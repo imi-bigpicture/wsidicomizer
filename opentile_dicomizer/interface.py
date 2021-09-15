@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pydicom
 from opentile import TiledPage, Tiler
+from pydicom import uid
 from pydicom.dataset import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom import WsiDicom
@@ -339,6 +340,7 @@ class WsiDicomizer(WsiDicom):
             cls.open_tiler(
                 tiler,
                 base_dataset,
+                uid_generator,
                 include_levels=include_levels,
                 include_label=include_label,
                 include_overview=include_overview
