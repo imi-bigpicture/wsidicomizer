@@ -1,0 +1,11 @@
+wsidicom.egg-info*
+dist*
+Pipfile.lock*
+.mypy_cache*
+.pytest_cache*
+poetry.lock
+*__pycache__**
+.vscode
+.ipynb_checkpoints
+*.ipynb
+*.dcm
