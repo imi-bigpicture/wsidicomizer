@@ -18,6 +18,20 @@ from wsidicom.uid import WSI_SOP_CLASS_UID
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
+    """Return image type.
+
+    Parameters
+    ----------
+    image_flavor: str
+        Image flavor ('VOLUME', 'LABEL', 'OVERVIEW')
+    level_index: int:
+        Pyramidal level index of the image.
+
+    Returns
+    ----------
+    List[str]
+        Image type.
+    """
     if image_flavor == 'VOLUME' and level_index == 0:
         resampled = 'NONE'
     else:
@@ -28,20 +42,41 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
 
 def create_instance_dataset(
     base_dataset: Dataset,
-    image_flavour: str,
-    level_index: int,
-    image_size: Size,
-    tile_size: Size,
-    mpp: SizeMm,
+    image_flavor: str,
+    tiled_page: TiledPage,
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
+    """Return instance dataset for TiledPage based on base dataset.
+
+    Parameters
+    ----------
+    base_dataset: Dataset
+        Dataset common for all instances.
+    image_flavor:
+        Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
+    tiled_page: TiledPage:
+        Tiled page with image data and metadata.
+    uid_generator: Callable[..., Uid]
+        Function that can generate Uids.
+
+    Returns
+    ----------
+    Dataset
+        Dataset for instance.
+    """
     dataset = copy.deepcopy(base_dataset)
-    dataset.ImageType = get_image_type(image_flavour, level_index)
+    dataset.ImageType = get_image_type(
+        image_flavor,
+        tiled_page.pyramid_index
+    )
     dataset.SOPInstanceUID = uid_generator()
 
     shared_functional_group_sequence = Dataset()
     pixel_measure_sequence = Dataset()
-    pixel_measure_sequence.PixelSpacing = [mpp.width, mpp.height]
+    pixel_measure_sequence.PixelSpacing = [
+        tiled_page.pixel_spacing.width,
+        tiled_page.pixel_spacing.height
+    ]
     pixel_measure_sequence.SpacingBetweenSlices = 0.0
     pixel_measure_sequence.SliceThickness = 0.0
     shared_functional_group_sequence.PixelMeasuresSequence = (
@@ -50,12 +85,16 @@ def create_instance_dataset(
     dataset.SharedFunctionalGroupsSequence = DicomSequence(
         [shared_functional_group_sequence]
     )
-    dataset.TotalPixelMatrixColumns = image_size.width
-    dataset.TotalPixelMatrixRows = image_size.height
-    dataset.Columns = tile_size.width
-    dataset.Rows = tile_size.height
-    dataset.ImagedVolumeWidth = image_size.width * mpp.width
-    dataset.ImagedVolumeHeight = image_size.height * mpp.height
+    dataset.TotalPixelMatrixColumns = tiled_page.image_size.width
+    dataset.TotalPixelMatrixRows = tiled_page.image_size.height
+    dataset.Columns = tiled_page.tile_size.width
+    dataset.Rows = tiled_page.tile_size.height
+    dataset.ImagedVolumeWidth = (
+        tiled_page.image_size.width * tiled_page.pixel_spacing.width
+    )
+    dataset.ImagedVolumeHeight = (
+        tiled_page.image_size.height * tiled_page.pixel_spacing.height
+    )
     dataset.ImagedVolumeDepth = 0.0
     # If PhotometricInterpretation is YBR and no subsampling
     dataset.SamplesPerPixel = 3
@@ -78,6 +117,18 @@ def create_instance_dataset(
 def create_test_base_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
+    """Return simple base dataset for testing.
+
+    Parameters
+    ----------
+    uid_generator: Callable[..., Uid]
+        Function that can generate Uids.
+
+    Returns
+    ----------
+    Dataset
+        Common dataset.
+    """
     dataset = Dataset()
     dataset.StudyInstanceUID = uid_generator()
     dataset.SeriesInstanceUID = uid_generator()
@@ -149,10 +200,17 @@ def create_test_base_dataset(
 
 
 class ImageDataWrapper(ImageData):
-    """Wraps a TiledPage to ImageData. Get tile is wrapped by removing
-    focal and optical path parameters. Image geometry properties are converted
-    to wsidicom.geometry class."""
+
     def __init__(self, tiled_page: TiledPage):
+        """Wraps a TiledPage to ImageData. Get tile is wrapped by removing
+        focal and optical path parameters. Image geometry properties are
+        converted to wsidicom.geometry class.
+
+        Parameters
+        ----------
+        tiled_page: TiledPage
+            TiledPage to wrap.
+        """
         self._tiled_page = tiled_page
 
     @cached_property
@@ -337,15 +395,31 @@ class WsiDicomizer(WsiDicom):
         image_type: str,
         uid_generator: Callable[..., Uid],
         transfer_syntax: Uid
-    ) -> WsiInstance:
+    ) -> WsiInstanceSave:
+        """Create WsiInstanceSave from TiledPage.
 
+        Parameters
+        ----------
+        tiled_page: TiledPage
+            TiledPage containg image data and metadata.
+        base_dataset: Dataset
+            Base dataset to include.
+        image_type: str
+            Type of instance to create.
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+            Function that can gernerate unique identifiers.
+        transfer_syntax: Uid = pydicom.uid.JPEGBaseline8Bit
+            Transfer syntax.
+
+        Returns
+        ----------
+        WsiInstanceSave
+            Created WsiInstanceSave.
+        """
         instance_dataset = create_instance_dataset(
             base_dataset,
             image_type,
-            tiled_page.pyramid_index,
-            tiled_page.image_size,
-            tiled_page.tile_size,
-            tiled_page.pixel_spacing,
+            tiled_page,
             uid_generator
         )
         return WsiInstanceSave(
@@ -383,6 +457,11 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool = True
             Include overview(s), default true.
+
+        Returns
+        ----------
+        Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
+            Lists of created level, label and overivew instances.
         """
         level_instances = [
             cls.create_instance(
@@ -422,8 +501,8 @@ class WsiDicomizer(WsiDicom):
     def import_tiler(
         cls,
         tiler: Tiler,
-        base_dataset: Dataset = None,
-    ) -> 'WsiDicom':
+        base_dataset: Dataset = create_test_base_dataset(),
+    ) -> WsiDicom:
         """Open data in tiler as WsiDicom object.
 
         Parameters
@@ -432,10 +511,12 @@ class WsiDicomizer(WsiDicom):
             Tiler that can produce WsiInstances.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
-        """
-        if base_dataset is None:
-            base_dataset = WsiDataset.create_test_base_dataset()
 
+        Returns
+        ----------
+        WsiDicom
+            WsiDicom object of imported tiler.
+        """
         (
             level_instances,
             label_instances,
@@ -457,7 +538,8 @@ class WsiDicomizer(WsiDicom):
         include_label: bool = True,
         include_overview: bool = True
     ) -> None:
-        """Convert data in tiler to Dicom files in output path.
+        """Convert data in tiler to Dicom files in output path. Closes tiler
+        when finished.
 
         Parameters
         ----------
