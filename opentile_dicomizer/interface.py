@@ -1,39 +1,42 @@
-from pathlib import Path
-from typing import Callable, Iterator, List, Tuple
 import os
 from datetime import datetime
+from functools import cached_property
+from pathlib import Path
+from typing import Callable, Iterator, List, Tuple
 
 import pydicom
 from opentile import TiledPage, Tiler
-from pydicom import uid
 from pydicom.dataset import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom import WsiDicom
-from wsidicom.geometry import Point, Size, SizeMm, Region
+from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomLabels,
                                 WsiDicomLevels, WsiDicomOverviews, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 
 class ImageDataWrapper(ImageData):
+    """Wraps a TiledPage to ImageData. Get tile is wrapped by removing
+    focal and optical path parameters. Image geometry properties are converted
+    to wsidicom.geometry class."""
     def __init__(self, tiled_page: TiledPage):
         self._tiled_page = tiled_page
 
-    @property
+    @cached_property
     def image_size(self) -> Size:
-        return self._tiled_page.image_size
+        return Size(*self._tiled_page.image_size.to_tuple())
 
-    @property
+    @cached_property
     def tile_size(self) -> Size:
-        return self._tiled_page.tile_size
+        return Size(*self._tiled_page.tile_size.to_tuple())
 
-    @property
+    @cached_property
     def tiled_size(self) -> Size:
-        return self._tiled_page.tiled_size
+        return Size(*self._tiled_page.tiled_size.to_tuple())
 
-    @property
+    @cached_property
     def pixel_spacing(self) -> SizeMm:
-        return self._tiled_page.pixel_spacing
+        return SizeMm(*self._tiled_page.pixel_spacing.to_tuple())
 
     @property
     def focal_planes(self) -> List[float]:
