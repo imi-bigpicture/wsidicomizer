@@ -54,10 +54,11 @@ class ImageDataWrapper(ImageData):
     ) -> bytes:
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return self._tiled_page.get_tile(tile)
+        return self._tiled_page.get_tile(tile.to_tuple())
 
     def get_tiles(self, tiles: List[Point]) -> Iterator[List[bytes]]:
-        return self._tiled_page.get_tiles(tiles)
+        tiles_ = (tile.to_tuple() for tile in tiles)
+        return self._tiled_page.get_tiles(tiles_)
 
     def close(self) -> None:
         self._tiled_page.close()
