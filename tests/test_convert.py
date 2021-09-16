@@ -10,8 +10,8 @@ from typing import Dict, Tuple, TypedDict
 import pytest
 from opentile import NdpiTiler, __version__
 from opentile_dicomizer import WsiDicomizer
+from opentile_dicomizer.interface import create_test_base_dataset
 from wsidicom import WsiDicom
-from wsidicom.interface import WsiDataset
 
 ndpi_test_data_dir = os.environ.get(
     "NDPI_TESTDIR",
@@ -55,7 +55,7 @@ class NdpiConvertTest(unittest.TestCase):
             cls.tile_size,
             turbo_path
         )
-        base_dataset = WsiDataset.create_test_base_dataset()
+        base_dataset = create_test_base_dataset()
         tempdir = TemporaryDirectory()
         WsiDicomizer.convert(
             Path(tempdir.name),
