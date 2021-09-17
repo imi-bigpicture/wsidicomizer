@@ -8,6 +8,7 @@ authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 python = "^3.8"
 wsidicom = {path = "../wsidicom", develop = true}
 opentile = {path = "../opentile", develop = true}
+highdicom = "^0.9.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

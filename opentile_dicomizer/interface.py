@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Callable, Iterator, List, Tuple
 
 import pydicom
+from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
+                               SpecimenDescription, SpecimenPreparationStep,
+                               SpecimenSampling, SpecimenStaining)
 from opentile import TiledPage, Tiler
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
@@ -15,6 +18,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomLabels,
                                 WsiDicomLevels, WsiDicomOverviews, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
+from wsidicom.conceptcode import *
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
@@ -39,6 +43,10 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
 
     return ['ORGINAL', 'PRIMARY', image_flavor, resampled]
 
+def append_dataset(dataset_0: Dataset, dataset_1: Dataset) -> Dataset:
+    for element in dataset_1.elements():
+        dataset_0.add(element)
+    return dataset_0
 
 def create_instance_dataset(
     base_dataset: Dataset,
@@ -102,11 +110,11 @@ def create_instance_dataset(
     # If transfer syntax pydicom.uid.JPEGBaseline8Bit
     dataset.BitsAllocated = 8
     dataset.BitsStored = 8
-    dataset.HighBit = 8
+    dataset.HighBit = 7
     dataset.PixelRepresentation = 0
     dataset.LossyImageCompression = '01'
-    dataset.LossyImageCompressionRatio = 1
-    dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+    # dataset.LossyImageCompressionRatio = 1
+    # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
 
     # Should be incremented
     dataset.InstanceNumber = 0
@@ -114,10 +122,10 @@ def create_instance_dataset(
     dataset.ExtendedDepthOfField = 'NO'
     return dataset
 
-def create_test_base_dataset(
+def create_minimal_base_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
-    """Return simple base dataset for testing.
+    """Return minimal base dataset.
 
     Parameters
     ----------
@@ -127,7 +135,7 @@ def create_test_base_dataset(
     Returns
     ----------
     Dataset
-        Common dataset.
+        Minimal WSI dataset.
     """
     dataset = Dataset()
     dataset.StudyInstanceUID = uid_generator()
@@ -135,40 +143,6 @@ def create_test_base_dataset(
     dataset.FrameOfReferenceUID = uid_generator()
     dataset.Modality = 'SM'
     dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
-    dataset.Manufacturer = 'Manufacturer'
-    dataset.ManufacturerModelName = 'ManufacturerModelName'
-    dataset.DeviceSerialNumber = 'DeviceSerialNumber'
-    dataset.SoftwareVersions = ['SoftwareVersions']
-
-    # Generic specimen sequence
-    dataset.ContainerIdentifier = 'ContainerIdentifier'
-    specimen_description_sequence = Dataset()
-    specimen_description_sequence.SpecimenIdentifier = 'SpecimenIdentifier'
-    specimen_description_sequence.SpecimenUID = uid_generator()
-    dataset.SpecimenDescriptionSequence = DicomSequence(
-        [specimen_description_sequence]
-    )
-
-    # Generic optical path sequence
-    optical_path_sequence = Dataset()
-    optical_path_sequence.OpticalPathIdentifier = '1'
-    illumination_type_code_sequence = Dataset()
-    illumination_type_code_sequence.CodeValue = '111744'
-    illumination_type_code_sequence.CodingSchemeDesignator = 'DCM'
-    illumination_type_code_sequence.CodeMeaning = (
-        'Brightfield illumination'
-    )
-    optical_path_sequence.IlluminationTypeCodeSequence = DicomSequence(
-        [illumination_type_code_sequence]
-    )
-    illumination_color_code_sequence = Dataset()
-    illumination_color_code_sequence.CodeValue = 'R-102C0'
-    illumination_color_code_sequence.CodingSchemeDesignator = 'SRT'
-    illumination_color_code_sequence.CodeMeaning = 'Full Spectrum'
-    optical_path_sequence.IlluminationColorCodeSequence = DicomSequence(
-        [illumination_color_code_sequence]
-    )
-    dataset.OpticalPathSequence = DicomSequence([optical_path_sequence])
 
     # Generic dimension organization sequence
     dimension_organization_uid = uid_generator()
@@ -193,9 +167,167 @@ def create_test_base_dataset(
     )
 
     dataset.BurnedInAnnotation = 'NO'
-    dataset.BurnedInAnnotation = 'NO'
     dataset.SpecimenLabelInImage = 'NO'
     dataset.VolumetricProperties = 'VOLUME'
+    return dataset
+
+def create_device_module(
+    manufacturer: str = None,
+    model_name: str = None,
+    serial_number: str = None,
+    software_versions: List[str] = None
+) -> Dataset:
+    dataset = Dataset()
+    properties = {
+        'Manufacturer': manufacturer,
+        'ManufacturerModelName': model_name,
+        'DeviceSerialNumber': serial_number,
+        'SoftwareVersions': software_versions
+    }
+    for name, value in properties.items():
+        if value is not None:
+            setattr(dataset, name, value)
+    return dataset
+
+def create_simple_sample(
+    sample_id: str,
+    embedding_medium: str = None,
+    fixative: str = None,
+    stainings: List[str] = None,
+    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+) -> Dataset:
+    if embedding_medium is not None:
+        embedding_medium_code = SpecimenEmbeddingMediaCode(embedding_medium).code
+    else:
+        embedding_medium_code = None
+    if fixative is not None:
+        fixative_code = SpecimenFixativesCode(fixative).code
+    else:
+        fixative_code = None
+    if stainings is not None:
+        processing_type = SpecimenPreparationProcedureCode('Staining').code
+        processing_procedure = SpecimenStaining([
+            SpecimenStainsCode(staining).code for staining in stainings
+        ])
+        sample_preparation_step = SpecimenPreparationStep(
+            specimen_id=sample_id,
+            processing_type = processing_type,
+            processing_procedure = processing_procedure,
+            embedding_medium=embedding_medium_code,
+            fixative=fixative_code
+        )
+        sample_preparation_steps = [sample_preparation_step]
+    else:
+        sample_preparation_steps = None
+
+    specimen = SpecimenDescription(
+        specimen_id=sample_id,
+        specimen_uid=uid_generator(),
+        specimen_preparation_steps=sample_preparation_steps
+    )
+    return specimen
+
+
+def create_simple_specimen_module(
+    slide_id: str,
+    samples: List[Dataset]
+) -> Dataset:
+    # Generic specimen sequence
+    dataset = Dataset()
+    dataset.ContainerIdentifier = slide_id
+
+    container_type_code_sequence = Dataset()
+    container_type_code_sequence.CodeValue = '258661006'
+    container_type_code_sequence.CodingSchemeDesignator = 'SCT'
+    container_type_code_sequence.CodeMeaning = 'Slide'
+    dataset.ContainerTypeCodeSequence = (
+        DicomSequence([container_type_code_sequence])
+    )
+
+    container_component_sequence = Dataset()
+    container_component_sequence.ContainerComponentMaterial = 'GLASS'
+    container_component_type_code_sequence = Dataset()
+    container_component_type_code_sequence.CodeValue = '433472003'
+    container_component_type_code_sequence.CodingSchemeDesignator = 'SCT'
+    container_component_type_code_sequence.CodeMeaning = (
+        'Microscope slide coverslip'
+    )
+    container_component_sequence.ContainerComponentTypeCodeSequence = (
+        DicomSequence([container_component_type_code_sequence])
+    )
+    dataset.ContainerComponentSequence = (
+        DicomSequence([container_component_sequence])
+    )
+    specimen_description_sequence = (
+        DicomSequence(samples)
+    )
+    dataset.SpecimenDescriptionSequence = specimen_description_sequence
+
+    return dataset
+
+
+def create_generic_optical_path_module() -> Dataset:
+    dataset = Dataset()
+    # Generic optical path sequence
+    optical_path_sequence = Dataset()
+    optical_path_sequence.OpticalPathIdentifier = '0'
+    illumination_type_code_sequence = Dataset()
+    illumination_type_code_sequence.CodeValue = '111744'
+    illumination_type_code_sequence.CodingSchemeDesignator = 'DCM'
+    illumination_type_code_sequence.CodeMeaning = (
+        'Brightfield illumination'
+    )
+    optical_path_sequence.IlluminationTypeCodeSequence = DicomSequence(
+        [illumination_type_code_sequence]
+    )
+    illumination_color_code_sequence = Dataset()
+    illumination_color_code_sequence.CodeValue = 'R-102C0'
+    illumination_color_code_sequence.CodingSchemeDesignator = 'SRT'
+    illumination_color_code_sequence.CodeMeaning = 'Full Spectrum'
+    optical_path_sequence.IlluminationColorCodeSequence = DicomSequence(
+        [illumination_color_code_sequence]
+    )
+    dataset.OpticalPathSequence = DicomSequence([optical_path_sequence])
+
+    return dataset
+
+def create_test_base_dataset(
+    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+) -> Dataset:
+    """Return simple base dataset for testing.
+
+    Parameters
+    ----------
+    uid_generator: Callable[..., Uid]
+        Function that can generate Uids.
+
+    Returns
+    ----------
+    Dataset
+        Common dataset.
+    """
+    dataset = create_minimal_base_dataset(uid_generator)
+
+    # Generic device module
+    dataset = append_dataset(dataset, create_device_module(
+        'Scanner manufacturer',
+        'Scanner model name',
+        'Scanner serial number',
+        ['Scanner software versions']
+    ))
+
+    # Generic specimen module
+    dataset = append_dataset(dataset, create_simple_specimen_module(
+        'slide id',
+        samples=[create_simple_sample(
+            'sample id',
+            uid_generator=uid_generator
+        )]
+    ))
+
+    # Generic optical path sequence
+    dataset = append_dataset(dataset, create_generic_optical_path_module())
+
     return dataset
 
 
@@ -428,6 +560,28 @@ class WsiDicomizer(WsiDicom):
             transfer_syntax
         )
 
+    @staticmethod
+    def populate_base_dataset(
+        tiler: Tiler,
+        base_dataset: Dataset
+    ) -> Dataset:
+        for property, value in tiler.properties.items():
+            if property == 'aquisition_datatime':
+                base_dataset.AcquisitionDateTime = value
+            elif property == 'device_serial_number':
+                base_dataset.DeviceSerialNumber = value
+            elif property == 'manufacturer':
+                base_dataset.Manufacturer = value
+            elif property == 'software_versions':
+                base_dataset.SoftwareVersions = value
+            elif property == 'lossy_image_compression_method':
+                base_dataset.LossyImageCompressionMethod = value
+            elif property == 'lossy_image_compression_ratio':
+                base_dataset.LossyImageCompressionRatio = value
+            elif property == 'photometric_interpretation':
+                base_dataset.PhotometricInterpretation = value
+        return base_dataset
+
     @classmethod
     def open_tiler(
         cls,
@@ -463,6 +617,8 @@ class WsiDicomizer(WsiDicom):
         Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
             Lists of created level, label and overivew instances.
         """
+        base_dataset = cls.populate_base_dataset(tiler, base_dataset)
+
         level_instances = [
             cls.create_instance(
                 level,
