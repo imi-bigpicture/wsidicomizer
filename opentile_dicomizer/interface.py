@@ -363,11 +363,11 @@ class ImageDataWrapper(ImageData):
 
     @property
     def focal_planes(self) -> List[float]:
-        return [0.0]
+        return [self._tiled_page.focal_plane]
 
     @property
     def optical_paths(self) -> List[str]:
-        return ['0']
+        return [self._tiled_page.optical_path]
 
     def get_tile(
         self,
