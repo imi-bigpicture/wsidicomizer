@@ -21,6 +21,14 @@ from wsidicom.uid import WSI_SOP_CLASS_UID
 from wsidicom.conceptcode import *
 
 
+def get_transfer_syntax(compression_string: str) -> Uid:
+    if compression_string == 'COMPRESSION.JPEG':
+        return pydicom.uid.JPEGBaseline8Bit
+    elif compression_string == 'COMPRESSION.APERIO_JP2000_RGB':
+        return pydicom.uid.JPEG2000
+    raise NotImplementedError('Not supported compression')
+
+
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
     """Return image type.
 
@@ -526,7 +534,6 @@ class WsiDicomizer(WsiDicom):
         base_dataset: Dataset,
         image_type: str,
         uid_generator: Callable[..., Uid],
-        transfer_syntax: Uid
     ) -> WsiInstanceSave:
         """Create WsiInstanceSave from TiledPage.
 
@@ -540,8 +547,6 @@ class WsiDicomizer(WsiDicom):
             Type of instance to create.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
             Function that can gernerate unique identifiers.
-        transfer_syntax: Uid = pydicom.uid.JPEGBaseline8Bit
-            Transfer syntax.
 
         Returns
         ----------
@@ -554,10 +559,12 @@ class WsiDicomizer(WsiDicom):
             tiled_page,
             uid_generator
         )
+
+
         return WsiInstanceSave(
             WsiDataset(instance_dataset),
             ImageDataWrapper(tiled_page),
-            transfer_syntax
+            get_transfer_syntax(tiled_page.compression)
         )
 
     @staticmethod
@@ -588,7 +595,6 @@ class WsiDicomizer(WsiDicom):
         tiler: Tiler,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
-        transfer_syntax: Uid = pydicom.uid.JPEGBaseline8Bit,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
@@ -603,8 +609,6 @@ class WsiDicomizer(WsiDicom):
             Base dataset to include in files.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
             Function that can gernerate unique identifiers.
-        transfer_syntax: Uid = pydicom.uid.JPEGBaseline8Bit
-            Transfer syntax.
         include_levels: List[int] = None
             Optional list of levels to include. Include all levels if None.
         include_label: bool = True
@@ -625,7 +629,6 @@ class WsiDicomizer(WsiDicom):
                 base_dataset,
                 'VOLUME',
                 uid_generator,
-                transfer_syntax
             )
             for level in tiler.levels
             if include_levels is None or level.pyramid_index in include_levels
@@ -637,7 +640,6 @@ class WsiDicomizer(WsiDicom):
                 base_dataset,
                 'LABEL',
                 uid_generator,
-                transfer_syntax
             )
             for label in tiler.labels if include_label
         ]
@@ -647,7 +649,6 @@ class WsiDicomizer(WsiDicom):
                 base_dataset,
                 'OVERVIEW',
                 uid_generator,
-                transfer_syntax
             )
             for overview in tiler.overviews if include_overview
         ]
