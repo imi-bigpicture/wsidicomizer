@@ -5,10 +5,11 @@ import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, Tuple, TypedDict
+from typing import Dict, Tuple
 
 import pytest
-from opentile import NdpiTiler, __version__
+from opentile import OpenTile
+from opentile.ndpi_tiler import NdpiTiler
 from opentile_dicomizer import WsiDicomizer
 from opentile_dicomizer.interface import create_test_base_dataset
 from wsidicom import WsiDicom
@@ -17,12 +18,10 @@ ndpi_test_data_dir = os.environ.get(
     "NDPI_TESTDIR",
     "C:/temp/opentile/ndpi/"
 )
-sub_data_dir = "convert"
-ndpi_data_dir = ndpi_test_data_dir + '/' + sub_data_dir
 turbo_path = 'C:/libjpeg-turbo64/bin/turbojpeg.dll'
 
 
-@pytest.mark.convert
+@pytest.mark.convert_ndpi
 class NdpiConvertTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,8 +48,8 @@ class NdpiConvertTest(unittest.TestCase):
 
     @classmethod
     def open(cls, path: Path) -> Tuple[WsiDicom, TemporaryDirectory]:
-        filepath = Path(path).joinpath('ndpi/input.ndpi')
-        tiler = NdpiTiler(
+        filepath = Path(path).joinpath('input.ndpi')
+        tiler = OpenTile.open(
             filepath,
             cls.tile_size,
             turbo_path
@@ -69,8 +68,8 @@ class NdpiConvertTest(unittest.TestCase):
     @classmethod
     def _get_folders(cls):
         return [
-            Path(ndpi_data_dir).joinpath(item)
-            for item in os.listdir(ndpi_data_dir)
+            Path(ndpi_test_data_dir).joinpath(item)
+            for item in os.listdir(ndpi_test_data_dir)
         ]
 
     def test_read_region(self):

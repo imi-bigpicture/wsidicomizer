@@ -1,5 +1,6 @@
 import copy
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -9,24 +10,34 @@ import pydicom
 from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
                                SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
-from opentile import TiledPage, Tiler
+from opentile.common import OpenTilePage, Tiler
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
 from wsidicom import WsiDicom
+from wsidicom.conceptcode import *
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomLabels,
                                 WsiDicomLevels, WsiDicomOverviews, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
-from wsidicom.conceptcode import *
 
 
-def get_transfer_syntax(compression_string: str) -> Uid:
-    if compression_string == 'COMPRESSION.JPEG':
+def is_supported_transfer_syntax(compression: str) -> bool:
+    try:
+        get_transfer_syntax(compression)
+        return True
+    except NotImplementedError:
+        return False
+
+
+def get_transfer_syntax(compression: str) -> Uid:
+    if compression == 'COMPRESSION.JPEG':
         return pydicom.uid.JPEGBaseline8Bit
-    elif compression_string == 'COMPRESSION.APERIO_JP2000_RGB':
+    elif compression == 'COMPRESSION.APERIO_JP2000_RGB':
         return pydicom.uid.JPEG2000
-    raise NotImplementedError('Not supported compression')
+    raise NotImplementedError(
+        f'Not supported compression {compression}'
+    )
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
@@ -51,18 +62,20 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
 
     return ['ORGINAL', 'PRIMARY', image_flavor, resampled]
 
+
 def append_dataset(dataset_0: Dataset, dataset_1: Dataset) -> Dataset:
     for element in dataset_1.elements():
         dataset_0.add(element)
     return dataset_0
 
+
 def create_instance_dataset(
     base_dataset: Dataset,
     image_flavor: str,
-    tiled_page: TiledPage,
+    tiled_page: OpenTilePage,
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
-    """Return instance dataset for TiledPage based on base dataset.
+    """Return instance dataset for OpenTilePage based on base dataset.
 
     Parameters
     ----------
@@ -70,7 +83,7 @@ def create_instance_dataset(
         Dataset common for all instances.
     image_flavor:
         Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
-    tiled_page: TiledPage:
+    tiled_page: OpenTilePage:
         Tiled page with image data and metadata.
     uid_generator: Callable[..., Uid]
         Function that can generate Uids.
@@ -103,6 +116,7 @@ def create_instance_dataset(
     )
     dataset.TotalPixelMatrixColumns = tiled_page.image_size.width
     dataset.TotalPixelMatrixRows = tiled_page.image_size.height
+    # assert(False)
     dataset.Columns = tiled_page.tile_size.width
     dataset.Rows = tiled_page.tile_size.height
     dataset.ImagedVolumeWidth = (
@@ -129,6 +143,7 @@ def create_instance_dataset(
     dataset.FocusMethod = 'AUTO'
     dataset.ExtendedDepthOfField = 'NO'
     return dataset
+
 
 def create_minimal_base_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
@@ -179,6 +194,7 @@ def create_minimal_base_dataset(
     dataset.VolumetricProperties = 'VOLUME'
     return dataset
 
+
 def create_device_module(
     manufacturer: str = None,
     model_name: str = None,
@@ -197,6 +213,7 @@ def create_device_module(
             setattr(dataset, name, value)
     return dataset
 
+
 def create_simple_sample(
     sample_id: str,
     embedding_medium: str = None,
@@ -205,7 +222,9 @@ def create_simple_sample(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
     if embedding_medium is not None:
-        embedding_medium_code = SpecimenEmbeddingMediaCode(embedding_medium).code
+        embedding_medium_code = (
+            SpecimenEmbeddingMediaCode(embedding_medium).code
+        )
     else:
         embedding_medium_code = None
     if fixative is not None:
@@ -219,8 +238,8 @@ def create_simple_sample(
         ])
         sample_preparation_step = SpecimenPreparationStep(
             specimen_id=sample_id,
-            processing_type = processing_type,
-            processing_procedure = processing_procedure,
+            processing_type=processing_type,
+            processing_procedure=processing_procedure,
             embedding_medium=embedding_medium_code,
             fixative=fixative_code
         )
@@ -299,6 +318,7 @@ def create_generic_optical_path_module() -> Dataset:
 
     return dataset
 
+
 def create_test_base_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
@@ -341,15 +361,15 @@ def create_test_base_dataset(
 
 class ImageDataWrapper(ImageData):
 
-    def __init__(self, tiled_page: TiledPage):
-        """Wraps a TiledPage to ImageData. Get tile is wrapped by removing
+    def __init__(self, tiled_page: OpenTilePage):
+        """Wraps a OpenTilePage to ImageData. Get tile is wrapped by removing
         focal and optical path parameters. Image geometry properties are
         converted to wsidicom.geometry class.
 
         Parameters
         ----------
-        tiled_page: TiledPage
-            TiledPage to wrap.
+        tiled_page: OpenTilePage
+            OpenTilePage to wrap.
         """
         self._tiled_page = tiled_page
 
@@ -504,22 +524,29 @@ class WsiInstanceSave(WsiInstance):
         fp.write_tag(pydicom.tag.ItemTag)
         fp.write_UL(0)
 
-        tile_geometry = Region(Point(0, 0), self.tiled_size)
-        # Generator for the tiles
-        tile_jobs = (
-            self._image_data.get_tiles(tile_geometry.iterate_all())
-        )
-        # itemize and and write the tiles
-        for tile_job in tile_jobs:
-            for tile in tile_job:
-                for frame in pydicom.encaps.itemize_frame(tile, 1):
-                    fp.write(frame)
+        chunk_size = 4*10
 
-        # This method tests faster, but also writes all data at once
-        # (takes a lot of memory)
-        # fp.write(
-        #     self.tiler.get_encapsulated_tiles(tile_geometry.iterate_all())
-        # )
+        # Divide the image tiles up into chunk_size chunks (up to tiled size)
+        chunked_tile_points = (
+            Region(
+                Point(x, y),
+                Size(min(chunk_size, self._image_data.tiled_size.width - x), 1)
+            ).iterate_all()
+            for y in range(self._image_data.tiled_size.height)
+            for x in range(0, self._image_data.tiled_size.width, chunk_size)
+        )
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            # Thread that takes a chunk of tile points and returns list of
+            # tile bytes
+            def thread(tile_points: List[Point]) -> List[bytes]:
+                return self._image_data.get_tiles(tile_points)
+
+            # Each thread produces a list of tiles that is itimized and writen
+            for thread_job in pool.map(thread, chunked_tile_points):
+                for tile in thread_job:
+                    for frame in pydicom.encaps.itemize_frame(tile, 1):
+                        fp.write(frame)
 
         # end sequence
         fp.write_tag(pydicom.tag.SequenceDelimiterTag)
@@ -530,17 +557,17 @@ class WsiDicomizer(WsiDicom):
     """WsiDicom class with import tiler-functionality."""
     @staticmethod
     def create_instance(
-        tiled_page: TiledPage,
+        tiled_page: OpenTilePage,
         base_dataset: Dataset,
         image_type: str,
         uid_generator: Callable[..., Uid],
     ) -> WsiInstanceSave:
-        """Create WsiInstanceSave from TiledPage.
+        """Create WsiInstanceSave from OpenTilePage.
 
         Parameters
         ----------
-        tiled_page: TiledPage
-            TiledPage containg image data and metadata.
+        tiled_page: OpenTilePage
+            OpenTilePage containg image data and metadata.
         base_dataset: Dataset
             Base dataset to include.
         image_type: str
@@ -559,7 +586,6 @@ class WsiDicomizer(WsiDicom):
             tiled_page,
             uid_generator
         )
-
 
         return WsiInstanceSave(
             WsiDataset(instance_dataset),
@@ -622,7 +648,6 @@ class WsiDicomizer(WsiDicom):
             Lists of created level, label and overivew instances.
         """
         base_dataset = cls.populate_base_dataset(tiler, base_dataset)
-
         level_instances = [
             cls.create_instance(
                 level,
@@ -632,6 +657,7 @@ class WsiDicomizer(WsiDicom):
             )
             for level in tiler.levels
             if include_levels is None or level.pyramid_index in include_levels
+            and is_supported_transfer_syntax(level.compression)
         ]
 
         label_instances = [
@@ -641,7 +667,9 @@ class WsiDicomizer(WsiDicom):
                 'LABEL',
                 uid_generator,
             )
-            for label in tiler.labels if include_label
+            for label in tiler.labels
+            if include_label and
+            is_supported_transfer_syntax(label.compression)
         ]
         overview_instances = [
             cls.create_instance(
@@ -650,8 +678,11 @@ class WsiDicomizer(WsiDicom):
                 'OVERVIEW',
                 uid_generator,
             )
-            for overview in tiler.overviews if include_overview
+            for overview in tiler.overviews
+            if include_overview and
+            is_supported_transfer_syntax(overview.compression)
         ]
+
         return level_instances, label_instances, overview_instances
 
     @classmethod
@@ -659,6 +690,10 @@ class WsiDicomizer(WsiDicom):
         cls,
         tiler: Tiler,
         base_dataset: Dataset = create_test_base_dataset(),
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
+        include_levels: List[int] = None,
+        include_label: bool = True,
+        include_overview: bool = True
     ) -> WsiDicom:
         """Open data in tiler as WsiDicom object.
 
@@ -678,7 +713,14 @@ class WsiDicomizer(WsiDicom):
             level_instances,
             label_instances,
             overview_instances
-        ) = cls.open_tiler(tiler, base_dataset)
+        ) = cls.open_tiler(
+            tiler,
+            base_dataset,
+            uid_generator,
+            include_levels=include_levels,
+            include_label=include_label,
+            include_overview=include_overview
+        )
         levels = WsiDicomLevels.open(level_instances)
         labels = WsiDicomLabels.open(label_instances)
         overviews = WsiDicomOverviews.open(overview_instances)
@@ -715,18 +757,16 @@ class WsiDicomizer(WsiDicom):
         include_overwiew: bool
             Include overview(s), default true.
         """
-        level_instances, label_instances, overview_instances = (
-            cls.open_tiler(
-                tiler,
-                base_dataset,
-                uid_generator,
-                include_levels=include_levels,
-                include_label=include_label,
-                include_overview=include_overview
-            )
+        imported_wsi = cls.import_tiler(
+            tiler,
+            base_dataset,
+            uid_generator,
+            include_levels,
+            include_label,
+            include_overview
         )
 
-        for instance in level_instances+label_instances+overview_instances:
+        for instance in imported_wsi.instances:
             instance.save(output_path)
 
         tiler.close()
