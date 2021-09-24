@@ -10,8 +10,8 @@ from typing import Dict, Tuple
 import pytest
 from opentile import OpenTile
 from opentile.ndpi_tiler import NdpiTiler
-from opentile_dicomizer import WsiDicomizer
-from opentile_dicomizer.interface import create_test_base_dataset
+from wsidicomizer import WsiDicomizer
+from wsidicomizer.interface import create_test_base_dataset
 from wsidicom import WsiDicom
 
 ndpi_test_data_dir = os.environ.get(
