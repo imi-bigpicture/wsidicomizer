@@ -3,7 +3,6 @@ import os
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from functools import cached_property
 from pathlib import Path
 from typing import (Callable, DefaultDict, Dict, Iterator, List,
                     Tuple, Union)
@@ -58,6 +57,18 @@ class ImageDataWrapper(ImageData):
         self._needs_transcoding = not is_supported_transfer_syntax(
             self.native_transfer_syntax
         )
+        if self.needs_transcoding:
+            self._transfer_syntax = pydicom.uid.JPEGBaseline8Bit
+        else:
+            self._transfer_syntax = get_transfer_syntax(
+                self._tiled_page.compression
+            )
+        self._image_size = Size(*self._tiled_page.image_size.to_tuple())
+        self._tile_size = Size(*self._tiled_page.tile_size.to_tuple())
+        self._tiled_size = Size(*self._tiled_page.tiled_size.to_tuple())
+        self._pixel_spacing = SizeMm(
+            *self._tiled_page.pixel_spacing.to_tuple()
+            )
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiled_page}"
@@ -65,12 +76,10 @@ class ImageDataWrapper(ImageData):
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self._tiled_page})"
 
-    @cached_property
+    @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        if self.needs_transcoding:
-            pydicom.uid.JPEGBaseline8Bit
-        return get_transfer_syntax(self._tiled_page.compression)
+        return self._transfer_syntax
 
     @property
     def needs_transcoding(self) -> bool:
@@ -80,24 +89,26 @@ class ImageDataWrapper(ImageData):
     def native_transfer_syntax(self) -> str:
         return self._tiled_page.compression
 
-    @cached_property
+    @property
     def image_size(self) -> Size:
         """The pixel size of the image."""
-        return Size(*self._tiled_page.image_size.to_tuple())
+        return self._image_size
 
-    @cached_property
+    @property
     def tile_size(self) -> Size:
         """The pixel tile size of the image."""
-        return Size(*self._tiled_page.tile_size.to_tuple())
+        return self._tile_size
 
-    @cached_property
+    @property
     def tiled_size(self) -> Size:
-        return Size(*self._tiled_page.tiled_size.to_tuple())
+        """The size of the image when divided into tiles, e.g. number of
+        columns and rows of tiles. Equals (1, 1) if image is not tiled."""
+        return self._tiled_size
 
-    @cached_property
+    @property
     def pixel_spacing(self) -> SizeMm:
         """Size of the pixels in mm/pixel."""
-        return SizeMm(*self._tiled_page.pixel_spacing.to_tuple())
+        return self._pixel_spacing
 
     @property
     def focal_planes(self) -> List[float]:
