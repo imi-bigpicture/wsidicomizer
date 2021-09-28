@@ -20,6 +20,8 @@ ndpi_test_data_dir = os.environ.get(
 )
 turbo_path = 'C:/libjpeg-turbo64/bin/turbojpeg.dll'
 
+include_levels = [4, 6]
+
 
 @pytest.mark.convert_ndpi
 class NdpiConvertTest(unittest.TestCase):
@@ -60,7 +62,7 @@ class NdpiConvertTest(unittest.TestCase):
             Path(tempdir.name),
             tiler,
             base_dataset,
-            include_levels=[4, 6]
+            include_levels=include_levels
         )
         wsi = WsiDicom.open(str(tempdir.name))
         return (wsi, tiler, tempdir)
