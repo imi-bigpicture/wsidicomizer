@@ -9,7 +9,6 @@ from opentile.common import OpenTilePage
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from pydicom.uid import generate_uid
 from wsidicom.conceptcode import (SpecimenEmbeddingMediaCode,
                                   SpecimenFixativesCode,
                                   SpecimenPreparationProcedureCode,
@@ -49,7 +48,6 @@ def create_instance_dataset(
     base_dataset: Dataset,
     image_flavor: str,
     tiled_page: OpenTilePage,
-    uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Return instance dataset for OpenTilePage based on base dataset.
 
@@ -61,8 +59,6 @@ def create_instance_dataset(
         Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
     tiled_page: OpenTilePage:
         Tiled page with image data and metadata.
-    uid_generator: Callable[..., Uid]
-        Function that can generate Uids.
 
     Returns
     ----------
@@ -74,7 +70,7 @@ def create_instance_dataset(
         image_flavor,
         tiled_page.pyramid_index
     )
-    dataset.SOPInstanceUID = uid_generator()
+    dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
 
     shared_functional_group_sequence = Dataset()
     pixel_measure_sequence = Dataset()
@@ -90,11 +86,15 @@ def create_instance_dataset(
     dataset.SharedFunctionalGroupsSequence = DicomSequence(
         [shared_functional_group_sequence]
     )
+    dataset.DimensionOrganizationType = 'TILED_FULL'
     dataset.TotalPixelMatrixColumns = tiled_page.image_size.width
     dataset.TotalPixelMatrixRows = tiled_page.image_size.height
-    # assert(False)
     dataset.Columns = tiled_page.tile_size.width
     dataset.Rows = tiled_page.tile_size.height
+    dataset.NumberOfFrames = (
+        tiled_page.tiled_size.width
+        * tiled_page.tiled_size.height
+    )
     dataset.ImagedVolumeWidth = (
         tiled_page.image_size.width * tiled_page.pixel_spacing.width
     )
