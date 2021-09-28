@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -347,9 +348,9 @@ class WsiDicomizer(WsiDicom):
     @staticmethod
     def _group_instances(
         instances: List[WsiInstance]
-    ) -> Dict[Union[str, Uid], List[WsiInstance]]:
+    ) -> List[List[WsiInstance]]:
         """Group instances by properties that can't differ in a DICOM-file,
-        i.e. group instance by file.
+        i.e. the instances are grouped by output file.
 
         Parameters
         ----------
@@ -358,19 +359,23 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        Dict[Union[str, Uid], List[WsiInstance]]
-            Instances grouped by photometric interpretation and transfer
-            syntax.
+        List[List[WsiInstance]]
+            Instances grouped by common properties.
         """
         groups: DefaultDict[Union[str, Uid], List[str]] = DefaultDict(list)
         for instance in instances:
             groups[
                 instance.photometric_interpretation,
-                instance._image_data.transfer_syntax
+                instance._image_data.transfer_syntax,
+                instance.ext_depth_of_field,
+                instance.ext_depth_of_field_planes,
+                instance.ext_depth_of_field_plane_distance,
+                instance.focus_method,
+                instance.slice_spacing
             ].append(
                 instance
             )
-        return dict(groups)
+        return list(groups.values())
 
     @staticmethod
     def _list_image_data(
@@ -583,9 +588,10 @@ class WsiDicomizer(WsiDicom):
         by properties that can differ in the same file:
             - photometric interpretation
             - transfer syntax
-            - (not yet) extended depth of field (and planes and distance)
-            - (not yet) focus method
-            - (not yet) spacing between slices
+            - extended depth of field (and planes and distance)
+            - focus method
+            - spacing between slices
+        Other properties are assumed to be equal or to be updated.
 
         Parameters
         ----------
@@ -598,27 +604,20 @@ class WsiDicomizer(WsiDicom):
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
             Uid generator to use.
         """
-        # We should group on properties that cant differ in the same file:
-        # photometric interpretation
-        # transfer syntax
-        # focus/focal plane thingies
-        for (photometric_interpretation, transfer_syntax), instances in (
-            self._group_instances(group.instances.values()).items()
-        ):
-            # Uid to use for file name and as instance uid
+        for instances in self._group_instances(group.instances.values()):
             uid = uid_generator()
             file_path = os.path.join(output_path, uid + '.dcm')
-
+            transfer_syntax = instances[0]._image_data.transfer_syntax
+            dataset = deepcopy(instances[0].dataset)
             fp = self._create_filepointer(file_path)
             self._write_preamble(fp)
             self._write_file_meta(fp, uid, transfer_syntax)
-            dataset = append_dataset(base_dataset, instances[0].dataset)
+            dataset = append_dataset(dataset, base_dataset)
             dataset.SOPInstanceUID = uid
             self._write_base(fp, dataset)
             self._write_pixel_data_start(fp)
             for (path, z), image_data in self._list_image_data(instances):
                 self._write_pixel_data(fp, image_data, z, path)
-
             self._write_pixel_data_end(fp)
             fp.close()
             print(f"Wrote file {file_path}")
