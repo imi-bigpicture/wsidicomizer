@@ -24,24 +24,6 @@ from wsidicom.uid import WSI_SOP_CLASS_UID
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
 
 
-def is_supported_transfer_syntax(compression: str) -> bool:
-    try:
-        get_transfer_syntax(compression)
-        return True
-    except NotImplementedError:
-        return False
-
-
-def get_transfer_syntax(compression: str) -> Uid:
-    if compression == 'COMPRESSION.JPEG':
-        return pydicom.uid.JPEGBaseline8Bit
-    elif compression == 'COMPRESSION.APERIO_JP2000_RGB':
-        return pydicom.uid.JPEG2000
-    raise NotImplementedError(
-        f'Not supported compression {compression}'
-    )
-
-
 class ImageDataWrapper(ImageData):
     def __init__(self, tiled_page: OpenTilePage):
         """Wraps a OpenTilePage to ImageData. Get tile is wrapped by removing
@@ -54,21 +36,17 @@ class ImageDataWrapper(ImageData):
             OpenTilePage to wrap.
         """
         self._tiled_page = tiled_page
-        self._needs_transcoding = not is_supported_transfer_syntax(
-            self.native_transfer_syntax
-        )
+        self._needs_transcoding = not self.is_supported_transfer_syntax()
         if self.needs_transcoding:
             self._transfer_syntax = pydicom.uid.JPEGBaseline8Bit
         else:
-            self._transfer_syntax = get_transfer_syntax(
-                self._tiled_page.compression
-            )
+            self._transfer_syntax = self.get_transfer_syntax()
         self._image_size = Size(*self._tiled_page.image_size.to_tuple())
         self._tile_size = Size(*self._tiled_page.tile_size.to_tuple())
         self._tiled_size = Size(*self._tiled_page.tiled_size.to_tuple())
         self._pixel_spacing = SizeMm(
             *self._tiled_page.pixel_spacing.to_tuple()
-            )
+        )
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiled_page}"
@@ -83,10 +61,13 @@ class ImageDataWrapper(ImageData):
 
     @property
     def needs_transcoding(self) -> bool:
+        """Return true if image data requires transcoding for Dicom
+        compatibilty."""
         return self._needs_transcoding
 
     @property
-    def native_transfer_syntax(self) -> str:
+    def native_compression(self) -> str:
+        """Return compression method used in image data."""
         return self._tiled_page.compression
 
     @property
@@ -122,6 +103,8 @@ class ImageDataWrapper(ImageData):
 
     @property
     def suggested_minimum_chunk_size(self) -> int:
+        """Return suggested minumum chunk size for optimal performance with
+        get_tiles()."""
         return self._tiled_page.suggested_minimum_chunk_size
 
     def get_tile(
@@ -149,10 +132,30 @@ class ImageDataWrapper(ImageData):
         if not self.needs_transcoding:
             return self._tiled_page.get_tiles(tiles_tuples)
         decoded_tiles = self._tiled_page.get_decoded_tiles(tiles_tuples)
-        return [jpeg_encode(tile for tile in decoded_tiles)]
+        return [jpeg_encode(tile) for tile in decoded_tiles]
 
     def close(self) -> None:
         self._tiled_page.close()
+
+    def is_supported_transfer_syntax(self) -> bool:
+        """Return true if image data is encoded with Dicom-supported transfer
+        syntax."""
+        try:
+            self.get_transfer_syntax()
+            return True
+        except NotImplementedError:
+            return False
+
+    def get_transfer_syntax(self) -> Uid:
+        """Return transfer syntax (Uid) for compression type in image data."""
+        compression = self.native_compression
+        if compression == 'COMPRESSION.JPEG':
+            return pydicom.uid.JPEGBaseline8Bit
+        elif compression == 'COMPRESSION.APERIO_JP2000_RGB':
+            return pydicom.uid.JPEG2000
+        raise NotImplementedError(
+            f'Not supported compression {compression}'
+        )
 
     def create_instance_dataset(
         self,
@@ -167,8 +170,6 @@ class ImageDataWrapper(ImageData):
             Dataset common for all instances.
         image_flavor:
             Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
-        image_data: ImageData:
-            Tiled page with image data and metadata.
 
         Returns
         ----------
@@ -239,23 +240,14 @@ class DicomWsiFileWriter:
         ----------
         path: Path
             Path to filepointer.
-        Returns
-        ----------
-        pydicom.filebase.DicomFile
-            Created filepointer.
+
         """
-        self._fp: DicomFile = pydicom.filebase.DicomFile(path, mode='wb')
+        self._fp = pydicom.filebase.DicomFile(path, mode='wb')
         self._fp.is_little_endian = True
         self._fp.is_implicit_VR = False
 
     def write_preamble(self) -> None:
-        """Writes file preamble to file.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        """
+        """Writes file preamble to file."""
         preamble = b'\x00' * 128
         self._fp.write(preamble)
         self._fp.write(b'DICM')
@@ -473,8 +465,8 @@ class WsiDicomGroupSave(WsiDicomGroup):
             print(f"Wrote file {file_path}")
 
 
-class WsiDicomLevelSave(WsiDicomGroupSave, WsiDicomLevel):
-    """Extend WsiDicomLevel with save-functionality."""
+class WsiDicomLevelSave(WsiDicomLevel, WsiDicomGroupSave):
+    """Extend WsiDicomLevel with save-functionality from WsiDicomGroupSave."""
     pass
 
 
@@ -505,78 +497,26 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
             )
 
 
-class WsiDicomLabelsSave(WsiDicomSeriesSave, WsiDicomLabels):
-    """Extend WsiDicomLabels with save-functionality."""
-    @classmethod
-    def open(
-        cls,
-        instances: List[WsiInstance]
-    ) -> 'WsiDicomLabelsSave':
-        """Return label series created from wsi files.
-
-        Parameters
-        ----------
-        instances: List[WsiInstance]
-            Instances to create levels from.
-
-        Returns
-        ----------
-        WsiDicomLabelsSave
-            Created label series
-        """
-        labels = WsiDicomGroupSave.open(instances)
-        return cls(labels)
+class WsiDicomLabelsSave(WsiDicomLabels, WsiDicomSeriesSave):
+    """Extend WsiDicomLabels with save-functionality from WsiDicomSeriesSave.
+    """
+    group_class = WsiDicomGroupSave
 
 
-class WsiDicomOverviewsSave(WsiDicomSeriesSave, WsiDicomOverviews):
-    """Extend WsiDicomOverviews with save-functionality."""
-    @classmethod
-    def open(
-        cls,
-        instances: List[WsiInstance]
-    ) -> 'WsiDicomOverviewsSave':
-        """Return overview series created from wsi files.
-
-        Parameters
-        ----------
-        instances: List[WsiInstance]
-            Instances to create levels from.
-
-        Returns
-        ----------
-        WsiDicomOverviewsSave
-            Created overview series
-        """
-        overviews = WsiDicomGroupSave.open(instances)
-        return cls(overviews)
+class WsiDicomOverviewsSave(WsiDicomOverviews, WsiDicomSeriesSave):
+    """Extend WsiDicomOverviews with save-functionality from
+    WsiDicomSeriesSave."""
+    group_class = WsiDicomGroupSave
 
 
-class WsiDicomLevelsSave(WsiDicomSeriesSave, WsiDicomLevels):
-    """Extend WsiDicomLevels with save-functionality."""
-    @classmethod
-    def open(
-        cls,
-        instances: List[WsiInstance]
-    ) -> 'WsiDicomLevelsSave':
-        """Return level series created from wsi instances.
-
-        Parameters
-        ----------
-        instances: List[WsiInstance]
-            Instances to create levels from.
-
-        Returns
-        ----------
-        WsiDicomLevelsSave
-            Created level series
-        """
-        levels = WsiDicomLevelSave.open_levels(instances)
-        return cls(levels)
+class WsiDicomLevelsSave(WsiDicomLevels, WsiDicomSeriesSave):
+    """Extend WsiDicomLevels with save-functionality from WsiDicomSeriesSave.
+    """
+    group_class = WsiDicomLevelSave
 
 
 class WsiDicomizer(WsiDicom):
     """WsiDicom class with import tiler-functionality."""
-
     levels: WsiDicomLevelsSave
     labels: WsiDicomLabelsSave
     overviews: WsiDicomOverviewsSave
@@ -675,7 +615,6 @@ class WsiDicomizer(WsiDicom):
             )
             for level in tiler.levels
             if include_levels is None or level.pyramid_index in include_levels
-            and is_supported_transfer_syntax(level.compression)
         ]
 
         label_instances = [
@@ -685,8 +624,7 @@ class WsiDicomizer(WsiDicom):
                 'LABEL'
             )
             for label in tiler.labels
-            if include_label and
-            is_supported_transfer_syntax(label.compression)
+            if include_label
         ]
         overview_instances = [
             cls._create_instance(
@@ -695,8 +633,7 @@ class WsiDicomizer(WsiDicom):
                 'OVERVIEW'
             )
             for overview in tiler.overviews
-            if include_overview and
-            is_supported_transfer_syntax(overview.compression)
+            if include_overview
         ]
 
         return level_instances, label_instances, overview_instances

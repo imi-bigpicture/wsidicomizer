@@ -5,7 +5,6 @@ import pydicom
 from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
                                SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
-from opentile.common import OpenTilePage
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
@@ -42,83 +41,6 @@ def append_dataset(dataset_0: Dataset, dataset_1: Dataset) -> Dataset:
     for element in dataset_1.elements():
         dataset_0.add(element)
     return dataset_0
-
-
-def create_instance_dataset(
-    base_dataset: Dataset,
-    image_flavor: str,
-    tiled_page: OpenTilePage,
-) -> Dataset:
-    """Return instance dataset for OpenTilePage based on base dataset.
-
-    Parameters
-    ----------
-    base_dataset: Dataset
-        Dataset common for all instances.
-    image_flavor:
-        Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
-    tiled_page: OpenTilePage:
-        Tiled page with image data and metadata.
-
-    Returns
-    ----------
-    Dataset
-        Dataset for instance.
-    """
-    dataset = copy.deepcopy(base_dataset)
-    dataset.ImageType = get_image_type(
-        image_flavor,
-        tiled_page.pyramid_index
-    )
-    dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
-
-    shared_functional_group_sequence = Dataset()
-    pixel_measure_sequence = Dataset()
-    pixel_measure_sequence.PixelSpacing = [
-        tiled_page.pixel_spacing.width,
-        tiled_page.pixel_spacing.height
-    ]
-    pixel_measure_sequence.SpacingBetweenSlices = 0.0
-    pixel_measure_sequence.SliceThickness = 0.0
-    shared_functional_group_sequence.PixelMeasuresSequence = (
-        DicomSequence([pixel_measure_sequence])
-    )
-    dataset.SharedFunctionalGroupsSequence = DicomSequence(
-        [shared_functional_group_sequence]
-    )
-    dataset.DimensionOrganizationType = 'TILED_FULL'
-    dataset.TotalPixelMatrixColumns = tiled_page.image_size.width
-    dataset.TotalPixelMatrixRows = tiled_page.image_size.height
-    dataset.Columns = tiled_page.tile_size.width
-    dataset.Rows = tiled_page.tile_size.height
-    dataset.NumberOfFrames = (
-        tiled_page.tiled_size.width
-        * tiled_page.tiled_size.height
-    )
-    dataset.ImagedVolumeWidth = (
-        tiled_page.image_size.width * tiled_page.pixel_spacing.width
-    )
-    dataset.ImagedVolumeHeight = (
-        tiled_page.image_size.height * tiled_page.pixel_spacing.height
-    )
-    dataset.ImagedVolumeDepth = 0.0
-    # If PhotometricInterpretation is YBR and no subsampling
-    dataset.SamplesPerPixel = 3
-    dataset.PhotometricInterpretation = 'YBR_FULL'
-    # If transfer syntax pydicom.uid.JPEGBaseline8Bit
-    dataset.BitsAllocated = 8
-    dataset.BitsStored = 8
-    dataset.HighBit = 7
-    dataset.PixelRepresentation = 0
-    dataset.LossyImageCompression = '01'
-    # dataset.LossyImageCompressionRatio = 1
-    # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-
-    # Should be incremented
-    dataset.InstanceNumber = 0
-    dataset.FocusMethod = 'AUTO'
-    dataset.ExtendedDepthOfField = 'NO'
-    return dataset
 
 
 def create_minimal_base_dataset(
