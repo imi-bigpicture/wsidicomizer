@@ -1,26 +1,27 @@
-from copy import deepcopy
 import os
+from abc import ABCMeta
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import (Callable, DefaultDict, Dict, Iterator, List,
-                    Tuple, Union)
+from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
 
 import pydicom
 from imagecodecs import jpeg_encode
 from opentile.common import OpenTilePage, Tiler
 from pydicom.dataset import Dataset
+from pydicom.filebase import DicomFile
+from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
-                                WsiDicomLabels, WsiDicomLevels,
-                                WsiDicomOverviews, WsiInstance)
+                                WsiDicomLabels, WsiDicomLevel, WsiDicomLevels,
+                                WsiDicomOverviews, WsiDicomSeries, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
-from .dataset import (append_dataset, create_instance_dataset,
-                      create_test_base_dataset)
+from .dataset import append_dataset, create_test_base_dataset, get_image_type
 
 
 def is_supported_transfer_syntax(compression: str) -> bool:
@@ -42,7 +43,6 @@ def get_transfer_syntax(compression: str) -> Uid:
 
 
 class ImageDataWrapper(ImageData):
-
     def __init__(self, tiled_page: OpenTilePage):
         """Wraps a OpenTilePage to ImageData. Get tile is wrapped by removing
         focal and optical path parameters. Image geometry properties are
@@ -120,6 +120,10 @@ class ImageDataWrapper(ImageData):
         """Optical paths avaiable in the image."""
         return [self._tiled_page.optical_path]
 
+    @property
+    def suggested_minimum_chunk_size(self) -> int:
+        return self._tiled_page.suggested_minimum_chunk_size
+
     def get_tile(
         self,
         tile: Point,
@@ -150,21 +154,445 @@ class ImageDataWrapper(ImageData):
     def close(self) -> None:
         self._tiled_page.close()
 
+    def create_instance_dataset(
+        self,
+        base_dataset: Dataset,
+        image_flavor: str
+    ) -> Dataset:
+        """Return instance dataset for image_data based on base dataset.
+
+        Parameters
+        ----------
+        base_dataset: Dataset
+            Dataset common for all instances.
+        image_flavor:
+            Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
+        image_data: ImageData:
+            Tiled page with image data and metadata.
+
+        Returns
+        ----------
+        Dataset
+            Dataset for instance.
+        """
+        dataset = deepcopy(base_dataset)
+        dataset.ImageType = get_image_type(
+            image_flavor,
+            self._tiled_page.pyramid_index
+        )
+        dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
+
+        shared_functional_group_sequence = Dataset()
+        pixel_measure_sequence = Dataset()
+        pixel_measure_sequence.PixelSpacing = [
+            self.pixel_spacing.width,
+            self.pixel_spacing.height
+        ]
+        pixel_measure_sequence.SpacingBetweenSlices = 0.0
+        pixel_measure_sequence.SliceThickness = 0.0
+        shared_functional_group_sequence.PixelMeasuresSequence = (
+            DicomSequence([pixel_measure_sequence])
+        )
+        dataset.SharedFunctionalGroupsSequence = DicomSequence(
+            [shared_functional_group_sequence]
+        )
+        dataset.DimensionOrganizationType = 'TILED_FULL'
+        dataset.TotalPixelMatrixColumns = self.image_size.width
+        dataset.TotalPixelMatrixRows = self.image_size.height
+        dataset.Columns = self.tile_size.width
+        dataset.Rows = self.tile_size.height
+        dataset.NumberOfFrames = (
+            self.tiled_size.width
+            * self.tiled_size.height
+        )
+        dataset.ImagedVolumeWidth = (
+            self.image_size.width * self.pixel_spacing.width
+        )
+        dataset.ImagedVolumeHeight = (
+            self.image_size.height * self.pixel_spacing.height
+        )
+        dataset.ImagedVolumeDepth = 0.0
+        # If PhotometricInterpretation is YBR and no subsampling
+        dataset.SamplesPerPixel = 3
+        dataset.PhotometricInterpretation = 'YBR_FULL'
+        # If transfer syntax pydicom.uid.JPEGBaseline8Bit
+        dataset.BitsAllocated = 8
+        dataset.BitsStored = 8
+        dataset.HighBit = 7
+        dataset.PixelRepresentation = 0
+        dataset.LossyImageCompression = '01'
+        # dataset.LossyImageCompressionRatio = 1
+        # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+
+        # Should be incremented
+        dataset.InstanceNumber = 0
+        dataset.FocusMethod = 'AUTO'
+        dataset.ExtendedDepthOfField = 'NO'
+        return dataset
+
+
+class DicomWsiFileWriter:
+    def __init__(self, path: Path) -> None:
+        """Return a dicom filepointer.
+
+        Parameters
+        ----------
+        path: Path
+            Path to filepointer.
+        Returns
+        ----------
+        pydicom.filebase.DicomFile
+            Created filepointer.
+        """
+        self._fp: DicomFile = pydicom.filebase.DicomFile(path, mode='wb')
+        self._fp.is_little_endian = True
+        self._fp.is_implicit_VR = False
+
+    def write_preamble(self) -> None:
+        """Writes file preamble to file.
+
+        Parameters
+        ----------
+        fp: pydicom.filebase.DicomFileLike
+            Filepointer to file to write.
+        """
+        preamble = b'\x00' * 128
+        self._fp.write(preamble)
+        self._fp.write(b'DICM')
+
+    def write_file_meta(self, uid: Uid, transfer_syntax: Uid) -> None:
+        """Writes file meta dataset to file.
+
+        Parameters
+        ----------
+        uid: Uid
+            SOP instance uid to include in file.
+        transfer_syntax: Uid
+            Transfer syntax used in file.
+        """
+        meta_ds = pydicom.dataset.FileMetaDataset()
+        meta_ds.TransferSyntaxUID = transfer_syntax
+        meta_ds.MediaStorageSOPInstanceUID = uid
+        meta_ds.MediaStorageSOPClassUID = WSI_SOP_CLASS_UID
+        pydicom.dataset.validate_file_meta(meta_ds)
+        pydicom.filewriter.write_file_meta_info(self._fp, meta_ds)
+
+    def write_base(self, dataset: WsiDataset) -> None:
+        """Writes base dataset to file.
+
+        Parameters
+        ----------
+        dataset: WsiDataset
+
+        """
+        now = datetime.now()
+        dataset.ContentDate = datetime.date(now).strftime('%Y%m%d')
+        dataset.ContentTime = datetime.time(now).strftime('%H%M%S.%f')
+        pydicom.filewriter.write_dataset(self._fp, dataset)
+
+    def write_pixel_data_start(self) -> None:
+        """Writes tags starting pixel data."""
+        pixel_data_element = pydicom.dataset.DataElement(
+            0x7FE00010,
+            'OB',
+            0,
+            is_undefined_length=True
+            )
+
+        # Write pixel data tag
+        self._fp.write_tag(pixel_data_element.tag)
+
+        if not self._fp.is_implicit_VR:
+            # Write pixel data VR (OB), two empty bytes (PS3.5 7.1.2)
+            self._fp.write(bytes(pixel_data_element.VR, "iso8859"))
+            self._fp.write_US(0)
+        # Write unspecific length
+        self._fp.write_UL(0xFFFFFFFF)
+
+        # Write item tag and (empty) length for BOT
+        self._fp.write_tag(pydicom.tag.ItemTag)
+        self._fp.write_UL(0)
+
+    def write_pixel_data(
+        self,
+        image_data: ImageData,
+        z: float,
+        path: str
+    ) -> None:
+        """Writes pixel data to file.
+
+        Parameters
+        ----------
+        image_data: ImageData
+            Image data to read pixel tiles from.
+        z: float
+            Focal plane to write.
+        path: str
+            Optical path to write.
+        """
+        # Single get_tile method
+        # tile_points = Region(
+        #     Point(0, 0),
+        #     image_data.tiled_size
+        # ).iterate_all()
+        # for tile_point in tile_points:
+        #     tile = image_data.get_tile(tile_point, z, path)
+        #     for frame in pydicom.encaps.itemize_frame(tile, 1):
+        #         fp.write(frame)
+        minimum_chunk_size = getattr(
+            image_data,
+            'suggested_minimum_chunk_size',
+            1
+        )
+        chunk_size = 10*minimum_chunk_size
+
+        # Divide the image tiles up into chunk_size chunks (up to tiled size)
+        chunked_tile_points = (
+            Region(
+                Point(x, y),
+                Size(min(chunk_size, image_data.tiled_size.width - x), 1)
+            ).iterate_all()
+            for y in range(image_data.tiled_size.height)
+            for x in range(0, image_data.tiled_size.width, chunk_size)
+        )
+        with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
+            # Thread that takes a chunk of tile points and returns list of
+            # tile bytes
+            def thread(tile_points: List[Point]) -> List[bytes]:
+                return image_data.get_tiles(tile_points, z, path)
+
+            # Each thread produces a list of tiles that is itimized and writen
+            for thread_job in pool.map(thread, chunked_tile_points):
+                for tile in thread_job:
+                    for frame in pydicom.encaps.itemize_frame(tile, 1):
+                        self._fp.write(frame)
+
+    def write_pixel_data_end(self) -> None:
+        """Writes tags ending pixel data."""
+        self._fp.write_tag(pydicom.tag.SequenceDelimiterTag)
+        self._fp.write_UL(0)
+
+    def close(self) -> None:
+        self._fp.close()
+
+
+class WsiDicomGroupSave(WsiDicomGroup):
+    """Extend WsiDicomGroup with save-functionality."""
+    def _group_instances_to_file(
+        self,
+    ) -> List[List[WsiInstance]]:
+        """Group instances by properties that can't differ in a DICOM-file,
+        i.e. the instances are grouped by output file.
+
+        Returns
+        ----------
+        List[List[WsiInstance]]
+            Instances grouped by common properties.
+        """
+        groups: DefaultDict[Union[str, Uid], List[str]] = DefaultDict(list)
+        for instance in self.instances.values():
+            groups[
+                instance.photometric_interpretation,
+                instance._image_data.transfer_syntax,
+                instance.ext_depth_of_field,
+                instance.ext_depth_of_field_planes,
+                instance.ext_depth_of_field_plane_distance,
+                instance.focus_method,
+                instance.slice_spacing
+            ].append(
+                instance
+            )
+        return list(groups.values())
+
+    @staticmethod
+    def _list_image_data(
+        instances: List[WsiInstance]
+    ) -> Tuple[Tuple[str, float], List[ImageData]]:
+        """List and sort ImageData in instances by optical path and focal
+        plane.
+
+        Parameters
+        ----------
+        instances: List[WsiInstance]
+            List of instances with optical paths and focal planes to list and
+            sort.
+
+        Returns
+        ----------
+        Tuple[Tuple[str, float], List[ImageData]]
+            ImageData listed and sorted by optical path and focal plane.
+        """
+        output: Dict[Tuple[str, float], ImageData] = {}
+        for instance in instances:
+            for optical_path in instance.optical_paths:
+                for z in instance.focal_planes:
+                    if (optical_path, z) not in output:
+                        output[optical_path, z] = instance._image_data
+        return OrderedDict(output).items()
+
+    def save(
+        self,
+        output_path: Path,
+        base_dataset: Dataset,
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    ) -> None:
+        """Save a WsiDicomGroup to files in output_path. Instances are grouped
+        by properties that can differ in the same file:
+            - photometric interpretation
+            - transfer syntax
+            - extended depth of field (and planes and distance)
+            - focus method
+            - spacing between slices
+        Other properties are assumed to be equal or to be updated.
+
+        Parameters
+        ----------
+        output_path: Path
+            Folder path to save files to.
+        base_dataset: Dataset
+            Dataset to use as base for each file.
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+            Uid generator to use.
+        """
+        for instances in self._group_instances_to_file():
+            uid = uid_generator()
+            file_path = os.path.join(output_path, uid + '.dcm')
+            transfer_syntax = instances[0]._image_data.transfer_syntax
+            dataset = deepcopy(instances[0].dataset)
+            wsi_file = DicomWsiFileWriter(file_path)
+            wsi_file.write_preamble()
+            wsi_file.write_file_meta(uid, transfer_syntax)
+            dataset = append_dataset(dataset, base_dataset)
+            dataset.SOPInstanceUID = uid
+            wsi_file.write_base(dataset)
+            wsi_file.write_pixel_data_start()
+            for (path, z), image_data in self._list_image_data(instances):
+                wsi_file.write_pixel_data(image_data, z, path)
+            wsi_file.write_pixel_data_end()
+            wsi_file.close()
+            print(f"Wrote file {file_path}")
+
+
+class WsiDicomLevelSave(WsiDicomGroupSave, WsiDicomLevel):
+    """Extend WsiDicomLevel with save-functionality."""
+    pass
+
+
+class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
+    """Extend WsiDicomSeries with save-functionality."""
+    groups: List[WsiDicomGroupSave]
+
+    def save(
+        self,
+        output_path: Path,
+        base_dataset: Dataset,
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    ) -> None:
+        """Save WsiDicomSeries as DICOM-files in path.
+
+        Parameters
+        ----------
+        output_path: Path
+        base_dataset: Dataset
+        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+             Function that can gernerate unique identifiers.
+        """
+        for group in self.groups:
+            group.save(
+                output_path,
+                base_dataset,
+                uid_generator
+            )
+
+
+class WsiDicomLabelsSave(WsiDicomSeriesSave, WsiDicomLabels):
+    """Extend WsiDicomLabels with save-functionality."""
+    @classmethod
+    def open(
+        cls,
+        instances: List[WsiInstance]
+    ) -> 'WsiDicomLabelsSave':
+        """Return label series created from wsi files.
+
+        Parameters
+        ----------
+        instances: List[WsiInstance]
+            Instances to create levels from.
+
+        Returns
+        ----------
+        WsiDicomLabelsSave
+            Created label series
+        """
+        labels = WsiDicomGroupSave.open(instances)
+        return cls(labels)
+
+
+class WsiDicomOverviewsSave(WsiDicomSeriesSave, WsiDicomOverviews):
+    """Extend WsiDicomOverviews with save-functionality."""
+    @classmethod
+    def open(
+        cls,
+        instances: List[WsiInstance]
+    ) -> 'WsiDicomOverviewsSave':
+        """Return overview series created from wsi files.
+
+        Parameters
+        ----------
+        instances: List[WsiInstance]
+            Instances to create levels from.
+
+        Returns
+        ----------
+        WsiDicomOverviewsSave
+            Created overview series
+        """
+        overviews = WsiDicomGroupSave.open(instances)
+        return cls(overviews)
+
+
+class WsiDicomLevelsSave(WsiDicomSeriesSave, WsiDicomLevels):
+    """Extend WsiDicomLevels with save-functionality."""
+    @classmethod
+    def open(
+        cls,
+        instances: List[WsiInstance]
+    ) -> 'WsiDicomLevelsSave':
+        """Return level series created from wsi instances.
+
+        Parameters
+        ----------
+        instances: List[WsiInstance]
+            Instances to create levels from.
+
+        Returns
+        ----------
+        WsiDicomLevelsSave
+            Created level series
+        """
+        levels = WsiDicomLevelSave.open_levels(instances)
+        return cls(levels)
+
 
 class WsiDicomizer(WsiDicom):
     """WsiDicom class with import tiler-functionality."""
+
+    levels: WsiDicomLevelsSave
+    labels: WsiDicomLabelsSave
+    overviews: WsiDicomOverviewsSave
+
     @staticmethod
     def _create_instance(
-        tiled_page: OpenTilePage,
+        image_data: ImageData,
         base_dataset: Dataset,
-        image_type: str,
+        image_type: str
     ) -> WsiInstance:
         """Create WsiInstance from OpenTilePage.
 
         Parameters
         ----------
-        tiled_page: OpenTilePage
-            OpenTilePage containg image data and metadata.
+        image_data: ImageData
+            Image data and metadata.
         base_dataset: Dataset
             Base dataset to include.
         image_type: str
@@ -177,15 +605,14 @@ class WsiDicomizer(WsiDicom):
         WsiInstance
             Created WsiInstance.
         """
-        instance_dataset = create_instance_dataset(
+        instance_dataset = image_data.create_instance_dataset(
             base_dataset,
-            image_type,
-            tiled_page
+            image_type
         )
 
         return WsiInstance(
             WsiDataset(instance_dataset),
-            ImageDataWrapper(tiled_page)
+            image_data
         )
 
     @staticmethod
@@ -242,9 +669,9 @@ class WsiDicomizer(WsiDicom):
         base_dataset = cls.populate_base_dataset(tiler, base_dataset)
         level_instances = [
             cls._create_instance(
-                level,
+                ImageDataWrapper(level),
                 base_dataset,
-                'VOLUME',
+                'VOLUME'
             )
             for level in tiler.levels
             if include_levels is None or level.pyramid_index in include_levels
@@ -253,7 +680,7 @@ class WsiDicomizer(WsiDicom):
 
         label_instances = [
             cls._create_instance(
-                label,
+                ImageDataWrapper(label),
                 base_dataset,
                 'LABEL'
             )
@@ -263,7 +690,7 @@ class WsiDicomizer(WsiDicom):
         ]
         overview_instances = [
             cls._create_instance(
-                overview,
+                ImageDataWrapper(overview),
                 base_dataset,
                 'OVERVIEW'
             )
@@ -292,26 +719,28 @@ class WsiDicomizer(WsiDicom):
             Tiler that can produce WsiInstances.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
+        include_levels: List[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
 
         Returns
         ----------
-        WsiDicom
-            WsiDicom object of imported tiler.
+        WsiDicomizer
+            WsiDicomizer object of imported tiler.
         """
-        (
-            level_instances,
-            label_instances,
-            overview_instances
-        ) = cls._open_tiler(
+        level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
             base_dataset,
             include_levels=include_levels,
             include_label=include_label,
             include_overview=include_overview
         )
-        levels = WsiDicomLevels.open(level_instances)
-        labels = WsiDicomLabels.open(label_instances)
-        overviews = WsiDicomOverviews.open(overview_instances)
+        levels = WsiDicomLevelsSave.open(level_instances)
+        labels = WsiDicomLabelsSave.open(label_instances)
+        overviews = WsiDicomOverviewsSave.open(overview_instances)
         return cls(levels, labels, overviews)
 
     @classmethod
@@ -353,285 +782,7 @@ class WsiDicomizer(WsiDicom):
             include_overview
         )
         imported_wsi.save(output_path, base_dataset, uid_generator)
-
         tiler.close()
-
-    @staticmethod
-    def _group_instances(
-        instances: List[WsiInstance]
-    ) -> List[List[WsiInstance]]:
-        """Group instances by properties that can't differ in a DICOM-file,
-        i.e. the instances are grouped by output file.
-
-        Parameters
-        ----------
-        instances: List[WsiInstance]
-            List of instances to group.
-
-        Returns
-        ----------
-        List[List[WsiInstance]]
-            Instances grouped by common properties.
-        """
-        groups: DefaultDict[Union[str, Uid], List[str]] = DefaultDict(list)
-        for instance in instances:
-            groups[
-                instance.photometric_interpretation,
-                instance._image_data.transfer_syntax,
-                instance.ext_depth_of_field,
-                instance.ext_depth_of_field_planes,
-                instance.ext_depth_of_field_plane_distance,
-                instance.focus_method,
-                instance.slice_spacing
-            ].append(
-                instance
-            )
-        return list(groups.values())
-
-    @staticmethod
-    def _list_image_data(
-        instances: List[WsiInstance]
-    ) -> Tuple[Tuple[str, float], List[ImageData]]:
-        """List and sort ImageData in instances by optical path and focal
-        plane.
-
-        Parameters
-        ----------
-        instances: List[WsiInstance]
-            List of instances with optical paths and focal planes to list and
-            sort.
-
-        Returns
-        ----------
-        Tuple[Tuple[str, float], List[ImageData]]
-            ImageData listed and sorted by optical path and focal plane.
-        """
-        output: Dict[Tuple[str, float], ImageData] = {}
-        for instance in instances:
-            for optical_path in instance.optical_paths:
-                for z in instance.focal_planes:
-                    if (optical_path, z) not in output:
-                        output[optical_path, z] = instance._image_data
-        return OrderedDict(output).items()
-
-    @staticmethod
-    def _create_filepointer(path: Path) -> pydicom.filebase.DicomFile:
-        """Return a dicom filepointer.
-
-        Parameters
-        ----------
-        path: Path
-            Path to filepointer.
-        Returns
-        ----------
-        pydicom.filebase.DicomFile
-            Created filepointer.
-        """
-        fp = pydicom.filebase.DicomFile(path, mode='wb')
-        fp.is_little_endian = True
-        fp.is_implicit_VR = False
-        return fp
-
-    @staticmethod
-    def _write_preamble(fp: pydicom.filebase.DicomFileLike):
-        """Writes file preamble to file.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        """
-        preamble = b'\x00' * 128
-        fp.write(preamble)
-        fp.write(b'DICM')
-
-    def _write_file_meta(
-        self,
-        fp: pydicom.filebase.DicomFileLike,
-        uid: Uid,
-        transfer_syntax: Uid
-    ):
-        """Writes file meta dataset to file.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        uid: Uid
-            SOP instance uid to include in file.
-        transfer_syntax: Uid
-            Transfer syntax used in file.
-        """
-        meta_ds = pydicom.dataset.FileMetaDataset()
-        meta_ds.TransferSyntaxUID = transfer_syntax
-        meta_ds.MediaStorageSOPInstanceUID = uid
-        meta_ds.MediaStorageSOPClassUID = WSI_SOP_CLASS_UID
-        pydicom.dataset.validate_file_meta(meta_ds)
-        pydicom.filewriter.write_file_meta_info(fp, meta_ds)
-
-    def _write_base(
-        self,
-        fp: pydicom.filebase.DicomFileLike,
-        dataset: WsiDataset
-    ) -> None:
-        """Writes base dataset to file.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        dataset: WsiDataset
-
-        """
-        now = datetime.now()
-        dataset.ContentDate = datetime.date(now).strftime('%Y%m%d')
-        dataset.ContentTime = datetime.time(now).strftime('%H%M%S.%f')
-        pydicom.filewriter.write_dataset(fp, dataset)
-
-    @staticmethod
-    def _write_pixel_data_start(
-        fp: pydicom.filebase.DicomFileLike
-    ) -> None:
-        """Writes tags starting pixel data.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        """
-        pixel_data_element = pydicom.dataset.DataElement(
-            0x7FE00010,
-            'OB',
-            0,
-            is_undefined_length=True
-            )
-
-        # Write pixel data tag
-        fp.write_tag(pixel_data_element.tag)
-
-        if not fp.is_implicit_VR:
-            # Write pixel data VR (OB), two empty bytes (PS3.5 7.1.2)
-            fp.write(bytes(pixel_data_element.VR, "iso8859"))
-            fp.write_US(0)
-        # Write unspecific length
-        fp.write_UL(0xFFFFFFFF)
-
-        # Write item tag and (empty) length for BOT
-        fp.write_tag(pydicom.tag.ItemTag)
-        fp.write_UL(0)
-
-    @staticmethod
-    def _write_pixel_data(
-        fp: pydicom.filebase.DicomFileLike,
-        image_data: ImageData,
-        z: float,
-        path: str
-    ):
-        """Writes pixel data to file.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        image_data: ImageData
-            Image data to read pixel tiles from.
-        z: float
-            Focal plane to write.
-        path: str
-            Optical path to write.
-        """
-        # Single get_tile method
-        # tile_points = Region(
-        #     Point(0, 0),
-        #     image_data.tiled_size
-        # ).iterate_all()
-        # for tile_point in tile_points:
-        #     tile = image_data.get_tile(tile_point, z, path)
-        #     for frame in pydicom.encaps.itemize_frame(tile, 1):
-        #         fp.write(frame)
-
-        chunk_size = 4*10
-
-        # Divide the image tiles up into chunk_size chunks (up to tiled size)
-        chunked_tile_points = (
-            Region(
-                Point(x, y),
-                Size(min(chunk_size, image_data.tiled_size.width - x), 1)
-            ).iterate_all()
-            for y in range(image_data.tiled_size.height)
-            for x in range(0, image_data.tiled_size.width, chunk_size)
-        )
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            # Thread that takes a chunk of tile points and returns list of
-            # tile bytes
-            def thread(tile_points: List[Point]) -> List[bytes]:
-                return image_data.get_tiles(tile_points, z, path)
-
-            # Each thread produces a list of tiles that is itimized and writen
-            for thread_job in pool.map(thread, chunked_tile_points):
-                for tile in thread_job:
-                    for frame in pydicom.encaps.itemize_frame(tile, 1):
-                        fp.write(frame)
-
-    @staticmethod
-    def _write_pixel_data_end(
-        fp: pydicom.filebase.DicomFileLike,
-    ) -> None:
-        """Writes tags ending pixel data.
-
-        Parameters
-        ----------
-        fp: pydicom.filebase.DicomFileLike
-            Filepointer to file to write.
-        """
-        # end sequence
-        fp.write_tag(pydicom.tag.SequenceDelimiterTag)
-        fp.write_UL(0)
-
-    def _save_group(
-        self,
-        output_path: Path,
-        base_dataset: Dataset,
-        group: WsiDicomGroup,
-        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-    ) -> None:
-        """Save a WsiDicomGroup to files in output_path. Instances are grouped
-        by properties that can differ in the same file:
-            - photometric interpretation
-            - transfer syntax
-            - extended depth of field (and planes and distance)
-            - focus method
-            - spacing between slices
-        Other properties are assumed to be equal or to be updated.
-
-        Parameters
-        ----------
-        output_path: Path
-            Folder path to save files to.
-        base_dataset: Dataset
-            Dataset to use as base for each file.
-        group: WsiDicomGroup
-            Group (level, label, or overview) to save.
-        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-            Uid generator to use.
-        """
-        for instances in self._group_instances(group.instances.values()):
-            uid = uid_generator()
-            file_path = os.path.join(output_path, uid + '.dcm')
-            transfer_syntax = instances[0]._image_data.transfer_syntax
-            dataset = deepcopy(instances[0].dataset)
-            fp = self._create_filepointer(file_path)
-            self._write_preamble(fp)
-            self._write_file_meta(fp, uid, transfer_syntax)
-            dataset = append_dataset(dataset, base_dataset)
-            dataset.SOPInstanceUID = uid
-            self._write_base(fp, dataset)
-            self._write_pixel_data_start(fp)
-            for (path, z), image_data in self._list_image_data(instances):
-                self._write_pixel_data(fp, image_data, z, path)
-            self._write_pixel_data_end(fp)
-            fp.close()
-            print(f"Wrote file {file_path}")
 
     def save(
         self,
@@ -648,14 +799,12 @@ class WsiDicomizer(WsiDicom):
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
         """
-        for collection in [self.levels, self.labels, self.overviews]:
-            for group in collection:
-                self._save_group(
-                    output_path,
-                    base_dataset,
-                    group,
-                    uid_generator
-                )
-
-
-
+        collections: List[WsiDicomSeriesSave] = [
+            self.levels, self.labels, self.overviews
+        ]
+        for collection in collections:
+            collection.save(
+                output_path,
+                base_dataset,
+                uid_generator
+            )
