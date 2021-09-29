@@ -120,14 +120,26 @@ class OpenSlideWrapper(ImageDataWrapper):
     def __init__(
         self,
         open_slide: OpenSlide,
-        level: int,
+        level_index: int,
         tile_size: int,
         jpeg: TurboJPEG
     ):
+        """Wraps a OpenSlide level to ImageData.
+
+        Parameters
+        ----------
+        open_slide: OpenSlide
+            OpenSlide object to wrap.
+        level_index: int
+            Level in OpenSlide object to wrap
+        tile_size: int
+            Output tile size.
+        jpeg: TurboJPEG
+            TurboJPEG object to use.
+        """
         self._tile_size = Size(tile_size, tile_size)
         self._open_slide = open_slide
-        self._level_index = level
-        self._level = int(math.log2(self.downsample))
+        self._level_index = level_index
         self._jpeg = jpeg
         self._image_size = Size.from_tuple(
             self._open_slide.level_dimensions[self._level_index]
@@ -135,6 +147,8 @@ class OpenSlideWrapper(ImageDataWrapper):
         self._downsample = int(
             self._open_slide.level_downsamples[self._level_index]
         )
+        self._pyramid_index = int(math.log2(self.downsample))
+
         base_mpp_x = float(self._open_slide.properties['openslide.mpp-x'])
         base_mpp_y = float(self._open_slide.properties['openslide.mpp-y'])
         self._pixel_spacing = SizeMm(
@@ -170,7 +184,7 @@ class OpenSlideWrapper(ImageDataWrapper):
     @property
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
-        return self._level
+        return self._pyramid_index
 
     def get_tile(
         self,
@@ -218,9 +232,7 @@ class OpenSlideWrapper(ImageDataWrapper):
 
 class OpenTileWrapper(ImageDataWrapper):
     def __init__(self, tiled_page: OpenTilePage):
-        """Wraps a OpenTilePage to ImageData. Get tile is wrapped by removing
-        focal and optical path parameters. Image geometry properties are
-        converted to wsidicom.geometry class.
+        """Wraps a OpenTilePage to ImageData.
 
         Parameters
         ----------
