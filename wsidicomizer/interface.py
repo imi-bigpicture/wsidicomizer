@@ -925,7 +925,7 @@ class WsiDicomizer(WsiDicom):
         include_overwiew: bool
             Include overview(s), default true.
         """
-        try:
+        if OpenTile.detect_format(filepath) is not None:
             imported_wsi = cls.import_tiff(
                 filepath,
                 base_dataset,
@@ -935,13 +935,15 @@ class WsiDicomizer(WsiDicom):
                 include_label,
                 include_overview
             )
-        except NotImplementedError:
+        elif OpenSlide.detect_format(filepath) is not None:
             imported_wsi = cls.import_openslide(
                 filepath,
                 base_dataset,
                 tile_size,
                 turbo_path
             )
+        else:
+            raise NotImplementedError(f"Not supported format in {filepath}")
         imported_wsi.save(output_path, base_dataset, uid_generator)
         imported_wsi.close()
 
