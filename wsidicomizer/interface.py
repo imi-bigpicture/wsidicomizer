@@ -116,6 +116,60 @@ class ImageDataWrapper(ImageData):
         return dataset
 
 
+class OpenSlideAssociatedWrapper(ImageDataWrapper):
+    def __init__(
+        self,
+        open_slide: OpenSlide,
+        image_type: str,
+        jpeg
+    ):
+        self._open_slide = open_slide
+        image_data = np.array(open_slide.associated_images[image_type])
+        self._image = jpeg.encode(
+            image_data,
+            JPEG_ENCODE_QUALITY,
+            TJPF_BGRX,
+            JPEG_ENCODE_SUBSAMPLE
+        )
+        (height, width) = image_data.shape[0:2]
+        print(width, height)
+        self._image_size = Size(width, height)
+
+    @property
+    def transfer_syntax(self) -> Uid:
+        """The uid of the transfer syntax of the image."""
+        return pydicom.uid.JPEGBaseline8Bit
+
+    @property
+    def image_size(self) -> Size:
+        """The pixel size of the image."""
+        return self._image_size
+
+    @property
+    def tile_size(self) -> Size:
+        """The pixel tile size of the image."""
+        return self.image_size
+
+    @property
+    def pixel_spacing(self) -> SizeMm:
+        """Size of the pixels in mm/pixel."""
+        # TODO figure out pixel spacing for label and overview in openslide.
+        return SizeMm(1, 1)
+
+    @property
+    def pyramid_index(self) -> int:
+        """The pyramidal index in relation to the base layer."""
+        return 0
+
+    def close(self) -> None:
+        self._openslide.close()
+
+    def get_tile(self, tile: Point, z: float, path: str) -> bytes:
+        if tile != Point(0, 0):
+            raise ValueError
+        return self._image
+
+
 class OpenSlideWrapper(ImageDataWrapper):
     def __init__(
         self,
@@ -192,8 +246,8 @@ class OpenSlideWrapper(ImageDataWrapper):
         z: float,
         path: str
     ) -> bytes:
-        """Return image bytes for tile. Returns transcoded tile if
-        non-supported encoding.
+        """Return image bytes for tile. Image data from openslide is RGBA
+        PIL image. Return image data encoded in jpeg.
 
         Parameters
         ----------
@@ -879,25 +933,38 @@ class WsiDicomizer(WsiDicom):
         Returns
         ----------
         WsiDicomizer
-            WsiDicomizer object of imported tiler.
+            WsiDicomizer object of imported openslide file.
         """
-        # TODO: include_levels etc, create labels and overviews
         slide = OpenSlide(filepath)
-        level_instances: List[WsiInstance] = []
         jpeg = TurboJPEG(turbo_path)
-        for level_index in range(slide.level_count):
-            image_data = OpenSlideWrapper(
-                slide,
-                level_index,
-                tile_size,
-                jpeg
+        level_instances = [
+            cls._create_instance(
+                OpenSlideWrapper(slide, level_index, tile_size, jpeg),
+                base_dataset,
+                'VOLUME'
             )
-            instance = cls._create_instance(image_data, base_dataset, 'VOLUME')
-            level_instances.append(instance)
-
+            for level_index in range(slide.level_count)
+            if include_levels is None or level_index in include_levels
+        ]
+        if include_label and 'label' in slide.associated_images:
+            label_instances = [cls._create_instance(
+                OpenSlideAssociatedWrapper(slide, 'label', jpeg),
+                base_dataset,
+                'LABEL'
+            )]
+        else:
+            label_instances = []
+        if include_overview and 'macro' in slide.associated_images:
+            overview_instances = [cls._create_instance(
+                OpenSlideAssociatedWrapper(slide, 'macro', jpeg),
+                base_dataset,
+                'OVERVIEW'
+            )]
+        else:
+            overview_instances = []
         levels = WsiDicomLevelsSave.open(level_instances)
-        labels = WsiDicomLabelsSave.open([])
-        overviews = WsiDicomOverviewsSave.open([])
+        labels = WsiDicomLabelsSave.open(label_instances)
+        overviews = WsiDicomOverviewsSave.open(overview_instances)
         return cls(levels, labels, overviews)
 
     @classmethod
