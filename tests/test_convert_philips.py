@@ -8,8 +8,6 @@ from tempfile import TemporaryDirectory
 from typing import Dict, Tuple
 
 import pytest
-from opentile import OpenTile
-from opentile.philips_tiff_tiler import PhilipsTiffTiler
 from wsidicomizer import WsiDicomizer
 from wsidicomizer.interface import create_test_base_dataset
 from wsidicom import WsiDicom
@@ -31,7 +29,7 @@ class PhilipsConvertTest(unittest.TestCase):
         super().__init__(*args, **kwargs)
         self.test_folders: Dict[
             Path,
-            Tuple[WsiDicom, PhilipsTiffTiler, TemporaryDirectory]
+            Tuple[WsiDicom, TemporaryDirectory]
         ]
         self.tile_size: Tuple[int, int]
 
@@ -44,25 +42,24 @@ class PhilipsConvertTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        for (wsi, tiler, tempdir) in cls.test_folders.values():
+        for (wsi, tempdir) in cls.test_folders.values():
             wsi.close()
-            tiler.close()
             tempdir.cleanup()
 
     @classmethod
     def open(cls, path: Path) -> Tuple[WsiDicom, TemporaryDirectory]:
         filepath = Path(path).joinpath('input.tif')
-        tiler = OpenTile.open(filepath, turbo_path=turbo_path)
         base_dataset = create_test_base_dataset()
         tempdir = TemporaryDirectory()
         WsiDicomizer.convert(
+            filepath,
             Path(tempdir.name),
-            tiler,
             base_dataset,
+            turbo_path=turbo_path,
             include_levels=include_levels
         )
         wsi = WsiDicom.open(str(tempdir.name))
-        return (wsi, tiler, tempdir)
+        return (wsi, tempdir)
 
     @classmethod
     def _get_folders(cls):
@@ -72,7 +69,7 @@ class PhilipsConvertTest(unittest.TestCase):
         ]
 
     def test_read_region(self):
-        for folder, (wsi, _, _) in self.test_folders.items():
+        for folder, (wsi, _) in self.test_folders.items():
             json_files = glob.glob(
                 str(folder.absolute())+"/read_region/*.json")
 
@@ -91,7 +88,7 @@ class PhilipsConvertTest(unittest.TestCase):
                 )
 
     def test_read_thumbnail(self):
-        for folder, (wsi, _, _) in self.test_folders.items():
+        for folder, (wsi, _) in self.test_folders.items():
             json_files = glob.glob(
                 str(folder.absolute())+"/read_thumbnail/*.json")
 

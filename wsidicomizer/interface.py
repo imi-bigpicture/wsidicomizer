@@ -1,4 +1,6 @@
 import os
+os.add_dll_directory(r'C:\tools\openslide-win64-20171122\bin')  # NOQA
+
 from abc import ABCMeta
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -7,13 +9,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
 
+import numpy as np
+from opentile.interface import OpenTile
 import pydicom
 from imagecodecs import jpeg_encode
+from openslide import OpenSlide
 from opentile.common import OpenTilePage, Tiler
 from pydicom.dataset import Dataset
-from pydicom.filebase import DicomFile
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
+from turbojpeg import TurboJPEG, TJSAMP_444, TJPF_BGRX, TJPF_BGR
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
@@ -22,9 +27,196 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
+import math
+
+
+JPEG_ENCODE_QUALITY = 95
+JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
 
 
 class ImageDataWrapper(ImageData):
+    _default_z = 0
+
+    @property
+    def pyramid_index(self) -> int:
+        raise NotImplementedError
+
+    def create_instance_dataset(
+        self,
+        base_dataset: Dataset,
+        image_flavor: str
+    ) -> Dataset:
+        """Return instance dataset for image_data based on base dataset.
+
+        Parameters
+        ----------
+        base_dataset: Dataset
+            Dataset common for all instances.
+        image_flavor:
+            Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
+
+        Returns
+        ----------
+        Dataset
+            Dataset for instance.
+        """
+        dataset = deepcopy(base_dataset)
+        dataset.ImageType = get_image_type(
+            image_flavor,
+            self.pyramid_index
+        )
+        dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
+
+        shared_functional_group_sequence = Dataset()
+        pixel_measure_sequence = Dataset()
+        pixel_measure_sequence.PixelSpacing = [
+            self.pixel_spacing.width,
+            self.pixel_spacing.height
+        ]
+        pixel_measure_sequence.SpacingBetweenSlices = 0.0
+        pixel_measure_sequence.SliceThickness = 0.0
+        shared_functional_group_sequence.PixelMeasuresSequence = (
+            DicomSequence([pixel_measure_sequence])
+        )
+        dataset.SharedFunctionalGroupsSequence = DicomSequence(
+            [shared_functional_group_sequence]
+        )
+        dataset.DimensionOrganizationType = 'TILED_FULL'
+        dataset.TotalPixelMatrixColumns = self.image_size.width
+        dataset.TotalPixelMatrixRows = self.image_size.height
+        dataset.Columns = self.tile_size.width
+        dataset.Rows = self.tile_size.height
+        dataset.NumberOfFrames = (
+            self.tiled_size.width
+            * self.tiled_size.height
+        )
+        dataset.ImagedVolumeWidth = (
+            self.image_size.width * self.pixel_spacing.width
+        )
+        dataset.ImagedVolumeHeight = (
+            self.image_size.height * self.pixel_spacing.height
+        )
+        dataset.ImagedVolumeDepth = 0.0
+        # If PhotometricInterpretation is YBR and no subsampling
+        dataset.SamplesPerPixel = 3
+        dataset.PhotometricInterpretation = 'YBR_FULL'
+        # If transfer syntax pydicom.uid.JPEGBaseline8Bit
+        dataset.BitsAllocated = 8
+        dataset.BitsStored = 8
+        dataset.HighBit = 7
+        dataset.PixelRepresentation = 0
+        dataset.LossyImageCompression = '01'
+        # dataset.LossyImageCompressionRatio = 1
+        # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+
+        # Should be incremented
+        dataset.InstanceNumber = 0
+        dataset.FocusMethod = 'AUTO'
+        dataset.ExtendedDepthOfField = 'NO'
+        return dataset
+
+
+class OpenSlideWrapper(ImageDataWrapper):
+    def __init__(
+        self,
+        open_slide: OpenSlide,
+        level: int,
+        tile_size: int,
+        jpeg: TurboJPEG
+    ):
+        self._tile_size = Size(tile_size, tile_size)
+        self._open_slide = open_slide
+        self._level_index = level
+        self._level = int(math.log2(self.downsample))
+        self._jpeg = jpeg
+        self._image_size = Size.from_tuple(
+            self._open_slide.level_dimensions[self._level_index]
+        )
+        self._downsample = int(
+            self._open_slide.level_downsamples[self._level_index]
+        )
+        base_mpp_x = float(self._open_slide.properties['openslide.mpp-x'])
+        base_mpp_y = float(self._open_slide.properties['openslide.mpp-y'])
+        self._pixel_spacing = SizeMm(
+            base_mpp_x * self.downsample / 1000.0,
+            base_mpp_y * self.downsample / 1000.0
+        )
+
+    @property
+    def transfer_syntax(self) -> Uid:
+        """The uid of the transfer syntax of the image."""
+        return pydicom.uid.JPEGBaseline8Bit
+
+    @property
+    def image_size(self) -> Size:
+        """The pixel size of the image."""
+        return self._image_size
+
+    @property
+    def tile_size(self) -> Size:
+        """The pixel tile size of the image."""
+        return self._tile_size
+
+    @property
+    def pixel_spacing(self) -> SizeMm:
+        """Size of the pixels in mm/pixel."""
+        return self._pixel_spacing
+
+    @property
+    def downsample(self) -> int:
+        """Downsample facator for level."""
+        return self._downsample
+
+    @property
+    def pyramid_index(self) -> int:
+        """The pyramidal index in relation to the base layer."""
+        return self._level
+
+    def get_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> bytes:
+        """Return image bytes for tile. Returns transcoded tile if
+        non-supported encoding.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+        z: float
+            Focal plane of tile to get.
+        path: str
+            Optical path of tile to get.
+
+        Returns
+        ----------
+        bytes
+            Tile bytes.
+        """
+        if z not in self.focal_planes or path not in self.optical_paths:
+            raise ValueError
+        tile_point_in_base_level = tile * self.downsample * self._tile_size
+        tile_data = np.array(
+            self._open_slide.read_region(
+                tile_point_in_base_level.to_tuple(),
+                self._level_index,
+                self._tile_size.to_tuple()
+            )
+        )
+        return self._jpeg.encode(
+            tile_data,
+            JPEG_ENCODE_QUALITY,
+            TJPF_BGRX,
+            JPEG_ENCODE_SUBSAMPLE
+        )
+
+    def close(self) -> None:
+        self._open_slide.close()
+
+
+class OpenTileWrapper(ImageDataWrapper):
     def __init__(self, tiled_page: OpenTilePage):
         """Wraps a OpenTilePage to ImageData. Get tile is wrapped by removing
         focal and optical path parameters. Image geometry properties are
@@ -81,12 +273,6 @@ class ImageDataWrapper(ImageData):
         return self._tile_size
 
     @property
-    def tiled_size(self) -> Size:
-        """The size of the image when divided into tiles, e.g. number of
-        columns and rows of tiles. Equals (1, 1) if image is not tiled."""
-        return self._tiled_size
-
-    @property
     def pixel_spacing(self) -> SizeMm:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
@@ -107,12 +293,29 @@ class ImageDataWrapper(ImageData):
         get_tiles()."""
         return self._tiled_page.suggested_minimum_chunk_size
 
-    def get_tile(
-        self,
-        tile: Point,
-        z: float,
+    @property
+    def pyramid_index(self) -> int:
+        """The pyramidal index in relation to the base layer."""
+        return self._tiled_page.pyramid_index
+
+    def get_tile(self, tile: Point, z: float, path: str) -> bytes:
+        """Return image bytes for tile. Returns transcoded tile if
+        non-supported encoding.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+        z: float
+            Focal plane of tile to get.
         path: str
-    ) -> bytes:
+            Optical path of tile to get.
+
+        Returns
+        ----------
+        bytes
+            Tile bytes.
+        """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         if not self.needs_transcoding:
@@ -126,6 +329,23 @@ class ImageDataWrapper(ImageData):
         z: float,
         path: str
     ) -> Iterator[List[bytes]]:
+        """Return list of image bytes for tiles. Returns transcoded tiles if
+        non-supported encoding.
+
+        Parameters
+        ----------
+        tiles: List[Point]
+            Tile positions to get.
+        z: float
+            Focal plane of tile to get.
+        path: str
+            Optical path of tile to get.
+
+        Returns
+        ----------
+        Iterator[List[bytes]]
+            Iterator of tile bytes.
+        """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tiles_tuples = (tile.to_tuple() for tile in tiles)
@@ -156,80 +376,6 @@ class ImageDataWrapper(ImageData):
         raise NotImplementedError(
             f'Not supported compression {compression}'
         )
-
-    def create_instance_dataset(
-        self,
-        base_dataset: Dataset,
-        image_flavor: str
-    ) -> Dataset:
-        """Return instance dataset for image_data based on base dataset.
-
-        Parameters
-        ----------
-        base_dataset: Dataset
-            Dataset common for all instances.
-        image_flavor:
-            Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
-
-        Returns
-        ----------
-        Dataset
-            Dataset for instance.
-        """
-        dataset = deepcopy(base_dataset)
-        dataset.ImageType = get_image_type(
-            image_flavor,
-            self._tiled_page.pyramid_index
-        )
-        dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
-
-        shared_functional_group_sequence = Dataset()
-        pixel_measure_sequence = Dataset()
-        pixel_measure_sequence.PixelSpacing = [
-            self.pixel_spacing.width,
-            self.pixel_spacing.height
-        ]
-        pixel_measure_sequence.SpacingBetweenSlices = 0.0
-        pixel_measure_sequence.SliceThickness = 0.0
-        shared_functional_group_sequence.PixelMeasuresSequence = (
-            DicomSequence([pixel_measure_sequence])
-        )
-        dataset.SharedFunctionalGroupsSequence = DicomSequence(
-            [shared_functional_group_sequence]
-        )
-        dataset.DimensionOrganizationType = 'TILED_FULL'
-        dataset.TotalPixelMatrixColumns = self.image_size.width
-        dataset.TotalPixelMatrixRows = self.image_size.height
-        dataset.Columns = self.tile_size.width
-        dataset.Rows = self.tile_size.height
-        dataset.NumberOfFrames = (
-            self.tiled_size.width
-            * self.tiled_size.height
-        )
-        dataset.ImagedVolumeWidth = (
-            self.image_size.width * self.pixel_spacing.width
-        )
-        dataset.ImagedVolumeHeight = (
-            self.image_size.height * self.pixel_spacing.height
-        )
-        dataset.ImagedVolumeDepth = 0.0
-        # If PhotometricInterpretation is YBR and no subsampling
-        dataset.SamplesPerPixel = 3
-        dataset.PhotometricInterpretation = 'YBR_FULL'
-        # If transfer syntax pydicom.uid.JPEGBaseline8Bit
-        dataset.BitsAllocated = 8
-        dataset.BitsStored = 8
-        dataset.HighBit = 7
-        dataset.PixelRepresentation = 0
-        dataset.LossyImageCompression = '01'
-        # dataset.LossyImageCompressionRatio = 1
-        # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-
-        # Should be incremented
-        dataset.InstanceNumber = 0
-        dataset.FocusMethod = 'AUTO'
-        dataset.ExtendedDepthOfField = 'NO'
-        return dataset
 
 
 class DicomWsiFileWriter:
@@ -609,7 +755,7 @@ class WsiDicomizer(WsiDicom):
         base_dataset = cls.populate_base_dataset(tiler, base_dataset)
         level_instances = [
             cls._create_instance(
-                ImageDataWrapper(level),
+                OpenTileWrapper(level),
                 base_dataset,
                 'VOLUME'
             )
@@ -619,7 +765,7 @@ class WsiDicomizer(WsiDicom):
 
         label_instances = [
             cls._create_instance(
-                ImageDataWrapper(label),
+                OpenTileWrapper(label),
                 base_dataset,
                 'LABEL'
             )
@@ -628,7 +774,7 @@ class WsiDicomizer(WsiDicom):
         ]
         overview_instances = [
             cls._create_instance(
-                ImageDataWrapper(overview),
+                OpenTileWrapper(overview),
                 base_dataset,
                 'OVERVIEW'
             )
@@ -639,23 +785,29 @@ class WsiDicomizer(WsiDicom):
         return level_instances, label_instances, overview_instances
 
     @classmethod
-    def import_tiler(
+    def import_tiff(
         cls,
-        tiler: Tiler,
+        filepath: Path,
         base_dataset: Dataset = create_test_base_dataset(),
+        tile_size: Size = None,
+        turbo_path: Path = None,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
     ) -> 'WsiDicomizer':
-        """Open data in tiler as WsiDicom object. Note that created
+        """Open data in tiff file as WsiDicom object. Note that created
         instances always has a random UID.
 
         Parameters
         ----------
-        tiler: Tiler
-            Tiler that can produce WsiInstances.
+        filepath: Path
+            Path to tiff file
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
+        tile_size: Size = None
+            Tile size to use if not defined by file.
+        turbo_path: Path = None
+            Path to turbojpeg library.
         include_levels: List[int] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
@@ -668,6 +820,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported tiler.
         """
+        tiler = OpenTile.open(filepath, tile_size, turbo_path)
         level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
             base_dataset,
@@ -681,27 +834,88 @@ class WsiDicomizer(WsiDicom):
         return cls(levels, labels, overviews)
 
     @classmethod
+    def import_openslide(
+        cls,
+        filepath: Path,
+        base_dataset: Dataset,
+        tile_size: int,
+        turbo_path: Path,
+        include_levels: List[int] = None,
+        include_label: bool = True,
+        include_overview: bool = True
+    ) -> 'WsiDicomizer':
+        """Open data in openslide file as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: Path
+            Path to tiff file
+        base_dataset: Dataset
+            Base dataset to use in files. If none, use test dataset.
+        tile_size: Size = None
+            Tile size to use if not defined by file.
+        turbo_path: Path = None
+            Path to turbojpeg library.
+        include_levels: List[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+
+        Returns
+        ----------
+        WsiDicomizer
+            WsiDicomizer object of imported tiler.
+        """
+        # TODO: include_levels etc, create labels and overviews
+        slide = OpenSlide(filepath)
+        level_instances: List[WsiInstance] = []
+        jpeg = TurboJPEG(turbo_path)
+        for level_index in range(slide.level_count):
+            image_data = OpenSlideWrapper(
+                slide,
+                level_index,
+                tile_size,
+                jpeg
+            )
+            instance = cls._create_instance(image_data, base_dataset, 'VOLUME')
+            level_instances.append(instance)
+
+        levels = WsiDicomLevelsSave.open(level_instances)
+        labels = WsiDicomLabelsSave.open([])
+        overviews = WsiDicomOverviewsSave.open([])
+        return cls(levels, labels, overviews)
+
+    @classmethod
     def convert(
         cls,
+        filepath: Path,
         output_path: Path,
-        tiler: Tiler,
         base_dataset: Dataset,
+        tile_size: Size = None,
+        turbo_path: Path = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
     ) -> None:
-        """Convert data in tiler to DICOM files in output path. Created
-        instances get UID from uid_generator. Closes tiler when finished.
+        """Convert data in file to DICOM files in output path. Created
+        instances get UID from uid_generator. Closes when finished.
 
         Parameters
         ----------
+        filepath: Path
+            Path to file
         output_path: Path
             Folder path to save files to.
-        tiler: Tiler
-            Tiler that can produce WsiInstances.
         base_dataset: Dataset
-            Base dataset to include in files.
+            Base dataset to use in files. If none, use test dataset.
+        tile_size: Size = None
+            Tile size to use if not defined by file.
+        turbo_path: Path = None
+            Path to turbojpeg library.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
         include_levels: List[int]
@@ -711,15 +925,25 @@ class WsiDicomizer(WsiDicom):
         include_overwiew: bool
             Include overview(s), default true.
         """
-        imported_wsi = cls.import_tiler(
-            tiler,
-            base_dataset,
-            include_levels,
-            include_label,
-            include_overview
-        )
+        try:
+            imported_wsi = cls.import_tiff(
+                filepath,
+                base_dataset,
+                tile_size,
+                turbo_path,
+                include_levels,
+                include_label,
+                include_overview
+            )
+        except NotImplementedError:
+            imported_wsi = cls.import_openslide(
+                filepath,
+                base_dataset,
+                tile_size,
+                turbo_path
+            )
         imported_wsi.save(output_path, base_dataset, uid_generator)
-        tiler.close()
+        imported_wsi.close()
 
     def save(
         self,

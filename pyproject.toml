@@ -10,6 +10,7 @@ wsidicom = {path = "../wsidicom", develop = true}
 opentile = {path = "../opentile", develop = true}
 highdicom = "^0.9.1"
 imagecodecs = "^2021.8.26"
+openslide-python = "^1.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
