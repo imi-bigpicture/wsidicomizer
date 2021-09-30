@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
+import math
 
 import numpy as np
 from opentile.interface import OpenTile
@@ -27,7 +28,6 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
-import math
 
 
 JPEG_ENCODE_QUALITY = 95
@@ -132,7 +132,6 @@ class OpenSlideAssociatedWrapper(ImageDataWrapper):
             JPEG_ENCODE_SUBSAMPLE
         )
         (height, width) = image_data.shape[0:2]
-        print(width, height)
         self._image_size = Size(width, height)
 
     @property
@@ -174,8 +173,8 @@ class OpenSlideWrapper(ImageDataWrapper):
     def __init__(
         self,
         open_slide: OpenSlide,
-        level_index: int,
-        tile_size: int,
+        level_index: Size,
+        tile_size: Size,
         jpeg: TurboJPEG
     ):
         """Wraps a OpenSlide level to ImageData.
@@ -186,12 +185,12 @@ class OpenSlideWrapper(ImageDataWrapper):
             OpenSlide object to wrap.
         level_index: int
             Level in OpenSlide object to wrap
-        tile_size: int
+        tile_size: Size
             Output tile size.
         jpeg: TurboJPEG
             TurboJPEG object to use.
         """
-        self._tile_size = Size(tile_size, tile_size)
+        self._tile_size = tile_size
         self._open_slide = open_slide
         self._level_index = level_index
         self._jpeg = jpeg
@@ -855,7 +854,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Path,
         base_dataset: Dataset = create_test_base_dataset(),
-        tile_size: Size = None,
+        tile_size: Tuple[int, int] = None,
         turbo_path: Path = None,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -870,7 +869,7 @@ class WsiDicomizer(WsiDicom):
             Path to tiff file
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
-        tile_size: Size = None
+        tile_size: Size = Tuple[int, int]
             Tile size to use if not defined by file.
         turbo_path: Path = None
             Path to turbojpeg library.
@@ -903,9 +902,9 @@ class WsiDicomizer(WsiDicom):
     def import_openslide(
         cls,
         filepath: Path,
-        base_dataset: Dataset,
-        tile_size: int,
+        tile_size: Tuple[int, int],
         turbo_path: Path,
+        base_dataset: Dataset = create_test_base_dataset(),
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
@@ -917,12 +916,12 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: Path
             Path to tiff file
-        base_dataset: Dataset
-            Base dataset to use in files. If none, use test dataset.
-        tile_size: Size = None
-            Tile size to use if not defined by file.
+        tile_size: Size = Tuple[int, int]
+            Tile size to use.
         turbo_path: Path = None
             Path to turbojpeg library.
+        base_dataset: Dataset
+            Base dataset to use in files. If none, use test dataset.
         include_levels: List[int] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
@@ -939,7 +938,12 @@ class WsiDicomizer(WsiDicom):
         jpeg = TurboJPEG(turbo_path)
         level_instances = [
             cls._create_instance(
-                OpenSlideWrapper(slide, level_index, tile_size, jpeg),
+                OpenSlideWrapper(
+                    slide,
+                    level_index,
+                    Size.from_tuple(tile_size),
+                    jpeg
+                ),
                 base_dataset,
                 'VOLUME'
             )
