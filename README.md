@@ -5,7 +5,7 @@
 Please note that this is an early release and the API is not frozen yet. Function names and functionality is prone to change.
 
 ## Requirements
-*wsidicomizer* requires python >3.7 and uses numpy, pydicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
+*wsidicomizer* requires python >=3.7 and uses numpy, pydicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
 
 ## Limitations
 Files with z-stacks or multiple focal paths are currently not supported.
