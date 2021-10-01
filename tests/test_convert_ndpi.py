@@ -55,7 +55,6 @@ class NdpiConvertTest(unittest.TestCase):
             Path(tempdir.name),
             base_dataset,
             cls.tile_size,
-            turbo_path,
             include_levels=include_levels
         )
         wsi = WsiDicom.open(str(tempdir.name))

@@ -1,6 +1,5 @@
+import math
 import os
-os.add_dll_directory(r'C:\tools\openslide-win64-20171122\bin')  # NOQA
-
 from abc import ABCMeta
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -8,18 +7,16 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
-import math
 
 import numpy as np
-from opentile.interface import OpenTile
 import pydicom
 from imagecodecs import jpeg_encode
-from openslide import OpenSlide
 from opentile.common import OpenTilePage, Tiler
+from opentile.interface import OpenTile
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from turbojpeg import TurboJPEG, TJSAMP_444, TJPF_BGRX, TJPF_BGR
+from turbojpeg import TJPF_RGBA, TJSAMP_444, TurboJPEG
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
@@ -28,7 +25,8 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
-
+os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
+from openslide import OpenSlide
 
 JPEG_ENCODE_QUALITY = 95
 JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
@@ -128,7 +126,7 @@ class OpenSlideAssociatedWrapper(ImageDataWrapper):
         self._image = jpeg.encode(
             image_data,
             JPEG_ENCODE_QUALITY,
-            TJPF_BGRX,
+            TJPF_RGBA,
             JPEG_ENCODE_SUBSAMPLE
         )
         (height, width) = image_data.shape[0:2]
@@ -272,10 +270,35 @@ class OpenSlideWrapper(ImageDataWrapper):
                 self._tile_size.to_tuple()
             )
         )
+        transparency = tile_data[:, :, 3]
+        # Check if any pixel has transparency
+        # For some reason, edge tiles have some transparency (253).
+        if np.all(transparency >= 255):
+            # No transparency, send pixel data in original format
+            print("no transparancey")
+        else:
+            # Tile has transparency, send pixel data without transparency
+            # Check if all pixels are fully transparent
+            if np.all(transparency == 0):
+                print("full transparency")
+                # Replace fully transparent with white
+                tile_data = np.full(tile_data.shape, 255, dtype=np.uint8)
+            else:
+                # Multiply pixel values with transparency
+                print("partial transparency")
+                # Make all fully transparent pixel white and non-transparent
+                tile_data[transparency == 0, :] = 255
+                transparency[transparency == 0] = 255
+                # Multiply with transparenceny
+                for color in range(3):
+                    tile_data[:, :, color] = (
+                        255 * (tile_data[:, :, color] / transparency)
+                    )
+
         return self._jpeg.encode(
             tile_data,
             JPEG_ENCODE_QUALITY,
-            TJPF_BGRX,
+            TJPF_RGBA,
             JPEG_ENCODE_SUBSAMPLE
         )
 
@@ -855,7 +878,6 @@ class WsiDicomizer(WsiDicom):
         filepath: Path,
         base_dataset: Dataset = create_test_base_dataset(),
         tile_size: Tuple[int, int] = None,
-        turbo_path: Path = None,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
@@ -871,8 +893,6 @@ class WsiDicomizer(WsiDicom):
             Base dataset to use in files. If none, use test dataset.
         tile_size: Size = Tuple[int, int]
             Tile size to use if not defined by file.
-        turbo_path: Path = None
-            Path to turbojpeg library.
         include_levels: List[int] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
@@ -885,7 +905,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported tiler.
         """
-        tiler = OpenTile.open(filepath, tile_size, turbo_path)
+        tiler = OpenTile.open(filepath, tile_size)
         level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
             base_dataset,
@@ -903,7 +923,6 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Path,
         tile_size: Tuple[int, int],
-        turbo_path: Path,
         base_dataset: Dataset = create_test_base_dataset(),
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -918,8 +937,6 @@ class WsiDicomizer(WsiDicom):
             Path to tiff file
         tile_size: Size = Tuple[int, int]
             Tile size to use.
-        turbo_path: Path = None
-            Path to turbojpeg library.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
         include_levels: List[int] = None
@@ -935,7 +952,7 @@ class WsiDicomizer(WsiDicom):
             WsiDicomizer object of imported openslide file.
         """
         slide = OpenSlide(filepath)
-        jpeg = TurboJPEG(turbo_path)
+        jpeg = TurboJPEG(os.environ['TURBOJPEG'])
         level_instances = [
             cls._create_instance(
                 OpenSlideWrapper(
@@ -978,7 +995,6 @@ class WsiDicomizer(WsiDicom):
         output_path: Path,
         base_dataset: Dataset,
         tile_size: Size = None,
-        turbo_path: Path = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -997,8 +1013,6 @@ class WsiDicomizer(WsiDicom):
             Base dataset to use in files. If none, use test dataset.
         tile_size: Size = None
             Tile size to use if not defined by file.
-        turbo_path: Path = None
-            Path to turbojpeg library.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
         include_levels: List[int]
@@ -1013,7 +1027,6 @@ class WsiDicomizer(WsiDicom):
                 filepath,
                 base_dataset,
                 tile_size,
-                turbo_path,
                 include_levels,
                 include_label,
                 include_overview
@@ -1022,8 +1035,7 @@ class WsiDicomizer(WsiDicom):
             imported_wsi = cls.import_openslide(
                 filepath,
                 base_dataset,
-                tile_size,
-                turbo_path
+                tile_size
             )
         else:
             raise NotImplementedError(f"Not supported format in {filepath}")

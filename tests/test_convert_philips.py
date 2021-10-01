@@ -55,7 +55,6 @@ class PhilipsConvertTest(unittest.TestCase):
             filepath,
             Path(tempdir.name),
             base_dataset,
-            turbo_path=turbo_path,
             include_levels=include_levels
         )
         wsi = WsiDicom.open(str(tempdir.name))
