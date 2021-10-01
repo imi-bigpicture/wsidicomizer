@@ -16,7 +16,7 @@ from opentile.interface import OpenTile
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_RGBA, TJSAMP_444, TurboJPEG
+from turbojpeg import TJPF_RGB, TJPF_RGBA, TJSAMP_444, TurboJPEG
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
@@ -25,8 +25,10 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
+
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
 from openslide import OpenSlide
+from openslide.lowlevel import ArgumentError
 
 JPEG_ENCODE_QUALITY = 95
 JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
@@ -159,7 +161,11 @@ class OpenSlideAssociatedWrapper(ImageDataWrapper):
         return 0
 
     def close(self) -> None:
-        self._openslide.close()
+        try:
+            self._open_slide.close()
+        except ArgumentError:
+            # Slide already closed
+            pass
 
     def get_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
@@ -263,47 +269,36 @@ class OpenSlideWrapper(ImageDataWrapper):
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tile_point_in_base_level = tile * self.downsample * self._tile_size
-        tile_data = np.array(
-            self._open_slide.read_region(
+        image = self._open_slide.read_region(
                 tile_point_in_base_level.to_tuple(),
                 self._level_index,
                 self._tile_size.to_tuple()
             )
-        )
+        tile_data = np.array(image)
         transparency = tile_data[:, :, 3]
+        tile_data = np.delete(tile_data, 3, 2)
         # Check if any pixel has transparency
-        # For some reason, edge tiles have some transparency (253).
-        if np.all(transparency >= 255):
-            # No transparency, send pixel data in original format
-            print("no transparancey")
-        else:
-            # Tile has transparency, send pixel data without transparency
+        if not np.all(transparency >= 255):
             # Check if all pixels are fully transparent
             if np.all(transparency == 0):
-                print("full transparency")
                 # Replace fully transparent with white
                 tile_data = np.full(tile_data.shape, 255, dtype=np.uint8)
             else:
-                # Multiply pixel values with transparency
-                print("partial transparency")
-                # Make all fully transparent pixel white and non-transparent
+                # Make all fully transparent pixel white
                 tile_data[transparency == 0, :] = 255
-                transparency[transparency == 0] = 255
-                # Multiply with transparenceny
-                for color in range(3):
-                    tile_data[:, :, color] = (
-                        255 * (tile_data[:, :, color] / transparency)
-                    )
-
         return self._jpeg.encode(
             tile_data,
             JPEG_ENCODE_QUALITY,
-            TJPF_RGBA,
+            TJPF_RGB,
             JPEG_ENCODE_SUBSAMPLE
         )
 
     def close(self) -> None:
-        self._open_slide.close()
+        try:
+            self._open_slide.close()
+        except ArgumentError:
+            # Slide already closed
+            pass
 
 
 class OpenTileWrapper(ImageDataWrapper):
@@ -994,7 +989,7 @@ class WsiDicomizer(WsiDicom):
         filepath: Path,
         output_path: Path,
         base_dataset: Dataset,
-        tile_size: Size = None,
+        tile_size: Tuple[int, int] = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -1011,7 +1006,7 @@ class WsiDicomizer(WsiDicom):
             Folder path to save files to.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
-        tile_size: Size = None
+        tile_size: Tuple[int, int] = None
             Tile size to use if not defined by file.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
@@ -1034,8 +1029,8 @@ class WsiDicomizer(WsiDicom):
         elif OpenSlide.detect_format(filepath) is not None:
             imported_wsi = cls.import_openslide(
                 filepath,
-                base_dataset,
-                tile_size
+                tile_size,
+                base_dataset
             )
         else:
             raise NotImplementedError(f"Not supported format in {filepath}")
