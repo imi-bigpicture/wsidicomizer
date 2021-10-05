@@ -10,12 +10,11 @@ from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
 
 import numpy as np
 import pydicom
-from pydicom import config
-
-from PIL import Image
 from imagecodecs import jpeg_encode
 from opentile.common import OpenTilePage, Tiler
 from opentile.interface import OpenTile
+from PIL import Image
+from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
@@ -28,13 +27,15 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
-
 from .openslide_patch import OpenSlidePatched as OpenSlide
 from openslide.lowlevel import ArgumentError
+
 
 config.enforce_valid_values = True
 config.future_behavior()
 
+# Should be configurable parameters
+# Also, it should be possible to configure jpeg2000-compresesion
 JPEG_ENCODE_QUALITY = 95
 JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
 
@@ -681,14 +682,14 @@ class DicomWsiFileWriter:
             for x in range(0, image_data.tiled_size.width, chunk_size)
         )
         with ThreadPoolExecutor(max_workers=os.cpu_count()) as pool:
-            # Thread that takes a chunk of tile points and returns list of
-            # tile bytes
             def thread(tile_points: List[Point]) -> List[bytes]:
+                # Thread that takes a chunk of tile points and returns list of
+                # tile bytes
                 return image_data.get_encoded_tiles(tile_points, z, path)
 
-            # Each thread produces a list of tiles that is itimized and writen
-            for thread_job in pool.map(thread, chunked_tile_points):
-                for tile in thread_job:
+            # Each thread result is a list of tiles that is itemized and writen
+            for thread_result in pool.map(thread, chunked_tile_points):
+                for tile in thread_result:
                     for frame in pydicom.encaps.itemize_frame(tile, 1):
                         self._fp.write(frame)
 
