@@ -1,6 +1,6 @@
 import math
 import os
-from abc import ABC, ABCMeta
+from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -10,6 +10,8 @@ from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
 
 import numpy as np
 import pydicom
+from pydicom import config
+
 from PIL import Image
 from imagecodecs import jpeg_encode
 from opentile.common import OpenTilePage, Tiler
@@ -30,6 +32,9 @@ from .dataset import append_dataset, create_test_base_dataset, get_image_type
 from .openslide_patch import OpenSlidePatched as OpenSlide
 from openslide.lowlevel import ArgumentError
 
+config.enforce_valid_values = True
+config.future_behavior()
+
 JPEG_ENCODE_QUALITY = 95
 JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
 
@@ -38,8 +43,18 @@ class ImageDataWrapper(ImageData):
     _default_z = 0
 
     @property
+    @abstractmethod
     def pyramid_index(self) -> int:
         raise NotImplementedError
+
+    @property
+    def samples_per_pixel(self) -> int:
+        return 3
+
+    @property
+    def photometric_interpretation(self) -> str:
+        # Should be derived from the used subsample format
+        return 'YBR_FULL'
 
     def create_instance_dataset(
         self,
@@ -70,8 +85,8 @@ class ImageDataWrapper(ImageData):
         shared_functional_group_sequence = Dataset()
         pixel_measure_sequence = Dataset()
         pixel_measure_sequence.PixelSpacing = [
-            self.pixel_spacing.width,
-            self.pixel_spacing.height
+            pydicom.valuerep.DSfloat(self.pixel_spacing.width, True),
+            pydicom.valuerep.DSfloat(self.pixel_spacing.height, True)
         ]
         pixel_measure_sequence.SpacingBetweenSlices = 0.0
         pixel_measure_sequence.SliceThickness = 0.0
@@ -170,6 +185,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
             TJPF_RGBA,
             JPEG_ENCODE_SUBSAMPLE
         )
+        self._decoded_image = Image.fromarray(image_data, mode='RGB')
         (height, width) = image_data.shape[0:2]
         self._image_size = Size(width, height)
 
@@ -212,7 +228,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
     ) -> bytes:
         if tile != Point(0, 0):
             raise ValueError
-        return self._open_slide.associated_images[self._image_type]
+        return self._decoded_image
 
 
 class OpenSlideLevelWrapper(OpenSlideWrapper):
@@ -280,6 +296,28 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """The pyramidal index in relation to the base layer."""
         return self._pyramid_index
 
+    def _get_tile(self, tile: Point) -> np.ndarray:
+        """Return tile as np array. Transparency is removed.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+
+        Returns
+        ----------
+        np.ndarray
+            Numpy array of tile.
+        """
+        tile_point_in_base_level = tile * self.downsample * self._tile_size
+        tile_data = self._open_slide.read_region_np(
+                tile_point_in_base_level.to_tuple(),
+                self._level_index,
+                self._tile_size.to_tuple()
+        )
+        tile_data = self._remove_transparency(tile_data)
+        return tile_data
+
     def get_encoded_tile(
         self,
         tile: Point,
@@ -305,16 +343,8 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile_point_in_base_level = tile * self.downsample * self._tile_size
-        tile_data = self._open_slide.read_region_np(
-                tile_point_in_base_level.to_tuple(),
-                self._level_index,
-                self._tile_size.to_tuple()
-        )
-        tile_data = self._remove_transparency(tile_data)
-
         return self._jpeg.encode(
-            tile_data,
+            self._get_tile(tile),
             JPEG_ENCODE_QUALITY,
             TJPF_RGBA,
             JPEG_ENCODE_SUBSAMPLE
@@ -344,12 +374,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile_point_in_base_level = tile * self.downsample * self._tile_size
-        return self._open_slide.read_region(
-                tile_point_in_base_level.to_tuple(),
-                self._level_index,
-                self._tile_size.to_tuple()
-        )
+        return Image.fromarray(self._get_tile(tile), mode='RGB')
 
 
 class OpenTileWrapper(ImageDataWrapper):
@@ -692,8 +717,8 @@ class WsiDicomGroupSave(WsiDicomGroup):
         groups: DefaultDict[Union[str, Uid], List[str]] = DefaultDict(list)
         for instance in self.instances.values():
             groups[
-                instance.photometric_interpretation,
-                instance._image_data.transfer_syntax,
+                instance.image_data.photometric_interpretation,
+                instance.image_data.transfer_syntax,
                 instance.ext_depth_of_field,
                 instance.ext_depth_of_field_planes,
                 instance.ext_depth_of_field_plane_distance,
