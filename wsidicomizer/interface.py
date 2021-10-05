@@ -1,6 +1,6 @@
 import math
 import os
-from abc import ABCMeta
+from abc import ABC, ABCMeta
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -10,13 +10,14 @@ from typing import Callable, DefaultDict, Dict, Iterator, List, Tuple, Union
 
 import numpy as np
 import pydicom
+from PIL import Image
 from imagecodecs import jpeg_encode
 from opentile.common import OpenTilePage, Tiler
 from opentile.interface import OpenTile
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_RGB, TJPF_RGBA, TJSAMP_444, TurboJPEG
+from turbojpeg import TJPF_RGBA, TJSAMP_444, TurboJPEG
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
@@ -26,8 +27,7 @@ from wsidicom.uid import WSI_SOP_CLASS_UID
 
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
 
-os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
-from openslide import OpenSlide
+from .openslide_patch import OpenSlidePatched as OpenSlide
 from openslide.lowlevel import ArgumentError
 
 JPEG_ENCODE_QUALITY = 95
@@ -116,16 +116,55 @@ class ImageDataWrapper(ImageData):
         return dataset
 
 
-class OpenSlideAssociatedWrapper(ImageDataWrapper):
+class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
+    @property
+    def transfer_syntax(self) -> Uid:
+        """The uid of the transfer syntax of the image."""
+        return pydicom.uid.JPEGBaseline8Bit
+
+    @staticmethod
+    def _remove_transparency(image_data: np.ndarray) -> np.ndarray:
+        transparency = image_data[:, :, 3]
+        # Check if all pixels are fully transparent
+        if np.all(transparency == 0):
+            # Replace fully transparent with white
+            image_data = np.full(image_data.shape, 255, dtype=np.uint8)
+        elif not np.all(transparency == 255):
+            # Only partial transparency
+            # Make all fully transparent pixel white and non-transparent
+            image_data[transparency == 0, :] = 255
+            transparency[transparency == 0] = 255
+            # Add transparency to other pixels.
+            # Make RGBA-axis first axis
+            image_data = np.moveaxis(image_data, 2, 0)
+            # Multiply with transparency-factor
+            image_data[0:3, :, :] = (
+                255 * (image_data[0:3, :, :] / transparency)
+            )
+            # Move RGBA-axis back to last.
+            image_data = np.moveaxis(image_data, 0, 2)
+        return image_data
+
+    def close(self) -> None:
+        try:
+            self._open_slide.close()
+        except ArgumentError:
+            # Slide already closed
+            pass
+
+
+class OpenSlideAssociatedWrapper(OpenSlideWrapper):
     def __init__(
         self,
         open_slide: OpenSlide,
         image_type: str,
         jpeg
     ):
+        self._image_type = image_type
         self._open_slide = open_slide
-        image_data = np.array(open_slide.associated_images[image_type])
-        self._image = jpeg.encode(
+        image_data = open_slide.associated_images_np[image_type]
+        image_data = self._remove_transparency(image_data)
+        self._encoded_image = jpeg.encode(
             image_data,
             JPEG_ENCODE_QUALITY,
             TJPF_RGBA,
@@ -133,11 +172,6 @@ class OpenSlideAssociatedWrapper(ImageDataWrapper):
         )
         (height, width) = image_data.shape[0:2]
         self._image_size = Size(width, height)
-
-    @property
-    def transfer_syntax(self) -> Uid:
-        """The uid of the transfer syntax of the image."""
-        return pydicom.uid.JPEGBaseline8Bit
 
     @property
     def image_size(self) -> Size:
@@ -160,20 +194,28 @@ class OpenSlideAssociatedWrapper(ImageDataWrapper):
         """The pyramidal index in relation to the base layer."""
         return 0
 
-    def close(self) -> None:
-        try:
-            self._open_slide.close()
-        except ArgumentError:
-            # Slide already closed
-            pass
-
-    def get_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> Image.Image:
         if tile != Point(0, 0):
             raise ValueError
-        return self._image
+        return self._encoded_image
+
+    def get_decoded_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> bytes:
+        if tile != Point(0, 0):
+            raise ValueError
+        return self._open_slide.associated_images[self._image_type]
 
 
-class OpenSlideWrapper(ImageDataWrapper):
+class OpenSlideLevelWrapper(OpenSlideWrapper):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -214,11 +256,6 @@ class OpenSlideWrapper(ImageDataWrapper):
         )
 
     @property
-    def transfer_syntax(self) -> Uid:
-        """The uid of the transfer syntax of the image."""
-        return pydicom.uid.JPEGBaseline8Bit
-
-    @property
     def image_size(self) -> Size:
         """The pixel size of the image."""
         return self._image_size
@@ -243,14 +280,14 @@ class OpenSlideWrapper(ImageDataWrapper):
         """The pyramidal index in relation to the base layer."""
         return self._pyramid_index
 
-    def get_tile(
+    def get_encoded_tile(
         self,
         tile: Point,
         z: float,
         path: str
     ) -> bytes:
-        """Return image bytes for tile. Image data from openslide is RGBA
-        PIL image. Return image data encoded in jpeg.
+        """Return image bytes for tile. Transparency is removed and tile is
+        encoded as jpeg.
 
         Parameters
         ----------
@@ -269,36 +306,50 @@ class OpenSlideWrapper(ImageDataWrapper):
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tile_point_in_base_level = tile * self.downsample * self._tile_size
-        image = self._open_slide.read_region(
+        tile_data = self._open_slide.read_region_np(
                 tile_point_in_base_level.to_tuple(),
                 self._level_index,
                 self._tile_size.to_tuple()
-            )
-        tile_data = np.array(image)
-        transparency = tile_data[:, :, 3]
-        tile_data = np.delete(tile_data, 3, 2)
-        # Check if any pixel has transparency
-        if not np.all(transparency >= 255):
-            # Check if all pixels are fully transparent
-            if np.all(transparency == 0):
-                # Replace fully transparent with white
-                tile_data = np.full(tile_data.shape, 255, dtype=np.uint8)
-            else:
-                # Make all fully transparent pixel white
-                tile_data[transparency == 0, :] = 255
+        )
+        tile_data = self._remove_transparency(tile_data)
+
         return self._jpeg.encode(
             tile_data,
             JPEG_ENCODE_QUALITY,
-            TJPF_RGB,
+            TJPF_RGBA,
             JPEG_ENCODE_SUBSAMPLE
         )
 
-    def close(self) -> None:
-        try:
-            self._open_slide.close()
-        except ArgumentError:
-            # Slide already closed
-            pass
+    def get_decoded_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> Image.Image:
+        """Return Image for tile. Image mode is RGBA.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+        z: float
+            Focal plane of tile to get.
+        path: str
+            Optical path of tile to get.
+
+        Returns
+        ----------
+        Image.Image
+            Tile as Image.
+        """
+        if z not in self.focal_planes or path not in self.optical_paths:
+            raise ValueError
+        tile_point_in_base_level = tile * self.downsample * self._tile_size
+        return self._open_slide.read_region(
+                tile_point_in_base_level.to_tuple(),
+                self._level_index,
+                self._tile_size.to_tuple()
+        )
 
 
 class OpenTileWrapper(ImageDataWrapper):
@@ -373,7 +424,7 @@ class OpenTileWrapper(ImageDataWrapper):
     @property
     def suggested_minimum_chunk_size(self) -> int:
         """Return suggested minumum chunk size for optimal performance with
-        get_tiles()."""
+        get_encoeded_tiles()."""
         return self._tiled_page.suggested_minimum_chunk_size
 
     @property
@@ -381,7 +432,7 @@ class OpenTileWrapper(ImageDataWrapper):
         """The pyramidal index in relation to the base layer."""
         return self._tiled_page.pyramid_index
 
-    def get_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.
 
@@ -401,12 +452,40 @@ class OpenTileWrapper(ImageDataWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        if not self.needs_transcoding:
-            return self._tiled_page.get_tile(tile.to_tuple())
-        decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
-        return jpeg_encode(decoded_tile)
+        if self.needs_transcoding:
+            decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
+            return jpeg_encode(decoded_tile)
+        return self._tiled_page.get_tile(tile.to_tuple())
 
-    def get_tiles(
+    def get_decoded_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> Image.Image:
+        """Return Image for tile.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+        z: float
+            Focal plane of tile to get.
+        path: str
+            Optical path of tile to get.
+
+        Returns
+        ----------
+        Image.Image
+            Tile as Image.
+        """
+        if z not in self.focal_planes or path not in self.optical_paths:
+            raise ValueError
+        return Image.fromarray(
+            self._tiled_page.get_decoded_tile(tile.to_tuple())
+        )
+
+    def get_encoded_tiles(
         self,
         tiles: List[Point],
         z: float,
@@ -580,7 +659,7 @@ class DicomWsiFileWriter:
             # Thread that takes a chunk of tile points and returns list of
             # tile bytes
             def thread(tile_points: List[Point]) -> List[bytes]:
-                return image_data.get_tiles(tile_points, z, path)
+                return image_data.get_encoded_tiles(tile_points, z, path)
 
             # Each thread produces a list of tiles that is itimized and writen
             for thread_job in pool.map(thread, chunked_tile_points):
@@ -950,7 +1029,7 @@ class WsiDicomizer(WsiDicom):
         jpeg = TurboJPEG(os.environ['TURBOJPEG'])
         level_instances = [
             cls._create_instance(
-                OpenSlideWrapper(
+                OpenSlideLevelWrapper(
                     slide,
                     level_index,
                     Size.from_tuple(tile_size),
