@@ -18,7 +18,7 @@ from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_RGBA, TJSAMP_444, TurboJPEG
+from turbojpeg import TJPF_BGRA, TJSAMP_444, TurboJPEG
 from wsidicom import WsiDicom
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
@@ -29,7 +29,7 @@ from wsidicom.uid import WSI_SOP_CLASS_UID
 from .dataset import append_dataset, create_test_base_dataset, get_image_type
 from .openslide_patch import OpenSlidePatched as OpenSlide
 from openslide.lowlevel import ArgumentError
-
+from openslide._convert import argb2rgba as convert_argb_to_rgba
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -60,7 +60,10 @@ class ImageDataWrapper(ImageData):
     def create_instance_dataset(
         self,
         base_dataset: Dataset,
-        image_flavor: str
+        image_flavor: str,
+        instance_number: int,
+        transfer_syntax: Uid,
+        photometric_interpretation: str
     ) -> Dataset:
         """Return instance dataset for image_data based on base dataset.
 
@@ -113,20 +116,19 @@ class ImageDataWrapper(ImageData):
             self.image_size.height * self.pixel_spacing.height
         )
         dataset.ImagedVolumeDepth = 0.0
-        # If PhotometricInterpretation is YBR and no subsampling
-        dataset.SamplesPerPixel = 3
-        dataset.PhotometricInterpretation = 'YBR_FULL'
-        # If transfer syntax pydicom.uid.JPEGBaseline8Bit
-        dataset.BitsAllocated = 8
-        dataset.BitsStored = 8
-        dataset.HighBit = 7
-        dataset.PixelRepresentation = 0
-        dataset.LossyImageCompression = '01'
-        # dataset.LossyImageCompressionRatio = 1
-        # dataset.LossyImageCompressionMethod = 'ISO_10918_1'
 
-        # Should be incremented
-        dataset.InstanceNumber = 0
+        if transfer_syntax == pydicom.uid.JPEGBaseline8Bit:
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            # dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+        if photometric_interpretation == 'YBR_FULL':
+            dataset.PhotometricInterpretation = photometric_interpretation
+            dataset.SamplesPerPixel = 3
+
+        dataset.InstanceNumber = instance_number
         dataset.FocusMethod = 'AUTO'
         dataset.ExtendedDepthOfField = 'NO'
         return dataset
@@ -140,25 +142,24 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
 
     @staticmethod
     def _remove_transparency(image_data: np.ndarray) -> np.ndarray:
+        """Removes transparency from image data. Openslide-python produces
+        non-premultiplied, 'straigt' RGBA data and the RGB-part can be left
+        unmodified. Fully transparent pixels have RGBA-value 0, 0, 0, 0. For
+        these, we want full-white pixel instead of full-black.
+
+        Parameters
+        ----------
+        image_data: np.ndarray
+             Image data in RGBA pixel format to remove transparency from.
+
+        Returns
+        ----------
+        image_data: np.ndarray
+            Image data in RGBA pixel format without transparency.
+        """
         transparency = image_data[:, :, 3]
-        # Check if all pixels are fully transparent
-        if np.all(transparency == 0):
-            # Replace fully transparent with white
-            image_data = np.full(image_data.shape, 255, dtype=np.uint8)
-        elif not np.all(transparency == 255):
-            # Only partial transparency
-            # Make all fully transparent pixel white and non-transparent
-            image_data[transparency == 0, :] = 255
-            transparency[transparency == 0] = 255
-            # Add transparency to other pixels.
-            # Make RGBA-axis first axis
-            image_data = np.moveaxis(image_data, 2, 0)
-            # Multiply with transparency-factor
-            image_data[0:3, :, :] = (
-                255 * (image_data[0:3, :, :] / transparency)
-            )
-            # Move RGBA-axis back to last.
-            image_data = np.moveaxis(image_data, 0, 2)
+        # Check for pixels with full transparency
+        image_data[transparency == 0, :] = 255
         return image_data
 
     def close(self) -> None:
@@ -183,10 +184,11 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         self._encoded_image = jpeg.encode(
             image_data,
             JPEG_ENCODE_QUALITY,
-            TJPF_RGBA,
+            TJPF_BGRA,
             JPEG_ENCODE_SUBSAMPLE
         )
-        self._decoded_image = Image.fromarray(image_data, mode='RGB')
+        convert_argb_to_rgba(image_data)
+        self._decoded_image = Image.fromarray(image_data).convert('RGB')
         (height, width) = image_data.shape[0:2]
         self._image_size = Size(width, height)
 
@@ -297,7 +299,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """The pyramidal index in relation to the base layer."""
         return self._pyramid_index
 
-    def _get_tile(self, tile: Point) -> np.ndarray:
+    def _get_tile(self, tile: Point, flip: bool = False) -> np.ndarray:
         """Return tile as np array. Transparency is removed.
 
         Parameters
@@ -317,7 +319,9 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
                 self._tile_size.to_tuple()
         )
         tile_data = self._remove_transparency(tile_data)
-        return tile_data
+        if flip:
+            convert_argb_to_rgba(tile_data)
+        return tile_data[:, :, 0:3]
 
     def get_encoded_tile(
         self,
@@ -347,7 +351,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         return self._jpeg.encode(
             self._get_tile(tile),
             JPEG_ENCODE_QUALITY,
-            TJPF_RGBA,
+            TJPF_BGRA,
             JPEG_ENCODE_SUBSAMPLE
         )
 
@@ -375,7 +379,8 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Image.fromarray(self._get_tile(tile), mode='RGB')
+        tile = self._get_tile(tile, True)
+        return Image.fromarray(tile[:, :, 0:3])
 
 
 class OpenTileWrapper(ImageDataWrapper):
@@ -857,9 +862,10 @@ class WsiDicomizer(WsiDicom):
 
     @staticmethod
     def _create_instance(
-        image_data: ImageData,
+        image_data: ImageDataWrapper,
         base_dataset: Dataset,
-        image_type: str
+        image_type: str,
+        instance_number: int
     ) -> WsiInstance:
         """Create WsiInstance from OpenTilePage.
 
@@ -871,8 +877,8 @@ class WsiDicomizer(WsiDicom):
             Base dataset to include.
         image_type: str
             Type of instance to create.
-        uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-            Function that can gernerate unique identifiers.
+        instance_number: int
+            The number of the instance (in a series).
 
         Returns
         ----------
@@ -881,7 +887,10 @@ class WsiDicomizer(WsiDicom):
         """
         instance_dataset = image_data.create_instance_dataset(
             base_dataset,
-            image_type
+            image_type,
+            instance_number,
+            image_data.transfer_syntax,
+            image_data.photometric_interpretation
         )
 
         return WsiInstance(
@@ -941,32 +950,37 @@ class WsiDicomizer(WsiDicom):
             Lists of created level, label and overivew instances.
         """
         base_dataset = cls.populate_base_dataset(tiler, base_dataset)
+        instance_number = 0
         level_instances = [
             cls._create_instance(
                 OpenTileWrapper(level),
                 base_dataset,
-                'VOLUME'
+                'VOLUME',
+                instance_number+index
             )
-            for level in tiler.levels
+            for index, level in enumerate(tiler.levels)
             if include_levels is None or level.pyramid_index in include_levels
         ]
-
+        instance_number += len(level_instances)
         label_instances = [
             cls._create_instance(
                 OpenTileWrapper(label),
                 base_dataset,
-                'LABEL'
+                'LABEL',
+                instance_number+index
             )
-            for label in tiler.labels
+            for index, label in enumerate(tiler.labels)
             if include_label
         ]
+        instance_number += len(level_instances)
         overview_instances = [
             cls._create_instance(
                 OpenTileWrapper(overview),
                 base_dataset,
-                'OVERVIEW'
+                'OVERVIEW',
+                instance_number+index
             )
-            for overview in tiler.overviews
+            for index, overview in enumerate(tiler.overviews)
             if include_overview
         ]
 
@@ -1053,6 +1067,7 @@ class WsiDicomizer(WsiDicom):
         """
         slide = OpenSlide(filepath)
         jpeg = TurboJPEG(os.environ['TURBOJPEG'])
+        instance_number = 0
         level_instances = [
             cls._create_instance(
                 OpenSlideLevelWrapper(
@@ -1062,24 +1077,29 @@ class WsiDicomizer(WsiDicom):
                     jpeg
                 ),
                 base_dataset,
-                'VOLUME'
+                'VOLUME',
+                instance_number+level_index
             )
             for level_index in range(slide.level_count)
             if include_levels is None or level_index in include_levels
         ]
+        instance_number += len(level_instances)
         if include_label and 'label' in slide.associated_images:
             label_instances = [cls._create_instance(
                 OpenSlideAssociatedWrapper(slide, 'label', jpeg),
                 base_dataset,
-                'LABEL'
+                'LABEL',
+                instance_number
             )]
         else:
             label_instances = []
+        instance_number += len(label_instances)
         if include_overview and 'macro' in slide.associated_images:
             overview_instances = [cls._create_instance(
                 OpenSlideAssociatedWrapper(slide, 'macro', jpeg),
                 base_dataset,
-                'OVERVIEW'
+                'OVERVIEW',
+                instance_number
             )]
         else:
             overview_instances = []
@@ -1135,7 +1155,10 @@ class WsiDicomizer(WsiDicom):
             imported_wsi = cls.import_openslide(
                 filepath,
                 tile_size,
-                base_dataset
+                base_dataset,
+                include_levels=include_levels,
+                include_label=include_label,
+                include_overview=include_overview
             )
         else:
             raise NotImplementedError(f"Not supported format in {filepath}")
