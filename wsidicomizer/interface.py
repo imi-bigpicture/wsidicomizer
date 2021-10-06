@@ -767,7 +767,7 @@ class WsiDicomGroupSave(WsiDicomGroup):
 
     def save(
         self,
-        output_path: Path,
+        output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> None:
@@ -782,7 +782,7 @@ class WsiDicomGroupSave(WsiDicomGroup):
 
         Parameters
         ----------
-        output_path: Path
+        output_path: str
             Folder path to save files to.
         base_dataset: Dataset
             Dataset to use as base for each file.
@@ -819,7 +819,7 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
 
     def save(
         self,
-        output_path: Path,
+        output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> None:
@@ -827,7 +827,7 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
 
         Parameters
         ----------
-        output_path: Path
+        output_path: str
         base_dataset: Dataset
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
@@ -993,7 +993,7 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def import_tiff(
         cls,
-        filepath: Path,
+        filepath: str,
         base_dataset: Dataset = create_test_base_dataset(),
         tile_size: int = None,
         include_levels: List[int] = None,
@@ -1005,7 +1005,7 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: str
             Path to tiff file
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
@@ -1039,7 +1039,7 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def import_openslide(
         cls,
-        filepath: Path,
+        filepath: str,
         tile_size: int,
         base_dataset: Dataset = create_test_base_dataset(),
         include_levels: List[int] = None,
@@ -1051,7 +1051,7 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: str
             Path to tiff file
         tile_size: int
             Tile size to use.
@@ -1115,9 +1115,9 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def convert(
         cls,
-        filepath: Path,
-        output_path: Path,
-        base_dataset: Dataset,
+        filepath: str,
+        output_path: str = None,
+        base_dataset: Dataset = create_test_base_dataset(),
         tile_size: int = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
@@ -1129,11 +1129,11 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: str
             Path to file
-        output_path: Path
+        output_path: str = None
             Folder path to save files to.
-        base_dataset: Dataset
+        base_dataset: Dataset = create_test_base_dataset()
             Base dataset to use in files. If none, use test dataset.
         tile_size: int
             Tile size to use if not defined by file.
@@ -1166,12 +1166,22 @@ class WsiDicomizer(WsiDicom):
             )
         else:
             raise NotImplementedError(f"Not supported format in {filepath}")
+
+        if output_path is None:
+            output_path = str(Path(filepath).parents[0].joinpath(
+                Path(filepath).stem
+            ))
+        try:
+            os.mkdir(output_path)
+        except FileExistsError:
+            ValueError(f'Output path {output_path} already excists')
+
         imported_wsi.save(output_path, base_dataset, uid_generator)
         imported_wsi.close()
 
     def save(
         self,
-        output_path: Path,
+        output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> None:
@@ -1179,7 +1189,7 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        output_path: Path
+        output_path: str
         base_dataset: Dataset
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
