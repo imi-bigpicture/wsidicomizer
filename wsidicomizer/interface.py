@@ -240,7 +240,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         self,
         open_slide: OpenSlide,
         level_index: Size,
-        tile_size: Size,
+        tile_size: int,
         jpeg: TurboJPEG
     ):
         """Wraps a OpenSlide level to ImageData.
@@ -256,7 +256,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         jpeg: TurboJPEG
             TurboJPEG object to use.
         """
-        self._tile_size = tile_size
+        self._tile_size = Size(tile_size, tile_size)
         self._open_slide = open_slide
         self._level_index = level_index
         self._jpeg = jpeg
@@ -995,7 +995,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Path,
         base_dataset: Dataset = create_test_base_dataset(),
-        tile_size: Tuple[int, int] = None,
+        tile_size: int = None,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
@@ -1009,7 +1009,7 @@ class WsiDicomizer(WsiDicom):
             Path to tiff file
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
-        tile_size: Size = Tuple[int, int]
+        tile_size: int
             Tile size to use if not defined by file.
         include_levels: List[int] = None
             Levels to include. If None, include all levels.
@@ -1040,7 +1040,7 @@ class WsiDicomizer(WsiDicom):
     def import_openslide(
         cls,
         filepath: Path,
-        tile_size: Tuple[int, int],
+        tile_size: int,
         base_dataset: Dataset = create_test_base_dataset(),
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -1053,7 +1053,7 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: Path
             Path to tiff file
-        tile_size: Size = Tuple[int, int]
+        tile_size: int
             Tile size to use.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
@@ -1077,7 +1077,7 @@ class WsiDicomizer(WsiDicom):
                 OpenSlideLevelWrapper(
                     slide,
                     level_index,
-                    Size.from_tuple(tile_size),
+                    tile_size,
                     jpeg
                 ),
                 base_dataset,
@@ -1118,7 +1118,7 @@ class WsiDicomizer(WsiDicom):
         filepath: Path,
         output_path: Path,
         base_dataset: Dataset,
-        tile_size: Tuple[int, int] = None,
+        tile_size: int = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -1135,7 +1135,7 @@ class WsiDicomizer(WsiDicom):
             Folder path to save files to.
         base_dataset: Dataset
             Base dataset to use in files. If none, use test dataset.
-        tile_size: Tuple[int, int] = None
+        tile_size: int
             Tile size to use if not defined by file.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.

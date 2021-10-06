@@ -14,7 +14,7 @@ class MiraxConvertTest(ConvertTest):
     input_filename = 'input.mrxs'
     include_levels = [4, 6]
     turbo_path = os.environ['TURBOJPEG']
-    tile_size = (1024, 1024)
+    tile_size = 1024
 
     def __init__(self, *args, **kwargs):
         super(ConvertTest, self).__init__(*args, **kwargs)

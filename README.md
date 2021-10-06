@@ -1,6 +1,21 @@
 # *wsidicomizer*
 *wsidicomizer* is a Python library for converting files wsi files to dicom using opentile or openslide.
 
+## Installation
+***Download wsidicomizer from git***
+```console
+$ python -m pip git+https://github.com/imi-bigpicture/wsidicomizer.git
+```
+
+***Install OpenSlide***
+Instructions for how to install OpenSlide is avaiable on https://openslide.org/download/  
+For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'OPENSLIDE'
+
+***Install libjpeg-turbo***
+Install libjpeg-turbo either as binary from https://libjpeg-turbo.org/ or using your package manager.
+For Windows, you also need to add libjpeg-turbo's bin-folder to the environment variable 'TURBOJPEG'
+
+
 ## Important note
 Please note that this is an early release and the API is not frozen yet. Function names and functionality is prone to change.
 
@@ -12,8 +27,8 @@ Files with z-stacks or multiple focal paths are currently not supported.
 
 ## Basic usage
 ***Convert a wsi-file into DICOM using cli-interface***
-```bash
-wsidicomizer/cli.py -i 'path_to_wsi_file' -o 'path_to_output_folder'
+```console
+wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 ### Arguments:
 -i, --input, path to input wsi file  

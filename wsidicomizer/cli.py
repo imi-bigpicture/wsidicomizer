@@ -12,17 +12,18 @@ def main():
     parser.add_argument(
         '-i', '--input',
         type=Path,
+        required=True,
         help='path to input wsi file'
     )
     parser.add_argument(
         '-o', '--output',
         type=Path,
+        required=True,
         help='path to output folder'
     )
     parser.add_argument(
-        '-t', '--tile_size',
+        '-t', '--tile-size',
         type=int,
-        nargs=2,
         help='tile size (same for width and height)'
     )
     parser.add_argument(
@@ -37,12 +38,12 @@ def main():
         help='levels to include, if not all',
     )
     parser.add_argument(
-        '--no_label',
+        '--no-label',
         action="store_true",
         help='if not to include label'
     )
     parser.add_argument(
-        '--no_overview',
+        '--nooverview',
         action="store_true",
         help='if not to include overview'
     )
