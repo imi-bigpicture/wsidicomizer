@@ -5,13 +5,19 @@ from typing import Tuple
 import numpy as np
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
-    openslide_dir = os.environ['OPENSLIDE']  # NOQA
-    try:  # NOQA
-        os.add_dll_directory(openslide_dir)  # NOQA
-    except AttributeError:  # NOQA
+    try:
+        openslide_dir = os.environ['OPENSLIDE']
+    except KeyError:
+        raise ValueError(
+            "Enviroment variable 'OPENSLIDE'"
+            "needs to be set to OpenSlide bin path"
+        )
+    try:
+        os.add_dll_directory(openslide_dir)
+    except AttributeError:
         os.environ['PATH'] = (
             openslide_dir + os.pathsep + os.environ['PATH']
-        )  # NOQA
+        )
 
 from openslide import OpenSlide, _AssociatedImageMap
 from openslide.lowlevel import (_read_associated_image, _read_region,
