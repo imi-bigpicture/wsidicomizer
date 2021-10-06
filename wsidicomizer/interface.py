@@ -770,7 +770,7 @@ class WsiDicomGroupSave(WsiDicomGroup):
         output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-    ) -> None:
+    ) -> List[Path]:
         """Save a WsiDicomGroup to files in output_path. Instances are grouped
         by properties that can differ in the same file:
             - photometric interpretation
@@ -788,13 +788,19 @@ class WsiDicomGroupSave(WsiDicomGroup):
             Dataset to use as base for each file.
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
             Uid generator to use.
+
+        Returns
+        ----------
+        List[str]
+            List of paths of created files.
         """
+        filepaths: List[Path] = []
         for instances in self._group_instances_to_file():
             uid = uid_generator()
-            file_path = os.path.join(output_path, uid + '.dcm')
+            filepath = os.path.join(output_path, uid + '.dcm')
             transfer_syntax = instances[0]._image_data.transfer_syntax
             dataset = deepcopy(instances[0].dataset)
-            wsi_file = DicomWsiFileWriter(file_path)
+            wsi_file = DicomWsiFileWriter(filepath)
             wsi_file.write_preamble()
             wsi_file.write_file_meta(uid, transfer_syntax)
             dataset = append_dataset(dataset, base_dataset)
@@ -805,7 +811,8 @@ class WsiDicomGroupSave(WsiDicomGroup):
                 wsi_file.write_pixel_data(image_data, z, path)
             wsi_file.write_pixel_data_end()
             wsi_file.close()
-            print(f"Wrote file {file_path}")
+            filepaths.append(filepath)
+        return filepaths
 
 
 class WsiDicomLevelSave(WsiDicomLevel, WsiDicomGroupSave):
@@ -822,7 +829,7 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
         output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-    ) -> None:
+    ) -> List[str]:
         """Save WsiDicomSeries as DICOM-files in path.
 
         Parameters
@@ -831,13 +838,21 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
         base_dataset: Dataset
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
+
+        Returns
+        ----------
+        List[str]
+            List of paths of created files.
         """
+        filepaths: List[str] = []
         for group in self.groups:
-            group.save(
+            group_file_paths = group.save(
                 output_path,
                 base_dataset,
                 uid_generator
             )
+            filepaths.extend(group_file_paths)
+        return filepaths
 
 
 class WsiDicomLabelsSave(WsiDicomLabels, WsiDicomSeriesSave):
@@ -1184,7 +1199,7 @@ class WsiDicomizer(WsiDicom):
         output_path: str,
         base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-    ) -> None:
+    ) -> List[str]:
         """Save wsi as DICOM-files in path.
 
         Parameters
@@ -1193,13 +1208,21 @@ class WsiDicomizer(WsiDicom):
         base_dataset: Dataset
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
+
+        Returns
+        ----------
+        List[str]
+            List of paths of created files.
         """
         collections: List[WsiDicomSeriesSave] = [
             self.levels, self.labels, self.overviews
         ]
+        filepaths: List[str] = []
         for collection in collections:
-            collection.save(
+            collection_filepaths = collection.save(
                 output_path,
                 base_dataset,
                 uid_generator
             )
+            filepaths.extend(collection_filepaths)
+        return filepaths
