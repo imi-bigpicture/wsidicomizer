@@ -13,6 +13,7 @@ import pydicom
 from imagecodecs import jpeg_encode
 from opentile.common import OpenTilePage, Tiler
 from opentile.interface import OpenTile
+from opentile.turbojpeg_patch import find_turbojpeg_path
 from PIL import Image
 from pydicom import config
 from pydicom.dataset import Dataset
@@ -1069,7 +1070,7 @@ class WsiDicomizer(WsiDicom):
             WsiDicomizer object of imported openslide file.
         """
         slide = OpenSlide(filepath)
-        jpeg = TurboJPEG(os.environ['TURBOJPEG'])
+        jpeg = TurboJPEG(str(find_turbojpeg_path()))
         instance_number = 0
         level_instances = [
             cls._create_instance(
