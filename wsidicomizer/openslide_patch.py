@@ -2,9 +2,17 @@ import os
 from ctypes import c_uint32
 from typing import Tuple
 
-os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
-
 import numpy as np
+
+if os.name == 'nt':  # On windows, add path to openslide to dll path
+    openslide_dir = os.environ['OPENSLIDE']  # NOQA
+    try:  # NOQA
+        os.add_dll_directory(openslide_dir)  # NOQA
+    except AttributeError:  # NOQA
+        os.environ['PATH'] = (
+            openslide_dir + os.pathsep + os.environ['PATH']
+        )  # NOQA
+
 from openslide import OpenSlide, _AssociatedImageMap
 from openslide.lowlevel import (_read_associated_image, _read_region,
                                 get_associated_image_dimensions)
