@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 from typing import Dict, Tuple, List
 
 from wsidicomizer import WsiDicomizer
-from wsidicomizer.interface import create_test_base_dataset
+from wsidicomizer.dataset import create_test_base_dataset
 from wsidicom import WsiDicom
 from PIL import ImageChops, ImageStat, ImageFilter
 

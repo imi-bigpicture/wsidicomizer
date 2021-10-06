@@ -37,13 +37,7 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
     return ['ORGINAL', 'PRIMARY', image_flavor, resampled]
 
 
-def append_dataset(dataset_0: Dataset, dataset_1: Dataset) -> Dataset:
-    for element in dataset_1.elements():
-        dataset_0.add(element)
-    return dataset_0
-
-
-def create_minimal_base_dataset(
+def create_wsi_base_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
     """Return minimal base dataset.
@@ -232,10 +226,10 @@ def create_test_base_dataset(
     Dataset
         Common dataset.
     """
-    dataset = create_minimal_base_dataset(uid_generator)
+    dataset = create_wsi_base_dataset(uid_generator)
 
     # Generic device module
-    dataset = append_dataset(dataset, create_device_module(
+    dataset.update(create_device_module(
         'Scanner manufacturer',
         'Scanner model name',
         'Scanner serial number',
@@ -243,7 +237,7 @@ def create_test_base_dataset(
     ))
 
     # Generic specimen module
-    dataset = append_dataset(dataset, create_simple_specimen_module(
+    dataset.update(create_simple_specimen_module(
         'slide id',
         samples=[create_simple_sample(
             'sample id',
@@ -252,6 +246,6 @@ def create_test_base_dataset(
     ))
 
     # Generic optical path sequence
-    dataset = append_dataset(dataset, create_generic_optical_path_module())
+    dataset.update(create_generic_optical_path_module())
 
     return dataset

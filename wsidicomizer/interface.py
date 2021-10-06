@@ -27,10 +27,10 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
                                 WsiDicomOverviews, WsiDicomSeries, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
-from .dataset import append_dataset, create_test_base_dataset, get_image_type
+from .dataset import (create_wsi_base_dataset, get_image_type)
 from .openslide_patch import OpenSlidePatched as OpenSlide
-from openslide.lowlevel import ArgumentError
 from openslide._convert import argb2rgba as convert_argb_to_rgba
+from openslide.lowlevel import ArgumentError
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -803,7 +803,7 @@ class WsiDicomGroupSave(WsiDicomGroup):
             wsi_file = DicomWsiFileWriter(filepath)
             wsi_file.write_preamble()
             wsi_file.write_file_meta(uid, transfer_syntax)
-            dataset = append_dataset(dataset, base_dataset)
+            dataset.update(base_dataset)
             dataset.SOPInstanceUID = uid
             wsi_file.write_base(dataset)
             wsi_file.write_pixel_data_start()
@@ -1009,7 +1009,7 @@ class WsiDicomizer(WsiDicom):
     def import_tiff(
         cls,
         filepath: str,
-        base_dataset: Dataset = create_test_base_dataset(),
+        datasets: Union[Dataset, List[Dataset]] = None,
         tile_size: int = None,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -1022,7 +1022,7 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: str
             Path to tiff file
-        base_dataset: Dataset
+        datasets: Union[Dataset, List[Dataset]] = None
             Base dataset to use in files. If none, use test dataset.
         tile_size: int
             Tile size to use if not defined by file.
@@ -1038,6 +1038,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported tiler.
         """
+        base_dataset = cls.create_base_dataset(datasets)
         tiler = OpenTile.open(filepath, tile_size)
         level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
@@ -1056,7 +1057,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         tile_size: int,
-        base_dataset: Dataset = create_test_base_dataset(),
+        datasets: Union[Dataset, List[Dataset]] = None,
         include_levels: List[int] = None,
         include_label: bool = True,
         include_overview: bool = True
@@ -1070,7 +1071,7 @@ class WsiDicomizer(WsiDicom):
             Path to tiff file
         tile_size: int
             Tile size to use.
-        base_dataset: Dataset
+        datasets: Union[Dataset, List[Dataset]] = None
             Base dataset to use in files. If none, use test dataset.
         include_levels: List[int] = None
             Levels to include. If None, include all levels.
@@ -1084,6 +1085,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported openslide file.
         """
+        base_dataset = cls.create_base_dataset(datasets)
         slide = OpenSlide(filepath)
         jpeg = TurboJPEG(str(find_turbojpeg_path()))
         instance_number = 0
@@ -1132,7 +1134,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         output_path: str = None,
-        base_dataset: Dataset = create_test_base_dataset(),
+        datasets: Union[Dataset, List[Dataset]] = None,
         tile_size: int = None,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
@@ -1148,7 +1150,7 @@ class WsiDicomizer(WsiDicom):
             Path to file
         output_path: str = None
             Folder path to save files to.
-        base_dataset: Dataset = create_test_base_dataset()
+        datasets: Union[Dataset, List[Dataset]] = None
             Base dataset to use in files. If none, use test dataset.
         tile_size: int
             Tile size to use if not defined by file.
@@ -1161,6 +1163,7 @@ class WsiDicomizer(WsiDicom):
         include_overwiew: bool
             Include overview(s), default true.
         """
+        base_dataset = cls.create_base_dataset(datasets)
         if OpenTile.detect_format(filepath) is not None:
             imported_wsi = cls.import_tiff(
                 filepath,
@@ -1197,7 +1200,7 @@ class WsiDicomizer(WsiDicom):
     def save(
         self,
         output_path: str,
-        base_dataset: Dataset,
+        datasets: Union[Dataset, List[Dataset]],
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> List[str]:
         """Save wsi as DICOM-files in path.
@@ -1205,7 +1208,7 @@ class WsiDicomizer(WsiDicom):
         Parameters
         ----------
         output_path: str
-        base_dataset: Dataset
+        datasets: Union[Dataset, List[Dataset]]
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
 
@@ -1217,12 +1220,40 @@ class WsiDicomizer(WsiDicom):
         collections: List[WsiDicomSeriesSave] = [
             self.levels, self.labels, self.overviews
         ]
+
         filepaths: List[str] = []
         for collection in collections:
             collection_filepaths = collection.save(
                 output_path,
-                base_dataset,
+                self.create_base_dataset(datasets),
                 uid_generator
             )
             filepaths.extend(collection_filepaths)
         return filepaths
+
+    @staticmethod
+    def create_base_dataset(
+        datasets: Union[Dataset, List[Dataset]]
+    ) -> Dataset:
+        """Create a base dataset by combining datasets to a minimal dataset.
+
+        Parameters
+        ----------
+        datasets: Union[Dataset, List[Dataset]]
+
+        Returns
+        ----------
+        Dataset
+            Combined base dataset.
+        """
+        base_dataset = create_wsi_base_dataset()
+        if isinstance(datasets, list):
+            for dataset in datasets:
+                base_dataset.update(dataset)
+            return base_dataset
+        elif isinstance(datasets, Dataset):
+            base_dataset.update(datasets)
+            return base_dataset
+        raise TypeError(
+            'datasets parameter should be singe or list of Datasets'
+        )

@@ -41,15 +41,38 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 --no_label, do not include label(s)  
 --no_overview, do not include overview(s)  
 
-***Convert a wsi-file into DCIOM using python-interface***
+***Create a base dataset***  
+```python
+from wsidicomizer.dataset import create_device_module, create_simple_sample, create_simple_specimen_module
+device_module = create_device_module(
+    create_simple_sample='Scanner manufacturer',
+    model_name='Scanner model name',
+    serial_number='Scanner serial number',
+    software_versions=['Scanner software versions']
+)
+sample = create_simple_sample(
+    sample_id='sample id',
+    embedding_medium='Paraffin wax',
+    fixative='Formalin',
+    stainings=['hematoxylin stain', 'water soluble eosin stain']
+)
+specimen_module = create_simple_specimen_module(
+    slide_id='slide id',
+    samples=[sample]
+)
+```
+
+***Convert a wsi-file into DCIOM using python-interface***  
 ```python
 from wsidicomizer import WsiDicomizer
 WsiDicomizer.convert(
     path_to_wsi_filee,
     path_to_export_folder,
+    [device_module, specimen_module],
     tile_size
 )
 ```
+tile_size is required for Ndpi- and OpenSlide-files. 
 
 ***Import a wsi file as a WsiDicom object.***
 ```python
