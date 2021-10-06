@@ -300,12 +300,15 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         return self._pyramid_index
 
     def _get_tile(self, tile: Point, flip: bool = False) -> np.ndarray:
-        """Return tile as np array. Transparency is removed.
+        """Return tile as np array. Transparency is removed. Optionally the
+        pixel format can be flipped to RGBA, suitable for opening with PIL.
 
         Parameters
         ----------
         tile: Point
             Tile position to get.
+        flip: bool
+            If to flip the pixel format from ARGB to RGBA.
 
         Returns
         ----------
