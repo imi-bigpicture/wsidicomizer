@@ -768,7 +768,6 @@ class WsiDicomGroupSave(WsiDicomGroup):
     def save(
         self,
         output_path: str,
-        base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> List[Path]:
         """Save a WsiDicomGroup to files in output_path. Instances are grouped
@@ -784,8 +783,7 @@ class WsiDicomGroupSave(WsiDicomGroup):
         ----------
         output_path: str
             Folder path to save files to.
-        base_dataset: Dataset
-            Dataset to use as base for each file.
+
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
             Uid generator to use.
 
@@ -803,7 +801,6 @@ class WsiDicomGroupSave(WsiDicomGroup):
             wsi_file = DicomWsiFileWriter(filepath)
             wsi_file.write_preamble()
             wsi_file.write_file_meta(uid, transfer_syntax)
-            dataset.update(base_dataset)
             dataset.SOPInstanceUID = uid
             wsi_file.write_base(dataset)
             wsi_file.write_pixel_data_start()
@@ -827,7 +824,6 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
     def save(
         self,
         output_path: str,
-        base_dataset: Dataset,
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> List[str]:
         """Save WsiDicomSeries as DICOM-files in path.
@@ -835,7 +831,6 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
         Parameters
         ----------
         output_path: str
-        base_dataset: Dataset
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
 
@@ -848,7 +843,6 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
         for group in self.groups:
             group_file_paths = group.save(
                 output_path,
-                base_dataset,
                 uid_generator
             )
             filepaths.extend(group_file_paths)
@@ -1194,13 +1188,12 @@ class WsiDicomizer(WsiDicom):
         except FileExistsError:
             ValueError(f'Output path {output_path} already excists')
 
-        imported_wsi.save(output_path, base_dataset, uid_generator)
+        imported_wsi.save(output_path, uid_generator)
         imported_wsi.close()
 
     def save(
         self,
         output_path: str,
-        datasets: Union[Dataset, List[Dataset]],
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
     ) -> List[str]:
         """Save wsi as DICOM-files in path.
@@ -1208,7 +1201,6 @@ class WsiDicomizer(WsiDicom):
         Parameters
         ----------
         output_path: str
-        datasets: Union[Dataset, List[Dataset]]
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
              Function that can gernerate unique identifiers.
 
@@ -1225,7 +1217,6 @@ class WsiDicomizer(WsiDicom):
         for collection in collections:
             collection_filepaths = collection.save(
                 output_path,
-                self.create_base_dataset(datasets),
                 uid_generator
             )
             filepaths.extend(collection_filepaths)
@@ -1233,13 +1224,14 @@ class WsiDicomizer(WsiDicom):
 
     @staticmethod
     def create_base_dataset(
-        datasets: Union[Dataset, List[Dataset]]
+        modules: Union[Dataset, List[Dataset]]
     ) -> Dataset:
-        """Create a base dataset by combining datasets to a minimal dataset.
+        """Create a base dataset by combining module datasets with a minimal 
+        wsi dataset.
 
         Parameters
         ----------
-        datasets: Union[Dataset, List[Dataset]]
+        modules: Union[Dataset, List[Dataset]]
 
         Returns
         ----------
@@ -1247,13 +1239,13 @@ class WsiDicomizer(WsiDicom):
             Combined base dataset.
         """
         base_dataset = create_wsi_base_dataset()
-        if isinstance(datasets, list):
-            for dataset in datasets:
-                base_dataset.update(dataset)
-            return base_dataset
-        elif isinstance(datasets, Dataset):
-            base_dataset.update(datasets)
-            return base_dataset
-        raise TypeError(
-            'datasets parameter should be singe or list of Datasets'
-        )
+        if isinstance(modules, list):
+            for module in modules:
+                base_dataset.update(module)
+        elif isinstance(modules, Dataset):
+            base_dataset.update(modules)
+        else:
+            raise TypeError(
+                'datasets parameter should be singe or list of Datasets'
+            )
+        return base_dataset
