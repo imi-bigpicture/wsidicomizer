@@ -27,7 +27,7 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
                                 WsiDicomOverviews, WsiDicomSeries, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
 
-from .dataset import (create_wsi_base_dataset, get_image_type)
+from .dataset import (create_wsi_dataset, get_image_type)
 from .openslide_patch import OpenSlidePatched as OpenSlide
 from openslide._convert import argb2rgba as convert_argb_to_rgba
 from openslide.lowlevel import ArgumentError
@@ -1226,7 +1226,7 @@ class WsiDicomizer(WsiDicom):
     def create_base_dataset(
         modules: Union[Dataset, List[Dataset]]
     ) -> Dataset:
-        """Create a base dataset by combining module datasets with a minimal 
+        """Create a base dataset by combining module datasets with a minimal
         wsi dataset.
 
         Parameters
@@ -1238,7 +1238,7 @@ class WsiDicomizer(WsiDicom):
         Dataset
             Combined base dataset.
         """
-        base_dataset = create_wsi_base_dataset()
+        base_dataset = create_wsi_dataset()
         if isinstance(modules, list):
             for module in modules:
                 base_dataset.update(module)

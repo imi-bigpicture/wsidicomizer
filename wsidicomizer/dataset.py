@@ -37,7 +37,7 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
     return ['ORGINAL', 'PRIMARY', image_flavor, resampled]
 
 
-def create_wsi_base_dataset(
+def create_wsi_dataset(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
     """Return minimal base dataset.
@@ -226,7 +226,7 @@ def create_test_base_dataset(
     Dataset
         Common dataset.
     """
-    dataset = create_wsi_base_dataset(uid_generator)
+    dataset = create_wsi_dataset(uid_generator)
 
     # Generic device module
     dataset.update(create_device_module(

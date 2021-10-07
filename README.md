@@ -41,7 +41,8 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 --no_label, do not include label(s)  
 --no_overview, do not include overview(s)  
 
-***Create a base dataset***  
+***Create module datasets (Optional)***
+Created DICOM wsis will contain a bare wsi DICOM dataset. The bare datset can be expanded by DICOM *module* datasets.
 ```python
 from wsidicomizer.dataset import create_device_module, create_simple_sample, create_simple_specimen_module
 device_module = create_device_module(
@@ -60,6 +61,7 @@ specimen_module = create_simple_specimen_module(
     slide_id='slide id',
     samples=[sample]
 )
+optical_module = create_generic_optical_path_module()
 ```
 
 ***Convert a wsi-file into DCIOM using python-interface***  
@@ -68,7 +70,7 @@ from wsidicomizer import WsiDicomizer
 WsiDicomizer.convert(
     path_to_wsi_filee,
     path_to_export_folder,
-    [device_module, specimen_module],
+    [device_module, specimen_module, optical_module],
     tile_size
 )
 ```
@@ -81,3 +83,7 @@ wsi = WsiDicomizer.import_tiff(path_to_wsi_file)
 region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
+
+## TODOs
+Packaging of libjpeg-turbo into an 'ready-to-use' distribution.  
+Look into if OpenSlide python will provide a 'ready-to-use' distribution

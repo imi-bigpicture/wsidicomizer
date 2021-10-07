@@ -3,53 +3,67 @@ from pathlib import Path
 import json
 from pydicom.dataset import Dataset
 from wsidicomizer.interface import WsiDicomizer
-from wsidicomizer.dataset import create_test_base_dataset
+from wsidicomizer.dataset import create_wsi_dataset
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert wsi to DICOM')
+    parser = argparse.ArgumentParser(
+        description=('Convert combatible wsi file to DICOM')
+    )
 
     parser.add_argument(
         '-i', '--input',
         type=Path,
         required=True,
-        help='path to input wsi file'
+        help='Path to input wsi file.'
     )
     parser.add_argument(
         '-o', '--output',
         type=Path,
-        required=True,
-        help='path to output folder'
+        help=(
+            'Path to output folder. Folder will be created and must not '
+            'excist. If not specified a folder named after the input file is '
+            'created in the same path.'
+        )
     )
     parser.add_argument(
         '-t', '--tile-size',
         type=int,
-        help='tile size (same for width and height)'
+        help=(
+            'Tile size (same for width and height). Required for ndpi and '
+            'openslide formats E.g. 512'
+        )
     )
     parser.add_argument(
         '-d', '--dataset',
         type=Path,
-        help='path to json DICOM dataset'
+        help=(
+            'Path to json DICOM dataset. Can be used to define additional '
+            'DICOM modules to include in the files'
+        )
     )
     parser.add_argument(
         '-l', '--levels',
         type=int,
         nargs='+',
-        help='levels to include, if not all',
+        help=(
+            'Pyramid levels to include, if not all. E.g. 0 1 for base and '
+            'first pyramid layer. '
+        ),
     )
     parser.add_argument(
         '--no-label',
         action="store_true",
-        help='if not to include label'
+        help='If not to include label'
     )
     parser.add_argument(
-        '--nooverview',
+        '--no-overview',
         action="store_true",
-        help='if not to include overview'
+        help='If not to include overview'
     )
     args = parser.parse_args()
     if not args.dataset:
-        dataset = create_test_base_dataset()
+        dataset = create_wsi_dataset()
     else:
         json_file = open(args.dataset)
         dataset = Dataset.from_json(json.load(json_file))
@@ -59,8 +73,8 @@ def main():
         levels = args.levels
 
     WsiDicomizer.convert(
-        str(args.input),
-        str(args.output),
+        args.input,
+        args.output,
         dataset,
         tile_size=args.tile_size,
         include_levels=levels,
