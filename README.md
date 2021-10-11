@@ -63,6 +63,8 @@ specimen_module = create_specimen_module(
 )
 optical_module = create_brightfield_optical_path_module()
 patient_module = create_patient_module()
+study_module = create_study_module()
+
 ```
 
 ***Convert a wsi-file into DCIOM using python-interface***
@@ -71,7 +73,7 @@ from wsidicomizer import WsiDicomizer
 WsiDicomizer.convert(
     path_to_wsi_filee,
     path_to_export_folder,
-    [device_module, specimen_module, optical_module, patient_module],
+    [device_module, specimen_module, optical_module, patient_module, study_module],
     tile_size
 )
 ```
