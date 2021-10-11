@@ -51,13 +51,13 @@ device_module = create_device_module(
     serial_number='Scanner serial number',
     software_versions=['Scanner software versions']
 )
-sample = create_simple_sample(
+sample = create_sample(
     sample_id='sample id',
     embedding_medium='Paraffin wax',
     fixative='Formalin',
     stainings=['hematoxylin stain', 'water soluble eosin stain']
 )
-specimen_module = create_simple_specimen_module(
+specimen_module = create_specimen_module(
     slide_id='slide id',
     samples=[sample]
 )
