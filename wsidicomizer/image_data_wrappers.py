@@ -134,7 +134,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
         return pydicom.uid.JPEGBaseline8Bit
 
     @staticmethod
-    def _remove_transparency(image_data: np.ndarray) -> np.ndarray:
+    def _make_transparent_pixels_white(image_data: np.ndarray) -> np.ndarray:
         """Removes transparency from image data. Openslide-python produces
         non-premultiplied, 'straigt' RGBA data and the RGB-part can be left
         unmodified. Fully transparent pixels have RGBA-value 0, 0, 0, 0. For
@@ -173,7 +173,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         self._image_type = image_type
         self._open_slide = open_slide
         image_data = open_slide.associated_images_np[image_type]
-        image_data = self._remove_transparency(image_data)
+        image_data = self._make_transparent_pixels_white(image_data)
         self._encoded_image = jpeg.encode(
             image_data,
             JPEG_ENCODE_QUALITY,
@@ -314,7 +314,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
                 self._level_index,
                 self._tile_size.to_tuple()
         )
-        tile_data = self._remove_transparency(tile_data)
+        tile_data = self._make_transparent_pixels_white(tile_data)
         if flip:
             convert_argb_to_rgba(tile_data)
         return tile_data[:, :, 0:3]
