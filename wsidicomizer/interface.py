@@ -22,6 +22,7 @@ from .openslide_patch import OpenSlidePatched as OpenSlide
 config.enforce_valid_values = True
 config.future_behavior()
 
+
 class WsiDicomizer(WsiDicom):
     """WsiDicom class with import file-functionality."""
 
