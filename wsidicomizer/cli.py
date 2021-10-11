@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 from pydicom.dataset import Dataset
 from wsidicomizer.interface import WsiDicomizer
-from wsidicomizer.dataset import create_wsi_dataset
+from wsidicomizer.dataset import create_default_dataset
 
 
 def main():
@@ -63,7 +63,7 @@ def main():
     )
     args = parser.parse_args()
     if not args.dataset:
-        dataset = create_wsi_dataset()
+        dataset = create_default_dataset()
     else:
         json_file = open(args.dataset)
         dataset = Dataset.from_json(json.load(json_file))

@@ -8,7 +8,7 @@ $ python -m pip git+https://github.com/imi-bigpicture/wsidicomizer.git
 ```
 
 ***Install OpenSlide***
-Instructions for how to install OpenSlide is avaiable on https://openslide.org/download/  
+Instructions for how to install OpenSlide is avaiable on https://openslide.org/download/
 For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'OPENSLIDE'
 
 ***Install libjpeg-turbo***
@@ -31,15 +31,15 @@ Files with z-stacks or multiple focal paths are currently not supported.
 wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 ### Arguments:
--i, --input, path to input wsi file  
--o, --output, path to output folder  
--d, --dataset, optional path to json file defining base dataset  
--t, --tile_size, tile size, required depending on input format  
--l, --levels, optional levels to include  
+-i, --input, path to input wsi file
+-o, --output, path to output folder
+-d, --dataset, optional path to json file defining base dataset
+-t, --tile_size, tile size, required depending on input format
+-l, --levels, optional levels to include
 
 ### Flags
---no_label, do not include label(s)  
---no_overview, do not include overview(s)  
+--no_label, do not include label(s)
+--no_overview, do not include overview(s)
 
 ***Create module datasets (Optional)***
 Created DICOM wsis will contain a bare wsi DICOM dataset. The bare datset can be expanded by DICOM *module* datasets.
@@ -61,20 +61,21 @@ specimen_module = create_simple_specimen_module(
     slide_id='slide id',
     samples=[sample]
 )
-optical_module = create_generic_optical_path_module()
+optical_module = create_brightfield_optical_path_module()
+patient_module = create_patient_module()
 ```
 
-***Convert a wsi-file into DCIOM using python-interface***  
+***Convert a wsi-file into DCIOM using python-interface***
 ```python
 from wsidicomizer import WsiDicomizer
 WsiDicomizer.convert(
     path_to_wsi_filee,
     path_to_export_folder,
-    [device_module, specimen_module, optical_module],
+    [device_module, specimen_module, optical_module, patient_module],
     tile_size
 )
 ```
-tile_size is required for Ndpi- and OpenSlide-files. 
+tile_size is required for Ndpi- and OpenSlide-files.
 
 ***Import a wsi file as a WsiDicom object.***
 ```python
@@ -85,5 +86,6 @@ wsi.close()
 ```
 
 ## TODOs
-Packaging of libjpeg-turbo into an 'ready-to-use' distribution.  
-Look into if OpenSlide python will provide a 'ready-to-use' distribution
+Packaging of libjpeg-turbo into an 'ready-to-use' distribution.
+Look into if OpenSlide python will provide a 'ready-to-use' distribution.
+Interface for coding annotations (geometrical, diagnosis using for example structured reporting).
