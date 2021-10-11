@@ -129,6 +129,8 @@ class ImageDataWrapper(ImageData):
             dataset.PhotometricInterpretation = photometric_interpretation
             dataset.SamplesPerPixel = 3
 
+        dataset.PlanarConfiguration = 0
+
         dataset.InstanceNumber = instance_number
         dataset.FocusMethod = 'AUTO'
         dataset.ExtendedDepthOfField = 'NO'
