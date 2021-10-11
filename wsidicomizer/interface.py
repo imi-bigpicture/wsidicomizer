@@ -26,6 +26,7 @@ from wsidicom.interface import (ImageData, WsiDataset, WsiDicomGroup,
                                 WsiDicomLabels, WsiDicomLevel, WsiDicomLevels,
                                 WsiDicomOverviews, WsiDicomSeries, WsiInstance)
 from wsidicom.uid import WSI_SOP_CLASS_UID
+from wsidicom.errors import WsiDicomNotFoundError
 
 from .dataset import (create_wsi_dataset, get_image_type)
 from .openslide_patch import OpenSlidePatched as OpenSlide
@@ -824,7 +825,11 @@ class WsiDicomLevelSave(WsiDicomLevel, WsiDicomGroupSave):
 
 class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
     """Extend WsiDicomSeries with save-functionality."""
-    groups: List[WsiDicomGroupSave]
+
+    @property
+    def groups(self) -> List[WsiDicomGroupSave]:
+        """Override to get correct type hint."""
+        return self._groups
 
     def save(
         self,
@@ -857,26 +862,50 @@ class WsiDicomSeriesSave(WsiDicomSeries, metaclass=ABCMeta):
 class WsiDicomLabelsSave(WsiDicomLabels, WsiDicomSeriesSave):
     """Extend WsiDicomLabels with save-functionality from WsiDicomSeriesSave.
     """
-    group_class = WsiDicomGroupSave
+    @staticmethod
+    def group_open(instances: List[WsiInstance]) -> List[WsiDicomGroupSave]:
+        return WsiDicomGroupSave.open(instances)
 
 
 class WsiDicomOverviewsSave(WsiDicomOverviews, WsiDicomSeriesSave):
     """Extend WsiDicomOverviews with save-functionality from
     WsiDicomSeriesSave."""
-    group_class = WsiDicomGroupSave
+    @staticmethod
+    def group_open(instances: List[WsiInstance]) -> List[WsiDicomGroupSave]:
+        return WsiDicomGroupSave.open(instances)
 
 
 class WsiDicomLevelsSave(WsiDicomLevels, WsiDicomSeriesSave):
     """Extend WsiDicomLevels with save-functionality from WsiDicomSeriesSave.
     """
-    group_class = WsiDicomLevelSave
+    @staticmethod
+    def group_open(instances: List[WsiInstance]) -> List[WsiDicomLevelSave]:
+        return WsiDicomLevelSave.open(instances)
 
 
 class WsiDicomizer(WsiDicom):
-    """WsiDicom class with import tiler-functionality."""
-    levels: WsiDicomLevelsSave
-    labels: WsiDicomLabelsSave
-    overviews: WsiDicomOverviewsSave
+    """WsiDicom class with import file-functionality."""
+
+    @property
+    def levels(self) -> WsiDicomLevelsSave:
+        """Return contained levels"""
+        if self._levels is not None:
+            return self._levels
+        raise WsiDicomNotFoundError("levels", str(self))
+
+    @property
+    def labels(self) -> WsiDicomLabelsSave:
+        """Return contained labels"""
+        if self._labels is not None:
+            return self._labels
+        raise WsiDicomNotFoundError("labels", str(self))
+
+    @property
+    def overviews(self) -> WsiDicomOverviewsSave:
+        """Return contained overviews"""
+        if self._overviews is not None:
+            return self._overviews
+        raise WsiDicomNotFoundError("overviews", str(self))
 
     @classmethod
     def import_tiff(
