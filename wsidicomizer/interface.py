@@ -878,132 +878,6 @@ class WsiDicomizer(WsiDicom):
     labels: WsiDicomLabelsSave
     overviews: WsiDicomOverviewsSave
 
-    @staticmethod
-    def _create_instance(
-        image_data: ImageDataWrapper,
-        base_dataset: Dataset,
-        image_type: str,
-        instance_number: int
-    ) -> WsiInstance:
-        """Create WsiInstance from OpenTilePage.
-
-        Parameters
-        ----------
-        image_data: ImageData
-            Image data and metadata.
-        base_dataset: Dataset
-            Base dataset to include.
-        image_type: str
-            Type of instance to create.
-        instance_number: int
-            The number of the instance (in a series).
-
-        Returns
-        ----------
-        WsiInstance
-            Created WsiInstance.
-        """
-        instance_dataset = image_data.create_instance_dataset(
-            base_dataset,
-            image_type,
-            instance_number,
-            image_data.transfer_syntax,
-            image_data.photometric_interpretation
-        )
-
-        return WsiInstance(
-            WsiDataset(instance_dataset),
-            image_data
-        )
-
-    @staticmethod
-    def populate_base_dataset(
-        tiler: Tiler,
-        base_dataset: Dataset
-    ) -> Dataset:
-        for property, value in tiler.properties.items():
-            if property == 'aquisition_datatime':
-                base_dataset.AcquisitionDateTime = value
-            elif property == 'device_serial_number':
-                base_dataset.DeviceSerialNumber = value
-            elif property == 'manufacturer':
-                base_dataset.Manufacturer = value
-            elif property == 'software_versions':
-                base_dataset.SoftwareVersions = value
-            elif property == 'lossy_image_compression_method':
-                base_dataset.LossyImageCompressionMethod = value
-            elif property == 'lossy_image_compression_ratio':
-                base_dataset.LossyImageCompressionRatio = value
-            elif property == 'photometric_interpretation':
-                base_dataset.PhotometricInterpretation = value
-        return base_dataset
-
-    @classmethod
-    def _open_tiler(
-        cls,
-        tiler: Tiler,
-        base_dataset: Dataset,
-        include_levels: List[int] = None,
-        include_label: bool = True,
-        include_overview: bool = True
-    ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
-        """Open tiler to produce WsiInstances.
-
-        Parameters
-        ----------
-        tiler: Tiler
-            Tiler that can produce WsiInstances.
-        base_dataset: Dataset
-            Base dataset to include in files.
-        include_levels: List[int] = None
-            Optional list of levels to include. Include all levels if None.
-        include_label: bool = True
-            Include label(s), default true.
-        include_overwiew: bool = True
-            Include overview(s), default true.
-
-        Returns
-        ----------
-        Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
-            Lists of created level, label and overivew instances.
-        """
-        base_dataset = cls.populate_base_dataset(tiler, base_dataset)
-        instance_number = 0
-        level_instances = [
-            cls._create_instance(
-                OpenTileWrapper(level),
-                base_dataset,
-                'VOLUME',
-                instance_number+index
-            )
-            for index, level in enumerate(tiler.levels)
-            if include_levels is None or level.pyramid_index in include_levels
-        ]
-        instance_number += len(level_instances)
-        label_instances = [
-            cls._create_instance(
-                OpenTileWrapper(label),
-                base_dataset,
-                'LABEL',
-                instance_number+index
-            )
-            for index, label in enumerate(tiler.labels)
-            if include_label
-        ]
-        instance_number += len(level_instances)
-        overview_instances = [
-            cls._create_instance(
-                OpenTileWrapper(overview),
-                base_dataset,
-                'OVERVIEW',
-                instance_number+index
-            )
-            for index, overview in enumerate(tiler.overviews)
-            if include_overview
-        ]
-
-        return level_instances, label_instances, overview_instances
-
     @classmethod
     def import_tiff(
         cls,
@@ -1037,7 +911,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported tiler.
         """
-        base_dataset = cls.create_base_dataset(datasets)
+        base_dataset = cls._create_base_dataset(datasets)
         tiler = OpenTile.open(filepath, tile_size)
         level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
@@ -1084,7 +958,7 @@ class WsiDicomizer(WsiDicom):
         WsiDicomizer
             WsiDicomizer object of imported openslide file.
         """
-        base_dataset = cls.create_base_dataset(datasets)
+        base_dataset = cls._create_base_dataset(datasets)
         slide = OpenSlide(filepath)
         jpeg = TurboJPEG(str(find_turbojpeg_path()))
         instance_number = 0
@@ -1162,7 +1036,7 @@ class WsiDicomizer(WsiDicom):
         include_overwiew: bool
             Include overview(s), default true.
         """
-        base_dataset = cls.create_base_dataset(datasets)
+        base_dataset = cls._create_base_dataset(datasets)
         if OpenTile.detect_format(filepath) is not None:
             imported_wsi = cls.import_tiff(
                 filepath,
@@ -1228,7 +1102,111 @@ class WsiDicomizer(WsiDicom):
         return filepaths
 
     @staticmethod
-    def create_base_dataset(
+    def _create_instance(
+        image_data: ImageDataWrapper,
+        base_dataset: Dataset,
+        image_type: str,
+        instance_number: int
+    ) -> WsiInstance:
+        """Create WsiInstance from OpenTilePage.
+
+        Parameters
+        ----------
+        image_data: ImageData
+            Image data and metadata.
+        base_dataset: Dataset
+            Base dataset to include.
+        image_type: str
+            Type of instance to create.
+        instance_number: int
+            The number of the instance (in a series).
+
+        Returns
+        ----------
+        WsiInstance
+            Created WsiInstance.
+        """
+        instance_dataset = image_data.create_instance_dataset(
+            base_dataset,
+            image_type,
+            instance_number,
+            image_data.transfer_syntax,
+            image_data.photometric_interpretation
+        )
+
+        return WsiInstance(
+            WsiDataset(instance_dataset),
+            image_data
+        )
+
+    @classmethod
+    def _open_tiler(
+        cls,
+        tiler: Tiler,
+        base_dataset: Dataset,
+        include_levels: List[int] = None,
+        include_label: bool = True,
+        include_overview: bool = True
+    ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
+        """Open tiler to produce WsiInstances.
+
+        Parameters
+        ----------
+        tiler: Tiler
+            Tiler that can produce WsiInstances.
+        base_dataset: Dataset
+            Base dataset to include in files.
+        include_levels: List[int] = None
+            Optional list of levels to include. Include all levels if None.
+        include_label: bool = True
+            Include label(s), default true.
+        include_overwiew: bool = True
+            Include overview(s), default true.
+
+        Returns
+        ----------
+        Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
+            Lists of created level, label and overivew instances.
+        """
+        base_dataset = cls._populate_base_dataset(tiler, base_dataset)
+        instance_number = 0
+        level_instances = [
+            cls._create_instance(
+                OpenTileWrapper(level),
+                base_dataset,
+                'VOLUME',
+                instance_number+index
+            )
+            for index, level in enumerate(tiler.levels)
+            if include_levels is None or level.pyramid_index in include_levels
+        ]
+        instance_number += len(level_instances)
+        label_instances = [
+            cls._create_instance(
+                OpenTileWrapper(label),
+                base_dataset,
+                'LABEL',
+                instance_number+index
+            )
+            for index, label in enumerate(tiler.labels)
+            if include_label
+        ]
+        instance_number += len(level_instances)
+        overview_instances = [
+            cls._create_instance(
+                OpenTileWrapper(overview),
+                base_dataset,
+                'OVERVIEW',
+                instance_number+index
+            )
+            for index, overview in enumerate(tiler.overviews)
+            if include_overview
+        ]
+
+        return level_instances, label_instances, overview_instances
+
+    @staticmethod
+    def _create_base_dataset(
         modules: Union[Dataset, List[Dataset]]
     ) -> Dataset:
         """Create a base dataset by combining module datasets with a minimal
@@ -1253,4 +1231,39 @@ class WsiDicomizer(WsiDicom):
             raise TypeError(
                 'datasets parameter should be singe or list of Datasets'
             )
+        return base_dataset
+
+    @staticmethod
+    def _populate_base_dataset(
+        tiler: Tiler,
+        base_dataset: Dataset
+    ) -> Dataset:
+        """Populate dataset with properties from tiler, if present.
+        Parameters
+        ----------
+        tiler: Tiler
+            A opentile Tiler.
+        base_dataset: Dataset
+            Dataset to append properties to.
+
+        Returns
+        ----------
+        Dataset
+            Dataset with added properties.
+        """
+        for property, value in tiler.properties.items():
+            if property == 'aquisition_datatime':
+                base_dataset.AcquisitionDateTime = value
+            elif property == 'device_serial_number':
+                base_dataset.DeviceSerialNumber = value
+            elif property == 'manufacturer':
+                base_dataset.Manufacturer = value
+            elif property == 'software_versions':
+                base_dataset.SoftwareVersions = value
+            elif property == 'lossy_image_compression_method':
+                base_dataset.LossyImageCompressionMethod = value
+            elif property == 'lossy_image_compression_ratio':
+                base_dataset.LossyImageCompressionRatio = value
+            elif property == 'photometric_interpretation':
+                base_dataset.PhotometricInterpretation = value
         return base_dataset
