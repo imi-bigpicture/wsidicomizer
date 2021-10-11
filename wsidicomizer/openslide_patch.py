@@ -23,6 +23,13 @@ from openslide import OpenSlide, _AssociatedImageMap
 from openslide.lowlevel import (_read_associated_image, _read_region,
                                 get_associated_image_dimensions)
 
+"""
+OpenSlidePatched extends OpenSlide with functions to get image data as numpy
+arrays instead of pillow images. Private functions (_read_associated_image,
+_read_region) are used to get raw data from the OpenSlide C API. We consider
+this safe, as these directly map to the Openslide C API and are thus not likely
+to change.
+"""
 
 class _AssociatedImageMapNp(_AssociatedImageMap):
     def __getitem__(self, name: str) -> np.ndarray:
