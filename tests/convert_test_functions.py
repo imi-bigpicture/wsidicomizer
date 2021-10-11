@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 from typing import Dict, Tuple, List
 
 from wsidicomizer import WsiDicomizer
-from wsidicomizer.dataset import create_test_base_dataset
+from wsidicomizer.dataset import create_default_dataset
 from wsidicom import WsiDicom
 from PIL import ImageChops, ImageStat, ImageFilter
 
@@ -48,7 +48,7 @@ class ConvertTest(unittest.TestCase):
     @classmethod
     def open(cls, path: Path) -> Tuple[Path, WsiDicom, TemporaryDirectory]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_test_base_dataset()
+        base_dataset = create_default_dataset()
         tempdir = TemporaryDirectory()
         WsiDicomizer.convert(
             str(filepath),
