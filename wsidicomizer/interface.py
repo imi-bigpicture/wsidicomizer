@@ -681,7 +681,10 @@ class DicomWsiFileWriter:
             'suggested_minimum_chunk_size',
             1
         )
-        chunk_size = 10*minimum_chunk_size
+        #
+        number_of_chunks = 10
+
+        chunk_size = number_of_chunks*minimum_chunk_size
 
         # Divide the image tiles up into chunk_size chunks (up to tiled size)
         chunked_tile_points = (

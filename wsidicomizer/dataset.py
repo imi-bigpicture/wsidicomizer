@@ -40,17 +40,13 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
 
 
 def create_wsi_dataset(
-    study_id: str = "",
-    study_date: datetime.date = "",
-    study_time: datetime.time = "",
-    study_accession_number: str = "",
-    referring_physician_name: str = "",
     offset: Tuple[float, float] = [0.0, 0.0],
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
-    slide icrosocy series, general study, frame of reference, acquisition
-    context, multi-frame dimension, and whole slide microscopy image modules.
+    slide icrosocy series, frame of reference, acquisition context, multi-frame
+    dimension, and whole slide microscopy image modules.
+
     Some modules returned 'not complete', and completed during image data
     import or file save():
         SOP common module:
@@ -77,16 +73,6 @@ def create_wsi_dataset(
 
     Parameters
     ----------
-    study_id: str = ""
-        Study identifier. Can be empty.
-    date: datetime.date = ""
-        Date the study started. Can be empty.
-    time: datetime.time = ""
-        Time the study started. Can be empty.
-    accession_number: str = ""
-        Order for the study. Can be empty.
-    referring_physician_name: str = ""
-        Name of reffering physician. Can be empty.
     image_offset: Tuple[float, float] = 0.0
         X and Y offset (in mm) to first pixel in image data.
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
@@ -106,14 +92,6 @@ def create_wsi_dataset(
     # General series and Whole slide Microscopy modules
     dataset.SeriesInstanceUID = uid_generator()
     dataset.Modality = 'SM'
-
-    # General study module
-    dataset.StudyInstanceUID = uid_generator()
-    dataset.StudyID = study_id
-    dataset.StudyDate = study_date
-    dataset.StudyTime = study_time
-    dataset.AccessionNumber = study_accession_number
-    dataset.ReferringPhysicianName = referring_physician_name
 
     # Frame of reference module
     dataset.FrameOfReferenceUID = uid_generator()
@@ -140,6 +118,44 @@ def create_wsi_dataset(
     offset_item.x_offset = offset[0]
     offset_item.y_offset = offset[1]
     dataset.TotalPixelMatrixOriginSequence = DicomSequence([offset_item])
+    return dataset
+
+
+def create_study_module(
+    study_id: str = "",
+    study_date: datetime.date = "",
+    study_time: datetime.time = "",
+    study_accession_number: str = "",
+    referring_physician_name: str = "",
+    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+) -> Dataset:
+    """Create general study module.
+
+    Parameters
+    ----------
+    study_id: str = ""
+        Study identifier. Can be empty.
+    date: datetime.date = ""
+        Date the study started. Can be empty.
+    time: datetime.time = ""
+        Time the study started. Can be empty.
+    accession_number: str = ""
+        Order for the study. Can be empty.
+    referring_physician_name: str = ""
+        Name of reffering physician. Can be empty.
+
+    Returns
+    ----------
+    Dataset
+        Dataset containing general study module.
+    """
+    dataset = Dataset()
+    dataset.StudyInstanceUID = uid_generator()
+    dataset.StudyID = study_id
+    dataset.StudyDate = study_date
+    dataset.StudyTime = study_time
+    dataset.AccessionNumber = study_accession_number
+    dataset.ReferringPhysicianName = referring_physician_name
     return dataset
 
 
@@ -448,10 +464,10 @@ def create_brightfield_optical_path_module(
     return dataset
 
 
-def create_default_dataset(
+def create_default_modules(
     uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
 ) -> Dataset:
-    """Return simple base dataset for testing.
+    """Return default module dataset for testing.
 
     Parameters
     ----------
@@ -460,19 +476,22 @@ def create_default_dataset(
 
     Returns
     ----------
-    Dataset
-        Common dataset.
+    List[Dataset]
+        Default module datasets.
     """
-    dataset = create_wsi_dataset(uid_generator=uid_generator)
+    modules: List[Dataset] = []
 
-    # Gemeroc patient module
-    dataset.update(create_patient_module())
+    # Generic study module
+    modules.append(create_study_module())
+
+    # Generic patient module
+    modules.append(create_patient_module())
 
     # Generic device module
-    dataset.update(create_device_module())
+    modules.append(create_device_module())
 
     # Generic specimen module
-    dataset.update(create_specimen_module(
+    modules.append(create_specimen_module(
         'Unkown',
         samples=[create_sample(
             sample_id='Unkown',
@@ -482,6 +501,6 @@ def create_default_dataset(
     ))
 
     # Generic optical path sequence
-    dataset.update(create_brightfield_optical_path_module())
+    modules.append(create_brightfield_optical_path_module())
 
-    return dataset
+    return modules
