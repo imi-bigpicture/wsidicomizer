@@ -8,7 +8,6 @@ authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 python = ">=3.7,<3.11"
 wsidicom = {path = "../wsidicom", develop = true}
 opentile = {path = "../opentile", develop = true}
-imagecodecs = "^2021.8.26"
 openslide-python = "^1.1.2"
 PyTurboJPEG = "^1.6.1"
 numpy = "^1.21.2"
@@ -22,3 +21,6 @@ pytest-watch = "^4.2.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+wsidicomizer = "wsidicomizer.cli:main"
