@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from typing import Literal
 
@@ -17,7 +17,7 @@ config.enforce_valid_values = True
 config.future_behavior()
 
 
-class ImageDataWrapper(ImageData):
+class ImageDataWrapper(ImageData, metaclass=ABCMeta):
     _default_z = 0
 
     def __init__(
