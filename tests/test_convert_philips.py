@@ -1,12 +1,13 @@
 import os
+import unittest
 
 import pytest
 
-from .convert_test_functions import ConvertTest
+from .convert_test_functions import ConvertTestBase
 
 
 @pytest.mark.convert_philips
-class PhilipsConvertTest(ConvertTest):
+class PhilipsConvertTest(ConvertTestBase, unittest.TestCase):
     test_data_dir = os.environ.get(
             "PHILIPS_TESTDIR",
             "C:/temp/opentile/philips_tiff/"
@@ -17,4 +18,4 @@ class PhilipsConvertTest(ConvertTest):
     tile_size = None
 
     def __init__(self, *args, **kwargs):
-        super(ConvertTest, self).__init__(*args, **kwargs)
+        super(ConvertTestBase, self).__init__(*args, **kwargs)

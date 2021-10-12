@@ -1,7 +1,6 @@
 import glob
 import json
 import os
-import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,27 +15,26 @@ os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
 from openslide import OpenSlide
 
 
-class ConvertTest(unittest.TestCase):
+class ConvertTestBase:
     include_levels: List[int] = None
     input_filename: str = None
     test_data_dir: str = None
     turbo_path: str = None
     tile_size: Tuple[int, int] = None
-    test_folders: Dict[
-            Path,
-            Tuple[WsiDicom, OpenSlide, TemporaryDirectory]
-    ] = {}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.test_folders: Dict[
+                Path,
+                Tuple[WsiDicom, OpenSlide, TemporaryDirectory]
+        ] = {}
 
     @classmethod
     def setUpClass(cls):
         cls.test_folders = {}
-        if cls.test_data_dir is not None:
-            folders = cls._get_folders(cls.test_data_dir)
-            for folder in folders:
-                cls.test_folders[folder] = cls.open(folder)
+        folders = cls._get_folders(cls.test_data_dir)
+        for folder in folders:
+            cls.test_folders[folder] = cls.open(folder)
 
     @classmethod
     def tearDownClass(cls):
