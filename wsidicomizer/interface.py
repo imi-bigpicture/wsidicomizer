@@ -14,10 +14,12 @@ from wsidicom import WsiDicom
 from wsidicom.interface import (WsiDataset, WsiDicomLabels, WsiDicomLevels,
                                 WsiDicomOverviews, WsiInstance)
 
-from .dataset import create_wsi_dataset
-from .image_data_wrappers import (ImageDataWrapper, OpenSlideAssociatedWrapper,
-                                  OpenSlideLevelWrapper, OpenTileWrapper)
-from .openslide_patch import OpenSlidePatched as OpenSlide
+from wsidicomizer.dataset import create_wsi_dataset
+from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+from wsidicomizer.openslide_wrapper import (OpenSlideAssociatedWrapper,
+                                            OpenSlideLevelWrapper)
+from wsidicomizer.opentile_wrapper import OpenTileWrapper
+from openslide import OpenSlide
 
 config.enforce_valid_values = True
 config.future_behavior()
