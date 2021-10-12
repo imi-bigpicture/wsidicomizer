@@ -23,7 +23,7 @@ Please note that this is an early release and the API is not frozen yet. Functio
 *wsidicomizer* requires python >=3.7 and uses numpy, pydicom, highdicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
 
 ## Limitations
-Files with z-stacks or multiple focal paths are currently not supported.
+Files with z-stacks or multiple focal paths are currently not supported. DICOM properties related to slice thickness, focal plane thickness, and imaged volume are saved as 0 and not with proper values.
 
 ## Basic usage
 ***Convert a wsi-file into DICOM using cli-interface***
