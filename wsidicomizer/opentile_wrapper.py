@@ -1,35 +1,45 @@
-from typing import Iterator, List
+from typing import Iterator, List, Literal
 
 import pydicom
-from imagecodecs import jpeg_encode
 
 from opentile.common import OpenTilePage
 from PIL import Image
 from pydicom import config
 from pydicom.uid import UID as Uid
-from turbojpeg import TJSAMP_444
+from turbojpeg import TJPF_RGB, TJSAMP_444, TurboJPEG
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 config.enforce_valid_values = True
 config.future_behavior()
 
-# Should be configurable parameters
-# Also, it should be possible to configure jpeg2000-compresesion
-JPEG_ENCODE_QUALITY = 95
-JPEG_ENCODE_SUBSAMPLE = TJSAMP_444
-
 
 class OpenTileWrapper(ImageDataWrapper):
-    def __init__(self, tiled_page: OpenTilePage):
+    def __init__(
+        self,
+        tiled_page: OpenTilePage,
+        jpeg: TurboJPEG,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
+    ):
         """Wraps a OpenTilePage to ImageData.
 
         Parameters
         ----------
         tiled_page: OpenTilePage
             OpenTilePage to wrap.
+        jpeg: TurboJPEG
+            TurboJPEG object to use.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
         """
+        super().__init__(jpeg, jpeg_quality, jpeg_subsample)
         self._tiled_page = tiled_page
+
         self._needs_transcoding = not self.is_supported_transfer_syntax()
         if self.needs_transcoding:
             self._transfer_syntax = pydicom.uid.JPEGBaseline8Bit
@@ -52,6 +62,10 @@ class OpenTileWrapper(ImageDataWrapper):
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
         return self._transfer_syntax
+
+    @property
+    def pixel_format(self) -> Literal:
+        return TJPF_RGB
 
     @property
     def needs_transcoding(self) -> bool:
@@ -122,7 +136,7 @@ class OpenTileWrapper(ImageDataWrapper):
             raise ValueError
         if self.needs_transcoding:
             decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
-            return jpeg_encode(decoded_tile)
+            return self._encode(decoded_tile)
         return self._tiled_page.get_tile(tile.to_tuple())
 
     def get_decoded_tile(
@@ -182,7 +196,7 @@ class OpenTileWrapper(ImageDataWrapper):
         if not self.needs_transcoding:
             return self._tiled_page.get_tiles(tiles_tuples)
         decoded_tiles = self._tiled_page.get_decoded_tiles(tiles_tuples)
-        return [jpeg_encode(tile) for tile in decoded_tiles]
+        return [self._encode(tile) for tile in decoded_tiles]
 
     def close(self) -> None:
         self._tiled_page.close()

@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Literal, Tuple, Union
 
 import pydicom
 from opentile.common import Tiler
@@ -9,7 +9,7 @@ from opentile.turbojpeg_patch import find_turbojpeg_path
 from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.uid import UID as Uid
-from turbojpeg import TurboJPEG
+from turbojpeg import TJSAMP_444, TurboJPEG
 from wsidicom import WsiDicom
 from wsidicom.interface import (WsiDataset, WsiDicomLabels, WsiDicomLevels,
                                 WsiDicomOverviews, WsiInstance)
@@ -36,7 +36,9 @@ class WsiDicomizer(WsiDicom):
         tile_size: int = None,
         include_levels: List[int] = None,
         include_label: bool = True,
-        include_overview: bool = True
+        include_overview: bool = True,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
     ) -> 'WsiDicomizer':
         """Open data in tiff file as WsiDicom object. Note that created
         instances always has a random UID.
@@ -55,6 +57,13 @@ class WsiDicomizer(WsiDicom):
             Inclube label.
         include_overview: bool = True
             Include overview.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
+
 
         Returns
         ----------
@@ -68,7 +77,9 @@ class WsiDicomizer(WsiDicom):
             base_dataset,
             include_levels=include_levels,
             include_label=include_label,
-            include_overview=include_overview
+            include_overview=include_overview,
+            jpeg_quality=jpeg_quality,
+            jpeg_subsample=jpeg_subsample
         )
         levels = WsiDicomLevels.open(level_instances)
         labels = WsiDicomLabels.open(label_instances)
@@ -83,7 +94,9 @@ class WsiDicomizer(WsiDicom):
         datasets: Union[Dataset, List[Dataset]] = None,
         include_levels: List[int] = None,
         include_label: bool = True,
-        include_overview: bool = True
+        include_overview: bool = True,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
     ) -> 'WsiDicomizer':
         """Open data in openslide file as WsiDicom object. Note that created
         instances always has a random UID.
@@ -102,6 +115,12 @@ class WsiDicomizer(WsiDicom):
             Inclube label.
         include_overview: bool = True
             Include overview.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
 
         Returns
         ----------
@@ -118,7 +137,9 @@ class WsiDicomizer(WsiDicom):
                     slide,
                     level_index,
                     tile_size,
-                    jpeg
+                    jpeg,
+                    jpeg_quality,
+                    jpeg_subsample
                 ),
                 base_dataset,
                 'VOLUME',
@@ -130,7 +151,13 @@ class WsiDicomizer(WsiDicom):
         instance_number += len(level_instances)
         if include_label and 'label' in slide.associated_images:
             label_instances = [cls._create_instance(
-                OpenSlideAssociatedWrapper(slide, 'label', jpeg),
+                OpenSlideAssociatedWrapper(
+                    slide,
+                    'label',
+                    jpeg,
+                    jpeg_quality,
+                    jpeg_subsample
+                ),
                 base_dataset,
                 'LABEL',
                 instance_number
@@ -140,7 +167,13 @@ class WsiDicomizer(WsiDicom):
         instance_number += len(label_instances)
         if include_overview and 'macro' in slide.associated_images:
             overview_instances = [cls._create_instance(
-                OpenSlideAssociatedWrapper(slide, 'macro', jpeg),
+                OpenSlideAssociatedWrapper(
+                    slide,
+                    'macro',
+                    jpeg,
+                    jpeg_quality,
+                    jpeg_subsample
+                ),
                 base_dataset,
                 'OVERVIEW',
                 instance_number
@@ -162,8 +195,10 @@ class WsiDicomizer(WsiDicom):
         uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid,
         include_levels: List[int] = None,
         include_label: bool = True,
-        include_overview: bool = True
-    ) -> None:
+        include_overview: bool = True,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
+    ) -> List[str]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -185,6 +220,17 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool
             Include overview(s), default true.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
+
+        Returns
+        ----------
+        List[str]
+            List of paths of created files.
         """
         base_dataset = cls._create_base_dataset(datasets)
         if OpenTile.detect_format(filepath) is not None:
@@ -192,9 +238,11 @@ class WsiDicomizer(WsiDicom):
                 filepath,
                 base_dataset,
                 tile_size,
-                include_levels,
-                include_label,
-                include_overview
+                include_levels=include_levels,
+                include_label=include_label,
+                include_overview=include_overview,
+                jpeg_quality=jpeg_quality,
+                jpeg_subsample=jpeg_subsample
             )
         elif OpenSlide.detect_format(filepath) is not None:
             imported_wsi = cls.import_openslide(
@@ -203,7 +251,9 @@ class WsiDicomizer(WsiDicom):
                 base_dataset,
                 include_levels=include_levels,
                 include_label=include_label,
-                include_overview=include_overview
+                include_overview=include_overview,
+                jpeg_quality=jpeg_quality,
+                jpeg_subsample=jpeg_subsample
             )
         else:
             raise NotImplementedError(f"Not supported format in {filepath}")
@@ -217,8 +267,9 @@ class WsiDicomizer(WsiDicom):
         except FileExistsError:
             ValueError(f'Output path {output_path} already excists')
 
-        imported_wsi.save(output_path, uid_generator)
+        created_files = imported_wsi.save(output_path, uid_generator)
         imported_wsi.close()
+        return created_files
 
     @staticmethod
     def _create_instance(
@@ -265,7 +316,9 @@ class WsiDicomizer(WsiDicom):
         base_dataset: Dataset,
         include_levels: List[int] = None,
         include_label: bool = True,
-        include_overview: bool = True
+        include_overview: bool = True,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
     ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
         """Open tiler to produce WsiInstances.
 
@@ -281,17 +334,24 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool = True
             Include overview(s), default true.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
 
         Returns
         ----------
         Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
             Lists of created level, label and overivew instances.
         """
+        jpeg = TurboJPEG(str(find_turbojpeg_path()))
         base_dataset = cls._populate_base_dataset(tiler, base_dataset)
         instance_number = 0
         level_instances = [
             cls._create_instance(
-                OpenTileWrapper(level),
+                OpenTileWrapper(level, jpeg, jpeg_quality, jpeg_subsample),
                 base_dataset,
                 'VOLUME',
                 instance_number+index
@@ -302,7 +362,7 @@ class WsiDicomizer(WsiDicom):
         instance_number += len(level_instances)
         label_instances = [
             cls._create_instance(
-                OpenTileWrapper(label),
+                OpenTileWrapper(label, jpeg, jpeg_quality, jpeg_subsample),
                 base_dataset,
                 'LABEL',
                 instance_number+index
@@ -313,7 +373,7 @@ class WsiDicomizer(WsiDicom):
         instance_number += len(level_instances)
         overview_instances = [
             cls._create_instance(
-                OpenTileWrapper(overview),
+                OpenTileWrapper(overview, jpeg, jpeg_quality, jpeg_subsample),
                 base_dataset,
                 'OVERVIEW',
                 instance_number+index

@@ -2,7 +2,7 @@ import math
 import os
 from abc import ABCMeta
 from ctypes import c_uint32
-from typing import Literal, Tuple
+from typing import Literal
 
 import numpy as np
 import pydicom
@@ -71,15 +71,26 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
                 TJSAMP_444 - no subsampling
                 TJSAMP_420 - 2x2 subsampling
         """
+        super().__init__(jpeg, jpeg_quality, jpeg_subsample, TJPF_BGRA)
+
         self._open_slide = open_slide
-        self._jpeg = jpeg
-        self._jpeg_qualtiy = jpeg_quality
-        self._jpeg_subsample = jpeg_subsample
 
     @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
         return pydicom.uid.JPEGBaseline8Bit
+
+    @property
+    def pixel_format(self) -> Literal:
+        return TJPF_BGRA
+
+    @property
+    def jpeg_quality(self) -> Literal:
+        return self._jpeg_qualtiy
+
+    @property
+    def jpeg_subsample(self) -> Literal:
+        raise self._jpeg_subsample
 
     @staticmethod
     def _make_transparent_pixels_white(image_data: np.ndarray) -> np.ndarray:
@@ -102,27 +113,6 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
         # Check for pixels with full transparency
         image_data[transparency == 0, :] = 255
         return image_data
-
-    def _encode(self, image_data: np.ndarray) -> bytes:
-        """Return image data encoded in jpeg using set quality and subsample
-        options.
-
-        Parameters
-        ----------
-        image_data: np.ndarray
-            Image data to encode, in BGRA-pixel format.
-
-        Returns
-        ----------
-        bytes
-            Jpeg bytes.
-        """
-        return self._jpeg.encode(
-            image_data,
-            self._jpeg_qualtiy,
-            TJPF_BGRA,
-            self._jpeg_subsample
-        )
 
     def close(self) -> None:
         """Close the open slide object, if not already closed."""

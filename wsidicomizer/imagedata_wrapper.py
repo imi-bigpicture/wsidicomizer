@@ -1,17 +1,17 @@
 from abc import abstractmethod
 from copy import deepcopy
+from typing import Literal
 
+import numpy as np
 import pydicom
-
 from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-
+from turbojpeg import TJPF_RGB, TJSAMP_444, TurboJPEG
 from wsidicom.interface import ImageData
 
 from .dataset import get_image_type
-
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -20,9 +20,37 @@ config.future_behavior()
 class ImageDataWrapper(ImageData):
     _default_z = 0
 
+    def __init__(
+        self,
+        jpeg: TurboJPEG,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444,
+        jpeg_pixel_format: Literal = TJPF_RGB
+    ):
+        """Wraps a OpenTilePage to ImageData.
+
+        Parameters
+        ----------
+        tiled_page: OpenTilePage
+            OpenTilePage to wrap.
+        jpeg: TurboJPEG
+            TurboJPEG object to use.
+        jpeg_quality: Literal = 95
+            Jpeg encoding quality to use.
+        jpeg_subsample: Literal = TJSAMP_444
+            Jpeg subsample option to use:
+                TJSAMP_444 - no subsampling
+                TJSAMP_420 - 2x2 subsampling
+        """
+        self._jpeg = jpeg
+        self._jpeg_quality = jpeg_quality
+        self._jpeg_subsample = jpeg_subsample
+        self._jpeg_pixel_format = jpeg_pixel_format
+
     @property
     @abstractmethod
     def pyramid_index(self) -> int:
+        """Should return pyramid level for image data."""
         raise NotImplementedError
 
     @property
@@ -111,3 +139,24 @@ class ImageDataWrapper(ImageData):
         dataset.FocusMethod = 'AUTO'
         dataset.ExtendedDepthOfField = 'NO'
         return dataset
+
+    def _encode(self, image_data: np.ndarray) -> bytes:
+        """Return image data encoded in jpeg using set quality and subsample
+        options.
+
+        Parameters
+        ----------
+        image_data: np.ndarray
+            Image data to encode, in BGRA-pixel format.
+
+        Returns
+        ----------
+        bytes
+            Jpeg bytes.
+        """
+        return self._jpeg.encode(
+            image_data,
+            self._jpeg_quality,
+            self._jpeg_pixel_format,
+            self._jpeg_subsample
+        )
