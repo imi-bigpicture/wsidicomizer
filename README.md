@@ -31,14 +31,14 @@ Files with z-stacks or multiple focal paths are currently not supported. DICOM p
 wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 ### Arguments:
--i, --input, path to input wsi file
--o, --output, path to output folder
--d, --dataset, optional path to json file defining base dataset
--t, --tile_size, tile size, required depending on input format
+-i, --input, path to input wsi file  
+-o, --output, path to output folder  
+-d, --dataset, optional path to json file defining base dataset  
+-t, --tile_size, tile size, required depending on input format  
 -l, --levels, optional levels to include
 
 ### Flags
---no_label, do not include label(s)
+--no_label, do not include label(s)  
 --no_overview, do not include overview(s)
 
 ***Create module datasets (Optional)***
