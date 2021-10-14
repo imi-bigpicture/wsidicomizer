@@ -19,6 +19,7 @@ from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 from wsidicomizer.openslide_wrapper import (OpenSlideAssociatedWrapper,
                                             OpenSlideLevelWrapper)
 from wsidicomizer.opentile_wrapper import OpenTileWrapper
+from wsidicomizer.czi_wrapper import CziWrapper
 from openslide import OpenSlide
 
 config.enforce_valid_values = True
@@ -183,6 +184,35 @@ class WsiDicomizer(WsiDicom):
         levels = WsiDicomLevels.open(level_instances)
         labels = WsiDicomLabels.open(label_instances)
         overviews = WsiDicomOverviews.open(overview_instances)
+        return cls(levels, labels, overviews)
+
+    @classmethod
+    def import_czi(
+        cls,
+        filepath: str,
+        tile_size: int,
+        datasets: Union[Dataset, List[Dataset]] = None,
+        jpeg_quality: Literal = 95,
+        jpeg_subsample: Literal = TJSAMP_444
+    ) -> 'WsiDicomizer':
+        base_dataset = cls._create_base_dataset(datasets)
+        jpeg = TurboJPEG(str(find_turbojpeg_path()))
+        czi_wrapper = CziWrapper(
+            filepath,
+            tile_size,
+            jpeg,
+            jpeg_quality,
+            jpeg_subsample
+        )
+        base_level_instance = cls._create_instance(
+            czi_wrapper,
+            base_dataset,
+            'VOLUME',
+            0
+        )
+        levels = WsiDicomLevels.open([base_level_instance])
+        labels = WsiDicomLabels.open([])
+        overviews = WsiDicomOverviews.open([])
         return cls(levels, labels, overviews)
 
     @classmethod
