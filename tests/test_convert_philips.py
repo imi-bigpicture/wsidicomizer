@@ -14,7 +14,6 @@ class PhilipsConvertTest(ConvertTestBase, unittest.TestCase):
         )
     input_filename = 'input.tif'
     include_levels = [4, 6]
-    turbo_path = os.environ['TURBOJPEG']
     tile_size = None
 
     def __init__(self, *args, **kwargs):

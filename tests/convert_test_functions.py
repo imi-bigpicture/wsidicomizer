@@ -19,7 +19,6 @@ class ConvertTestBase:
     include_levels: List[int] = None
     input_filename: str = None
     test_data_dir: str = None
-    turbo_path: str = None
     tile_size: Tuple[int, int] = None
 
     def __init__(self, *args, **kwargs):
