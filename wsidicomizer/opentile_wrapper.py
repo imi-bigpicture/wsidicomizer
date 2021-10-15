@@ -1,4 +1,4 @@
-from typing import Iterator, List, Literal
+from typing import Iterator, List
 
 import pydicom
 
@@ -6,8 +6,8 @@ from opentile.common import OpenTilePage
 from PIL import Image
 from pydicom import config
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_RGB, TJSAMP_444, TurboJPEG
 from wsidicom.geometry import Point, Size, SizeMm
+from wsidicomizer.encoding import Encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 config.enforce_valid_values = True
@@ -18,9 +18,7 @@ class OpenTileWrapper(ImageDataWrapper):
     def __init__(
         self,
         tiled_page: OpenTilePage,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
         """Wraps a OpenTilePage to ImageData.
 
@@ -37,12 +35,12 @@ class OpenTileWrapper(ImageDataWrapper):
                 TJSAMP_444 - no subsampling
                 TJSAMP_420 - 2x2 subsampling
         """
-        super().__init__(jpeg, jpeg_quality, jpeg_subsample)
+        super().__init__(encoder)
         self._tiled_page = tiled_page
 
         self._needs_transcoding = not self.is_supported_transfer_syntax()
         if self.needs_transcoding:
-            self._transfer_syntax = pydicom.uid.JPEGBaseline8Bit
+            self._transfer_syntax = self._encoder.transfer_syntax
         else:
             self._transfer_syntax = self.get_transfer_syntax()
         self._image_size = Size(*self._tiled_page.image_size.to_tuple())
@@ -62,10 +60,6 @@ class OpenTileWrapper(ImageDataWrapper):
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
         return self._transfer_syntax
-
-    @property
-    def pixel_format(self) -> Literal:
-        return TJPF_RGB
 
     @property
     def needs_transcoding(self) -> bool:

@@ -11,13 +11,14 @@ import pytest
 from wsidicom import WsiDicom
 from wsidicomizer import WsiDicomizer
 from wsidicomizer.dataset import create_default_modules
+from wsidicomizer.encoding import JpegEncoder
 
 
 @pytest.mark.import_czi
 class CziImportTest(unittest.TestCase):
     input_filename: str = 'input.czi'
     test_data_dir: str = os.environ.get(
-        "SVS_TESTDIR",
+        "CZI_TESTDIR",
         "C:/temp/opentile/czi/"
     )
     tile_size = 512

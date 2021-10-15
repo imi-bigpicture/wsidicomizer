@@ -1,15 +1,15 @@
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Literal, Tuple, Optional
+from typing import DefaultDict, Dict, List, Tuple, Optional
+from pathlib import Path
 
 import numpy as np
-from numpy.core.getlimits import iinfo
 import pydicom
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_GRAY, TJPF_RGB, TJSAMP_444, TJSAMP_GRAY, TurboJPEG
 from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicomizer.encoding import Encoder
 
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
@@ -21,9 +21,7 @@ class CziWrapper(ImageDataWrapper):
         self,
         filepath: str,
         tile_size: int,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ) -> None:
         """Wraps a czi file to ImageData. Multiple z, c, or pyramid levels are
         currently not supported.
@@ -47,15 +45,9 @@ class CziWrapper(ImageDataWrapper):
         self._czi = CziFile(filepath)
         self._czi._fh.lock = True
         self._samples_per_pixel = self._get_samples_per_pixel()
-        if self.samples_per_pixel == 3:
-            pixel_format = TJPF_RGB
-        elif self.samples_per_pixel == 1:
-            pixel_format = TJPF_GRAY
-            jpeg_subsample = TJSAMP_GRAY
-        else:
-            raise NotImplementedError('Non-supported samples per pixel')
+
         self._dtype = self._czi.dtype
-        super().__init__(jpeg, jpeg_quality, jpeg_subsample, pixel_format)
+        super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
         self._image_size = Size(self._czi.shape[4], self._czi.shape[3])
         self._image_origin = Point(self._czi.start[4], self._czi.start[3])
@@ -74,7 +66,7 @@ class CziWrapper(ImageDataWrapper):
 
     @property
     def transfer_syntax(self) -> Uid:
-        return pydicom.uid.JPEGBaseline8Bit
+        return self._encoder.transfer_syntax
 
     @property
     def pixel_spacing(self) -> SizeMm:
@@ -130,6 +122,15 @@ class CziWrapper(ImageDataWrapper):
     @property
     def samples_per_pixel(self) -> int:
         return self._samples_per_pixel
+
+    @staticmethod
+    def detect_format(filepath: Path) -> Optional[str]:
+        try:
+            czi = CziFile(filepath)
+            czi.close()
+            return 'czi'
+        except ValueError:
+            return None
 
     def _get_scaling(
         self
@@ -431,4 +432,3 @@ class CziWrapper(ImageDataWrapper):
 
     def _get_samples_per_pixel(self) -> int:
         return self._czi.shape[-1]
-
