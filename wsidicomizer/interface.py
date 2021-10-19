@@ -32,7 +32,7 @@ class WsiDicomizer(WsiDicom):
     def import_tiff(
         cls,
         filepath: str,
-        datasets: Union[Dataset, List[Dataset]] = None,
+        modules: Union[Dataset, List[Dataset]] = None,
         tile_size: int = None,
         include_levels: List[int] = None,
         include_label: bool = True,
@@ -48,8 +48,8 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: str
             Path to tiff file
-        datasets: Union[Dataset, List[Dataset]] = None
-            Base dataset to use in files. If none, use test dataset.
+        modules: Union[Dataset, List[Dataset]] = None
+            Module datasets to use in files. If none, use test dataset.
         tile_size: int
             Tile size to use if not defined by file.
         include_levels: List[int] = None
@@ -77,7 +77,7 @@ class WsiDicomizer(WsiDicom):
             encoding_quality,
             subsampling=jpeg_subsampling
         )
-        base_dataset = cls._create_base_dataset(datasets)
+        base_dataset = cls._create_base_dataset(modules)
         tiler = OpenTile.open(filepath, tile_size)
         level_instances, label_instances, overview_instances = cls._open_tiler(
             tiler,
