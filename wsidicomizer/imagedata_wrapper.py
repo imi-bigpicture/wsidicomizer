@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from typing import Literal
 
 import numpy as np
 import pydicom
@@ -8,8 +7,8 @@ from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_RGB, TJSAMP_444, TurboJPEG
 from wsidicom.interface import ImageData
+from wsidicomizer.encoding import Encoder
 
 from .dataset import get_image_type
 
@@ -22,10 +21,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
 
     def __init__(
         self,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444,
-        jpeg_pixel_format: Literal = TJPF_RGB
+        encoder: Encoder
     ):
         """Wraps a OpenTilePage to ImageData.
 
@@ -42,10 +38,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
                 TJSAMP_444 - no subsampling
                 TJSAMP_420 - 2x2 subsampling
         """
-        self._jpeg = jpeg
-        self._jpeg_quality = jpeg_quality
-        self._jpeg_subsample = jpeg_subsample
-        self._jpeg_pixel_format = jpeg_pixel_format
+        self._encoder = encoder
 
     @property
     @abstractmethod
@@ -154,9 +147,4 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         bytes
             Jpeg bytes.
         """
-        return self._jpeg.encode(
-            image_data,
-            self._jpeg_quality,
-            self._jpeg_pixel_format,
-            self._jpeg_subsample
-        )
+        return self._encoder.encode(image_data)

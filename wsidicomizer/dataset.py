@@ -9,7 +9,8 @@ from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID as Uid
-from wsidicom.conceptcode import (SpecimenEmbeddingMediaCode,
+from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
+                                  SpecimenEmbeddingMediaCode,
                                   SpecimenFixativesCode,
                                   SpecimenPreparationProcedureCode,
                                   SpecimenSamplingProcedureCode,
@@ -271,6 +272,7 @@ def create_sample(
     embedding_medium: str = None,
     fixative: str = None,
     specimen_id: str = None,
+    specimen_type: str = None,
     specimen_sampling_method: str = None,
     anatomical_sites: List[Tuple[Code, List[Code]]] = None,
     location: Union[str, Tuple[float, float, float]] = None,
@@ -291,6 +293,9 @@ def create_sample(
         Fixative used. See SpecimenFixativesCode.list() for allowed values.
     specimen_id: str = None
         Identifier for the specimen the sample was sampled from.
+    specimen_type: str = None
+        Anatotomic type of specimen the sample was sampled from. See
+        AnatomicPathologySpecimenTypesCode.list() for allowed values.
     specimen_sampling_method: str = None
         Sampling method used for sampling the sample from the specimen. See
         SpecimenSamplingProcedureCode.list() for allowed values.
@@ -337,13 +342,19 @@ def create_sample(
                 'Specimen sampling method required if '
                 'specimen id is defined'
             )
+        specimen_type_code = AnatomicPathologySpecimenTypesCode(specimen_type)
+        sampling_method_code = SpecimenSamplingProcedureCode(
+            specimen_sampling_method
+        )
         sample_sampling_step = SpecimenPreparationStep(
-            specimen_id=specimen_id,
+            specimen_id=sample_id,
             processing_type=SpecimenPreparationProcedureCode(
                 'Sampling of tissue specimen'
             ).code,
-            processing_procedure=SpecimenSamplingProcedureCode(
-                specimen_sampling_method
+            processing_procedure=SpecimenSampling(
+                    method=sampling_method_code.code,
+                    parent_specimen_id=specimen_id,
+                    parent_specimen_type=specimen_type_code.code
             )
         )
         sample_preparation_steps.append(sample_sampling_step)
@@ -355,14 +366,31 @@ def create_sample(
         specimen_location=location
     )
     if anatomical_sites is not None:
-        for anatomical_site, modifiers in anatomical_sites:
-            if modifiers != []:
-                anatomical_site.PrimaryAnatomicStructureModifierSequence = (
-                    DicomSequence(modifiers)
-                )
+        anatomical_site_datasets = []
+        for (anatomical_site, modifiers) in anatomical_sites:
+            anatomical_site_dataset = Dataset()
+            anatomical_site_dataset.CodeValue = anatomical_site.value
+            anatomical_site_dataset.CodingSchemeDesignator = (
+                anatomical_site.scheme_designator
+            )
+            anatomical_site_dataset.CodeMeaning = anatomical_site.meaning
 
+            if modifiers != []:
+                modifier_mdatasets = []
+                for modifier in modifiers:
+                    modifier_dataset = Dataset()
+                    modifier_dataset.CodeValue = modifier.value
+                    modifier_dataset.CodingSchemeDesignator = (
+                        modifier.scheme_designator
+                    )
+                    modifier_dataset.CodeMeaning = modifier.meaning
+
+                anatomical_site.PrimaryAnatomicStructureModifierSequence = (
+                    DicomSequence(modifier_mdatasets)
+                )
+            anatomical_site_datasets.append(anatomical_site_dataset)
         specimen.PrimaryAnatomicStructureSequence = DicomSequence(
-            [anatomical_site for anatomical_site, _ in anatomical_sites]
+            anatomical_site_datasets
         )
 
     return specimen

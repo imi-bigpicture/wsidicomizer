@@ -2,7 +2,6 @@ import math
 import os
 from abc import ABCMeta
 from ctypes import c_uint32
-from typing import Literal
 
 import numpy as np
 import pydicom
@@ -10,10 +9,11 @@ import pydicom
 from PIL import Image
 from pydicom import config
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_BGRA, TJSAMP_444, TurboJPEG
 from wsidicom.geometry import Point, Size, SizeMm
 
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+from wsidicomizer.encoding import Encoder
+
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
     try:
@@ -52,9 +52,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
     def __init__(
         self,
         open_slide: OpenSlide,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
         """Wraps a OpenSlide image to ImageData.
 
@@ -71,33 +69,25 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
                 TJSAMP_444 - no subsampling
                 TJSAMP_420 - 2x2 subsampling
         """
-        super().__init__(jpeg, jpeg_quality, jpeg_subsample, TJPF_BGRA)
+        super().__init__(encoder)
 
         self._open_slide = open_slide
 
     @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        return pydicom.uid.JPEGBaseline8Bit
-
-    @property
-    def pixel_format(self) -> Literal:
-        return TJPF_BGRA
-
-    @property
-    def jpeg_quality(self) -> Literal:
-        return self._jpeg_qualtiy
-
-    @property
-    def jpeg_subsample(self) -> Literal:
-        raise self._jpeg_subsample
+        return self._encoder.transfer_syntax
 
     @staticmethod
     def _make_transparent_pixels_white(image_data: np.ndarray) -> np.ndarray:
-        """Removes transparency from image data. Openslide-python produces
-        non-premultiplied, 'straigt' RGBA data and the RGB-part can be left
-        unmodified. Fully transparent pixels have RGBA-value 0, 0, 0, 0. For
-        these, we want full-white pixel instead of full-black.
+        """Return image data where all pixels with transparency is replaced
+        by white pixels. Openslide returns fully transparent pixels with
+        RGBA-value 0, 0, 0, 0 for 'sparse' areas. At the edge to 'sparse' areas
+        there can also be partial transparency. This function 'aggresively'
+        removes all transparent pixels (instead of calculating RGB-values
+        with transparency for partial transparent pixels) as it is much,
+        simpler, faster, and the partial transparency is at the edge of the
+        ROIs.
 
         Parameters
         ----------
@@ -110,8 +100,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
             Image data in RGBA pixel format without transparency.
         """
         transparency = image_data[:, :, 3]
-        # Check for pixels with full transparency
-        image_data[transparency == 0, :] = 255
+        image_data[transparency != 255, :] = 255
         return image_data
 
     def close(self) -> None:
@@ -128,9 +117,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         self,
         open_slide: OpenSlide,
         image_type: str,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
         """Wraps a OpenSlide associated image (label or overview) to ImageData.
 
@@ -149,7 +136,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
                 TJSAMP_444 - no subsampling
                 TJSAMP_420 - 2x2 subsampling
         """
-        super().__init__(open_slide, jpeg, jpeg_quality, jpeg_subsample)
+        super().__init__(open_slide, encoder)
         self._image_type = image_type
         if image_type not in get_associated_image_names(self._open_slide._osr):
             raise ValueError(f"{image_type} not in {self._open_slide}")
@@ -217,11 +204,9 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         open_slide: OpenSlide,
         level_index: Size,
         tile_size: int,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
-        super().__init__(open_slide, jpeg, jpeg_quality, jpeg_subsample)
+        super().__init__(open_slide, encoder)
         """Wraps a OpenSlide level to ImageData.
 
         Parameters
@@ -244,7 +229,6 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         self._tile_size = Size(tile_size, tile_size)
         self._open_slide = open_slide
         self._level_index = level_index
-        self._jpeg = jpeg
         self._image_size = Size.from_tuple(
             self._open_slide.level_dimensions[self._level_index]
         )
@@ -319,7 +303,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         tile_data = self._make_transparent_pixels_white(tile_data)
         if flip:
             convert_argb_to_rgba(tile_data)
-        return tile_data[:, :, 0:3]
+        return tile_data
 
     def get_encoded_tile(
         self,
@@ -354,7 +338,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         z: float,
         path: str
     ) -> Image.Image:
-        """Return Image for tile. Image mode is RGBA.
+        """Return Image for tile. Image mode is RGB.
 
         Parameters
         ----------
@@ -373,4 +357,4 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tile = self._get_tile(tile, True)
-        return Image.fromarray(tile[:, :, 0:3])
+        return Image.fromarray(tile).convert('RGB')

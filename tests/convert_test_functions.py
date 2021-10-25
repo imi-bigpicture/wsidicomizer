@@ -9,7 +9,7 @@ from typing import Dict, Tuple, List
 from wsidicomizer import WsiDicomizer
 from wsidicomizer.dataset import create_default_modules
 from wsidicom import WsiDicom
-from PIL import ImageChops, ImageStat, ImageFilter
+from PIL import ImageChops, ImageStat, ImageFilter, Image
 
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
 from openslide import OpenSlide
@@ -19,7 +19,6 @@ class ConvertTestBase:
     include_levels: List[int] = None
     input_filename: str = None
     test_data_dir: str = None
-    turbo_path: str = None
     tile_size: Tuple[int, int] = None
 
     def __init__(self, *args, **kwargs):
@@ -50,8 +49,8 @@ class ConvertTestBase:
         tempdir = TemporaryDirectory()
         WsiDicomizer.convert(
             str(filepath),
-            Path(tempdir.name),
-            base_dataset,
+            output_path=Path(tempdir.name),
+            datasets=base_dataset,
             tile_size=cls.tile_size,
             include_levels=cls.include_levels
         )
@@ -81,6 +80,7 @@ class ConvertTestBase:
                     (region["size"]["width"], region["size"]["height"])
                 )
                 print(region)
+                print(im.mode)
                 self.assertEqual(
                     md5(im.tobytes()).hexdigest(),
                     region["md5"],
@@ -113,16 +113,17 @@ class ConvertTestBase:
                 with open(json_file, "rt") as f:
                     region = json.load(f)
 
-                im = wsi.read_region(
-                    (region["location"]["x"], region["location"]["y"]),
-                    region["level"],
-                    (region["size"]["width"], region["size"]["height"])
-                )
                 level_size = (
                     wsi.levels[0].size // pow(2, region['level'])
                 ).to_tuple()
+
                 # Only run test if level is in open slide wsi
                 if level_size in open_wsi.level_dimensions:
+                    im = wsi.read_region(
+                        (region["location"]["x"], region["location"]["y"]),
+                        region["level"],
+                        (region["size"]["width"], region["size"]["height"])
+                    )
                     index = open_wsi.level_dimensions.index(level_size)
                     scale = int(open_wsi.level_downsamples[index])
                     scaled_location_x = region["location"]["x"] * scale
@@ -131,12 +132,17 @@ class ConvertTestBase:
                         (scaled_location_x, scaled_location_y),
                         index,
                         (region["size"]["width"], region["size"]["height"])
-                    ).convert('RGB')
+                    )
+                    background = Image.new('RGBA', open_im.size, '#ffffff')
+                    open_im = Image.alpha_composite(background, open_im)
+                    open_im = open_im.convert('RGB')
+
                     blur = ImageFilter.GaussianBlur(2)
                     diff = ImageChops.difference(
                         im.filter(blur),
                         open_im.filter(blur)
                     )
+
                     for band_rms in ImageStat.Stat(diff).rms:
                         self.assertLess(band_rms, 2, region)
 

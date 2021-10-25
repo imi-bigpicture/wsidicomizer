@@ -14,7 +14,6 @@ class SvsConvertTest(ConvertTestBase, unittest.TestCase):
     )
     input_filename = 'input.svs'
     include_levels = [4, 6]
-    turbo_path = None
     tile_size = None
 
     def __init__(self, *args, **kwargs):
