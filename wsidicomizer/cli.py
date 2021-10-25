@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 from pydicom.dataset import Dataset
 from wsidicomizer.interface import WsiDicomizer
-from wsidicomizer.dataset import create_default_dataset
+from wsidicomizer.dataset import create_default_modules
 
 
 def main():
@@ -29,6 +29,7 @@ def main():
     parser.add_argument(
         '-t', '--tile-size',
         type=int,
+        default=512,
         help=(
             'Tile size (same for width and height). Required for ndpi and '
             'openslide formats E.g. 512'
@@ -63,7 +64,7 @@ def main():
     )
     args = parser.parse_args()
     if not args.dataset:
-        dataset = create_default_dataset()
+        dataset = create_default_modules()
     else:
         json_file = open(args.dataset)
         dataset = Dataset.from_json(json.load(json_file))
