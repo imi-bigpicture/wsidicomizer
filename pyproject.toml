@@ -6,8 +6,8 @@ authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.11"
-wsidicom = {path = "../wsidicom", develop = true}
-opentile = {path = "../opentile", develop = true}
+wsidicom = "^0.1.0"
+opentile = "^0.1.0"
 openslide-python = "^1.1.2"
 numpy = "^1.21.2"
 pydicom = "^2.2.1"
