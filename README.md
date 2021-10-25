@@ -25,24 +25,24 @@ Please note that this is an early release and the API is not frozen yet. Functio
 ## Limitations
 Files with z-stacks or multiple focal paths are currently not supported. DICOM properties related to slice thickness, focal plane thickness, and imaged volume are saved as 0 and not with proper values.
 
-## Basic usage
+## Basic cli-usage
 ***Convert a wsi-file into DICOM using cli-interface***
 ```console
 wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 ### Arguments:
--i, --input, path to input wsi file  
--o, --output, path to output folder  
--d, --dataset, optional path to json file defining base dataset  
--t, --tile_size, tile size, required depending on input format  
+-i, --input, path to input wsi file
+-o, --output, path to output folder
+-d, --dataset, optional path to json file defining base dataset
+-t, --tile_size, required depending on input format
 -l, --levels, optional levels to include
 
 ### Flags
---no_label, do not include label(s)  
+--no_label, do not include label(s)
 --no_overview, do not include overview(s)
 
+## Basic notebook-usage
 ***Create module datasets (Optional)***
-Created DICOM wsis will contain a bare wsi DICOM dataset. The bare datset can be expanded by DICOM *module* datasets.
 ```python
 from wsidicomizer.dataset import create_device_module, create_simple_sample, create_simple_specimen_module
 device_module = create_device_module(
