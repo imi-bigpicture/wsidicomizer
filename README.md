@@ -46,7 +46,7 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```python
 from wsidicomizer.dataset import create_device_module, create_simple_sample, create_simple_specimen_module
 device_module = create_device_module(
-    create_simple_sample='Scanner manufacturer',
+    manufacturer='Scanner manufacturer',
     model_name='Scanner model name',
     serial_number='Scanner serial number',
     software_versions=['Scanner software versions']
