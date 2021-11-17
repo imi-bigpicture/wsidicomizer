@@ -1,16 +1,17 @@
 import datetime
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
-import pydicom
 from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
                                SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
+from opentile.common import Tiler
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID as Uid
+from pydicom.uid import generate_uid
 from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
-                                  SpecimenEmbeddingMediaCode,
+                                  ConceptCode, SpecimenEmbeddingMediaCode,
                                   SpecimenFixativesCode,
                                   SpecimenPreparationProcedureCode,
                                   SpecimenSamplingProcedureCode,
@@ -40,9 +41,72 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
     return ['ORGINAL', 'PRIMARY', image_flavor, resampled]
 
 
+def create_base_dataset(
+    modules: Optional[Union[Dataset, List[Dataset]]] = None
+) -> Dataset:
+    """Create a base dataset by combining module datasets with a minimal
+    wsi dataset.
+
+    Parameters
+    ----------
+    modules: Optional[Union[Dataset, List[Dataset]]] = None
+
+    Returns
+    ----------
+    Dataset
+        Combined base dataset.
+    """
+    base_dataset = create_wsi_dataset()
+    if isinstance(modules, list):
+        for module in modules:
+            base_dataset.update(module)
+    elif isinstance(modules, Dataset):
+        base_dataset.update(modules)
+    elif modules is not None:
+        raise TypeError(
+            'datasets parameter should be single or list of Datasets'
+        )
+    return base_dataset
+
+
+def populate_base_dataset(
+    tiler: Tiler,
+    base_dataset: Dataset
+) -> Dataset:
+    """Populate dataset with properties from tiler, if present.
+    Parameters
+    ----------
+    tiler: Tiler
+        A opentile Tiler.
+    base_dataset: Dataset
+        Dataset to append properties to.
+
+    Returns
+    ----------
+    Dataset
+        Dataset with added properties.
+    """
+    for property, value in tiler.properties.items():
+        if property == 'aquisition_datatime':
+            base_dataset.AcquisitionDateTime = value
+        elif property == 'device_serial_number':
+            base_dataset.DeviceSerialNumber = value
+        elif property == 'manufacturer':
+            base_dataset.Manufacturer = value
+        elif property == 'software_versions':
+            base_dataset.SoftwareVersions = value
+        elif property == 'lossy_image_compression_method':
+            base_dataset.LossyImageCompressionMethod = value
+        elif property == 'lossy_image_compression_ratio':
+            base_dataset.LossyImageCompressionRatio = value
+        elif property == 'photometric_interpretation':
+            base_dataset.PhotometricInterpretation = value
+    return base_dataset
+
+
 def create_wsi_dataset(
-    offset: Tuple[float, float] = [0.0, 0.0],
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    offset: Tuple[float, float] = (0.0, 0.0),
+    uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
     slide icrosocy series, frame of reference, acquisition context, multi-frame
@@ -76,7 +140,7 @@ def create_wsi_dataset(
     ----------
     image_offset: Tuple[float, float] = 0.0
         X and Y offset (in mm) to first pixel in image data.
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    uid_generator: Callable[..., Uid] = generate_uid
         Function that can generate Uids.
 
     Returns
@@ -124,11 +188,11 @@ def create_wsi_dataset(
 
 def create_study_module(
     study_id: str = "",
-    study_date: datetime.date = "",
-    study_time: datetime.time = "",
+    study_date: Optional[datetime.date] = None,
+    study_time: Optional[datetime.time] = None,
     study_accession_number: str = "",
     referring_physician_name: str = "",
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Create general study module.
 
@@ -136,9 +200,9 @@ def create_study_module(
     ----------
     study_id: str = ""
         Study identifier. Can be empty.
-    date: datetime.date = ""
+    Optional[datetime.date] = None
         Date the study started. Can be empty.
-    time: datetime.time = ""
+    Optional[datetime.time] = None
         Time the study started. Can be empty.
     accession_number: str = ""
         Order for the study. Can be empty.
@@ -163,11 +227,11 @@ def create_study_module(
 def create_patient_module(
     name: str = "",
     id: str = "",
-    birth_date: datetime.date = "",
+    birth_date: Optional[datetime.date] = None,
     sex: str = "",
     identity_removed: bool = False,
     de_indentification_methods: List[Union[str, Code]] = [],
-    age_at_extraction: str = None
+    age_at_extraction: Optional[str] = None
 ) -> Dataset:
     """Create patient and patient study modules.
 
@@ -187,7 +251,7 @@ def create_patient_module(
     de_indentification_methods: List[Union[str, Code]] = []
         Method of de-indentification. Can be descriptive strings and/or coded
         values.
-    age_at_extraction: str = None
+    age_at_extraction: Optional[str] = None
         Age of the Patient at extraction.
 
     Returns
@@ -222,7 +286,11 @@ def create_patient_module(
         dataset.DeidentificationMethod = de_indentification_method_strings
     if de_indentification_method_codes != []:
         dataset.DeidentificationMethodCodeSequence = DicomSequence(
-            de_indentification_method_codes
+            [
+                ConceptCode.from_code(de_indentification_method_code).to_ds()
+                for de_indentification_method_code
+                in de_indentification_method_codes
+            ]
         )
     if age_at_extraction is not None:
         dataset.PatientAge = age_at_extraction
@@ -269,14 +337,14 @@ def create_device_module(
 def create_sample(
     sample_id: str,
     stainings: List[str],
-    embedding_medium: str = None,
-    fixative: str = None,
-    specimen_id: str = None,
-    specimen_type: str = None,
-    specimen_sampling_method: str = None,
-    anatomical_sites: List[Tuple[Code, List[Code]]] = None,
-    location: Union[str, Tuple[float, float, float]] = None,
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    embedding_medium: Optional[str] = None,
+    fixative: Optional[str] = None,
+    specimen_id: Optional[str] = None,
+    specimen_type: Optional[str] = None,
+    specimen_sampling_method: Optional[str] = None,
+    anatomical_sites: Optional[List[Tuple[Code, List[Code]]]] = None,
+    location: Optional[Union[str, Tuple[float, float, float]]] = None,
+    uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Create sample description.
 
@@ -286,26 +354,26 @@ def create_sample(
         Identifier for the sample.
     stainings: List[str]
         Stainings used. See SpecimenStainsCode.list() for allowed values.
-    embedding_medium: str = None
+    embedding_medium: Optional[str] = None
         Embedding medium used. See SpecimenEmbeddingMediaCode.list() for
         allowed values.
-    fixative: str = None
+    fixative: Optional[str] = None
         Fixative used. See SpecimenFixativesCode.list() for allowed values.
-    specimen_id: str = None
+    specimen_id: Optional[str] = None
         Identifier for the specimen the sample was sampled from.
-    specimen_type: str = None
+    specimen_type: Optional[str] = None
         Anatotomic type of specimen the sample was sampled from. See
         AnatomicPathologySpecimenTypesCode.list() for allowed values.
-    specimen_sampling_method: str = None
+    specimen_sampling_method: Optional[str] = None
         Sampling method used for sampling the sample from the specimen. See
         SpecimenSamplingProcedureCode.list() for allowed values.
-    anatomical_sites: List[Tuple[Code, List[Code]]] = None
+    anatomical_sites: Optional[List[Tuple[Code, List[Code]]]] = None
         List of original anatomical sites, each defined by a code and optional
         list of modifier codes.
-    location: Union[str, Tuple[float, float, float]] = None
+    location: Optional[Union[str, Tuple[float, float, float]]] = None
         Location of sample in slide, defined either by descriptive string
         or xyz-coordinates.
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
+    uid_generator: Callable[..., Uid] = generate_uid
         Function that can generate uids.
 
     Returns
@@ -342,6 +410,11 @@ def create_sample(
                 'Specimen sampling method required if '
                 'specimen id is defined'
             )
+        if specimen_type is None:
+            raise ValueError(
+                'Specimen type required if '
+                'specimen id is defined'
+            )
         specimen_type_code = AnatomicPathologySpecimenTypesCode(specimen_type)
         sampling_method_code = SpecimenSamplingProcedureCode(
             specimen_sampling_method
@@ -366,17 +439,14 @@ def create_sample(
         specimen_location=location
     )
     if anatomical_sites is not None:
-        anatomical_site_datasets = []
+        anatomical_site_datasets: List[Dataset] = []
         for (anatomical_site, modifiers) in anatomical_sites:
-            anatomical_site_dataset = Dataset()
-            anatomical_site_dataset.CodeValue = anatomical_site.value
-            anatomical_site_dataset.CodingSchemeDesignator = (
-                anatomical_site.scheme_designator
+            anatomical_site_dataset = (
+                ConceptCode.from_code(anatomical_site).to_ds()
             )
-            anatomical_site_dataset.CodeMeaning = anatomical_site.meaning
 
             if modifiers != []:
-                modifier_mdatasets = []
+                modifier_datasets: List[Dataset] = []
                 for modifier in modifiers:
                     modifier_dataset = Dataset()
                     modifier_dataset.CodeValue = modifier.value
@@ -384,10 +454,12 @@ def create_sample(
                         modifier.scheme_designator
                     )
                     modifier_dataset.CodeMeaning = modifier.meaning
+                    modifier_datasets.append(modifier_dataset)
 
-                anatomical_site.PrimaryAnatomicStructureModifierSequence = (
-                    DicomSequence(modifier_mdatasets)
-                )
+                (
+                    anatomical_site_dataset
+                    .PrimaryAnatomicStructureModifierSequence
+                ) = DicomSequence(modifier_datasets)
             anatomical_site_datasets.append(anatomical_site_dataset)
         specimen.PrimaryAnatomicStructureSequence = DicomSequence(
             anatomical_site_datasets
@@ -451,13 +523,13 @@ def create_specimen_module(
 
 
 def create_brightfield_optical_path_module(
-    magnification: float = None
+    magnification: Optional[float] = None
 ) -> Dataset:
     """Create optical path module for brightfield illumination conditions.
 
     Parameters
     ----------
-    magnification: float = None
+    magnification: Optional[float] = None
         Objective magnification.
 
     Returns
@@ -493,8 +565,8 @@ def create_brightfield_optical_path_module(
 
 
 def create_default_modules(
-    uid_generator: Callable[..., Uid] = pydicom.uid.generate_uid
-) -> Dataset:
+    uid_generator: Callable[..., Uid] = generate_uid
+) -> List[Dataset]:
     """Return default module dataset for testing.
 
     Parameters

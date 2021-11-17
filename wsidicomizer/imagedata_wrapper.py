@@ -2,12 +2,12 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
 import numpy as np
-import pydicom
 from pydicom import config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import UID as Uid
-from wsidicom.interface import ImageData
+from pydicom.uid import UID, generate_uid, JPEGBaseline8Bit
+from pydicom.valuerep import DSfloat
+from wsidicom import ImageData
 from wsidicomizer.encoding import Encoder
 
 from .dataset import get_image_type
@@ -29,14 +29,8 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         ----------
         tiled_page: OpenTilePage
             OpenTilePage to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         self._encoder = encoder
 
@@ -60,7 +54,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         base_dataset: Dataset,
         image_flavor: str,
         instance_number: int,
-        transfer_syntax: Uid,
+        transfer_syntax: UID,
         photometric_interpretation: str
     ) -> Dataset:
         """Return instance dataset for image_data based on base dataset.
@@ -71,6 +65,9 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
             Dataset common for all instances.
         image_flavor:
             Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
+        instance_number: int
+        transfer_syntax: UID
+        photometric_interpretation: str
 
         Returns
         ----------
@@ -82,13 +79,13 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
             image_flavor,
             self.pyramid_index
         )
-        dataset.SOPInstanceUID = pydicom.uid.generate_uid(prefix=None)
+        dataset.SOPInstanceUID = generate_uid(prefix=None)
 
         shared_functional_group_sequence = Dataset()
         pixel_measure_sequence = Dataset()
         pixel_measure_sequence.PixelSpacing = [
-            pydicom.valuerep.DSfloat(self.pixel_spacing.width, True),
-            pydicom.valuerep.DSfloat(self.pixel_spacing.height, True)
+            DSfloat(self.pixel_spacing.width, True),
+            DSfloat(self.pixel_spacing.height, True)
         ]
         pixel_measure_sequence.SpacingBetweenSlices = 0.0
         pixel_measure_sequence.SliceThickness = 0.0
@@ -115,7 +112,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         )
         dataset.ImagedVolumeDepth = 0.0
 
-        if transfer_syntax == pydicom.uid.JPEGBaseline8Bit:
+        if transfer_syntax == JPEGBaseline8Bit:
             dataset.BitsAllocated = 8
             dataset.BitsStored = 8
             dataset.HighBit = 7

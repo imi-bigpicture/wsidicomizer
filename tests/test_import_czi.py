@@ -33,6 +33,7 @@ class CziImportTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_folders = {}
+        assert cls.test_data_dir is not None
         folders = cls._get_folders(cls.test_data_dir)
         for folder in folders:
             cls.test_folders[folder] = cls.open(folder)
@@ -44,7 +45,7 @@ class CziImportTest(unittest.TestCase):
             tempdir.cleanup()
 
     @classmethod
-    def open(cls, path: Path) -> Tuple[Path, WsiDicom, TemporaryDirectory]:
+    def open(cls, path: Path) -> Tuple[WsiDicomizer, TemporaryDirectory]:
         filepath = Path(path).joinpath(cls.input_filename)
         base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
@@ -56,7 +57,7 @@ class CziImportTest(unittest.TestCase):
         return (wsi, tempdir)
 
     @staticmethod
-    def _get_folders(test_data_dir: Path):
+    def _get_folders(test_data_dir: str):
         return [
             Path(test_data_dir).joinpath(item)
             for item in os.listdir(test_data_dir)

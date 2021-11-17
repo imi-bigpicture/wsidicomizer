@@ -82,3 +82,7 @@ def main():
         include_label=not args.no_label,
         include_overview=not args.no_overview
     )
+
+
+if __name__ == "__main__":
+    main()

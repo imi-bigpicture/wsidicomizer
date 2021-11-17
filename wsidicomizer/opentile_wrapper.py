@@ -1,11 +1,10 @@
-from typing import Iterator, List
-
-import pydicom
+from typing import List
+from pathlib import Path
 
 from opentile.common import OpenTilePage
 from PIL import Image
 from pydicom import config
-from pydicom.uid import UID as Uid
+from pydicom.uid import UID, JPEGBaseline8Bit, JPEG2000
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
@@ -26,14 +25,8 @@ class OpenTileWrapper(ImageDataWrapper):
         ----------
         tiled_page: OpenTilePage
             OpenTilePage to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         super().__init__(encoder)
         self._tiled_page = tiled_page
@@ -57,7 +50,11 @@ class OpenTileWrapper(ImageDataWrapper):
         return f"{type(self).__name__}({self._tiled_page})"
 
     @property
-    def transfer_syntax(self) -> Uid:
+    def files(self) -> List[Path]:
+        return [Path(self._tiled_page.filepath)]
+
+    @property
+    def transfer_syntax(self) -> UID:
         """The uid of the transfer syntax of the image."""
         return self._transfer_syntax
 
@@ -166,7 +163,7 @@ class OpenTileWrapper(ImageDataWrapper):
         tiles: List[Point],
         z: float,
         path: str
-    ) -> Iterator[List[bytes]]:
+    ) -> List[bytes]:
         """Return list of image bytes for tiles. Returns transcoded tiles if
         non-supported encoding.
 
@@ -186,7 +183,7 @@ class OpenTileWrapper(ImageDataWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tiles_tuples = (tile.to_tuple() for tile in tiles)
+        tiles_tuples = [tile.to_tuple() for tile in tiles]
         if not self.needs_transcoding:
             return self._tiled_page.get_tiles(tiles_tuples)
         decoded_tiles = self._tiled_page.get_decoded_tiles(tiles_tuples)
@@ -204,13 +201,13 @@ class OpenTileWrapper(ImageDataWrapper):
         except NotImplementedError:
             return False
 
-    def get_transfer_syntax(self) -> Uid:
+    def get_transfer_syntax(self) -> UID:
         """Return transfer syntax (Uid) for compression type in image data."""
         compression = self.native_compression
         if compression == 'COMPRESSION.JPEG':
-            return pydicom.uid.JPEGBaseline8Bit
+            return JPEGBaseline8Bit
         elif compression == 'COMPRESSION.APERIO_JP2000_RGB':
-            return pydicom.uid.JPEG2000
+            return JPEG2000
         raise NotImplementedError(
             f'Not supported compression {compression}'
         )

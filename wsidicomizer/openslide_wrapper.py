@@ -2,9 +2,10 @@ import math
 import os
 from abc import ABCMeta
 from ctypes import c_uint32
+from pathlib import Path
+from typing import List
 
 import numpy as np
-import pydicom
 
 from PIL import Image
 from pydicom import config
@@ -60,18 +61,16 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
         ----------
         open_slide: OpenSlide
             OpenSlide object to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         super().__init__(encoder)
 
         self._open_slide = open_slide
+
+    @property
+    def files(self) -> List[Path]:
+        return [Path(self._open_slide._filename)]
 
     @property
     def transfer_syntax(self) -> Uid:
@@ -127,14 +126,8 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
             OpenSlide object to wrap.
         image_type: str
             Type of image to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         super().__init__(open_slide, encoder)
         self._image_type = image_type
@@ -182,7 +175,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         tile: Point,
         z: float,
         path: str
-    ) -> Image.Image:
+    ) -> bytes:
         if tile != Point(0, 0):
             raise ValueError
         return self._encoded_image
@@ -192,7 +185,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         tile: Point,
         z: float,
         path: str
-    ) -> bytes:
+    ) -> Image.Image:
         if tile != Point(0, 0):
             raise ValueError
         return self._decoded_image
@@ -202,7 +195,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
     def __init__(
         self,
         open_slide: OpenSlide,
-        level_index: Size,
+        level_index: int,
         tile_size: int,
         encoder: Encoder
     ):
@@ -215,16 +208,10 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             OpenSlide object to wrap.
         level_index: int
             Level in OpenSlide object to wrap
-        tile_size: Size
+        tile_size: int
             Output tile size.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         self._tile_size = Size(tile_size, tile_size)
         self._open_slide = open_slide
@@ -334,7 +321,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
 
     def get_decoded_tile(
         self,
-        tile: Point,
+        tile_point: Point,
         z: float,
         path: str
     ) -> Image.Image:
@@ -342,7 +329,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -356,5 +343,5 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile = self._get_tile(tile, True)
+        tile = self._get_tile(tile_point, True)
         return Image.fromarray(tile).convert('RGB')

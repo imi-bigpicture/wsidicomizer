@@ -4,7 +4,6 @@ from typing import DefaultDict, Dict, List, Tuple, Optional
 from pathlib import Path
 
 import numpy as np
-import pydicom
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
 from pydicom.uid import UID as Uid
@@ -12,6 +11,39 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicomizer.encoding import Encoder
 
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+
+
+def get_element(element: ET.Element, tag: str) -> ET.Element:
+    found_element = element.find(tag)
+    if found_element is None:
+        raise ValueError(f"Tag {tag} not found in element")
+    return found_element
+
+
+def get_nested_element(element: ET.Element, tags: List[str]) -> ET.Element:
+    found_element = element
+    for tag in tags:
+        found_element = found_element.find(tag)
+        if found_element is None:
+            raise ValueError(f"Tag {tag} not found in element")
+    return found_element
+
+
+def get_text_from_element(
+    element: ET.Element,
+    tag: str,
+    default: Optional[str] = None
+) -> str:
+    try:
+        element = get_element(element, tag)
+        text = element.text
+        if text is None:
+            raise ValueError("Text not found in element")
+    except ValueError:
+        if default is not None:
+            return default
+        raise ValueError(f"Tag {tag} or text not found in element")
+    return text
 
 
 class CziWrapper(ImageDataWrapper):
@@ -32,16 +64,10 @@ class CziWrapper(ImageDataWrapper):
             Path to czi file to wrap.
         tile_size: int
             Output tile size.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoded to use.
         """
-
+        self._filepath = filepath
         self._czi = CziFile(filepath)
         self._czi._fh.lock = True
         self._samples_per_pixel = self._get_samples_per_pixel()
@@ -63,6 +89,10 @@ class CziWrapper(ImageDataWrapper):
     @property
     def pyramid_index(self) -> int:
         return 0
+
+    @property
+    def files(self) -> List[Path]:
+        return [Path(self._filepath)]
 
     @property
     def transfer_syntax(self) -> Uid:
@@ -120,6 +150,13 @@ class CziWrapper(ImageDataWrapper):
         return self._tile_directory
 
     @property
+    def metadata(self) -> str:
+        metadata_xml = self._czi.metadata()
+        if metadata_xml is None or not isinstance(metadata_xml, str):
+            raise ValueError("No metadata string in file")
+        return metadata_xml
+
+    @property
     def samples_per_pixel(self) -> int:
         return self._samples_per_pixel
 
@@ -135,16 +172,19 @@ class CziWrapper(ImageDataWrapper):
     def _get_scaling(
         self
     ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-        metadata = ET.fromstring(self._czi.metadata()).find('Metadata')
-        scaling = metadata.find('Scaling')
-        scaling_elements = scaling.find('Items')
-        x: float = None
-        y: float = None
-        z: float = None
+        scaling_elements = get_nested_element(
+            ET.fromstring(self.metadata),
+            ['Metadata', 'Scaling', 'Items']
+        )
+        x: Optional[float] = None
+        y: Optional[float] = None
+        z: Optional[float] = None
         for distance in scaling_elements.findall('Distance'):
             dimension = distance.get('Id')
             # Value is in m per pixel, result in mm per pixel
-            value = float(distance.find('Value').text) * pow(10, 6)
+            value = (
+                float(get_text_from_element(distance, 'Value')) * pow(10, 6)
+            )
             if dimension == 'X':
                 x = value
             elif dimension == 'Y':
@@ -176,7 +216,7 @@ class CziWrapper(ImageDataWrapper):
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
             fill * np.iinfo(self._czi.dtype).max,
-            dtype=self._czi.dtype
+            dtype=np.dtype(self._czi.dtype)
         )
 
     def _get_tile(
@@ -285,7 +325,7 @@ class CziWrapper(ImageDataWrapper):
         if (tile, z, path) not in self.tile_directory:
             return self.blank_encoded_tile
         frame = self._get_tile(tile, z, path)
-        if self._dtype != np.uint8:
+        if self._dtype != np.dtype(np.uint8):
             frame = (frame * 255 / np.iinfo(self._dtype)).astype(np.uint8)
         return self._encode(self._get_tile(tile, z, path))
 
@@ -337,10 +377,10 @@ class CziWrapper(ImageDataWrapper):
         Tuple[Point, Size]
             Start point corrdinate and size for block.
         """
-        x_start: int = None
-        x_size: int = None
-        y_start: int = None
-        y_size: int = None
+        x_start: Optional[int] = None
+        x_size: Optional[int] = None
+        y_start: Optional[int] = None
+        y_size: Optional[int] = None
 
         for dimension_entry in block.dimension_entries:
             if dimension_entry.dimension == 'X':
@@ -349,7 +389,10 @@ class CziWrapper(ImageDataWrapper):
             elif dimension_entry.dimension == 'Y':
                 y_start = dimension_entry.start
                 y_size = dimension_entry.size
-        if None in [x_start, x_size, y_start, y_size]:
+        if (
+            x_start is None or x_size is None or
+            y_start is None or y_size is None
+        ):
             raise ValueError(
                 "Could not determine position of block"
             )
@@ -390,7 +433,7 @@ class CziWrapper(ImageDataWrapper):
                 z = self._focal_plane_mapping[dimension_entry.start]
             elif dimension_entry.dimension == 'C':
                 c = self._channel_mapping[dimension_entry.start]
-        if None in [x_start, x_size, y_start, y_size]:
+        if start is None or size is None or z is None or c is None:
             raise ValueError(
                 "Could not determine position of block"
             )
@@ -402,33 +445,37 @@ class CziWrapper(ImageDataWrapper):
         return size.height, size.width, self.samples_per_pixel
 
     def _get_focal_plane_mapping(self) -> List[float]:
-        metadata = ET.fromstring(self._czi.metadata()).find('Metadata')
-        information = metadata.find('Information')
-        image = information.find('Image')
+        image = get_nested_element(
+            ET.fromstring(self.metadata),
+            ["Metadata", 'Information', 'Image']
+        )
         try:
-            size_z = int(image.find('SizeZ').text)
-            dimensions = image.find('Dimensions')
-            z_dimension = dimensions.find('Z')
-            z_positions = z_dimension.find('Positions')
-            z_interval = z_positions.find('Interval')
-            start = int(z_interval.find('Start').text)
-            increment = int(z_interval.find('Increment').text)
-            _, _, z_scale = self._get_scaling()
-            return range(
-                start*z_scale,
-                (start+increment*size_z)*z_scale,
-                increment*z_scale
+            size_z = int(get_text_from_element(image, 'SizeZ', '0'))
+            z_interval = get_nested_element(
+                image,
+                ['Dimensions', 'Z', 'Positions', 'Interval']
             )
-        except AttributeError:
+            start = int(get_text_from_element(z_interval, 'Start'))
+            increment = int(get_text_from_element(z_interval, 'Increment'))
+            _, _, z_scale = self._get_scaling()
+            if z_scale is None:
+                raise ValueError("No z scale in metadata")
+            start_z = start * z_scale
+            step_z = (start+increment*size_z)*z_scale
+            end_z = increment*z_scale
+            return list(np.arange(start_z, end_z, step_z))
+        except ValueError:
             return [0.0]
 
     def _get_channel_mapping(self) -> List[str]:
-        metadata = ET.fromstring(self._czi.metadata()).find('Metadata')
-        information = metadata.find('Information')
-        image = information.find('Image')
-        dimensions = image.find('Dimensions')
-        channels = dimensions.find('Channels')
-        return [channel.find('Fluor').text for channel in channels]
+        channels = get_nested_element(
+            ET.fromstring(self.metadata),
+            ['Metadata', 'Information', 'Image', 'Dimensions', 'Channels']
+        )
+        return [
+            get_text_from_element(channel, 'Fluor')
+            for channel in channels
+        ]
 
     def _get_samples_per_pixel(self) -> int:
         return self._czi.shape[-1]
