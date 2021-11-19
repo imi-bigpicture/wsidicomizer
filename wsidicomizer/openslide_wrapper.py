@@ -170,7 +170,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         """The pyramidal index in relation to the base layer."""
         return 0
 
-    def get_encoded_tile(
+    def _get_encoded_tile(
         self,
         tile: Point,
         z: float,
@@ -180,7 +180,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
             raise ValueError
         return self._encoded_image
 
-    def get_decoded_tile(
+    def _get_decoded_tile(
         self,
         tile: Point,
         z: float,
@@ -292,7 +292,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             convert_argb_to_rgba(tile_data)
         return tile_data
 
-    def get_encoded_tile(
+    def _get_encoded_tile(
         self,
         tile: Point,
         z: float,
@@ -319,7 +319,7 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             raise ValueError
         return self._encode(self._get_tile(tile))
 
-    def get_decoded_tile(
+    def _get_decoded_tile(
         self,
         tile_point: Point,
         z: float,

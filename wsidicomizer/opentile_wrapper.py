@@ -105,7 +105,7 @@ class OpenTileWrapper(ImageDataWrapper):
         """The pyramidal index in relation to the base layer."""
         return self._tiled_page.pyramid_index
 
-    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.
 
@@ -130,7 +130,7 @@ class OpenTileWrapper(ImageDataWrapper):
             return self._encode(decoded_tile)
         return self._tiled_page.get_tile(tile.to_tuple())
 
-    def get_decoded_tile(
+    def _get_decoded_tile(
         self,
         tile: Point,
         z: float,
