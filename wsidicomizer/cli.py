@@ -1,9 +1,12 @@
 import argparse
-from pathlib import Path
 import json
+import os
+from pathlib import Path
+
 from pydicom.dataset import Dataset
-from wsidicomizer.interface import WsiDicomizer
+
 from wsidicomizer.dataset import create_default_modules
+from wsidicomizer.interface import WsiDicomizer
 
 
 def main():
@@ -62,6 +65,48 @@ def main():
         action="store_true",
         help='If not to include overview'
     )
+    parser.add_argument(
+        '--no-confidential',
+        action="store_true",
+        help='If not to include confidential metadata'
+    )
+    parser.add_argument(
+        '-w', '--workers',
+        type=int,
+        default=os.cpu_count(),
+        help='Number of worker threads to use'
+    )
+    parser.add_argument(
+        '--chunk-size',
+        type=int,
+        default=100,
+        help='Number of tiles to give each worker at a time'
+    )
+    parser.add_argument(
+        '--format',
+        type=str,
+        default='jpeg',
+        help="Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'."
+    )
+    parser.add_argument(
+        '--quality',
+        type=int,
+        default=90,
+        help=(
+            "Quality to use if re-encoding. Do not use > 95 for jpeg. "
+            "Use 100 for lossless jpeg2000."
+        )
+    )
+    parser.add_argument(
+        '--subsampling',
+        type=str,
+        default='422',
+        help=(
+            "Subsampling option if using jpeg for re-encoding. Use '444' for "
+            "no subsampling, '422' for 2x2 subsampling."
+        )
+    )
+
     args = parser.parse_args()
     if not args.dataset:
         dataset = create_default_modules()
@@ -74,13 +119,19 @@ def main():
         levels = args.levels
 
     WsiDicomizer.convert(
-        args.input,
-        args.output,
-        dataset,
+        filepath=args.input,
+        output_path=args.output,
+        datasets=dataset,
         tile_size=args.tile_size,
         include_levels=levels,
         include_label=not args.no_label,
-        include_overview=not args.no_overview
+        include_overview=not args.no_overview,
+        include_confidential=not args.no_confidential,
+        workers=args.workers,
+        chunk_size=args.chunk_size,
+        encoding_format=args.format,
+        encoding_quality=args.quality,
+        jpeg_subsampling=args.subsampling
     )
 
 
