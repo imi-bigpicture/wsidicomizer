@@ -1,8 +1,20 @@
 [tool.poetry]
 name = "wsidicomizer"
 version = "0.1.0"
-description = ""
+description = "Tool for converting wsi-files to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
+licence = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/imi-bigpicture/wsidicomizer"
+keywords = "whole slide image, digital pathology, dicom, converter"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "Operating System :: OS Independent".
+    "Topic :: Scientific/Engineering :: Medical Science Apps."
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.11"
