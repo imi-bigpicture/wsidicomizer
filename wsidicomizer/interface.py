@@ -1,12 +1,13 @@
 import os
 from pathlib import Path
-from typing import Callable, List, Tuple, Union, Optional
+from typing import Callable, List, Optional, Tuple, Union
 
 from opentile.common import Tiler
 from opentile.interface import OpenTile
 from pydicom import config
 from pydicom.dataset import Dataset
-from pydicom.uid import UID as Uid, generate_uid
+from pydicom.uid import UID as Uid
+from pydicom.uid import generate_uid
 from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 
@@ -14,11 +15,10 @@ from wsidicomizer.czi_wrapper import CziWrapper
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
-from wsidicomizer.openslide_wrapper import (OpenSlideAssociatedWrapper,
+from wsidicomizer.openslide_wrapper import (OpenSlide,
+                                            OpenSlideAssociatedWrapper,
                                             OpenSlideLevelWrapper)
 from wsidicomizer.opentile_wrapper import OpenTileWrapper
-
-from openslide import OpenSlide
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -49,7 +49,7 @@ class WsiDicomizer(WsiDicom):
         filepath: str
             Path to tiff file
         modules: Optional[Union[Dataset, List[Dataset]]] = None
-            Module datasets to use in files. If none, use test dataset.
+            Module datasets to use in files. If none, use default modules.
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: List[int] = None
@@ -100,7 +100,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         tile_size: int,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
+        modules: Optional[Union[Dataset, List[Dataset]]] = None,
         include_levels: Optional[List[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -117,8 +117,8 @@ class WsiDicomizer(WsiDicom):
             Path to openslide file.
         tile_size: int
             Tile size to use.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
-            Base dataset to use in files. If none, use test dataset.
+        modules: Optional[Union[Dataset, List[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
         include_levels: Optional[List[int]] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
@@ -146,7 +146,7 @@ class WsiDicomizer(WsiDicom):
             subsampling=jpeg_subsampling,
             colorspace=JCS_EXT_BGRA
         )
-        base_dataset = create_base_dataset(datasets)
+        base_dataset = create_base_dataset(modules)
         slide = OpenSlide(filepath)
         instance_number = 0
         level_instances = [
@@ -189,7 +189,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         tile_size: int,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
+        modules: Optional[Union[Dataset, List[Dataset]]] = None,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
@@ -203,8 +203,8 @@ class WsiDicomizer(WsiDicom):
             Path to czi file.
         tile_size: int
             Tile size to use.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
-            Base dataset to use in files. If none, use test dataset.
+        modules: Optional[Union[Dataset, List[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90
@@ -224,7 +224,7 @@ class WsiDicomizer(WsiDicom):
             encoding_quality,
             jpeg_subsampling
         )
-        base_dataset = create_base_dataset(datasets)
+        base_dataset = create_base_dataset(modules)
         base_level_instance = cls._create_instance(
             CziWrapper(filepath, tile_size, encoder),
             base_dataset,
@@ -241,7 +241,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         output_path: Optional[str] = None,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
+        modules: Optional[Union[Dataset, List[Dataset]]] = None,
         tile_size: Optional[int] = None,
         uid_generator: Callable[..., Uid] = generate_uid,
         include_levels: Optional[List[int]] = None,
@@ -263,8 +263,8 @@ class WsiDicomizer(WsiDicom):
             Path to file
         output_path: str = None
             Folder path to save files to.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
-            Base dataset to use in files. If none, use test dataset.
+        modules: Optional[Union[Dataset, List[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
         tile_size: int
             Tile size to use if not defined by file.
         uid_generator: Callable[..., Uid] = generate_uid
@@ -296,7 +296,7 @@ class WsiDicomizer(WsiDicom):
         List[str]
             List of paths of created files.
         """
-        base_dataset = create_base_dataset(datasets)
+        base_dataset = create_base_dataset(modules)
         if OpenTile.detect_format(Path(filepath)) is not None:
             imported_wsi = cls.import_tiff(
                 filepath,
