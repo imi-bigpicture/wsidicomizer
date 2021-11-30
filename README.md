@@ -33,13 +33,21 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ### Arguments:
 -i, --input, path to input wsi file
 -o, --output, path to output folder
+-t, --tile-size, required depending on input format
 -d, --dataset, optional path to json file defining base dataset
--t, --tile_size, required depending on input format
+-t, --tile-size, required depending on input format
 -l, --levels, optional levels to include
+-w, --workers, number of threads to use
+--chunk-size, number of tiles to give each worker at a time
+--format, encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'
+--quality, quality to use if re-encoding.
+--subsampling, subsampling option to use if re-encoding.
 
 ### Flags
---no_label, do not include label(s)
---no_overview, do not include overview(s)
+--no-label, do not include label(s)
+--no-overview, do not include overview(s)
+--no-confidential, do not include confidential metadata from image
+
 
 ## Basic notebook-usage
 ***Create module datasets (Optional)***
