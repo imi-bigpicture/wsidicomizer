@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Sequence
 from pathlib import Path
 
 from opentile.common import OpenTilePage
@@ -160,7 +160,7 @@ class OpenTileWrapper(ImageDataWrapper):
 
     def get_encoded_tiles(
         self,
-        tiles: List[Point],
+        tiles: Sequence[Point],
         z: float,
         path: str
     ) -> List[bytes]:
@@ -169,7 +169,7 @@ class OpenTileWrapper(ImageDataWrapper):
 
         Parameters
         ----------
-        tiles: List[Point]
+        tiles: Sequence[Point]
             Tile positions to get.
         z: float
             Focal plane of tile to get.

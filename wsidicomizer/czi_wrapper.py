@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ElementTree
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Tuple, Optional
+from typing import DefaultDict, Dict, List, Tuple, Optional, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -148,7 +148,7 @@ class CziWrapper(ImageDataWrapper):
         return self._block_directory
 
     @property
-    def tile_directory(self) -> Dict[Tuple[Point, float, str], List[int]]:
+    def tile_directory(self) -> Dict[Tuple[Point, float, str], Sequence[int]]:
         """Return dict of tiles with mosaic indices."""
         return self._tile_directory
 
@@ -338,13 +338,13 @@ class CziWrapper(ImageDataWrapper):
 
     def _create_tile_directory(
         self
-    ) -> Dict[Tuple[Point, float, str], List[int]]:
+    ) -> Dict[Tuple[Point, float, str], Sequence[int]]:
         """Create a directory mapping tile points to list of block indices that
         cover the tile. This could be extended to also index z and c.
 
         Returns
         ----------
-        Dict[Tuple[Point, int, int], List[int]]:
+        Dict[Tuple[Point, int, int], Sequence[int]]:
             Directory of tile point, focal plane and channel as key and
             lists of block indices as item.
         """

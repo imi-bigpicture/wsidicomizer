@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Callable, List, Tuple, Union, Optional
+from typing import Callable, List, Tuple, Union, Optional, Sequence
 
 from opentile.common import Tiler
 from opentile.interface import OpenTile
@@ -31,9 +31,9 @@ class WsiDicomizer(WsiDicom):
     def import_tiff(
         cls,
         filepath: str,
-        modules: Optional[Union[Dataset, List[Dataset]]] = None,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: Optional[int] = None,
-        include_levels: Optional[List[int]] = None,
+        include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         encoding_format: str = 'jpeg',
@@ -47,11 +47,11 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: str
             Path to tiff file
-        modules: Optional[Union[Dataset, List[Dataset]]] = None
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use test dataset.
         tile_size: Optional[int]
             Tile size to use if not defined by file.
-        include_levels: List[int] = None
+        include_levels: Sequence[int] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
             Inclube label.
@@ -96,8 +96,8 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         tile_size: int,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
-        include_levels: Optional[List[int]] = None,
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         encoding_format: str = 'jpeg',
@@ -113,9 +113,9 @@ class WsiDicomizer(WsiDicom):
             Path to openslide file.
         tile_size: int
             Tile size to use.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Base dataset to use in files. If none, use test dataset.
-        include_levels: Optional[List[int]] = None
+        include_levels: Optional[Sequence[int]] = None
             Levels to include. If None, include all levels.
         include_label: bool = True
             Inclube label.
@@ -185,7 +185,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         tile_size: int,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
@@ -199,7 +199,7 @@ class WsiDicomizer(WsiDicom):
             Path to czi file.
         tile_size: int
             Tile size to use.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Base dataset to use in files. If none, use test dataset.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
@@ -237,10 +237,10 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: str,
         output_path: Optional[str] = None,
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None,
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: Optional[int] = None,
         uid_generator: Callable[..., Uid] = generate_uid,
-        include_levels: Optional[List[int]] = None,
+        include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         encoding_format: str = 'jpeg',
@@ -256,13 +256,13 @@ class WsiDicomizer(WsiDicom):
             Path to file
         output_path: str = None
             Folder path to save files to.
-        datasets: Optional[Union[Dataset, List[Dataset]]] = None
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Base dataset to use in files. If none, use test dataset.
         tile_size: int
             Tile size to use if not defined by file.
         uid_generator: Callable[..., Uid] = generate_uid
              Function that can gernerate unique identifiers.
-        include_levels: List[int]
+        include_levels: Sequence[int]
             Optional list of levels to include. Include all levels if None.
         include_label: bool
             Include label(s), default true.
@@ -380,7 +380,7 @@ class WsiDicomizer(WsiDicom):
         tiler: Tiler,
         encoder: Encoder,
         base_dataset: Dataset,
-        include_levels: Optional[List[int]] = None,
+        include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
     ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
@@ -394,7 +394,7 @@ class WsiDicomizer(WsiDicom):
             Encoder to use for re-encoding.
         base_dataset: Dataset
             Base dataset to include in files.
-        include_levels: Optional[List[int]] = None
+        include_levels: Optional[Sequence[int]] = None
             Optional list of levels to include. Include all levels if None.
         include_label: bool = True
             Include label(s), default true.

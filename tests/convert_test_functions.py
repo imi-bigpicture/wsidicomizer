@@ -4,7 +4,7 @@ import os
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple, Sequence
 
 from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
@@ -16,7 +16,7 @@ from openslide import OpenSlide
 
 
 class ConvertTestBase:
-    include_levels: List[int] = []
+    include_levels: Sequence[int] = []
     input_filename: str = ""
     test_data_dir: str = ""
     tile_size: Optional[int] = None

@@ -1,10 +1,11 @@
 import datetime
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
                                SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
 from opentile.common import Tiler
+from opentile.interface import OpenTile
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
@@ -42,14 +43,14 @@ def get_image_type(image_flavor: str, level_index: int) -> List[str]:
 
 
 def create_base_dataset(
-    modules: Optional[Union[Dataset, List[Dataset]]] = None
+    modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
 ) -> Dataset:
     """Create a base dataset by combining module datasets with a minimal
     wsi dataset.
 
     Parameters
     ----------
-    modules: Optional[Union[Dataset, List[Dataset]]] = None
+    modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
 
     Returns
     ----------
@@ -230,7 +231,7 @@ def create_patient_module(
     birth_date: Optional[datetime.date] = None,
     sex: str = "",
     identity_removed: bool = False,
-    de_indentification_methods: List[Union[str, Code]] = [],
+    de_indentification_methods: Sequence[Union[str, Code]] = [],
     age_at_extraction: Optional[str] = None
 ) -> Dataset:
     """Create patient and patient study modules.
@@ -248,7 +249,7 @@ def create_patient_module(
     identity_removed: bool = False
         True if partient idendity has been removed from attributes in dataset
         and in image data.
-    de_indentification_methods: List[Union[str, Code]] = []
+    de_indentification_methods: Sequence[Union[str, Code]] = []
         Method of de-indentification. Can be descriptive strings and/or coded
         values.
     age_at_extraction: Optional[str] = None
@@ -302,7 +303,7 @@ def create_device_module(
     manufacturer: str = 'Unkown',
     model_name: str = 'Unkown',
     serial_number: str = 'Unkown',
-    software_versions: List[str] = ['Unkown']
+    software_versions: Sequence[str] = ['Unkown']
 ) -> Dataset:
     """Create extended equipment module.
 
@@ -314,7 +315,7 @@ def create_device_module(
         Manufacturer's model name of the equipment.
     serial_number: str = 'Unkown'
         Manufacturer's serial number of the equipment.
-    software_versions: List[str] = ['Unkown']
+    software_versions: Sequence[str] = ['Unkown']
         Software version of the equipment.
 
     Returns
@@ -336,13 +337,13 @@ def create_device_module(
 
 def create_sample(
     sample_id: str,
-    stainings: List[str],
+    stainings: Sequence[str],
     embedding_medium: Optional[str] = None,
     fixative: Optional[str] = None,
     specimen_id: Optional[str] = None,
     specimen_type: Optional[str] = None,
     specimen_sampling_method: Optional[str] = None,
-    anatomical_sites: Optional[List[Tuple[Code, List[Code]]]] = None,
+    anatomical_sites: Optional[Sequence[Tuple[Code, Sequence[Code]]]] = None,
     location: Optional[Union[str, Tuple[float, float, float]]] = None,
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
@@ -352,7 +353,7 @@ def create_sample(
     ----------
     sample_id: str
         Identifier for the sample.
-    stainings: List[str]
+    stainings: Sequence[str]
         Stainings used. See SpecimenStainsCode.list() for allowed values.
     embedding_medium: Optional[str] = None
         Embedding medium used. See SpecimenEmbeddingMediaCode.list() for
@@ -367,7 +368,7 @@ def create_sample(
     specimen_sampling_method: Optional[str] = None
         Sampling method used for sampling the sample from the specimen. See
         SpecimenSamplingProcedureCode.list() for allowed values.
-    anatomical_sites: Optional[List[Tuple[Code, List[Code]]]] = None
+    anatomical_sites: Optional[Sequence[Tuple[Code, Sequence[Code]]]] = None
         List of original anatomical sites, each defined by a code and optional
         list of modifier codes.
     location: Optional[Union[str, Tuple[float, float, float]]] = None
@@ -380,6 +381,62 @@ def create_sample(
     ----------
     Dataset
         Dataset containing a sample description.
+    """
+    sample_preparation_steps: List[SpecimenPreparationStep] = []
+    sample_preparation_step = create_sample_preparation_step(
+        sample_id,
+        stainings,
+        embedding_medium,
+        fixative
+    )
+    sample_preparation_steps.append(sample_preparation_step)
+    if specimen_id is not None:
+        sample_sampling_step = create_sample_sampling_step(
+            sample_id,
+            specimen_id,
+            specimen_sampling_method,
+            specimen_type
+        )
+        sample_preparation_steps.append(sample_sampling_step)
+
+    specimen = SpecimenDescription(
+        specimen_id=sample_id,
+        specimen_uid=uid_generator(),
+        specimen_preparation_steps=sample_preparation_steps,
+        specimen_location=location
+    )
+    if anatomical_sites is not None:
+        specimen = add_anatomical_sites_to_specimen(
+            specimen,
+            anatomical_sites
+        )
+
+    return specimen
+
+
+def create_sample_preparation_step(
+    specimen_id: str,
+    stainings: Sequence[str],
+    embedding_medium: Optional[str],
+    fixative: Optional[str]
+) -> SpecimenPreparationStep:
+    """Create SpecimenPreparationStep for a preparation step.
+
+    Parameters
+    ----------
+    specimen_id: str
+        ID of specimen that has been prepared.
+    stainings: Sequence[str]
+        Sequence of stainings used.
+    embedding_medium: Optional[str] = None
+        Embedding medium used.
+    fixative: Optional[str] = None
+        Fixative used.
+
+    Returns
+    ----------
+    SpecimenPreparationStep
+        SpecimenPreparationStep for a preparation step.
     """
     if embedding_medium is not None:
         embedding_medium_code = (
@@ -397,80 +454,117 @@ def create_sample(
         SpecimenStainsCode(staining).code for staining in stainings
     ])
     sample_preparation_step = SpecimenPreparationStep(
-        specimen_id=sample_id,
+        specimen_id=specimen_id,
         processing_type=processing_type,
         processing_procedure=processing_procedure,
         embedding_medium=embedding_medium_code,
         fixative=fixative_code
     )
-    sample_preparation_steps = [sample_preparation_step]
-    if specimen_id is not None:
-        if specimen_sampling_method is None:
-            raise ValueError(
-                'Specimen sampling method required if '
-                'specimen id is defined'
-            )
-        if specimen_type is None:
-            raise ValueError(
-                'Specimen type required if '
-                'specimen id is defined'
-            )
-        specimen_type_code = AnatomicPathologySpecimenTypesCode(specimen_type)
-        sampling_method_code = SpecimenSamplingProcedureCode(
-            specimen_sampling_method
-        )
-        sample_sampling_step = SpecimenPreparationStep(
-            specimen_id=sample_id,
-            processing_type=SpecimenPreparationProcedureCode(
-                'Sampling of tissue specimen'
-            ).code,
-            processing_procedure=SpecimenSampling(
-                    method=sampling_method_code.code,
-                    parent_specimen_id=specimen_id,
-                    parent_specimen_type=specimen_type_code.code
-            )
-        )
-        sample_preparation_steps.append(sample_sampling_step)
+    return sample_preparation_step
 
-    specimen = SpecimenDescription(
-        specimen_id=sample_id,
-        specimen_uid=uid_generator(),
-        specimen_preparation_steps=sample_preparation_steps,
-        specimen_location=location
+
+def create_sample_sampling_step(
+    sample_id: str,
+    specimen_id: str,
+    specimen_sampling_method: Optional[str],
+    specimen_type: Optional[str]
+) -> SpecimenPreparationStep:
+    """Create SpecimenPreparationStep for a sampling step.
+
+    Parameters
+    ----------
+    sample_id: str
+        ID of sample that has been created.
+    specimen_id: str
+        ID of specimen that was sampled.
+    specimen_sampling_method: Optional[str]
+        Method used to sample specimen.
+    specimen_type: Optional[str]
+        Type of specimen that was sampled
+
+    Returns
+    ----------
+    SpecimenPreparationStep
+        SpecimenPreparationStep for a sampling step.
+    """
+    if specimen_sampling_method is None:
+        raise ValueError(
+            'Specimen sampling method required if '
+            'specimen id is defined'
+        )
+    if specimen_type is None:
+        raise ValueError(
+            'Specimen type required if '
+            'specimen id is defined'
+        )
+    specimen_type_code = AnatomicPathologySpecimenTypesCode(specimen_type)
+    sampling_method_code = SpecimenSamplingProcedureCode(
+        specimen_sampling_method
     )
-    if anatomical_sites is not None:
-        anatomical_site_datasets: List[Dataset] = []
-        for (anatomical_site, modifiers) in anatomical_sites:
-            anatomical_site_dataset = (
-                ConceptCode.from_code(anatomical_site).to_ds()
-            )
+    sample_sampling_step = SpecimenPreparationStep(
+        specimen_id=sample_id,
+        processing_type=SpecimenPreparationProcedureCode(
+            'Sampling of tissue specimen'
+        ).code,
+        processing_procedure=SpecimenSampling(
+                method=sampling_method_code.code,
+                parent_specimen_id=specimen_id,
+                parent_specimen_type=specimen_type_code.code
+        )
+    )
+    return sample_sampling_step
 
-            if modifiers != []:
-                modifier_datasets: List[Dataset] = []
-                for modifier in modifiers:
-                    modifier_dataset = Dataset()
-                    modifier_dataset.CodeValue = modifier.value
-                    modifier_dataset.CodingSchemeDesignator = (
-                        modifier.scheme_designator
-                    )
-                    modifier_dataset.CodeMeaning = modifier.meaning
-                    modifier_datasets.append(modifier_dataset)
 
-                (
-                    anatomical_site_dataset
-                    .PrimaryAnatomicStructureModifierSequence
-                ) = DicomSequence(modifier_datasets)
-            anatomical_site_datasets.append(anatomical_site_dataset)
-        specimen.PrimaryAnatomicStructureSequence = DicomSequence(
-            anatomical_site_datasets
+def add_anatomical_sites_to_specimen(
+    specimen: Dataset,
+    anatomical_sites: Sequence[Tuple[Code, Sequence[Code]]]
+) -> Dataset:
+    """Add anatomical site and anatomical site modifier codes to specimen.
+
+    Parameters
+    ----------
+    specimen: Dataset
+        Dataset containing a specimen description
+    anatomical_sites: Sequence[Tuple[Code, Sequence[Code]]]
+        List of original anatomical sites, each defined by a code and
+        list of modifier codes (can be empty).
+
+    Returns
+    ----------
+    Dataset
+        Dataset containing a specimen description.
+    """
+    anatomical_site_datasets: List[Dataset] = []
+    for (anatomical_site, modifiers) in anatomical_sites:
+        anatomical_site_dataset = (
+            ConceptCode.from_code(anatomical_site).to_ds()
         )
 
+        if modifiers != []:
+            modifier_datasets: List[Dataset] = []
+            for modifier in modifiers:
+                modifier_dataset = Dataset()
+                modifier_dataset.CodeValue = modifier.value
+                modifier_dataset.CodingSchemeDesignator = (
+                    modifier.scheme_designator
+                )
+                modifier_dataset.CodeMeaning = modifier.meaning
+                modifier_datasets.append(modifier_dataset)
+
+            (
+                anatomical_site_dataset
+                .PrimaryAnatomicStructureModifierSequence
+            ) = DicomSequence(modifier_datasets)
+        anatomical_site_datasets.append(anatomical_site_dataset)
+    specimen.PrimaryAnatomicStructureSequence = DicomSequence(
+        anatomical_site_datasets
+    )
     return specimen
 
 
 def create_specimen_module(
     slide_id: str,
-    samples: Union[Dataset, List[Dataset]]
+    samples: Union[Dataset, Sequence[Dataset]]
 ) -> Dataset:
     """Create specimen module.
 
@@ -478,7 +572,7 @@ def create_specimen_module(
     ----------
     slide_id: str.
         Identifier for the slide.
-    samples: Union[Dataset, List[Dataset]]
+    samples: Union[Dataset, Sequence[Dataset]]
         Single or list of sample descriptions (should be created with
         create_sample())
 
@@ -512,7 +606,7 @@ def create_specimen_module(
     dataset.ContainerComponentSequence = (
         DicomSequence([container_component_sequence])
     )
-    if not isinstance(samples, list):
+    if not isinstance(samples, Sequence):
         samples = [samples]
     specimen_description_sequence = (
         DicomSequence(samples)
