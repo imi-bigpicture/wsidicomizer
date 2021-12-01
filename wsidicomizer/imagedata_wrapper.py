@@ -8,6 +8,7 @@ from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID, generate_uid, JPEGBaseline8Bit
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData
+from wsidicom.instance import WsiDataset
 from wsidicomizer.encoding import Encoder
 
 from .dataset import get_image_type
@@ -56,7 +57,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         instance_number: int,
         transfer_syntax: UID,
         photometric_interpretation: str
-    ) -> Dataset:
+    ) -> WsiDataset:
         """Return instance dataset for image_data based on base dataset.
 
         Parameters
@@ -71,10 +72,10 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
 
         Returns
         ----------
-        Dataset
+        WsiDataset
             Dataset for instance.
         """
-        dataset = deepcopy(base_dataset)
+        dataset = WsiDataset(deepcopy(base_dataset))
         dataset.ImageType = get_image_type(
             image_flavor,
             self.pyramid_index

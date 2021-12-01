@@ -1,13 +1,19 @@
-from typing import List, Sequence
 from pathlib import Path
+from typing import List, Optional, Sequence, Union, Tuple
 
-from opentile.common import OpenTilePage
+from opentile.common import OpenTilePage, Tiler
+from opentile import OpenTile
 from PIL import Image
-from pydicom import config
-from pydicom.uid import UID, JPEGBaseline8Bit, JPEG2000
+from pydicom import Dataset, config
+from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews, WsiInstance, WsiDataset)
 from wsidicom.geometry import Point, Size, SizeMm
-from wsidicomizer.encoding import Encoder
+
+from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+from wsidicomizer.common import MetaDicomizer
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -211,3 +217,153 @@ class OpenTileWrapper(ImageDataWrapper):
         raise NotImplementedError(
             f'Not supported compression {compression}'
         )
+
+
+class OpenTileDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open data in tiff file as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use test dataset.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicomizer
+            WsiDicomizer object of imported tiler.
+        """
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            subsampling=jpeg_subsampling
+        )
+        base_dataset = create_base_dataset(modules)
+        tiler = OpenTile.open(filepath, tile_size)
+        level_instances, label_instances, overview_instances = cls._open_tiler(
+            tiler,
+            encoder,
+            base_dataset,
+            include_levels=include_levels,
+            include_label=include_label,
+            include_overview=include_overview,
+            include_confidential=include_confidential
+        )
+        levels = WsiDicomLevels.open(level_instances)
+        labels = WsiDicomLabels.open(label_instances)
+        overviews = WsiDicomOverviews.open(overview_instances)
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        return OpenTile.detect_format(Path(filepath)) is not None
+
+    @classmethod
+    def _open_tiler(
+        cls,
+        tiler: Tiler,
+        encoder: Encoder,
+        base_dataset: Dataset,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True
+    ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
+        """Open tiler to produce WsiInstances.
+
+        Parameters
+        ----------
+        tiler: Tiler
+            Tiler that can produce WsiInstances.
+        encoder: Encoder
+            Encoder to use for re-encoding.
+        base_dataset: Dataset
+            Base dataset to include in files.
+        include_levels: Optional[Sequence[int]] = None
+            Optional list of levels to include. Include all levels if None.
+        include_label: bool = True
+            Include label(s), default true.
+        include_overwiew: bool = True
+            Include overview(s), default true.
+        include_confidential: bool = True
+            Include confidential metadata.
+
+        Returns
+        ----------
+        Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
+            Lists of created level, label and overivew instances.
+        """
+        base_dataset = populate_base_dataset(
+            tiler,
+            base_dataset,
+            include_confidential
+        )
+        instance_number = 0
+        level_instances = [
+            cls._create_instance(
+                OpenTileWrapper(level, encoder),
+                base_dataset,
+                'VOLUME',
+                instance_number+index
+            )
+            for index, level in enumerate(tiler.levels)
+            if include_levels is None or level.pyramid_index in include_levels
+        ]
+        instance_number += len(level_instances)
+        label_instances = [
+            cls._create_instance(
+                OpenTileWrapper(label, encoder),
+                base_dataset,
+                'LABEL',
+                instance_number+index
+            )
+            for index, label in enumerate(tiler.labels)
+            if include_label
+        ]
+        instance_number += len(level_instances)
+        overview_instances = [
+            cls._create_instance(
+                OpenTileWrapper(overview, encoder),
+                base_dataset,
+                'OVERVIEW',
+                instance_number+index
+            )
+            for index, overview in enumerate(tiler.overviews)
+            if include_overview
+        ]
+
+        return level_instances, label_instances, overview_instances

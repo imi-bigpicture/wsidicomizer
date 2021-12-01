@@ -1,15 +1,21 @@
 import xml.etree.ElementTree as ElementTree
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Tuple, Optional, Sequence
 from pathlib import Path
+from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
+from pydicom import Dataset, config
 from pydicom.uid import UID as Uid
+from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicomizer.encoding import Encoder
+from wsidicom.wsidicom import WsiDicom
+from wsidicomizer.common import MetaDicomizer
 
+from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 
@@ -482,3 +488,67 @@ class CziWrapper(ImageDataWrapper):
 
     def _get_samples_per_pixel(self) -> int:
         return self._czi.shape[-1]
+
+
+class CziDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open data in czi file as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to czi file.
+        tile_size: int
+            Tile size to use.
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Base dataset to use in files. If none, use test dataset.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicomizer
+            WsiDicomizer object of imported czi file.
+        """
+        if tile_size is None:
+            raise ValueError("Tile size required for open slide")
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            jpeg_subsampling
+        )
+        base_dataset = create_base_dataset(modules)
+        base_level_instance = cls._create_instance(
+            CziWrapper(filepath, tile_size, encoder),
+            base_dataset,
+            'VOLUME',
+            0
+        )
+        levels = WsiDicomLevels.open([base_level_instance])
+        labels = WsiDicomLabels.open([])
+        overviews = WsiDicomOverviews.open([])
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        return CziWrapper.detect_format(Path(filepath)) is not None

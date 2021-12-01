@@ -8,7 +8,7 @@ from typing import Dict, Optional, Tuple, Sequence
 
 from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
-from wsidicomizer import WsiDicomizer
+from wsidicomizer.interface import WsiDicomizer
 from wsidicomizer.dataset import create_default_modules
 
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA

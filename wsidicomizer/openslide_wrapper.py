@@ -3,18 +3,21 @@ import os
 from abc import ABCMeta
 from ctypes import c_uint32
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
-
 from PIL import Image
-from pydicom import config
+from pydicom import Dataset, config
 from pydicom.uid import UID as Uid
+from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.wsidicom import WsiDicom
+from wsidicomizer.common import MetaDicomizer
 
+from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
-from wsidicomizer.encoding import Encoder
-
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
     try:
@@ -345,3 +348,101 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             raise ValueError
         tile = self._get_tile(tile_point, True)
         return Image.fromarray(tile).convert('RGB')
+
+
+class OpenSlideDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open data in openslide file as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to openslide file.
+        tile_size: int
+            Tile size to use.
+        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Base dataset to use in files. If none, use test dataset.
+        include_levels: Optional[Sequence[int]] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicomizer
+            WsiDicomizer object of imported openslide file.
+        """
+        if tile_size is None:
+            raise ValueError("Tile size required for open slide")
+        JCS_EXT_BGRA = 9
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            subsampling=jpeg_subsampling,
+            colorspace=JCS_EXT_BGRA
+        )
+        base_dataset = create_base_dataset(modules)
+        slide = OpenSlide(filepath)
+        instance_number = 0
+        level_instances = [
+            cls._create_instance(
+                OpenSlideLevelWrapper(slide, level_index, tile_size, encoder),
+                base_dataset,
+                'VOLUME',
+                instance_number+level_index
+            )
+            for level_index in range(slide.level_count)
+            if include_levels is None or level_index in include_levels
+        ]
+        instance_number += len(level_instances)
+        if include_label and 'label' in slide.associated_images:
+            label_instances = [cls._create_instance(
+                OpenSlideAssociatedWrapper(slide, 'label', encoder),
+                base_dataset,
+                'LABEL',
+                instance_number
+            )]
+        else:
+            label_instances = []
+        instance_number += len(label_instances)
+        if include_overview and 'macro' in slide.associated_images:
+            overview_instances = [cls._create_instance(
+                OpenSlideAssociatedWrapper(slide, 'macro', encoder),
+                base_dataset,
+                'OVERVIEW',
+                instance_number
+            )]
+        else:
+            overview_instances = []
+        levels = WsiDicomLevels.open(level_instances)
+        labels = WsiDicomLabels.open(label_instances)
+        overviews = WsiDicomOverviews.open(overview_instances)
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        return OpenSlide.detect_format(str(filepath)) is not None
