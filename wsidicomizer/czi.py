@@ -6,17 +6,16 @@ from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
-from pydicom import Dataset, config
+from pydicom import Dataset
 from pydicom.uid import UID as Uid
-from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews, WsiInstance)
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
-from wsidicomizer.common import MetaDicomizer
 
+from wsidicomizer.common import MetaImageData, MetaDicomizer
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 
 def get_element(element: ElementTree.Element, tag: str) -> ElementTree.Element:
@@ -55,7 +54,7 @@ def get_text_from_element(
     return text
 
 
-class CziWrapper(ImageDataWrapper):
+class CziImageData(MetaImageData):
     _default_z = 0
 
     def __init__(
@@ -539,7 +538,7 @@ class CziDicomizer(MetaDicomizer):
         )
         base_dataset = create_base_dataset(modules)
         base_level_instance = cls._create_instance(
-            CziWrapper(filepath, tile_size, encoder),
+            CziImageData(filepath, tile_size, encoder),
             base_dataset,
             'VOLUME',
             0
@@ -551,4 +550,4 @@ class CziDicomizer(MetaDicomizer):
 
     @staticmethod
     def is_supported(filepath: str) -> bool:
-        return CziWrapper.detect_format(Path(filepath)) is not None
+        return CziImageData.detect_format(Path(filepath)) is not None

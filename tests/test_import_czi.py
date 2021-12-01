@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 
 import pytest
 from wsidicom import WsiDicom
-from wsidicomizer.czi_wrapper import CziDicomizer
+from wsidicomizer.czi import CziDicomizer
 from wsidicomizer.dataset import create_default_modules
 
 

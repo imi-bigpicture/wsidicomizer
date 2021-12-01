@@ -8,9 +8,9 @@ from pydicom.uid import UID as Uid
 from pydicom.uid import generate_uid
 
 from wsidicomizer.common import MetaDicomizer
-from wsidicomizer.czi_wrapper import CziDicomizer
-from wsidicomizer.openslide_wrapper import OpenSlideDicomizer
-from wsidicomizer.opentile_wrapper import OpenTileDicomizer
+from wsidicomizer.czi import CziDicomizer
+from wsidicomizer.openslide import OpenSlideDicomizer
+from wsidicomizer.opentile import OpenTileDicomizer
 
 config.enforce_valid_values = True
 config.future_behavior()

@@ -7,17 +7,16 @@ from typing import List, Optional, Sequence, Union
 
 import numpy as np
 from PIL import Image
-from pydicom import Dataset, config
+from pydicom import Dataset
 from pydicom.uid import UID as Uid
-from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews, WsiInstance)
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
-from wsidicomizer.common import MetaDicomizer
 
+from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
     try:
@@ -48,11 +47,8 @@ OpenSlide C API. We consider this safe, as these directly map to the Openslide
 C API and are thus not likely  to change.
 """
 
-config.enforce_valid_values = True
-config.future_behavior()
 
-
-class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
+class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -114,7 +110,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
             pass
 
 
-class OpenSlideAssociatedWrapper(OpenSlideWrapper):
+class OpenSlideAssociatedImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -194,7 +190,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         return self._decoded_image
 
 
-class OpenSlideLevelWrapper(OpenSlideWrapper):
+class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -410,7 +406,12 @@ class OpenSlideDicomizer(MetaDicomizer):
         instance_number = 0
         level_instances = [
             cls._create_instance(
-                OpenSlideLevelWrapper(slide, level_index, tile_size, encoder),
+                OpenSlideLevelImageData(
+                    slide,
+                    level_index,
+                    tile_size,
+                    encoder
+                ),
                 base_dataset,
                 'VOLUME',
                 instance_number+level_index
@@ -421,7 +422,7 @@ class OpenSlideDicomizer(MetaDicomizer):
         instance_number += len(level_instances)
         if include_label and 'label' in slide.associated_images:
             label_instances = [cls._create_instance(
-                OpenSlideAssociatedWrapper(slide, 'label', encoder),
+                OpenSlideAssociatedImageData(slide, 'label', encoder),
                 base_dataset,
                 'LABEL',
                 instance_number
@@ -431,7 +432,7 @@ class OpenSlideDicomizer(MetaDicomizer):
         instance_number += len(label_instances)
         if include_overview and 'macro' in slide.associated_images:
             overview_instances = [cls._create_instance(
-                OpenSlideAssociatedWrapper(slide, 'macro', encoder),
+                OpenSlideAssociatedImageData(slide, 'macro', encoder),
                 base_dataset,
                 'OVERVIEW',
                 instance_number

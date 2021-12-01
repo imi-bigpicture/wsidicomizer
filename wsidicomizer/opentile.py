@@ -4,22 +4,18 @@ from typing import List, Optional, Sequence, Union, Tuple
 from opentile.common import OpenTilePage, Tiler
 from opentile import OpenTile
 from PIL import Image
-from pydicom import Dataset, config
+from pydicom import Dataset
 from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews, WsiInstance, WsiDataset)
+                      WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
 
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
-from wsidicomizer.common import MetaDicomizer
-
-config.enforce_valid_values = True
-config.future_behavior()
+from wsidicomizer.common import MetaDicomizer, MetaImageData
 
 
-class OpenTileWrapper(ImageDataWrapper):
+class OpenTileImageData(MetaImageData):
     def __init__(
         self,
         tiled_page: OpenTilePage,
@@ -335,7 +331,7 @@ class OpenTileDicomizer(MetaDicomizer):
         instance_number = 0
         level_instances = [
             cls._create_instance(
-                OpenTileWrapper(level, encoder),
+                OpenTileImageData(level, encoder),
                 base_dataset,
                 'VOLUME',
                 instance_number+index
@@ -346,7 +342,7 @@ class OpenTileDicomizer(MetaDicomizer):
         instance_number += len(level_instances)
         label_instances = [
             cls._create_instance(
-                OpenTileWrapper(label, encoder),
+                OpenTileImageData(label, encoder),
                 base_dataset,
                 'LABEL',
                 instance_number+index
@@ -357,7 +353,7 @@ class OpenTileDicomizer(MetaDicomizer):
         instance_number += len(level_instances)
         overview_instances = [
             cls._create_instance(
-                OpenTileWrapper(overview, encoder),
+                OpenTileImageData(overview, encoder),
                 base_dataset,
                 'OVERVIEW',
                 instance_number+index
