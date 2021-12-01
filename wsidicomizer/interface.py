@@ -11,7 +11,7 @@ from wsidicom import (WsiDataset, WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 
 from wsidicomizer.czi_wrapper import CziWrapper
-from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 from wsidicomizer.openslide_wrapper import (OpenSlideAssociatedWrapper,
@@ -36,6 +36,7 @@ class WsiDicomizer(WsiDicom):
         include_levels: Optional[List[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
+        include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
@@ -57,6 +58,8 @@ class WsiDicomizer(WsiDicom):
             Inclube label.
         include_overview: bool = True
             Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90
@@ -84,7 +87,8 @@ class WsiDicomizer(WsiDicom):
             base_dataset,
             include_levels=include_levels,
             include_label=include_label,
-            include_overview=include_overview
+            include_overview=include_overview,
+            include_confidential=include_confidential
         )
         levels = WsiDicomLevels.open(level_instances)
         labels = WsiDicomLabels.open(label_instances)
@@ -243,6 +247,9 @@ class WsiDicomizer(WsiDicom):
         include_levels: Optional[List[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
+        include_confidential: bool = True,
+        workers: Optional[int] = None,
+        chunk_size: Optional[int] = None,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
@@ -268,6 +275,13 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool
             Include overview(s), default true.
+        include_confidential: bool = True
+            Include confidential metadata.
+        workers: Optional[int] = None,
+            Maximum number of thread workers to use.
+        chunk_size: Optional[int] = None,
+            Chunk size (number of tiles) to process at a time. Actual chunk
+            size also depends on minimun_chunk_size from image_data.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90
@@ -291,6 +305,7 @@ class WsiDicomizer(WsiDicom):
                 include_levels=include_levels,
                 include_label=include_label,
                 include_overview=include_overview,
+                include_confidential=include_confidential,
                 encoding_format=encoding_format,
                 encoding_quality=encoding_quality,
                 jpeg_subsampling=jpeg_subsampling
@@ -332,7 +347,12 @@ class WsiDicomizer(WsiDicom):
         except FileExistsError:
             ValueError(f'Output path {output_path} already excists')
 
-        created_files = imported_wsi.save(output_path, uid_generator)
+        created_files = imported_wsi.save(
+            output_path,
+            uid_generator,
+            workers,
+            chunk_size
+        )
         imported_wsi.close()
         return [str(filepath) for filepath in created_files]
 
@@ -383,6 +403,7 @@ class WsiDicomizer(WsiDicom):
         include_levels: Optional[List[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
+        include_confidential: bool = True
     ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
         """Open tiler to produce WsiInstances.
 
@@ -400,13 +421,19 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool = True
             Include overview(s), default true.
+        include_confidential: bool = True
+            Include confidential metadata.
 
         Returns
         ----------
         Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
             Lists of created level, label and overivew instances.
         """
-        base_dataset = cls._populate_base_dataset(tiler, base_dataset)
+        base_dataset = populate_base_dataset(
+            tiler,
+            base_dataset,
+            include_confidential
+        )
         instance_number = 0
         level_instances = [
             cls._create_instance(
@@ -442,38 +469,3 @@ class WsiDicomizer(WsiDicom):
         ]
 
         return level_instances, label_instances, overview_instances
-
-    @staticmethod
-    def _populate_base_dataset(
-        tiler: Tiler,
-        base_dataset: Dataset
-    ) -> Dataset:
-        """Populate dataset with properties from tiler, if present.
-        Parameters
-        ----------
-        tiler: Tiler
-            A opentile Tiler.
-        base_dataset: Dataset
-            Dataset to append properties to.
-
-        Returns
-        ----------
-        Dataset
-            Dataset with added properties.
-        """
-        for property, value in tiler.properties.items():
-            if property == 'aquisition_datatime':
-                base_dataset.AcquisitionDateTime = value
-            elif property == 'device_serial_number':
-                base_dataset.DeviceSerialNumber = value
-            elif property == 'manufacturer':
-                base_dataset.Manufacturer = value
-            elif property == 'software_versions':
-                base_dataset.SoftwareVersions = value
-            elif property == 'lossy_image_compression_method':
-                base_dataset.LossyImageCompressionMethod = value
-            elif property == 'lossy_image_compression_ratio':
-                base_dataset.LossyImageCompressionRatio = value
-            elif property == 'photometric_interpretation':
-                base_dataset.PhotometricInterpretation = value
-        return base_dataset
