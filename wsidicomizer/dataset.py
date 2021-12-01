@@ -72,7 +72,8 @@ def create_base_dataset(
 
 def populate_base_dataset(
     tiler: Tiler,
-    base_dataset: Dataset
+    base_dataset: Dataset,
+    include_confidential: bool = True
 ) -> Dataset:
     """Populate dataset with properties from tiler, if present.
     Parameters
@@ -81,6 +82,8 @@ def populate_base_dataset(
         A opentile Tiler.
     base_dataset: Dataset
         Dataset to append properties to.
+    include_confidential: bool = True
+        If to include confidential properties (see https://dicom.nema.org/medical/dicom/current/output/html/part15.html#table_E.1-1)  # NOQA
 
     Returns
     ----------
@@ -88,12 +91,14 @@ def populate_base_dataset(
         Dataset with added properties.
     """
     for property, value in tiler.properties.items():
-        if property == 'aquisition_datatime':
+        if property == 'aquisition_datetime' and include_confidential:
             base_dataset.AcquisitionDateTime = value
-        elif property == 'device_serial_number':
+        elif property == 'device_serial_number' and include_confidential:
             base_dataset.DeviceSerialNumber = value
         elif property == 'manufacturer':
             base_dataset.Manufacturer = value
+        elif property == 'model':
+            base_dataset.ManufacturerModelName = value
         elif property == 'software_versions':
             base_dataset.SoftwareVersions = value
         elif property == 'lossy_image_compression_method':
