@@ -320,7 +320,7 @@ class CziWrapper(ImageDataWrapper):
         return Image.fromarray(self._get_tile(tile, z, path))
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
-        """Return image bytes for tile. Tole is encoded as jpeg.
+        """Return image bytes for tile. Tile is encoded as jpeg.
 
         Parameters
         ----------
