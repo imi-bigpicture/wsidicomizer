@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Tuple, Optional
 from pathlib import Path
@@ -27,14 +27,17 @@ from wsidicomizer.encoding import Encoder
 from wsidicomizer.imagedata_wrapper import ImageDataWrapper
 
 
-def get_element(element: ET.Element, tag: str) -> ET.Element:
+def get_element(element: ElementTree.Element, tag: str) -> ElementTree.Element:
     found_element = element.find(tag)
     if found_element is None:
         raise ValueError(f"Tag {tag} not found in element")
     return found_element
 
 
-def get_nested_element(element: ET.Element, tags: List[str]) -> ET.Element:
+def get_nested_element(
+    element: ElementTree.Element,
+    tags: List[str]
+) -> ElementTree.Element:
     found_element = element
     for tag in tags:
         found_element = found_element.find(tag)
@@ -44,7 +47,7 @@ def get_nested_element(element: ET.Element, tags: List[str]) -> ET.Element:
 
 
 def get_text_from_element(
-    element: ET.Element,
+    element: ElementTree.Element,
     tag: str,
     default: Optional[str] = None
 ) -> str:
@@ -187,7 +190,7 @@ class CziWrapper(ImageDataWrapper):
         self
     ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
         scaling_elements = get_nested_element(
-            ET.fromstring(self.metadata),
+            ElementTree.fromstring(self.metadata),
             ['Metadata', 'Scaling', 'Items']
         )
         x: Optional[float] = None
@@ -460,7 +463,7 @@ class CziWrapper(ImageDataWrapper):
 
     def _get_focal_plane_mapping(self) -> List[float]:
         image = get_nested_element(
-            ET.fromstring(self.metadata),
+            ElementTree.fromstring(self.metadata),
             ["Metadata", 'Information', 'Image']
         )
         try:
@@ -483,7 +486,7 @@ class CziWrapper(ImageDataWrapper):
 
     def _get_channel_mapping(self) -> List[str]:
         channels = get_nested_element(
-            ET.fromstring(self.metadata),
+            ElementTree.fromstring(self.metadata),
             ['Metadata', 'Information', 'Image', 'Dimensions', 'Channels']
         )
         return [
