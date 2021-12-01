@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Union, Type
+from typing import Callable, List, Optional, Sequence, Type, Union
 
 from pydicom import config
 from pydicom.dataset import Dataset

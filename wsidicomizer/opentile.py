@@ -1,8 +1,6 @@
 from pathlib import Path
-from typing import List, Optional, Sequence, Union, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
 
-from opentile.common import OpenTilePage, Tiler
-from opentile import OpenTile
 from PIL import Image
 from pydicom import Dataset
 from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
@@ -10,9 +8,11 @@ from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
 
+from opentile import OpenTile
+from opentile.common import OpenTilePage, Tiler
+from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
-from wsidicomizer.common import MetaDicomizer, MetaImageData
 
 
 class OpenTileImageData(MetaImageData):
@@ -260,8 +260,8 @@ class OpenTileDicomizer(MetaDicomizer):
 
         Returns
         ----------
-        WsiDicomizer
-            WsiDicomizer object of imported tiler.
+        WsiDicom
+            WsiDicom object of imported tiff file.
         """
         encoder = create_encoder(
             encoding_format,

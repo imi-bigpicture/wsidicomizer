@@ -1,19 +1,16 @@
 from abc import ABCMeta, abstractmethod
-from wsidicom import WsiDicom, WsiInstance
-from pydicom import Dataset
-from typing import Optional, Union, Sequence
-
-from abc import ABCMeta, abstractmethod
 from copy import deepcopy
+from typing import Optional, Sequence, Union
 
 import numpy as np
-from pydicom import config
+from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import UID, generate_uid, JPEGBaseline8Bit
+from pydicom.uid import UID, JPEGBaseline8Bit, generate_uid
 from pydicom.valuerep import DSfloat
-from wsidicom import ImageData
+from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
+
 from wsidicomizer.encoding import Encoder
 
 from .dataset import get_image_type

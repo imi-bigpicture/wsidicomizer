@@ -510,11 +510,19 @@ class CziDicomizer(MetaDicomizer):
         Parameters
         ----------
         filepath: str
-            Path to czi file.
-        tile_size: int
-            Tile size to use.
-        datasets: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Base dataset to use in files. If none, use test dataset.
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use test dataset.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90
@@ -526,8 +534,8 @@ class CziDicomizer(MetaDicomizer):
 
         Returns
         ----------
-        WsiDicomizer
-            WsiDicomizer object of imported czi file.
+        WsiDicom
+            WsiDicom object of imported czi file.
         """
         if tile_size is None:
             raise ValueError("Tile size required for open slide")
