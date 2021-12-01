@@ -75,7 +75,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         WsiDataset
             Dataset for instance.
         """
-        dataset = WsiDataset(deepcopy(base_dataset))
+        dataset = deepcopy(base_dataset)
         dataset.ImageType = get_image_type(
             image_flavor,
             self.pyramid_index
@@ -129,7 +129,7 @@ class ImageDataWrapper(ImageData, metaclass=ABCMeta):
         dataset.InstanceNumber = instance_number
         dataset.FocusMethod = 'AUTO'
         dataset.ExtendedDepthOfField = 'NO'
-        return dataset
+        return WsiDataset(dataset)
 
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
