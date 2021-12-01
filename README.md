@@ -31,6 +31,7 @@ Files with z-stacks or multiple focal paths are currently not supported. DICOM p
 wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 ### Arguments:
+~~~~
 -i, --input, path to input wsi file
 -o, --output, path to output folder
 -t, --tile-size, required depending on input format
@@ -42,12 +43,16 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 --format, encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'
 --quality, quality to use if re-encoding.
 --subsampling, subsampling option to use if re-encoding.
-
+~~~~
 ### Flags
+~~~~
 --no-label, do not include label(s)
 --no-overview, do not include overview(s)
 --no-confidential, do not include confidential metadata from image
-
+~~~~
+Using the no-confidential-flag properties according to [DICOM Basic Confidentiality Profile](https://dicom.nema.org/medical/dicom/current/output/html/part15.html#table_E.1-1) are not included in the output file. Properties otherwise included are currently:
+* Acquisition DateTime
+* Device Serial Number
 
 ## Basic notebook-usage
 ***Create module datasets (Optional)***
