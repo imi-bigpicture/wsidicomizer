@@ -58,12 +58,14 @@ def create_base_dataset(
         Combined base dataset.
     """
     base_dataset = create_wsi_dataset()
-    if isinstance(modules, list):
+    if modules is None:
+        modules = create_default_modules()
+    if isinstance(modules, Sequence):
         for module in modules:
             base_dataset.update(module)
     elif isinstance(modules, Dataset):
         base_dataset.update(modules)
-    elif modules is not None:
+    else:
         raise TypeError(
             'datasets parameter should be single or list of Datasets'
         )
