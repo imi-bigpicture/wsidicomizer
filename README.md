@@ -115,9 +115,9 @@ We recommend first creating an issue before creating potential contributions to 
 Our aim is to provide constructive and positive code reviews for all submissions. The project relies on gradual typing and roughly follows PEP8. However, we are not dogmatic. Most important is that the code is easy to read and understand.
 
 ## TODOs
-Packaging of libjpeg-turbo into an 'ready-to-use' distribution.
-Look into if OpenSlide python will provide a 'ready-to-use' distribution.
-Interface for coding annotations (geometrical, diagnosis using for example structured reporting).
+* Packaging of libjpeg-turbo into an 'ready-to-use' distribution.
+* Look into if OpenSlide python will provide a 'ready-to-use' distribution.
+* Interface for coding annotations (geometrical, diagnosis using for example structured reporting).
 
 ## Acknowledgement
 *wsidicomizer*: Copyright 2021 Sectra AB, licensed under Apache 2.0.
