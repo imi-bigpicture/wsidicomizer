@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import xml.etree.ElementTree as ElementTree
+from xml.etree import ElementTree
 from collections import defaultdict
 from pathlib import Path
 from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
