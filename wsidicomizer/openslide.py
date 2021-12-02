@@ -1,3 +1,17 @@
+#    Copyright 2021 SECTRA AB
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 import math
 import os
 from abc import ABCMeta
@@ -11,8 +25,9 @@ from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews)
-from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.geometry import Point, Size, SizeMm, Region
 from wsidicom.wsidicom import WsiDicom
+from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset
@@ -254,6 +269,54 @@ class OpenSlideLevelImageData(OpenSlideImageData):
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
         return self._pyramid_index
+
+    def stitch_tiles(
+        self,
+        region: Region,
+        path: str,
+        z: float
+    ) -> Image.Image:
+        """Overrides ImageData stitch_tiles() to read reagion directly from
+        openslide object.
+
+        Parameters
+        ----------
+        region: Region
+             Pixel region to stitch to image
+        path: str
+            Optical path
+        z: float
+            Z coordinate
+
+        Returns
+        ----------
+        Image.Image
+            Stitched image
+        """
+        if path not in self.optical_paths:
+            raise WsiDicomNotFoundError(f"Optical path {path}", str(self))
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f"Z {z}", str(self))
+        if region.size.width < 0 or region.size.height < 0:
+            raise ValueError('Negative size not allowed')
+
+        location_in_base_level = region.start * self.downsample
+
+        buffer = (region.size.width * region.size.height * c_uint32)()
+        _read_region(
+            self._open_slide._osr,
+            buffer,
+            location_in_base_level.x,
+            location_in_base_level.y,
+            self._level_index,
+            region.size.width,
+            region.size.height
+        )
+        tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
+        tile_data.shape = (region.size.width, region.size.height, 4)
+        tile_data = self._make_transparent_pixels_white(tile_data)
+        convert_argb_to_rgba(tile_data)
+        return Image.fromarray(tile_data).convert('RGB')
 
     def _get_tile(self, tile: Point, flip: bool = False) -> np.ndarray:
         """Return tile as np array. Transparency is removed. Optionally the
