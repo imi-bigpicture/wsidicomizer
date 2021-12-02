@@ -96,7 +96,7 @@ tile_size is required for Ndpi- and OpenSlide-files.
 ***Import a wsi file as a WsiDicom object.***
 ```python
 from wsidicomizer import WsiDicomizer
-wsi = WsiDicomizer.import_tiff(path_to_wsi_file)
+wsi = WsiDicomizer.open(path_to_wsi_file)
 region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
