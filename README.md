@@ -38,7 +38,6 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 -o, --output, path to output folder
 -t, --tile-size, required depending on input format
 -d, --dataset, optional path to json file defining base dataset
--t, --tile-size, required depending on input format
 -l, --levels, optional levels to include
 -w, --workers, number of threads to use
 --chunk-size, number of tiles to give each worker at a time
@@ -82,7 +81,7 @@ study_module = create_study_module()
 
 ```
 
-***Convert a wsi-file into DCIOM using python-interface***
+***Convert a wsi-file into DICOM using python-interface***
 ```python
 from wsidicomizer import WsiDicomizer
 created_files = WsiDicomizer.convert(
