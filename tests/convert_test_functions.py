@@ -63,13 +63,11 @@ class ConvertTestBase:
         TemporaryDirectory
     ]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
         assert tempdir.name is not None
         WsiDicomizer.convert(
             str(filepath),
             output_path=str(tempdir.name),
-            datasets=base_dataset,
             tile_size=cls.tile_size,
             include_levels=cls.include_levels
         )
