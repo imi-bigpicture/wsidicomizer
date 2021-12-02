@@ -442,7 +442,7 @@ class OpenSlideDicomizer(MetaDicomizer):
         include_overview: bool = True
             Include overview.
         include_confidential: bool = True
-            Include confidential metadata.
+            Include confidential metadata. Not implemented.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90

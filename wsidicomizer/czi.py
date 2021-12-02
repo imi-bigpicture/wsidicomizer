@@ -530,13 +530,13 @@ class CziDicomizer(MetaDicomizer):
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Levels to include. If None, include all levels.
+            Levels to include. Not implemented.
         include_label: bool = True
-            Inclube label.
+            Inclube label. Not implemented.
         include_overview: bool = True
-            Include overview.
+            Include overview. Not implemented.
         include_confidential: bool = True
-            Include confidential metadata.
+            Include confidential metadata. Not implemented.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
         encoding_quality: int = 90
