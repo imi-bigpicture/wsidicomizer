@@ -2,18 +2,21 @@ import math
 import os
 from abc import ABCMeta
 from ctypes import c_uint32
-from typing import Literal
+from pathlib import Path
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
-import pydicom
-
 from PIL import Image
-from pydicom import config
+from pydicom import Dataset
 from pydicom.uid import UID as Uid
-from turbojpeg import TJPF_BGRA, TJSAMP_444, TurboJPEG
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+from wsidicomizer.common import MetaDicomizer, MetaImageData
+from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
     try:
@@ -44,17 +47,12 @@ OpenSlide C API. We consider this safe, as these directly map to the Openslide
 C API and are thus not likely  to change.
 """
 
-config.enforce_valid_values = True
-config.future_behavior()
 
-
-class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
+class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def __init__(
         self,
         open_slide: OpenSlide,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
         """Wraps a OpenSlide image to ImageData.
 
@@ -62,42 +60,32 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
         ----------
         open_slide: OpenSlide
             OpenSlide object to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
-        super().__init__(jpeg, jpeg_quality, jpeg_subsample, TJPF_BGRA)
+        super().__init__(encoder)
 
         self._open_slide = open_slide
 
     @property
+    def files(self) -> List[Path]:
+        return [Path(self._open_slide._filename)]
+
+    @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        return pydicom.uid.JPEGBaseline8Bit
-
-    @property
-    def pixel_format(self) -> Literal:
-        return TJPF_BGRA
-
-    @property
-    def jpeg_quality(self) -> Literal:
-        return self._jpeg_qualtiy
-
-    @property
-    def jpeg_subsample(self) -> Literal:
-        raise self._jpeg_subsample
+        return self._encoder.transfer_syntax
 
     @staticmethod
     def _make_transparent_pixels_white(image_data: np.ndarray) -> np.ndarray:
-        """Removes transparency from image data. Openslide-python produces
-        non-premultiplied, 'straigt' RGBA data and the RGB-part can be left
-        unmodified. Fully transparent pixels have RGBA-value 0, 0, 0, 0. For
-        these, we want full-white pixel instead of full-black.
+        """Return image data where all pixels with transparency is replaced
+        by white pixels. Openslide returns fully transparent pixels with
+        RGBA-value 0, 0, 0, 0 for 'sparse' areas. At the edge to 'sparse' areas
+        there can also be partial transparency. This function 'aggresively'
+        removes all transparent pixels (instead of calculating RGB-values
+        with transparency for partial transparent pixels) as it is much,
+        simpler, faster, and the partial transparency is at the edge of the
+        ROIs.
 
         Parameters
         ----------
@@ -110,8 +98,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
             Image data in RGBA pixel format without transparency.
         """
         transparency = image_data[:, :, 3]
-        # Check for pixels with full transparency
-        image_data[transparency == 0, :] = 255
+        image_data[transparency != 255, :] = 255
         return image_data
 
     def close(self) -> None:
@@ -123,14 +110,12 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
             pass
 
 
-class OpenSlideAssociatedWrapper(OpenSlideWrapper):
+class OpenSlideAssociatedImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
         image_type: str,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
         """Wraps a OpenSlide associated image (label or overview) to ImageData.
 
@@ -140,16 +125,10 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
             OpenSlide object to wrap.
         image_type: str
             Type of image to wrap.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
-        super().__init__(open_slide, jpeg, jpeg_quality, jpeg_subsample)
+        super().__init__(open_slide, encoder)
         self._image_type = image_type
         if image_type not in get_associated_image_names(self._open_slide._osr):
             raise ValueError(f"{image_type} not in {self._open_slide}")
@@ -190,17 +169,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         """The pyramidal index in relation to the base layer."""
         return 0
 
-    def get_encoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> Image.Image:
-        if tile != Point(0, 0):
-            raise ValueError
-        return self._encoded_image
-
-    def get_decoded_tile(
+    def _get_encoded_tile(
         self,
         tile: Point,
         z: float,
@@ -208,20 +177,28 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
     ) -> bytes:
         if tile != Point(0, 0):
             raise ValueError
+        return self._encoded_image
+
+    def _get_decoded_tile(
+        self,
+        tile: Point,
+        z: float,
+        path: str
+    ) -> Image.Image:
+        if tile != Point(0, 0):
+            raise ValueError
         return self._decoded_image
 
 
-class OpenSlideLevelWrapper(OpenSlideWrapper):
+class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
-        level_index: Size,
+        level_index: int,
         tile_size: int,
-        jpeg: TurboJPEG,
-        jpeg_quality: Literal = 95,
-        jpeg_subsample: Literal = TJSAMP_444
+        encoder: Encoder
     ):
-        super().__init__(open_slide, jpeg, jpeg_quality, jpeg_subsample)
+        super().__init__(open_slide, encoder)
         """Wraps a OpenSlide level to ImageData.
 
         Parameters
@@ -230,21 +207,14 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             OpenSlide object to wrap.
         level_index: int
             Level in OpenSlide object to wrap
-        tile_size: Size
+        tile_size: int
             Output tile size.
-        jpeg: TurboJPEG
-            TurboJPEG object to use.
-        jpeg_quality: Literal = 95
-            Jpeg encoding quality to use.
-        jpeg_subsample: Literal = TJSAMP_444
-            Jpeg subsample option to use:
-                TJSAMP_444 - no subsampling
-                TJSAMP_420 - 2x2 subsampling
+        encoded: Encoder
+            Encoder to use.
         """
         self._tile_size = Size(tile_size, tile_size)
         self._open_slide = open_slide
         self._level_index = level_index
-        self._jpeg = jpeg
         self._image_size = Size.from_tuple(
             self._open_slide.level_dimensions[self._level_index]
         )
@@ -319,9 +289,9 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         tile_data = self._make_transparent_pixels_white(tile_data)
         if flip:
             convert_argb_to_rgba(tile_data)
-        return tile_data[:, :, 0:3]
+        return tile_data
 
-    def get_encoded_tile(
+    def _get_encoded_tile(
         self,
         tile: Point,
         z: float,
@@ -348,17 +318,17 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             raise ValueError
         return self._encode(self._get_tile(tile))
 
-    def get_decoded_tile(
+    def _get_decoded_tile(
         self,
-        tile: Point,
+        tile_point: Point,
         z: float,
         path: str
     ) -> Image.Image:
-        """Return Image for tile. Image mode is RGBA.
+        """Return Image for tile. Image mode is RGB.
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -372,5 +342,111 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile = self._get_tile(tile, True)
-        return Image.fromarray(tile[:, :, 0:3])
+        tile = self._get_tile(tile_point, True)
+        return Image.fromarray(tile).convert('RGB')
+
+
+class OpenSlideDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open openslide file in filepath as WsiDicom object. Note that
+        created instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicom
+            WsiDicom object of openslide file in filepath.
+        """
+        if tile_size is None:
+            raise ValueError("Tile size required for open slide")
+        JCS_EXT_BGRA = 9
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            subsampling=jpeg_subsampling,
+            colorspace=JCS_EXT_BGRA
+        )
+        base_dataset = create_base_dataset(modules)
+        slide = OpenSlide(filepath)
+        instance_number = 0
+        level_instances = [
+            cls._create_instance(
+                OpenSlideLevelImageData(
+                    slide,
+                    level_index,
+                    tile_size,
+                    encoder
+                ),
+                base_dataset,
+                'VOLUME',
+                instance_number+level_index
+            )
+            for level_index in range(slide.level_count)
+            if include_levels is None or level_index in include_levels
+        ]
+        instance_number += len(level_instances)
+        if include_label and 'label' in slide.associated_images:
+            label_instances = [cls._create_instance(
+                OpenSlideAssociatedImageData(slide, 'label', encoder),
+                base_dataset,
+                'LABEL',
+                instance_number
+            )]
+        else:
+            label_instances = []
+        instance_number += len(label_instances)
+        if include_overview and 'macro' in slide.associated_images:
+            overview_instances = [cls._create_instance(
+                OpenSlideAssociatedImageData(slide, 'macro', encoder),
+                base_dataset,
+                'OVERVIEW',
+                instance_number
+            )]
+        else:
+            overview_instances = []
+        levels = WsiDicomLevels.open(level_instances)
+        labels = WsiDicomLabels.open(label_instances)
+        overviews = WsiDicomOverviews.open(overview_instances)
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        """Return True if file in filepath is supported by OpenSlide."""
+        return OpenSlide.detect_format(str(filepath)) is not None

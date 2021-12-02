@@ -4,23 +4,22 @@ import os
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, Tuple, List
+from typing import Dict, Optional, Tuple, Sequence
 
-from wsidicomizer import WsiDicomizer
-from wsidicomizer.dataset import create_default_modules
+from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
-from PIL import ImageChops, ImageStat, ImageFilter
+from wsidicomizer.interface import WsiDicomizer
+from wsidicomizer.dataset import create_default_modules
 
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
 from openslide import OpenSlide
 
 
 class ConvertTestBase:
-    include_levels: List[int] = None
-    input_filename: str = None
-    test_data_dir: str = None
-    turbo_path: str = None
-    tile_size: Tuple[int, int] = None
+    include_levels: Sequence[int] = []
+    input_filename: str = ""
+    test_data_dir: str = ""
+    tile_size: Optional[int] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,14 +43,17 @@ class ConvertTestBase:
             open_wsi.close()
 
     @classmethod
-    def open(cls, path: Path) -> Tuple[Path, WsiDicom, TemporaryDirectory]:
+    def open(cls, path: Path) -> Tuple[
+        WsiDicom,
+        OpenSlide,
+        TemporaryDirectory
+    ]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
+        assert tempdir.name is not None
         WsiDicomizer.convert(
             str(filepath),
-            Path(tempdir.name),
-            base_dataset,
+            output_path=str(tempdir.name),
             tile_size=cls.tile_size,
             include_levels=cls.include_levels
         )
@@ -60,7 +62,7 @@ class ConvertTestBase:
         return (wsi, open_wsi, tempdir)
 
     @staticmethod
-    def _get_folders(test_data_dir: Path):
+    def _get_folders(test_data_dir: str):
         return [
             Path(test_data_dir).joinpath(item)
             for item in os.listdir(test_data_dir)
@@ -81,7 +83,8 @@ class ConvertTestBase:
                     (region["size"]["width"], region["size"]["height"])
                 )
                 print(region)
-                self.assertEqual(
+                print(im.mode)
+                self.assertEqual(  # type: ignore
                     md5(im.tobytes()).hexdigest(),
                     region["md5"],
                     msg=region
@@ -99,7 +102,7 @@ class ConvertTestBase:
                     (region["size"]["width"], region["size"]["height"])
                 )
                 print(region)
-                self.assertEqual(
+                self.assertEqual(  # type: ignore
                     md5(im.tobytes()).hexdigest(),
                     region["md5"],
                     msg=region
@@ -113,16 +116,17 @@ class ConvertTestBase:
                 with open(json_file, "rt") as f:
                     region = json.load(f)
 
-                im = wsi.read_region(
-                    (region["location"]["x"], region["location"]["y"]),
-                    region["level"],
-                    (region["size"]["width"], region["size"]["height"])
-                )
                 level_size = (
                     wsi.levels[0].size // pow(2, region['level'])
                 ).to_tuple()
+
                 # Only run test if level is in open slide wsi
                 if level_size in open_wsi.level_dimensions:
+                    im = wsi.read_region(
+                        (region["location"]["x"], region["location"]["y"]),
+                        region["level"],
+                        (region["size"]["width"], region["size"]["height"])
+                    )
                     index = open_wsi.level_dimensions.index(level_size)
                     scale = int(open_wsi.level_downsamples[index])
                     scaled_location_x = region["location"]["x"] * scale
@@ -131,14 +135,19 @@ class ConvertTestBase:
                         (scaled_location_x, scaled_location_y),
                         index,
                         (region["size"]["width"], region["size"]["height"])
-                    ).convert('RGB')
+                    )
+                    background = Image.new('RGBA', open_im.size, '#ffffff')
+                    open_im = Image.alpha_composite(background, open_im)
+                    open_im = open_im.convert('RGB')
+
                     blur = ImageFilter.GaussianBlur(2)
                     diff = ImageChops.difference(
                         im.filter(blur),
                         open_im.filter(blur)
                     )
+
                     for band_rms in ImageStat.Stat(diff).rms:
-                        self.assertLess(band_rms, 2, region)
+                        self.assertLess(band_rms, 2, region)  # type: ignore
 
     def test_read_thumbnail_openslide(self):
         for folder, (wsi, open_wsi, _) in self.test_folders.items():
@@ -160,4 +169,4 @@ class ConvertTestBase:
                     open_im.filter(blur)
                 )
                 for band_rms in ImageStat.Stat(diff).rms:
-                    self.assertLess(band_rms, 2, region)
+                    self.assertLess(band_rms, 2, region)  # type: ignore
