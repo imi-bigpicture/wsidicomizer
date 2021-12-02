@@ -19,7 +19,6 @@ from pathlib import Path
 
 from pydicom.dataset import Dataset
 
-from wsidicomizer.dataset import create_default_modules
 from wsidicomizer.interface import WsiDicomizer
 
 
