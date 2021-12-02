@@ -11,14 +11,12 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
 import os
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
 from pydicom.dataset import Dataset
-from pydicom.uid import UID as Uid
-from pydicom.uid import generate_uid
+from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer
@@ -111,7 +109,7 @@ class WsiDicomizer:
         output_path: Optional[str] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: Optional[int] = None,
-        uid_generator: Callable[..., Uid] = generate_uid,
+        uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -135,7 +133,7 @@ class WsiDicomizer:
             Module datasets to use in files. If none, use default modules.
         tile_size: int
             Tile size to use if not defined by file.
-        uid_generator: Callable[..., Uid] = generate_uid
+        uid_generator: Callable[..., UID] = generate_uid
              Function that can gernerate unique identifiers.
         include_levels: Sequence[int]
             Optional list of levels to include. Include all levels if None.
