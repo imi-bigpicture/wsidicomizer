@@ -46,12 +46,10 @@ class CziImportTest(unittest.TestCase):
     @classmethod
     def open(cls, path: Path) -> Tuple[WsiDicom, TemporaryDirectory]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
         wsi = CziDicomizer.open(
             str(filepath),
-            base_dataset,
-            cls.tile_size
+            tile_size=cls.tile_size
         )
         return (wsi, tempdir)
 
