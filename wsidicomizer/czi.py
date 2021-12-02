@@ -504,7 +504,7 @@ class CziDicomizer(MetaDicomizer):
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
     ) -> WsiDicom:
-        """Open data in czi file as WsiDicom object. Note that created
+        """Open czi file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
 
         Parameters
@@ -512,7 +512,7 @@ class CziDicomizer(MetaDicomizer):
         filepath: str
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use test dataset.
+            Module datasets to use in files. If none, use default modules.
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
@@ -535,7 +535,7 @@ class CziDicomizer(MetaDicomizer):
         Returns
         ----------
         WsiDicom
-            WsiDicom object of imported czi file.
+            WsiDicom object of czi file in filepath.
         """
         if tile_size is None:
             raise ValueError("Tile size required for open slide")
@@ -558,4 +558,5 @@ class CziDicomizer(MetaDicomizer):
 
     @staticmethod
     def is_supported(filepath: str) -> bool:
+        """Return True if file in filepath is supported by CziFile."""
         return CziImageData.detect_format(Path(filepath)) is not None

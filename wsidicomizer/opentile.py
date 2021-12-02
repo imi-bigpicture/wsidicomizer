@@ -230,7 +230,7 @@ class OpenTileDicomizer(MetaDicomizer):
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
     ) -> WsiDicom:
-        """Open data in tiff file as WsiDicom object. Note that created
+        """Open tiff file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
 
         Parameters
@@ -238,7 +238,7 @@ class OpenTileDicomizer(MetaDicomizer):
         filepath: str
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use test dataset.
+            Module datasets to use in files. If none, use default modules.
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
@@ -261,7 +261,7 @@ class OpenTileDicomizer(MetaDicomizer):
         Returns
         ----------
         WsiDicom
-            WsiDicom object of imported tiff file.
+            WsiDicom object of tiff file in filepath.
         """
         encoder = create_encoder(
             encoding_format,
@@ -286,6 +286,7 @@ class OpenTileDicomizer(MetaDicomizer):
 
     @staticmethod
     def is_supported(filepath: str) -> bool:
+        """Return True if file in filepath is supported by OpenTile."""
         return OpenTile.detect_format(Path(filepath)) is not None
 
     @classmethod

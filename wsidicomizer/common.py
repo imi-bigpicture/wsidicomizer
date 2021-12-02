@@ -151,9 +151,13 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
 
 
 class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
+    """Metaclass for Dicomizers. Subclasses should implement is_supported() and
+    open().
+    """
     @staticmethod
     @abstractmethod
     def is_supported(path: str) -> bool:
+        """Return True if file in filepath is supported by Dicomizer."""
         raise NotImplementedError()
 
     @classmethod
@@ -171,6 +175,39 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         encoding_quality: int = 90,
         jpeg_subsampling: str = '422'
     ) -> WsiDicom:
+        """Open file in filepath as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicom
+            WsiDicom object of file in filepath.
+        """
         raise NotImplementedError()
 
     @staticmethod
