@@ -23,9 +23,8 @@ from typing import Dict, Tuple
 
 import pytest
 from wsidicom import WsiDicom
-from wsidicomizer import WsiDicomizer
+from wsidicomizer.czi import CziDicomizer
 from wsidicomizer.dataset import create_default_modules
-from wsidicomizer.encoding import JpegEncoder
 
 
 @pytest.mark.import_czi
@@ -59,14 +58,12 @@ class CziImportTest(unittest.TestCase):
             tempdir.cleanup()
 
     @classmethod
-    def open(cls, path: Path) -> Tuple[WsiDicomizer, TemporaryDirectory]:
+    def open(cls, path: Path) -> Tuple[WsiDicom, TemporaryDirectory]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
-        wsi = WsiDicomizer.import_czi(
+        wsi = CziDicomizer.open(
             str(filepath),
-            cls.tile_size,
-            base_dataset
+            tile_size=cls.tile_size
         )
         return (wsi, tempdir)
 

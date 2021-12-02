@@ -18,11 +18,11 @@ import os
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple, Sequence
 
 from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
-from wsidicomizer import WsiDicomizer
+from wsidicomizer.interface import WsiDicomizer
 from wsidicomizer.dataset import create_default_modules
 
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
@@ -30,7 +30,7 @@ from openslide import OpenSlide
 
 
 class ConvertTestBase:
-    include_levels: List[int] = []
+    include_levels: Sequence[int] = []
     input_filename: str = ""
     test_data_dir: str = ""
     tile_size: Optional[int] = None
@@ -63,13 +63,11 @@ class ConvertTestBase:
         TemporaryDirectory
     ]:
         filepath = Path(path).joinpath(cls.input_filename)
-        base_dataset = create_default_modules()
         tempdir = TemporaryDirectory()
         assert tempdir.name is not None
         WsiDicomizer.convert(
             str(filepath),
             output_path=str(tempdir.name),
-            datasets=base_dataset,
             tile_size=cls.tile_size,
             include_levels=cls.include_levels
         )

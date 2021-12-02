@@ -14,17 +14,22 @@
 
 import xml.etree.ElementTree as ElementTree
 from collections import defaultdict
-from typing import DefaultDict, Dict, List, Tuple, Optional
 from pathlib import Path
+from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
+from pydicom import Dataset
 from pydicom.uid import UID as Uid
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicomizer.encoding import Encoder
+from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
+from wsidicomizer.common import MetaImageData, MetaDicomizer
+from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 
 
 def get_element(element: ElementTree.Element, tag: str) -> ElementTree.Element:
@@ -63,7 +68,7 @@ def get_text_from_element(
     return text
 
 
-class CziWrapper(ImageDataWrapper):
+class CziImageData(MetaImageData):
     _default_z = 0
 
     def __init__(
@@ -162,7 +167,7 @@ class CziWrapper(ImageDataWrapper):
         return self._block_directory
 
     @property
-    def tile_directory(self) -> Dict[Tuple[Point, float, str], List[int]]:
+    def tile_directory(self) -> Dict[Tuple[Point, float, str], Sequence[int]]:
         """Return dict of tiles with mosaic indices."""
         return self._tile_directory
 
@@ -352,13 +357,13 @@ class CziWrapper(ImageDataWrapper):
 
     def _create_tile_directory(
         self
-    ) -> Dict[Tuple[Point, float, str], List[int]]:
+    ) -> Dict[Tuple[Point, float, str], Sequence[int]]:
         """Create a directory mapping tile points to list of block indices that
         cover the tile. This could be extended to also index z and c.
 
         Returns
         ----------
-        Dict[Tuple[Point, int, int], List[int]]:
+        Dict[Tuple[Point, int, int], Sequence[int]]:
             Directory of tile point, focal plane and channel as key and
             lists of block indices as item.
         """
@@ -496,3 +501,76 @@ class CziWrapper(ImageDataWrapper):
 
     def _get_samples_per_pixel(self) -> int:
         return self._czi.shape[-1]
+
+
+class CziDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open czi file in filepath as WsiDicom object. Note that created
+        instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicom
+            WsiDicom object of czi file in filepath.
+        """
+        if tile_size is None:
+            raise ValueError("Tile size required for open slide")
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            jpeg_subsampling
+        )
+        base_dataset = create_base_dataset(modules)
+        base_level_instance = cls._create_instance(
+            CziImageData(filepath, tile_size, encoder),
+            base_dataset,
+            'VOLUME',
+            0
+        )
+        levels = WsiDicomLevels.open([base_level_instance])
+        labels = WsiDicomLabels.open([])
+        overviews = WsiDicomOverviews.open([])
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        """Return True if file in filepath is supported by CziFile."""
+        return CziImageData.detect_format(Path(filepath)) is not None

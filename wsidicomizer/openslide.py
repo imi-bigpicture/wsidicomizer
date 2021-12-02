@@ -17,18 +17,20 @@ import os
 from abc import ABCMeta
 from ctypes import c_uint32
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
-
 from PIL import Image
-from pydicom import config
+from pydicom import Dataset
 from pydicom.uid import UID as Uid
+from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
+                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.imagedata_wrapper import ImageDataWrapper
-from wsidicomizer.encoding import Encoder
-
+from wsidicomizer.common import MetaDicomizer, MetaImageData
+from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.encoding import Encoder, create_encoder
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
     try:
@@ -59,11 +61,8 @@ OpenSlide C API. We consider this safe, as these directly map to the Openslide
 C API and are thus not likely  to change.
 """
 
-config.enforce_valid_values = True
-config.future_behavior()
 
-
-class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
+class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -125,7 +124,7 @@ class OpenSlideWrapper(ImageDataWrapper, metaclass=ABCMeta):
             pass
 
 
-class OpenSlideAssociatedWrapper(OpenSlideWrapper):
+class OpenSlideAssociatedImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -205,7 +204,7 @@ class OpenSlideAssociatedWrapper(OpenSlideWrapper):
         return self._decoded_image
 
 
-class OpenSlideLevelWrapper(OpenSlideWrapper):
+class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -359,3 +358,109 @@ class OpenSlideLevelWrapper(OpenSlideWrapper):
             raise ValueError
         tile = self._get_tile(tile_point, True)
         return Image.fromarray(tile).convert('RGB')
+
+
+class OpenSlideDicomizer(MetaDicomizer):
+    @classmethod
+    def open(
+        cls,
+        filepath: str,
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        tile_size: Optional[int] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
+        include_confidential: bool = True,
+        encoding_format: str = 'jpeg',
+        encoding_quality: int = 90,
+        jpeg_subsampling: str = '422'
+    ) -> WsiDicom:
+        """Open openslide file in filepath as WsiDicom object. Note that
+        created instances always has a random UID.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to tiff file
+        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
+            Module datasets to use in files. If none, use default modules.
+        tile_size: Optional[int]
+            Tile size to use if not defined by file.
+        include_levels: Sequence[int] = None
+            Levels to include. If None, include all levels.
+        include_label: bool = True
+            Inclube label.
+        include_overview: bool = True
+            Include overview.
+        include_confidential: bool = True
+            Include confidential metadata.
+        encoding_format: str = 'jpeg'
+            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
+        encoding_quality: int = 90
+            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
+            for lossless jpeg2000.
+        jpeg_subsampling: str = '422'
+            Subsampling option if using jpeg for re-encoding. Use '444' for
+            no subsampling, '422' for 2x2 subsampling.
+
+        Returns
+        ----------
+        WsiDicom
+            WsiDicom object of openslide file in filepath.
+        """
+        if tile_size is None:
+            raise ValueError("Tile size required for open slide")
+        JCS_EXT_BGRA = 9
+        encoder = create_encoder(
+            encoding_format,
+            encoding_quality,
+            subsampling=jpeg_subsampling,
+            colorspace=JCS_EXT_BGRA
+        )
+        base_dataset = create_base_dataset(modules)
+        slide = OpenSlide(filepath)
+        instance_number = 0
+        level_instances = [
+            cls._create_instance(
+                OpenSlideLevelImageData(
+                    slide,
+                    level_index,
+                    tile_size,
+                    encoder
+                ),
+                base_dataset,
+                'VOLUME',
+                instance_number+level_index
+            )
+            for level_index in range(slide.level_count)
+            if include_levels is None or level_index in include_levels
+        ]
+        instance_number += len(level_instances)
+        if include_label and 'label' in slide.associated_images:
+            label_instances = [cls._create_instance(
+                OpenSlideAssociatedImageData(slide, 'label', encoder),
+                base_dataset,
+                'LABEL',
+                instance_number
+            )]
+        else:
+            label_instances = []
+        instance_number += len(label_instances)
+        if include_overview and 'macro' in slide.associated_images:
+            overview_instances = [cls._create_instance(
+                OpenSlideAssociatedImageData(slide, 'macro', encoder),
+                base_dataset,
+                'OVERVIEW',
+                instance_number
+            )]
+        else:
+            overview_instances = []
+        levels = WsiDicomLevels.open(level_instances)
+        labels = WsiDicomLabels.open(label_instances)
+        overviews = WsiDicomOverviews.open(overview_instances)
+        return cls(levels, labels, overviews)
+
+    @staticmethod
+    def is_supported(filepath: str) -> bool:
+        """Return True if file in filepath is supported by OpenSlide."""
+        return OpenSlide.detect_format(str(filepath)) is not None

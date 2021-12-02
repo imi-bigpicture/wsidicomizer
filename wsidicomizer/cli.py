@@ -123,7 +123,7 @@ def main():
 
     args = parser.parse_args()
     if not args.dataset:
-        dataset = create_default_modules()
+        dataset = None
     else:
         json_file = open(args.dataset)
         dataset = Dataset.from_json(json.load(json_file))
@@ -135,7 +135,7 @@ def main():
     WsiDicomizer.convert(
         filepath=args.input,
         output_path=args.output,
-        datasets=dataset,
+        modules=dataset,
         tile_size=args.tile_size,
         include_levels=levels,
         include_label=not args.no_label,
