@@ -379,7 +379,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return self._encode(self._get_tile(tile))
+        return self._encode(self._get_tile(tile, flip=True)[:, :, :3])
 
     def _get_decoded_tile(
         self,

@@ -90,6 +90,7 @@ class Jpeg2000Encoder(Encoder):
     def encode(self, data: np.ndarray) -> bytes:
         return jpeg2k_encode(
             data,
+            codecformat="J2K",
             level=self._quality
         )
 
