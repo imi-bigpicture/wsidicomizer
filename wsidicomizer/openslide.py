@@ -49,7 +49,6 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         )
 
 from openslide import OpenSlide
-from openslide._convert import argb2rgba as convert_argb_to_rgba
 from openslide.lowlevel import (ArgumentError, _read_associated_image,
                                 _read_region, get_associated_image_dimensions,
                                 get_associated_image_names)
@@ -92,29 +91,43 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         return self._encoder.transfer_syntax
 
     @staticmethod
-    def _make_transparent_pixels_white(image_data: np.ndarray) -> np.ndarray:
-        """Return image data where all pixels with transparency is replaced
-        by white pixels. Openslide returns fully transparent pixels with
-        RGBA-value 0, 0, 0, 0 for 'sparse' areas. At the edge to 'sparse' areas
-        there can also be partial transparency. This function 'aggresively'
-        removes all transparent pixels (instead of calculating RGB-values
-        with transparency for partial transparent pixels) as it is much,
-        simpler, faster, and the partial transparency is at the edge of the
-        ROIs.
+    def _remove_alpha(image_data: np.ndarray) -> np.ndarray:
+        """Return image data with applied for white background. Openslide
+        returns fully transparent pixels with RGBA-value 0, 0, 0, 0 for
+        'sparse' areas. At the edge to 'sparse' areas there can also be partial
+        transparency.
 
         Parameters
         ----------
-        image_data: np.ndarray
-             Image data in RGBA pixel format to remove transparency from.
+        image_data: np.ndarra
+             Image data in RGBA or BGRA pixel format to remove transparency
+             from.
 
         Returns
         ----------
         image_data: np.ndarray
-            Image data in RGBA pixel format without transparency.
+            Image data in RGB or BGR pixel format without transparency.
         """
-        transparency = image_data[:, :, 3]
-        image_data[transparency != 255, :] = 255
-        return image_data
+        image = Image.fromarray(image_data)
+        background = Image.new('RGB', image.size, (255, 255, 255))
+        background.paste(image, mask=image.split()[3])
+        return np.asarray(background)
+
+    @staticmethod
+    def _flip(image_data: np.ndarray) -> np.ndarray:
+        """Return fliped image data, e.g. RGB -> BGR or reverse.
+
+        Parameters
+        ----------
+        image_data: np.ndarray
+             Image data to flip
+
+        Returns
+        ----------
+        image_data: np.ndarray
+            Flipped image data
+        """
+        return image_data[:, :, (2, 1, 0)]
 
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
@@ -156,10 +169,10 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         _read_associated_image(self._open_slide._osr, image_type, buffer)
         image_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
         image_data.shape = (width, height, 4)
-        image_data = self._make_transparent_pixels_white(image_data)
-        self._encoded_image = self._encode(image_data)
-        convert_argb_to_rgba(image_data)
-        self._decoded_image = Image.fromarray(image_data).convert('RGB')
+        bgr_data = self._remove_alpha(image_data)
+        self._encoded_image = self._encode(bgr_data)
+        rgb_data = self._flip(bgr_data)
+        self._decoded_image = Image.fromarray(rgb_data)
         (height, width) = image_data.shape[0:2]
         self._image_size = Size(width, height)
 
@@ -299,9 +312,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             raise WsiDicomNotFoundError(f"Z {z}", str(self))
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError('Negative size not allowed')
-
         location_in_base_level = region.start * self.downsample
-
         buffer = (region.size.width * region.size.height * c_uint32)()
         _read_region(
             self._open_slide._osr,
@@ -314,9 +325,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         )
         tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
         tile_data.shape = (region.size.width, region.size.height, 4)
-        tile_data = self._make_transparent_pixels_white(tile_data)
-        convert_argb_to_rgba(tile_data)
-        return Image.fromarray(tile_data).convert('RGB')
+        tile_data = self._remove_alpha(tile_data)
+        tile_data = self._flip(tile_data)
+        return Image.fromarray(tile_data)
 
     def _get_tile(self, tile: Point, flip: bool = False) -> np.ndarray:
         """Return tile as np array. Transparency is removed. Optionally the
@@ -349,9 +360,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         )
         tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
         tile_data.shape = (self._tile_size.width, self._tile_size.height, 4)
-        tile_data = self._make_transparent_pixels_white(tile_data)
+        tile_data = self._remove_alpha(tile_data)
         if flip:
-            convert_argb_to_rgba(tile_data)
+            tile_data = self._flip(tile_data)
         return tile_data
 
     def _get_encoded_tile(
@@ -379,7 +390,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return self._encode(self._get_tile(tile))
+        tile_data = self._get_tile(tile)
+        return self._encode(tile_data)
 
     def _get_decoded_tile(
         self,
@@ -405,8 +417,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile = self._get_tile(tile_point, True)
-        return Image.fromarray(tile).convert('RGB')
+        tile = self._get_tile(tile_point)
+        return Image.fromarray(tile)
 
 
 class OpenSlideDicomizer(MetaDicomizer):
@@ -459,12 +471,11 @@ class OpenSlideDicomizer(MetaDicomizer):
         """
         if tile_size is None:
             raise ValueError("Tile size required for open slide")
-        JCS_EXT_BGRA = 9
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
             subsampling=jpeg_subsampling,
-            colorspace=JCS_EXT_BGRA
+            input_colorspace='BGR'
         )
         base_dataset = create_base_dataset(modules)
         slide = OpenSlide(filepath)
