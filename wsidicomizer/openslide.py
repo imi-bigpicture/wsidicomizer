@@ -324,7 +324,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             region.size.height
         )
         tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
-        tile_data.shape = (region.size.width, region.size.height, 4)
+        tile_data.shape = (region.size.height, region.size.width, 4)
         tile_data = self._remove_alpha(tile_data)
         tile_data = self._flip(tile_data)
         return Image.fromarray(tile_data)
@@ -359,7 +359,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             self._tile_size.height
         )
         tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
-        tile_data.shape = (self._tile_size.width, self._tile_size.height, 4)
+        tile_data.shape = (self._tile_size.height, self._tile_size.width, 4)
         tile_data = self._remove_alpha(tile_data)
         if flip:
             tile_data = self._flip(tile_data)
