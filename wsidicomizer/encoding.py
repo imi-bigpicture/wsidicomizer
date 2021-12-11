@@ -43,7 +43,7 @@ class Encoder(metaclass=ABCMeta):
 
 class JpegEncoder(Encoder):
     """Encoder for JPEG."""
-    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE', 'BGR']
+    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE']
 
     def __init__(
         self,
@@ -66,11 +66,8 @@ class JpegEncoder(Encoder):
         self._quality = quality
         self._subsampling = subsampling
         if input_colorspace not in self.SUPPORTED_COLORSPACES:
-            raise NotImplementedError('Non-implemeted colorspace    ')
-        if input_colorspace == 'BGR':
-            self._input_colorspace = 8
-        else:
-            self._input_colorspace = input_colorspace
+            raise NotImplementedError('Non-implemeted colorspace')
+        self._input_colorspace = input_colorspace
         self._outcolorspace = 'YCBCR'
 
     @property
@@ -108,7 +105,7 @@ class JpegEncoder(Encoder):
 
 
 class Jpeg2000Encoder(Encoder):
-    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE', 'BGR']
+    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE']
 
     def __init__(
         self,
@@ -157,8 +154,6 @@ class Jpeg2000Encoder(Encoder):
         bytes:
             JPEG2000 bytes.
         """
-        if self._input_colorspace == 'BGR':
-            data = data[:, :, (2, 1, 0)]
         return jpeg2k_encode(
             data,
             level=self._quality,
