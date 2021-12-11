@@ -80,6 +80,10 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         super().__init__(encoder)
 
         self._open_slide = open_slide
+        self._background = '#' + open_slide.properties.get(
+            'openslide.background-color',
+            'ffffff'
+        )
 
     @property
     def files(self) -> List[Path]:
@@ -90,8 +94,7 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         """The uid of the transfer syntax of the image."""
         return self._encoder.transfer_syntax
 
-    @staticmethod
-    def _remove_alpha(image_data: np.ndarray) -> np.ndarray:
+    def _remove_alpha(self, image: Image.Image) -> Image.Image:
         """Return image data with applied for white background. Openslide
         returns fully transparent pixels with RGBA-value 0, 0, 0, 0 for
         'sparse' areas. At the edge to 'sparse' areas there can also be partial
@@ -99,35 +102,17 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
 
         Parameters
         ----------
-        image_data: np.ndarra
-             Image data in RGBA or BGRA pixel format to remove transparency
-             from.
+        image: Image.Image
+             Image data in RGBA format.
 
         Returns
         ----------
-        image_data: np.ndarray
-            Image data in RGB or BGR pixel format without transparency.
+        image: Image.Image
+             Image data in RGB format.
         """
-        image = Image.fromarray(image_data)
-        background = Image.new('RGB', image.size, (255, 255, 255))
+        background = Image.new('RGB', image.size, self._background)
         background.paste(image, mask=image.split()[3])
-        return np.asarray(background)
-
-    @staticmethod
-    def _flip(image_data: np.ndarray) -> np.ndarray:
-        """Return fliped image data, e.g. RGB -> BGR or reverse.
-
-        Parameters
-        ----------
-        image_data: np.ndarray
-             Image data to flip
-
-        Returns
-        ----------
-        image_data: np.ndarray
-            Flipped image data
-        """
-        return image_data[:, :, (2, 1, 0)]
+        return background
 
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
@@ -161,20 +146,12 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         if image_type not in get_associated_image_names(self._open_slide._osr):
             raise ValueError(f"{image_type} not in {self._open_slide}")
 
-        width, height = get_associated_image_dimensions(
-            self._open_slide._osr,
-            image_type
-        )
-        buffer = (width * height * c_uint32)()
-        _read_associated_image(self._open_slide._osr, image_type, buffer)
-        image_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
-        image_data.shape = (width, height, 4)
-        bgr_data = self._remove_alpha(image_data)
-        self._encoded_image = self._encode(bgr_data)
-        rgb_data = self._flip(bgr_data)
-        self._decoded_image = Image.fromarray(rgb_data)
-        (height, width) = image_data.shape[0:2]
-        self._image_size = Size(width, height)
+        image = self._open_slide.associated_images[image_type]
+        image = self._remove_alpha(image)
+
+        self._encoded_image = self._encode(np.asarray(image))
+        self._decoded_image = image
+        self._image_size = Size.from_tuple(image.size)
 
     @property
     def image_size(self) -> Size:
@@ -310,60 +287,38 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             raise WsiDicomNotFoundError(f"Optical path {path}", str(self))
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"Z {z}", str(self))
-        if region.size.width < 0 or region.size.height < 0:
-            raise ValueError('Negative size not allowed')
-        location_in_base_level = region.start * self.downsample
-        buffer = (region.size.width * region.size.height * c_uint32)()
-        _read_region(
-            self._open_slide._osr,
-            buffer,
-            location_in_base_level.x,
-            location_in_base_level.y,
-            self._level_index,
-            region.size.width,
-            region.size.height
-        )
-        tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
-        tile_data.shape = (region.size.height, region.size.width, 4)
-        tile_data = self._remove_alpha(tile_data)
-        tile_data = self._flip(tile_data)
-        return Image.fromarray(tile_data)
+        return self._get_region(region.start, region.size)
 
-    def _get_tile(self, tile: Point, flip: bool = False) -> np.ndarray:
-        """Return tile as np array. Transparency is removed. Optionally the
-        pixel format can be flipped to RGBA, suitable for opening with PIL.
+    def _get_region(
+        self,
+        point: Point,
+        size: Size
+    ) -> Image.Image:
+        point_in_base_level = point * self.downsample
+        if size.width < 0 or size.height < 0:
+            raise ValueError('Negative size not allowed')
+        image = self._open_slide.read_region(
+            point_in_base_level.to_tuple(),
+            self._level_index,
+            size.to_tuple()
+        )
+        image = self._remove_alpha(image)
+        return image
+
+    def _get_tile(self, tile_point: Point) -> np.ndarray:
+        """Return tile as np array. Transparency is removed.
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
-        flip: bool
-            If to flip the pixel format from ARGB to RGBA.
 
         Returns
         ----------
         np.ndarray
             Numpy array of tile.
         """
-        tile_point_in_base_level = tile * self.downsample * self._tile_size
-        if self._tile_size.width < 0 or self._tile_size.height < 0:
-            raise ValueError('Negative size not allowed')
-        buffer = (self._tile_size.width * self._tile_size.height * c_uint32)()
-        _read_region(
-            self._open_slide._osr,
-            buffer,
-            tile_point_in_base_level.x,
-            tile_point_in_base_level.y,
-            self._level_index,
-            self._tile_size.width,
-            self._tile_size.height
-        )
-        tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
-        tile_data.shape = (self._tile_size.height, self._tile_size.width, 4)
-        tile_data = self._remove_alpha(tile_data)
-        if flip:
-            tile_data = self._flip(tile_data)
-        return tile_data
+        return np.asarray(self._get_region(tile_point, self.tile_size))
 
     def _get_encoded_tile(
         self,
@@ -474,8 +429,7 @@ class OpenSlideDicomizer(MetaDicomizer):
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
-            subsampling=jpeg_subsampling,
-            input_colorspace='BGR'
+            subsampling=jpeg_subsampling
         )
         base_dataset = create_base_dataset(modules)
         slide = OpenSlide(filepath)
