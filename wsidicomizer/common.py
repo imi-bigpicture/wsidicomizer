@@ -154,7 +154,7 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         Parameters
         ----------
         image_data: np.ndarray
-            Image data to encode, in BGRA-pixel format.
+            Image data to encode, in RGB-pixel format.
 
         Returns
         ----------
