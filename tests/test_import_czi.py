@@ -24,7 +24,6 @@ from typing import Dict, Tuple
 import pytest
 from wsidicom import WsiDicom
 from wsidicomizer.czi import CziDicomizer
-from wsidicomizer.dataset import create_default_modules
 
 
 @pytest.mark.import_czi
