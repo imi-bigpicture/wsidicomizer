@@ -318,7 +318,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         np.ndarray
             Numpy array of tile.
         """
-        return np.asarray(self._get_region(tile_point, self.tile_size))
+        return np.asarray(self._get_region(
+            tile_point*self.tile_size,
+            self.tile_size)
+        )
 
     def _get_encoded_tile(
         self,
