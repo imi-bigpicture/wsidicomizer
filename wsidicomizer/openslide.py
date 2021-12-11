@@ -110,9 +110,9 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         image: Image.Image
              Image data in RGB format.
         """
-        background = Image.new('RGB', image.size, self._background)
-        background.paste(image, mask=image.split()[3])
-        return background
+        no_alpha = Image.new('RGB', image.size, self._background)
+        no_alpha.paste(image, mask=image.split()[3])
+        return no_alpha
 
     def close(self) -> None:
         """Close the open slide object, if not already closed."""

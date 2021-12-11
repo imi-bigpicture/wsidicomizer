@@ -132,7 +132,6 @@ class ConvertTestBase:
                 level_size = (
                     wsi.levels[0].size // pow(2, region['level'])
                 ).to_tuple()
-
                 # Only run test if level is in open slide wsi
                 if level_size in open_wsi.level_dimensions:
                     im = wsi.read_region(
@@ -149,16 +148,20 @@ class ConvertTestBase:
                         index,
                         (region["size"]["width"], region["size"]["height"])
                     )
-                    background = Image.new('RGBA', open_im.size, '#ffffff')
-                    open_im = Image.alpha_composite(background, open_im)
-                    open_im = open_im.convert('RGB')
+                    no_alpha = Image.new(
+                        'RGB',
+                        open_im.size,
+                        (255, 255, 255)
+                    )
+                    no_alpha.paste(open_im, mask=open_im.split()[3])
+                    open_im = no_alpha
 
                     blur = ImageFilter.GaussianBlur(2)
                     diff = ImageChops.difference(
                         im.filter(blur),
                         open_im.filter(blur)
                     )
-
+                    print(scaled_location_x, scaled_location_y, index)
                     for band_rms in ImageStat.Stat(diff).rms:
                         self.assertLess(band_rms, 2, region)  # type: ignore
 
