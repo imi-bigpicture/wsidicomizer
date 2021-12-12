@@ -169,7 +169,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         path: str
     ) -> bytes:
         if tile != Point(0, 0):
-            raise ValueError
+            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
     def _get_decoded_tile(
@@ -179,7 +179,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         path: str
     ) -> Image.Image:
         if tile != Point(0, 0):
-            raise ValueError
+            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
 
 
@@ -271,10 +271,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         Image.Image
             Stitched image
         """
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"Optical path {path}", str(self))
         if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"Z {z}", str(self))
+            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         return self._get_region(region.start, region.size)
 
     def _get_region(
@@ -334,8 +334,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bytes
             Tile bytes.
         """
-        if z not in self.focal_planes or path not in self.optical_paths:
-            raise ValueError
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         return self._encode(self._get_tile(tile_point))
 
     def _get_decoded_tile(
@@ -360,8 +362,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         Image.Image
             Tile as Image.
         """
-        if z not in self.focal_planes or path not in self.optical_paths:
-            raise ValueError
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+        if z not in self.focal_planes:
+            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         return self._get_tile(tile_point)
 
 
