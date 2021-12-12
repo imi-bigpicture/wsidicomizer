@@ -160,6 +160,7 @@ class Jpeg2000Encoder(Encoder):
                 quality=self.quality
             )
             frame = buffer.getvalue()
+        # PIL encodes in jp2, find start of j2k and return from there.
         start_index = frame.find(self.START_TAGS)
         return frame[start_index:]
 
