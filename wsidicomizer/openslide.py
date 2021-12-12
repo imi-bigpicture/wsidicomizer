@@ -15,19 +15,17 @@
 import math
 import os
 from abc import ABCMeta
-from ctypes import c_uint32
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
-import numpy as np
 from PIL import Image
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews)
-from wsidicom.geometry import Point, Size, SizeMm, Region
-from wsidicom.wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
+from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset
@@ -49,17 +47,7 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         )
 
 from openslide import OpenSlide
-from openslide.lowlevel import (ArgumentError, _read_associated_image,
-                                _read_region, get_associated_image_dimensions,
-                                get_associated_image_names)
-
-"""
-OpenSlideWrapper uses private functions from OpenSlide to get image data as
-numpy arrays instead of pillow images. The private functions
-(_read_associated_image, _read_region) are used to get raw data from the
-OpenSlide C API. We consider this safe, as these directly map to the Openslide
-C API and are thus not likely  to change.
-"""
+from openslide.lowlevel import ArgumentError, get_associated_image_names
 
 
 class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
@@ -149,7 +137,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         image = self._open_slide.associated_images[image_type]
         image = self._remove_alpha(image)
 
-        self._encoded_image = self._encode(np.asarray(image))
+        self._encoded_image = self._encode(image)
         self._decoded_image = image
         self._image_size = Size.from_tuple(image.size)
 
@@ -305,7 +293,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         image = self._remove_alpha(image)
         return image
 
-    def _get_tile(self, tile_point: Point) -> np.ndarray:
+    def _get_tile(self, tile_point: Point) -> Image.Image:
         """Return tile as np array. Transparency is removed.
 
         Parameters
@@ -315,17 +303,17 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        np.ndarray
-            Numpy array of tile.
+        Image.Image
+            Image of tile.
         """
-        return np.asarray(self._get_region(
+        return self._get_region(
             tile_point*self.tile_size,
-            self.tile_size)
+            self.tile_size
         )
 
     def _get_encoded_tile(
         self,
-        tile: Point,
+        tile_point: Point,
         z: float,
         path: str
     ) -> bytes:
@@ -334,7 +322,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -348,8 +336,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile_data = self._get_tile(tile)
-        return self._encode(tile_data)
+        return self._encode(self._get_tile(tile_point))
 
     def _get_decoded_tile(
         self,
@@ -375,10 +362,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return self._get_region(
-            tile_point*self.tile_size,
-            self.tile_size
-        )
+        return self._get_tile(tile_point)
 
 
 class OpenSlideDicomizer(MetaDicomizer):
