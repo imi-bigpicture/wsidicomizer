@@ -85,8 +85,8 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def _remove_alpha(self, image: Image.Image) -> Image.Image:
         """Return image data with applied for white background. Openslide
         returns fully transparent pixels with RGBA-value 0, 0, 0, 0 for
-        'sparse' areas. At the edge to 'sparse' areas there can also be partial
-        transparency.
+        'sparse' areas. At the edge to 'sparse' areas and at (native) tile
+        edges there can also be partial transparency.
 
         Parameters
         ----------
