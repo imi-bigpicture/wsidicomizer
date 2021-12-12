@@ -375,8 +375,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        tile = self._get_tile(tile_point)
-        return Image.fromarray(tile)
+        return self._get_region(
+            tile_point*self.tile_size,
+            self.tile_size
+        )
 
 
 class OpenSlideDicomizer(MetaDicomizer):
