@@ -15,17 +15,19 @@
 import math
 import os
 from abc import ABCMeta
+from ctypes import c_uint32
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
+import numpy as np
 from PIL import Image
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews)
-from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.geometry import Point, Size, SizeMm, Region
 from wsidicom.wsidicom import WsiDicom
+from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset
@@ -47,7 +49,10 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         )
 
 from openslide import OpenSlide
-from openslide.lowlevel import ArgumentError, get_associated_image_names
+from openslide._convert import argb2rgba as convert_argb_to_rgba
+from openslide.lowlevel import (ArgumentError, _read_associated_image,
+                                _read_region, get_associated_image_dimensions,
+                                get_associated_image_names)
 
 
 class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
@@ -82,7 +87,7 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         """The uid of the transfer syntax of the image."""
         return self._encoder.transfer_syntax
 
-    def _remove_alpha(self, image: Image.Image) -> Image.Image:
+    def _remove_alpha(self, image_data: np.ndarray) -> np.ndarray:
         """Return image data with applied for white background. Openslide
         returns fully transparent pixels with RGBA-value 0, 0, 0, 0 for
         'sparse' areas. At the edge to 'sparse' areas and at (native) tile
@@ -90,17 +95,17 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
 
         Parameters
         ----------
-        image: Image.Image
+        image_data: np.ndarray
              Image data in RGBA format.
 
         Returns
         ----------
-        image: Image.Image
-             Image data in RGB format.
+        image_data: np.ndarray
+             Image data in RGBA format with transparent pixels as white.
         """
-        no_alpha = Image.new('RGB', image.size, self._background)
-        no_alpha.paste(image, mask=image.split()[3])
-        return no_alpha
+        transparency = image_data[:, :, 3]
+        image_data[transparency < 254, :] = 255
+        return image_data
 
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
@@ -134,12 +139,20 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         if image_type not in get_associated_image_names(self._open_slide._osr):
             raise ValueError(f"{image_type} not in {self._open_slide}")
 
-        image = self._open_slide.associated_images[image_type]
-        image = self._remove_alpha(image)
-
-        self._encoded_image = self._encode(image)
-        self._decoded_image = image
-        self._image_size = Size.from_tuple(image.size)
+        width, height = get_associated_image_dimensions(
+            self._open_slide._osr,
+            image_type
+        )
+        buffer = (width * height * c_uint32)()
+        _read_associated_image(self._open_slide._osr, image_type, buffer)
+        image_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
+        image_data.shape = (width, height, 4)
+        image_data = self._remove_alpha(image_data)
+        self._encoded_image = self._encode(image_data)
+        convert_argb_to_rgba(image_data)
+        self._decoded_image = Image.fromarray(image_data).convert('RGB')
+        (height, width) = image_data.shape[0:2]
+        self._image_size = Size(width, height)
 
     @property
     def image_size(self) -> Size:
@@ -275,25 +288,35 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f'optical path {path}', str(self))
-        return self._get_region(region.start, region.size)
+        image_data = self._get_region(region.start, region.size)
+        return Image.fromarray(image_data)
 
     def _get_region(
         self,
         point: Point,
         size: Size
-    ) -> Image.Image:
-        point_in_base_level = point * self.downsample
+    ) -> np.ndarray:
         if size.width < 0 or size.height < 0:
             raise ValueError('Negative size not allowed')
-        image = self._open_slide.read_region(
-            point_in_base_level.to_tuple(),
-            self._level_index,
-            size.to_tuple()
-        )
-        image = self._remove_alpha(image)
-        return image
 
-    def _get_tile(self, tile_point: Point) -> Image.Image:
+        location_in_base_level = point * self.downsample
+        buffer = (size.width * size.height * c_uint32)()
+        _read_region(
+            self._open_slide._osr,
+            buffer,
+            location_in_base_level.x,
+            location_in_base_level.y,
+            self._level_index,
+            size.width,
+            size.height
+        )
+        tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.uint8)
+        tile_data.shape = (size.height, size.width, 4)
+        tile_data = self._remove_alpha(tile_data)
+
+        return tile_data
+
+    def _get_tile(self, tile_point: Point) -> np.ndarray:
         """Return tile as np array. Transparency is removed.
 
         Parameters
@@ -366,7 +389,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f'optical path {path}', str(self))
-        return self._get_tile(tile_point)
+        tile_data = self._get_tile(tile_point)
+        tile = Image.fromarray(tile_data)
+        return tile
 
 
 class OpenSlideDicomizer(MetaDicomizer):
@@ -422,7 +447,8 @@ class OpenSlideDicomizer(MetaDicomizer):
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
-            subsampling=jpeg_subsampling
+            subsampling=jpeg_subsampling,
+            input_colorspace='BGR'
         )
         base_dataset = create_base_dataset(modules)
         slide = OpenSlide(filepath)
