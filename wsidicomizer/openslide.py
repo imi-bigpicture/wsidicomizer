@@ -448,7 +448,7 @@ class OpenSlideDicomizer(MetaDicomizer):
             encoding_format,
             encoding_quality,
             subsampling=jpeg_subsampling,
-            input_colorspace='BGR'
+            input_colorspace='BGRA'
         )
         base_dataset = create_base_dataset(modules)
         slide = OpenSlide(filepath)
