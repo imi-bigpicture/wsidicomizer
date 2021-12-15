@@ -73,10 +73,13 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         super().__init__(encoder)
 
         self._open_slide = open_slide
-        self._background = '#' + open_slide.properties.get(
+        background_color = open_slide.properties.get(
             'openslide.background-color',
             'ffffff'
         )
+        self._background_color = [
+            int(background_color[i:i+2], 16) for i in range(0, 6, 2)
+        ]
 
     @property
     def files(self) -> List[Path]:
@@ -88,10 +91,10 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         return self._encoder.transfer_syntax
 
     def _remove_alpha(self, image_data: np.ndarray) -> np.ndarray:
-        """Return image data with applied for white background. Openslide
-        returns fully transparent pixels with RGBA-value 0, 0, 0, 0 for
-        'sparse' areas. At the edge to 'sparse' areas and at (native) tile
-        edges there can also be partial transparency.
+        """Return image data with transparent pixels replaced with background
+        color. Openslide returns fully transparent pixels with RGBA-value
+        0, 0, 0, 0 for 'sparse' areas. At the edge to 'sparse' areas and at
+        (native) tile edges there can also be partial transparency.
 
         Parameters
         ----------
@@ -103,8 +106,12 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         image_data: np.ndarray
              Image data in RGBA format with transparent pixels as white.
         """
-        transparency = image_data[:, :, 3]
-        image_data[transparency < 254, :] = 255
+        ALPHA_CHANNEL = 3
+        ALPHA_THRESHOLD = 254
+        transparency = image_data[:, :, ALPHA_CHANNEL]
+        image_data[transparency < ALPHA_THRESHOLD, 0:ALPHA_CHANNEL] = (
+            self._background_color
+        )
         return image_data
 
     def close(self) -> None:
