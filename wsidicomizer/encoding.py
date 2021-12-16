@@ -14,7 +14,6 @@
 
 from abc import ABCMeta, abstractmethod
 from typing import Union, Optional
-
 import numpy as np
 from imagecodecs import jpeg2k_encode, jpeg8_encode
 from pydicom.uid import UID, JPEGBaseline8Bit, JPEG2000Lossless, JPEG2000
@@ -36,20 +35,21 @@ class Encoder(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def encode(self, data: np.ndarray) -> bytes:
+    def encode(
+        self,
+        data: np.ndarray
+    ) -> bytes:
         """Should return data as encoded bytes."""
         raise NotImplementedError
 
 
 class JpegEncoder(Encoder):
     """Encoder for JPEG."""
-    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE', 'BGRA']
 
     def __init__(
         self,
         quality: int = 90,
-        subsampling: Optional[str] = '422',
-        input_colorspace: str = 'RGB'
+        subsampling: Optional[str] = '422'
     ) -> None:
         """Creates a JPEG encoder with specified settings.
 
@@ -59,18 +59,10 @@ class JpegEncoder(Encoder):
             The encoding quality. To not use higher than 95.
         subsampling: Optional[str] = '422'
             Subsampling option.
-        input_colorspace: str = 'RGB'
-            Colorspace of input.
 
         """
         self._quality = quality
         self._subsampling = subsampling
-        if input_colorspace not in self.SUPPORTED_COLORSPACES:
-            raise NotImplementedError('Non-implemeted colorspace    ')
-        if input_colorspace == 'BGRA':
-            self._input_colorspace = 13  # CS_EXT_BGRA
-        else:
-            self._input_colorspace = input_colorspace
         self._outcolorspace = 'YCBCR'
 
     @property
@@ -83,13 +75,16 @@ class JpegEncoder(Encoder):
         """Quality setting of encoder"""
         return self._quality
 
-    def encode(self, data: np.ndarray) -> bytes:
+    def encode(
+        self,
+        data: np.ndarray
+    ) -> bytes:
         """Encodes data as JPEG. Converts data to uint8 before conversion.
 
         Parameters
         ----------
         data: np.ndarray
-            Numpy array of data to encode.
+            Data to encode.
 
         Returns
         ----------
@@ -101,28 +96,22 @@ class JpegEncoder(Encoder):
         return jpeg8_encode(
             data,
             level=self._quality,
-            colorspace=self._input_colorspace,
             outcolorspace=self._outcolorspace,
             subsampling=self._subsampling
         )
 
 
 class Jpeg2000Encoder(Encoder):
-    SUPPORTED_COLORSPACES = ['RGB', 'GRAYSCALE', 'BGRA']
-
     def __init__(
         self,
-        quality: float = 2,
-        input_colorspace: str = 'RGB'
+        quality: float = 20
     ) -> None:
         """Creates a JPEG2000 encoder with specified settings.
 
         Parameters
         ----------
-        quality: float = 2. Use < 1 for lossless.
+        quality: float = 20. Use < 1 for lossless.
             The encoding quality.
-        input_colorspace: str = 'RGB'
-            Colorspace of input.
 
         """
         self._quality = quality
@@ -130,9 +119,6 @@ class Jpeg2000Encoder(Encoder):
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000
-        if input_colorspace not in self.SUPPORTED_COLORSPACES:
-            raise NotImplementedError('Non-implemeted colorspace')
-        self._input_colorspace = input_colorspace
 
     @property
     def transfer_syntax(self) -> UID:
@@ -144,7 +130,10 @@ class Jpeg2000Encoder(Encoder):
         """Quality setting of encoder"""
         return self._quality
 
-    def encode(self, data: np.ndarray) -> bytes:
+    def encode(
+        self,
+        data: np.ndarray
+    ) -> bytes:
         """Encodes data as JPEG2000.
 
         Parameters
@@ -154,11 +143,9 @@ class Jpeg2000Encoder(Encoder):
 
         Returns
         ----------
-        bytes:
+        bytes
             JPEG2000 bytes.
         """
-        if self._input_colorspace == 'BGRA':
-            data = data[:, :, (2, 1, 0)]
         return jpeg2k_encode(
             data,
             level=self._quality,
@@ -169,8 +156,7 @@ class Jpeg2000Encoder(Encoder):
 def create_encoder(
     format: str,
     quality: float,
-    subsampling: Optional[str] = None,
-    input_colorspace: str = 'RGB'
+    subsampling: Optional[str] = None
 ) -> Encoder:
     """Creates an encoder with specified settings.
 
@@ -182,8 +168,7 @@ def create_encoder(
         The encoding quality.
     subsampling: Optional[str] = None
         Subsampling setting (for jpeg).
-    input_colorspace: str = 'RGB'
-        Colorspace of input.
+
     Returns
     ----------
     Enocer
@@ -192,12 +177,10 @@ def create_encoder(
     if format == 'jpeg':
         return JpegEncoder(
             quality=int(quality),
-            subsampling=subsampling,
-            input_colorspace=input_colorspace
+            subsampling=subsampling
         )
     elif format == 'jpeg2000':
         return Jpeg2000Encoder(
-            quality=quality,
-            input_colorspace=input_colorspace
+            quality=quality
         )
     raise ValueError("Encoder format must be 'jpeg' or 'jpeg2000'")

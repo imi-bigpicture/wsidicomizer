@@ -148,13 +148,16 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         dataset.ExtendedDepthOfField = 'NO'
         return WsiDataset(dataset)
 
-    def _encode(self, image_data: Union[Image.Image, np.ndarray]) -> bytes:
+    def _encode(
+        self,
+        image_data: np.ndarray
+    ) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
         options.
 
         Parameters
         ----------
-        Union[Image.Image, np.ndarray]
+        image_data: np.ndarray
             Image data to encode.
 
         Returns
