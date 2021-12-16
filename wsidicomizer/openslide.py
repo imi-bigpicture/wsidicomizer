@@ -47,6 +47,12 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         os.environ['PATH'] = (
             openslide_dir + os.pathsep + os.environ['PATH']
         )
+"""
+OpenSlideImageData uses private functions from OpenSlide to get image data as
+numpy arrays instead of pillow images. The private function _read_region is
+used to get raw  data from the OpenSlide C API. We consider this safe, as these
+directly map to the Openslide C API and are thus not likely  to change.
+"""
 
 from openslide import OpenSlide
 from openslide._convert import argb2rgba as convert_argb_to_rgba
