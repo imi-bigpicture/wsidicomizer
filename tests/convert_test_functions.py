@@ -96,7 +96,6 @@ class ConvertTestBase:
                     (region["size"]["width"], region["size"]["height"])
                 )
                 print(region)
-                print(im.mode)
                 self.assertEqual(  # type: ignore
                     md5(im.tobytes()).hexdigest(),
                     region["md5"],
@@ -141,8 +140,17 @@ class ConvertTestBase:
                     )
                     index = open_wsi.level_dimensions.index(level_size)
                     scale = int(open_wsi.level_downsamples[index])
-                    scaled_location_x = region["location"]["x"] * scale
-                    scaled_location_y = region["location"]["y"] * scale
+                    try:
+                        offset_x = open_wsi.properties['openslide.bounds-x']
+                        offset_y = open_wsi.properties['openslide.bounds-y']
+                    except KeyError:
+                        offset_x = offset_y = 0
+                    scaled_location_x = (
+                        region["location"]["x"] * scale + offset_x
+                    )
+                    scaled_location_y = (
+                        region["location"]["y"] * scale + offset_y
+                    )
                     open_im = open_wsi.read_region(
                         (scaled_location_x, scaled_location_y),
                         index,
@@ -165,24 +173,3 @@ class ConvertTestBase:
                     for band_rms in ImageStat.Stat(diff).rms:
                         self.assertLess(band_rms, 2, region)  # type: ignore
 
-    def test_read_thumbnail_openslide(self):
-        for folder, (wsi, open_wsi, _) in self.test_folders.items():
-            json_files = glob.glob(
-                str(folder.absolute())+"/read_thumbnail/*.json")
-
-            for json_file in json_files:
-                with open(json_file, "rt") as f:
-                    region = json.load(f)
-                im = wsi.read_thumbnail(
-                    (region["size"]["width"], region["size"]["height"])
-                )
-                open_im = open_wsi.get_thumbnail(
-                    (region["size"]["width"], region["size"]["height"])
-                ).convert('RGB')
-                blur = ImageFilter.GaussianBlur(2)
-                diff = ImageChops.difference(
-                    im.filter(blur),
-                    open_im.filter(blur)
-                )
-                for band_rms in ImageStat.Stat(diff).rms:
-                    self.assertLess(band_rms, 2, region)  # type: ignore

@@ -317,7 +317,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             if np.all(transparency == 0):
                 return True
         if np.all(data[CORNERS_Y, CORNERS_X, 0:TRANSPARENCY] == background):
-            if np.any(data[:, :, 0:TRANSPARENCY] != background):
+            if np.all(data[:, :, 0:TRANSPARENCY] == background):
                 return True
         return False
 
