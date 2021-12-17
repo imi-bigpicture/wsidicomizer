@@ -278,7 +278,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
-        if z not in self.focal_planes:
+        if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         image_data = self._get_region(region)
         if image_data is None:
@@ -429,7 +429,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
-        if z not in self.focal_planes:
+        if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         tile = self._get_region(
             Region(tile_point*self.tile_size, self.tile_size)
@@ -462,7 +462,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
-        if z not in self.focal_planes:
+        if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f'optical path {path}', str(self))
         tile = self._get_region(
             Region(tile_point*self.tile_size, self.tile_size)
