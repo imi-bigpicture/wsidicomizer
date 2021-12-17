@@ -18,10 +18,12 @@ import os
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, Optional, Tuple, Sequence
+from typing import Dict, Optional, Sequence, Tuple
 
+import pytest
 from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
+from wsidicom.errors import WsiDicomNotFoundError
 from wsidicomizer.interface import WsiDicomizer
 
 os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
@@ -80,6 +82,16 @@ class ConvertTestBase:
             Path(test_data_dir).joinpath(item)
             for item in os.listdir(test_data_dir)
         ]
+
+    def test_optical_path_not_found(self):
+        for (wsi, _, _) in self.test_folders.values():
+            with pytest.raises(WsiDicomNotFoundError):
+                wsi.read_tile(0, (0, 0), path='1')
+
+    def test_focal_plane_not_found(self):
+        for (wsi, _, _) in self.test_folders.values():
+            with pytest.raises(WsiDicomNotFoundError):
+                wsi.read_tile(0, (0, 0), z=1.0)
 
     def test_read_region(self):
         for folder, (wsi, _, _) in self.test_folders.items():
@@ -173,3 +185,27 @@ class ConvertTestBase:
                     for band_rms in ImageStat.Stat(diff).rms:
                         self.assertLess(band_rms, 2, region)  # type: ignore
 
+    def test_read_thumbnail_openslide(self):
+        for folder, (wsi, open_wsi, _) in self.test_folders.items():
+            # Do not run if slide has offset
+            if 'openslide.bounds-x' in open_wsi.properties:
+                continue
+            json_files = glob.glob(
+                str(folder.absolute())+"/read_thumbnail/*.json")
+
+            for json_file in json_files:
+                with open(json_file, "rt") as f:
+                    region = json.load(f)
+                im = wsi.read_thumbnail(
+                    (region["size"]["width"], region["size"]["height"])
+                )
+                open_im = open_wsi.get_thumbnail(
+                    (region["size"]["width"], region["size"]["height"])
+                ).convert('RGB')
+                blur = ImageFilter.GaussianBlur(2)
+                diff = ImageChops.difference(
+                    im.filter(blur),
+                    open_im.filter(blur)
+                )
+                for band_rms in ImageStat.Stat(diff).rms:
+                    self.assertLess(band_rms, 2, region)  # type: ignore
