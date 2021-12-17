@@ -17,6 +17,7 @@ from copy import deepcopy
 from typing import Optional, Sequence, Union
 
 import numpy as np
+from PIL import Image
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
@@ -147,14 +148,17 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         dataset.ExtendedDepthOfField = 'NO'
         return WsiDataset(dataset)
 
-    def _encode(self, image_data: np.ndarray) -> bytes:
+    def _encode(
+        self,
+        image_data: np.ndarray
+    ) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
         options.
 
         Parameters
         ----------
         image_data: np.ndarray
-            Image data to encode, in BGRA-pixel format.
+            Image data to encode.
 
         Returns
         ----------
