@@ -104,14 +104,15 @@ class JpegEncoder(Encoder):
 class Jpeg2000Encoder(Encoder):
     def __init__(
         self,
-        quality: float = 20
+        quality: float = 20.0
     ) -> None:
         """Creates a JPEG2000 encoder with specified settings.
 
         Parameters
         ----------
-        quality: float = 20. Use < 1 for lossless.
-            The encoding quality.
+        quality: float = 20.0.
+            The encoding quality as peak signal to noise (PSNR). Use < 1 for
+            lossless quality. Up to 60 gives acceptable results.
 
         """
         self._quality = quality
