@@ -76,11 +76,11 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
             Encoder to use.
         """
         super().__init__(encoder)
-        self._open_slide = open_slide
+        self._slide = open_slide
 
     @property
     def files(self) -> List[Path]:
-        return [Path(self._open_slide._filename)]
+        return [Path(self._slide._filename)]
 
     @property
     def transfer_syntax(self) -> Uid:
@@ -90,7 +90,7 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
         try:
-            self._open_slide.close()
+            self._slide.close()
         except ArgumentError:
             # Slide already closed
             pass
@@ -116,10 +116,10 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         """
         super().__init__(open_slide, encoder)
         self._image_type = image_type
-        if image_type not in get_associated_image_names(self._open_slide._osr):
-            raise ValueError(f"{image_type} not in {self._open_slide}")
+        if image_type not in get_associated_image_names(self._slide._osr):
+            raise ValueError(f"{image_type} not in {self._slide}")
 
-        image = self._open_slide.associated_images[image_type]
+        image = self._slide.associated_images[image_type]
         no_alpha = Image.new('RGB', image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[3])
         self._image_size = Size.from_tuple(no_alpha.size)
@@ -191,42 +191,37 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Encoder to use.
         """
         self._tile_size = Size(tile_size, tile_size)
-        self._open_slide = open_slide
+        self._slide = open_slide
         self._level_index = level_index
         self._image_size = Size.from_tuple(
-            self._open_slide.level_dimensions[self._level_index]
+            self._slide.level_dimensions[self._level_index]
         )
         self._downsample = int(
-            self._open_slide.level_downsamples[self._level_index]
+            self._slide.level_downsamples[self._level_index]
         )
         self._pyramid_index = int(math.log2(self.downsample))
 
-        base_mpp_x = float(self._open_slide.properties['openslide.mpp-x'])
-        base_mpp_y = float(self._open_slide.properties['openslide.mpp-y'])
+        base_mpp_x = float(self._slide.properties['openslide.mpp-x'])
+        base_mpp_y = float(self._slide.properties['openslide.mpp-y'])
         self._pixel_spacing = SizeMm(
             base_mpp_x * self.downsample / 1000.0,
             base_mpp_y * self.downsample / 1000.0
         )
 
-        try:
-            # Get set image origin and size to bounds if available
-            bounds_x = self._open_slide.properties['openslide.bounds-x']
-            bounds_y = self._open_slide.properties['openslide.bounds-y']
-            bounds_w = self._open_slide.properties['openslide.bounds-width']
-            bounds_h = self._open_slide.properties['openslide.bounds-height']
-            self._bounds = Region(
-                Point(int(bounds_x), int(bounds_y)),
-                Size(int(bounds_w), int(bounds_h))
+        # Get set image origin and size to bounds if available
+        bounds_x = self._slide.properties.get('openslide.bounds-x', 0)
+        bounds_y = self._slide.properties.get('openslide.bounds-y', 0)
+        bounds_w = self._slide.properties.get('openslide.bounds-width', None)
+        bounds_h = self._slide.properties.get('openslide.bounds-height', None)
+        self._offset = Point(int(bounds_x), int(bounds_y))
+        if None not in [bounds_w, bounds_h]:
+            self._image_size = (
+                Size(int(bounds_w), int(bounds_h)) // self.downsample
             )
-            self._image_size = self._bounds.size // self.downsample
-            self._offset = self._bounds.start
-        except KeyError:
-            # No bounds, use full image
-            self._bounds = None
+        else:
             self._image_size = Size.from_tuple(
-                self._open_slide.level_dimensions[self._level_index]
+                self._slide.level_dimensions[self._level_index]
             )
-            self._offset = Point(0, 0)
 
         self._blank_encoded_frame = bytes()
         self._blank_encoded_frame_size = None
@@ -391,7 +386,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         location_in_base_level = region.start * self.downsample + self._offset
         buffer = (region.size.width * region.size.height * c_uint32)()
         _read_region(
-            self._open_slide._osr,
+            self._slide._osr,
             buffer,
             location_in_base_level.x,
             location_in_base_level.y,
