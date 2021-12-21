@@ -132,8 +132,8 @@ def main():
         levels = args.levels
 
     WsiDicomizer.convert(
-        filepath=args.input,
-        output_path=args.output,
+        filepath=str(args.input),
+        output_path=str(args.output),
         modules=dataset,
         tile_size=args.tile_size,
         include_levels=levels,
