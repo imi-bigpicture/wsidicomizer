@@ -17,7 +17,6 @@ from copy import deepcopy
 from typing import Optional, Sequence, Union
 
 import numpy as np
-from PIL import Image
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
@@ -98,21 +97,35 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-
         shared_functional_group_sequence = Dataset()
-        pixel_measure_sequence = Dataset()
-        pixel_measure_sequence.PixelSpacing = [
-            DSfloat(self.pixel_spacing.width, True),
-            DSfloat(self.pixel_spacing.height, True)
-        ]
-        pixel_measure_sequence.SpacingBetweenSlices = 0.0
-        pixel_measure_sequence.SliceThickness = 0.0
-        shared_functional_group_sequence.PixelMeasuresSequence = (
-            DicomSequence([pixel_measure_sequence])
-        )
-        dataset.SharedFunctionalGroupsSequence = DicomSequence(
-            [shared_functional_group_sequence]
-        )
+        if self.pixel_spacing is None:
+            if image_flavor == 'VOLUME':
+                raise ValueError(
+                    "Image flavor 'VOLUME' requires pixel spacing to be set"
+                )
+        else:
+
+            pixel_measure_sequence = Dataset()
+            pixel_measure_sequence.PixelSpacing = [
+                DSfloat(self.pixel_spacing.width, True),
+                DSfloat(self.pixel_spacing.height, True)
+            ]
+            pixel_measure_sequence.SpacingBetweenSlices = 0.0
+            pixel_measure_sequence.SliceThickness = 0.0
+            shared_functional_group_sequence.PixelMeasuresSequence = (
+                DicomSequence([pixel_measure_sequence])
+            )
+            dataset.SharedFunctionalGroupsSequence = DicomSequence(
+                [shared_functional_group_sequence]
+            )
+            dataset.ImagedVolumeWidth = (
+                self.image_size.width * self.pixel_spacing.width
+            )
+            dataset.ImagedVolumeHeight = (
+                self.image_size.height * self.pixel_spacing.height
+            )
+            dataset.ImagedVolumeDepth = 0.0
+
         dataset.DimensionOrganizationType = 'TILED_FULL'
         dataset.TotalPixelMatrixColumns = self.image_size.width
         dataset.TotalPixelMatrixRows = self.image_size.height
@@ -122,13 +135,6 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.tiled_size.width
             * self.tiled_size.height
         )
-        dataset.ImagedVolumeWidth = (
-            self.image_size.width * self.pixel_spacing.width
-        )
-        dataset.ImagedVolumeHeight = (
-            self.image_size.height * self.pixel_spacing.height
-        )
-        dataset.ImagedVolumeDepth = 0.0
 
         if transfer_syntax == JPEGBaseline8Bit:
             dataset.BitsAllocated = 8
