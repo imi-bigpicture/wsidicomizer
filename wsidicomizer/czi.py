@@ -136,7 +136,7 @@ class CziImageData(MetaImageData):
 
     @property
     def tiled_size(self) -> Size:
-        return self.image_size / self.tile_size
+        return self.image_size.ceil_div(self.tile_size)
 
     @property
     def focal_planes(self) -> List[float]:
@@ -291,13 +291,11 @@ class CziImageData(MetaImageData):
             block_data.shape = self._size_to_numpy_shape(block_size)
             # Paste in block data into tile.
             image_data[
-                block_start_in_tile.y:block_end_in_tile.y,
-                block_start_in_tile.x:block_end_in_tile.x,
-                :
+            block_start_in_tile.y:block_end_in_tile.y,
+            block_start_in_tile.x:block_end_in_tile.x,
             ] = block_data[
                 tile_start_in_block.y:tile_end_in_block.y,
-                tile_start_in_block.x:tile_end_in_block.x,
-                :
+                tile_start_in_block.x:tile_end_in_block.x
             ]
         return image_data
 
@@ -324,6 +322,7 @@ class CziImageData(MetaImageData):
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
+            print("return blank tile")
             return self.blank_decoded_tile
         return Image.fromarray(self._get_tile(tile, z, path))
 
@@ -347,9 +346,7 @@ class CziImageData(MetaImageData):
         if (tile, z, path) not in self.tile_directory:
             return self.blank_encoded_tile
         frame = self._get_tile(tile, z, path)
-        if self._dtype != np.dtype(np.uint8):
-            frame = (frame * 255 / np.iinfo(self._dtype)).astype(np.uint8)
-        return self._encode(self._get_tile(tile, z, path))
+        return self._encode(frame)
 
     def close(self) -> None:
         """Close wrapped file."""
@@ -462,8 +459,10 @@ class CziImageData(MetaImageData):
 
         return start, size, z, c
 
-    def _size_to_numpy_shape(self, size: Size) -> Tuple[int, int, int]:
+    def _size_to_numpy_shape(self, size: Size) -> Tuple[int, ...]:
         """Return a tuple for use with numpy.shape."""
+        if self.samples_per_pixel == 1:
+            return size.height, size.width
         return size.height, size.width, self.samples_per_pixel
 
     def _get_focal_plane_mapping(self) -> List[float]:

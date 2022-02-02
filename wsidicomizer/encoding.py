@@ -92,7 +92,7 @@ class JpegEncoder(Encoder):
             JPEG bytes.
         """
         if data.dtype != np.dtype(np.uint8):
-            data = (data * 255 / np.iinfo(data.dtype).max).astype(np.uint8)
+            data = (255 * (data / np.iinfo(data.dtype).max)).astype(np.uint8)
         return jpeg8_encode(
             data,
             level=self._quality,
