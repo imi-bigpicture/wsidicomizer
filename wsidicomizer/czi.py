@@ -69,8 +69,6 @@ def get_text_from_element(
 
 
 class CziImageData(MetaImageData):
-    _default_z = 0
-
     def __init__(
         self,
         filepath: str,

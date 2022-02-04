@@ -87,6 +87,14 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         """The uid of the transfer syntax of the image."""
         return self._encoder.transfer_syntax
 
+    @property
+    def focal_planes(self) -> List[float]:
+        return [0.0]
+
+    @property
+    def optical_paths(self) -> List[str]:
+        return ['0']
+
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
         try:

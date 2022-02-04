@@ -34,18 +34,16 @@ config.future_behavior()
 
 
 class MetaImageData(ImageData, metaclass=ABCMeta):
-    _default_z = 0
+    _default_z = None
 
     def __init__(
         self,
         encoder: Encoder
     ):
-        """Wraps a OpenTilePage to ImageData.
+        """Metaclass for Dicomized image data.
 
         Parameters
         ----------
-        tiled_page: OpenTilePage
-            OpenTilePage to wrap.
         encoded: Encoder
             Encoder to use.
         """
