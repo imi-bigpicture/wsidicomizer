@@ -4,6 +4,17 @@
 - Provide 'as good as possible' conversion for other formats.
 - Simplify the encoding of wsi metadata into DICOM.
 
+# Supported formats
+*wsidicomizer* currently supports the following formats:
+- Aperio svs (lossless)
+- Hamamtsu ndpi (lossless)
+- Hamamatsu vms (lossy)
+- Philips tiff (lossless)
+- Mirax mrxs (lossy)
+- Trestle tiff (.ossy)
+- Ventana bif (lossy)
+- Zeiss czi (lossy, only base level)
+
 ## Installation
 ***Download wsidicomizer from git***
 ```console
