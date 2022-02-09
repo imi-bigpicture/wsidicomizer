@@ -188,7 +188,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         cls,
         filepath: str,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
+        tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -206,7 +206,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int]
+        tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
             Levels to include. If None, include all levels.
