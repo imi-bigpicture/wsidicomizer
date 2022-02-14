@@ -11,7 +11,7 @@
 - Hamamatsu vms (lossy)
 - Philips tiff (lossless)
 - Mirax mrxs (lossy)
-- Trestle tiff (.ossy)
+- Trestle tiff (lossy)
 - Ventana bif (lossy)
 - Zeiss czi (lossy, only base level)
 
