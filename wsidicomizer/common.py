@@ -17,7 +17,6 @@ from copy import deepcopy
 from typing import Optional, Sequence, Union
 
 import numpy as np
-from PIL import Image
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
@@ -35,18 +34,16 @@ config.future_behavior()
 
 
 class MetaImageData(ImageData, metaclass=ABCMeta):
-    _default_z = 0
+    _default_z = None
 
     def __init__(
         self,
         encoder: Encoder
     ):
-        """Wraps a OpenTilePage to ImageData.
+        """Metaclass for Dicomized image data.
 
         Parameters
         ----------
-        tiled_page: OpenTilePage
-            OpenTilePage to wrap.
         encoded: Encoder
             Encoder to use.
         """
@@ -98,21 +95,35 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-
         shared_functional_group_sequence = Dataset()
-        pixel_measure_sequence = Dataset()
-        pixel_measure_sequence.PixelSpacing = [
-            DSfloat(self.pixel_spacing.width, True),
-            DSfloat(self.pixel_spacing.height, True)
-        ]
-        pixel_measure_sequence.SpacingBetweenSlices = 0.0
-        pixel_measure_sequence.SliceThickness = 0.0
-        shared_functional_group_sequence.PixelMeasuresSequence = (
-            DicomSequence([pixel_measure_sequence])
-        )
-        dataset.SharedFunctionalGroupsSequence = DicomSequence(
-            [shared_functional_group_sequence]
-        )
+        if self.pixel_spacing is None:
+            if image_flavor == 'VOLUME':
+                raise ValueError(
+                    "Image flavor 'VOLUME' requires pixel spacing to be set"
+                )
+        else:
+
+            pixel_measure_sequence = Dataset()
+            pixel_measure_sequence.PixelSpacing = [
+                DSfloat(self.pixel_spacing.width, True),
+                DSfloat(self.pixel_spacing.height, True)
+            ]
+            pixel_measure_sequence.SpacingBetweenSlices = 0.0
+            pixel_measure_sequence.SliceThickness = 0.0
+            shared_functional_group_sequence.PixelMeasuresSequence = (
+                DicomSequence([pixel_measure_sequence])
+            )
+            dataset.SharedFunctionalGroupsSequence = DicomSequence(
+                [shared_functional_group_sequence]
+            )
+            dataset.ImagedVolumeWidth = (
+                self.image_size.width * self.pixel_spacing.width
+            )
+            dataset.ImagedVolumeHeight = (
+                self.image_size.height * self.pixel_spacing.height
+            )
+            dataset.ImagedVolumeDepth = 0.0
+
         dataset.DimensionOrganizationType = 'TILED_FULL'
         dataset.TotalPixelMatrixColumns = self.image_size.width
         dataset.TotalPixelMatrixRows = self.image_size.height
@@ -122,13 +133,6 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.tiled_size.width
             * self.tiled_size.height
         )
-        dataset.ImagedVolumeWidth = (
-            self.image_size.width * self.pixel_spacing.width
-        )
-        dataset.ImagedVolumeHeight = (
-            self.image_size.height * self.pixel_spacing.height
-        )
-        dataset.ImagedVolumeDepth = 0.0
 
         if transfer_syntax == JPEGBaseline8Bit:
             dataset.BitsAllocated = 8
@@ -184,7 +188,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         cls,
         filepath: str,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
+        tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -202,7 +206,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int]
+        tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
             Levels to include. If None, include all levels.

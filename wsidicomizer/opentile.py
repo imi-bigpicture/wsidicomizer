@@ -55,9 +55,12 @@ class OpenTileImageData(MetaImageData):
         self._image_size = Size(*self._tiled_page.image_size.to_tuple())
         self._tile_size = Size(*self._tiled_page.tile_size.to_tuple())
         self._tiled_size = Size(*self._tiled_page.tiled_size.to_tuple())
-        self._pixel_spacing = SizeMm(
-            *self._tiled_page.pixel_spacing.to_tuple()
-        )
+        if self._tiled_page.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(
+                *self._tiled_page.pixel_spacing.to_tuple()
+            )
+        else:
+            self._pixel_spacing = None
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiled_page}"
@@ -96,7 +99,7 @@ class OpenTileImageData(MetaImageData):
         return self._tile_size
 
     @property
-    def pixel_spacing(self) -> SizeMm:
+    def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
 
