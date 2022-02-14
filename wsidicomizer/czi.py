@@ -320,6 +320,7 @@ class CziImageData(MetaImageData):
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
+            print("return blank tile")
             return self.blank_decoded_tile
         return Image.fromarray(self._get_tile(tile, z, path))
 
