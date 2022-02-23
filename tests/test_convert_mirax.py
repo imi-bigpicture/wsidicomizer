@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import io
-import os
 import unittest
 
 import numpy as np
@@ -21,18 +20,14 @@ import pytest
 from PIL import Image
 from wsidicom.geometry import Size
 from wsidicomizer.encoding import JpegEncoder
-from wsidicomizer.openslide import OpenSlide, OpenSlideLevelImageData
-
+from wsidicomizer.openslide import OpenSlideLevelImageData
 from .convert_test_functions import ConvertTestBase
 
 
 @pytest.mark.convert_mirax
 class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
-    test_data_dir = os.environ.get(
-        "MIRAX_TESTDIR",
-        "C:/temp/opentile/mirax/"
-    )
-    input_filename = 'input.mrxs'
+    testdata_subfolder = 'mirax'
+    suffix = '.mrxs'
     include_levels = [4, 6]
     tile_size: int = 1024
 
@@ -42,10 +37,9 @@ class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        openslide_path = list(cls.test_folders.keys())[0]
-        cls.openslide = OpenSlide(str(openslide_path)+'/'+cls.input_filename)
+        _, openslide, _ = list(cls.test_folders.values())[0]
         cls.openslide_imagedata = OpenSlideLevelImageData(
-            cls.openslide,
+            openslide,
             0,
             512,
             JpegEncoder()
@@ -54,7 +48,6 @@ class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
-        cls.openslide.close()
 
     def test_detect_blank_tile(self):
         data = np.full((3, 3, 4), 0)
