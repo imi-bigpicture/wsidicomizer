@@ -25,7 +25,7 @@ class Encoder(metaclass=ABCMeta):
     @property
     @abstractmethod
     def transfer_syntax(self) -> UID:
-        """Should return correspodning transfer syntax for encoded data."""
+        """Should return corresponding transfer syntax for encoded data."""
         raise NotImplementedError
 
     @property
@@ -75,6 +75,11 @@ class JpegEncoder(Encoder):
         """Quality setting of encoder"""
         return self._quality
 
+    @property
+    def subsampling(self) -> Optional[str]:
+        """Subsampling of encoder"""
+        return self._subsampling
+
     def encode(
         self,
         data: np.ndarray
@@ -116,7 +121,7 @@ class Jpeg2000Encoder(Encoder):
 
         """
         self._quality = quality
-        if self.quality < 1:
+        if self._quality < 1:
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000
