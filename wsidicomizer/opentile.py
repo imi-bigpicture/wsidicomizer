@@ -17,7 +17,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 from PIL import Image
 from pydicom import Dataset
-from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
+from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
@@ -124,6 +124,36 @@ class OpenTileImageData(MetaImageData):
         """The pyramidal index in relation to the base layer."""
         return self._tiled_page.pyramid_index
 
+    @property
+    def photometric_interpretation(self) -> str:
+        if self.needs_transcoding:
+            return self._encoder.photometric_interpretation(
+                self.samples_per_pixel
+            )
+        if self._tiled_page.photometric_interpretation == 'YCBCR':
+            if self.transfer_syntax == JPEGBaseline8Bit:
+                if (
+                    self._tiled_page.subsampling == None
+                    or self._tiled_page.subsampling == (1, 1)
+                ):
+                    return 'YBR_FULL'
+                elif self._tiled_page.subsampling == (2, 2):
+                    return 'YBR_FULL_422'
+            elif self.transfer_syntax == JPEG2000:
+                return 'YBR_ICT'
+            elif self.transfer_syntax == JPEG2000Lossless:
+                return 'YBR_RCT'
+        elif self._tiled_page.photometric_interpretation == 'RGB':
+            return 'RGB'
+        elif self._tiled_page.photometric_interpretation == 'MINISBLACK':
+            return 'MONOCHROME2'
+        raise NotImplementedError(self._tiled_page.photometric_interpretation, self._tiled_page.subsampling)
+
+
+    @property
+    def samples_per_pixel(self) -> int:
+        return self._tiled_page.samples_per_pixel
+
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.
@@ -143,7 +173,7 @@ class OpenTileImageData(MetaImageData):
             Tile bytes.
         """
         if z not in self.focal_planes or path not in self.optical_paths:
-            raise ValueError
+            raise ValueError()
         if self.needs_transcoding:
             decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
             return self._encode(decoded_tile)
@@ -280,6 +310,8 @@ class OpenTileDicomizer(MetaDicomizer):
         WsiDicom
             WsiDicom object of tiff file in filepath.
         """
+
+
         encoder = create_encoder(
             encoding_format,
             encoding_quality,

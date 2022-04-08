@@ -88,6 +88,14 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         return self._encoder.transfer_syntax
 
     @property
+    def photometric_interpretation(self) -> str:
+        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+
+    @property
+    def samples_per_pixel(self) -> int:
+        return 3
+
+    @property
     def focal_planes(self) -> List[float]:
         return [0.0]
 

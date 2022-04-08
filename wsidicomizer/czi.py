@@ -119,6 +119,10 @@ class CziImageData(MetaImageData):
         return self._encoder.transfer_syntax
 
     @property
+    def photometric_interpretation(self) -> str:
+        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+
+    @property
     def pixel_spacing(self) -> SizeMm:
         return self._pixel_spacing
 

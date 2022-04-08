@@ -35,6 +35,10 @@ class Encoder(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
+    def photometric_interpretation(self, channels: int) -> str:
+        raise NotImplementedError()
+
+    @abstractmethod
     def encode(
         self,
         data: np.ndarray
@@ -62,13 +66,27 @@ class JpegEncoder(Encoder):
 
         """
         self._quality = quality
+        if subsampling not in ['444', '422']:
+            raise NotImplementedError(
+                "Only 444 and 422 subsampling options implemented"
+            )
         self._subsampling = subsampling
-        self._outcolorspace = 'YCBCR'
 
     @property
     def transfer_syntax(self) -> UID:
         """Transfer syntax of encoder."""
         return JPEGBaseline8Bit
+
+    def photometric_interpretation(self, channels: int) -> str:
+        if channels == 1:
+            return 'MONOCHROME2'
+        elif channels == 3:
+            if self._subsampling == '444':
+                return 'YBR_FULL'
+            elif self._subsampling == '422':
+                return 'YBR_FULL_422'
+            raise NotImplementedError()
+        raise ValueError()
 
     @property
     def quality(self) -> int:
@@ -96,7 +114,6 @@ class JpegEncoder(Encoder):
         return jpeg8_encode(
             data,
             level=self._quality,
-            outcolorspace=self._outcolorspace,
             subsampling=self._subsampling
         )
 
@@ -120,6 +137,15 @@ class Jpeg2000Encoder(Encoder):
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000
+
+    def photometric_interpretation(self, channels: int) -> str:
+        if channels == 1:
+            return 'MONOCRHOME2'
+        elif channels == 3:
+            if self.transfer_syntax == JPEG2000Lossless:
+                return 'YBR_RCT'
+            return 'YBR_ICT'
+        raise ValueError()
 
     @property
     def transfer_syntax(self) -> UID:
