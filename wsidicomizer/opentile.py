@@ -133,7 +133,7 @@ class OpenTileImageData(MetaImageData):
         if self._tiled_page.photometric_interpretation == 'YCBCR':
             if self.transfer_syntax == JPEGBaseline8Bit:
                 if (
-                    self._tiled_page.subsampling == None
+                    self._tiled_page.subsampling is None
                     or self._tiled_page.subsampling == (1, 1)
                 ):
                     return 'YBR_FULL'
@@ -147,8 +147,9 @@ class OpenTileImageData(MetaImageData):
             return 'RGB'
         elif self._tiled_page.photometric_interpretation == 'MINISBLACK':
             return 'MONOCHROME2'
-        raise NotImplementedError(self._tiled_page.photometric_interpretation, self._tiled_page.subsampling)
-
+        raise NotImplementedError(
+            "Non-implemented photometric interpretation."
+        )
 
     @property
     def samples_per_pixel(self) -> int:
