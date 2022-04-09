@@ -311,8 +311,6 @@ class OpenTileDicomizer(MetaDicomizer):
         WsiDicom
             WsiDicom object of tiff file in filepath.
         """
-
-
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
