@@ -32,6 +32,7 @@ from unittest import SkipTest
 testdata_dir = Path(os.environ.get("OPENTILE_TESTDIR", "tests/testdata"))
 REGION_DEFINITIONS_FILE = 'tests/testdata/region_definitions.json'
 
+
 class ConvertTestBase:
     include_levels: Sequence[int] = []
     suffix: str = ""
@@ -75,7 +76,6 @@ class ConvertTestBase:
 
         with open(REGION_DEFINITIONS_FILE) as json_file:
             cls.test_definitions = json.load(json_file)[cls.testdata_subfolder]
-
 
     @classmethod
     def tearDownClass(cls):
