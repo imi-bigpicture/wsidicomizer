@@ -249,6 +249,7 @@ class ConvertTestBase:
                     open_im.filter(blur)
                 )
                 for band_rms in ImageStat.Stat(diff).rms:
+                    print(file)
                     self.assertLess(band_rms, 2, region)  # type: ignore
 
     def test_photometric_interpretation(self):
