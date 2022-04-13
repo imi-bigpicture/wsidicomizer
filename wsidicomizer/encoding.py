@@ -121,7 +121,7 @@ class Jpeg2000Encoder(Encoder):
 
         """
         self._quality = quality
-        if self._quality < 1:
+        if self.quality < 1:
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000

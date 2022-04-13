@@ -62,8 +62,10 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
     @property
     def photometric_interpretation(self) -> str:
         # Should be derived from the used subsample format
-        # DICOM 2022a part 3 IODs - C.8.12.4.1.5 Photometric Interpretation and Samples Per Pixel
-        if isinstance(self._encoder, JpegEncoder) and self._encoder.subsampling == '422':
+        # DICOM 2022a part 3 IODs - C.8.12.4.1.5 Photometric Interpretation
+        # and Samples Per Pixel
+        if isinstance(self._encoder, JpegEncoder) and \
+            self._encoder.subsampling == '422':
             return 'YBR_FULL_422'
         # YBR_FULL is NOT a valid setting for any encoder under C.8.12.4.1.5!
         return 'YBR_FULL'
@@ -113,8 +115,8 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
                 DSfloat(self.pixel_spacing.height, True)
             ]
             pixel_measure_sequence.SpacingBetweenSlices = 0.0
-            # DICOM 2022a part 3 IODs - C.8.12.4.1.2 Imaged Volume Width, Height, Depth
-            # Depth must not be 0. Default to 0.5 microns
+            # DICOM 2022a part 3 IODs - C.8.12.4.1.2 Imaged Volume Width,
+            # Height, Depth. Depth must not be 0. Default to 0.5 microns
             pixel_measure_sequence.SliceThickness = 0.0005
             shared_functional_group_sequence.PixelMeasuresSequence = (
                 DicomSequence([pixel_measure_sequence])
@@ -129,8 +131,9 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
                 self.image_size.height * self.pixel_spacing.height
             )
             dataset.ImagedVolumeDepth = pixel_measure_sequence.SliceThickness
-            # DICOM 2022a part 3 IODs - C.8.12.9 Whole Slide Microscopy Image Frame Type Macro
-            # Analogous to ImageType and shared by all frames so clone
+            # DICOM 2022a part 3 IODs - C.8.12.9 Whole Slide Microscopy Image
+            # Frame Type Macro. Analogous to ImageType and shared by all
+            # frames so clone
             wsi_frame_type_item = Dataset()
             wsi_frame_type_item.FrameType = dataset.ImageType
             shared_functional_group_sequence.WholeSlideMicroscopyImageFrameTypeSequence = (
@@ -155,7 +158,8 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             dataset.LossyImageCompression = '01'
             dataset.LossyImageCompressionRatio = 1
             dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-        if photometric_interpretation == 'YBR_FULL' or photometric_interpretation == 'YBR_FULL_422':
+        if photometric_interpretation == 'YBR_FULL' or \
+            photometric_interpretation == 'YBR_FULL_422':
             dataset.PhotometricInterpretation = photometric_interpretation
             dataset.SamplesPerPixel = 3
 
