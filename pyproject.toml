@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.11"
+python = ">=3.8,<3.11"
 wsidicom = "^0.2.0"
 opentile = "^0.2.0"
 openslide-python = "^1.1.2"
