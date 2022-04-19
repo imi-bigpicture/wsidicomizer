@@ -66,9 +66,9 @@ class JpegEncoder(Encoder):
 
         """
         self._quality = quality
-        if subsampling not in ['444', '422']:
+        if subsampling not in ['444', '422', '420']:
             raise NotImplementedError(
-                "Only 444 and 422 subsampling options implemented"
+                f"Only '444', '422' and '420' subsampling options implemented."
             )
         self._subsampling = subsampling
 
@@ -81,11 +81,7 @@ class JpegEncoder(Encoder):
         if channels == 1:
             return 'MONOCHROME2'
         elif channels == 3:
-            if self._subsampling == '444':
-                return 'YBR_FULL'
-            elif self._subsampling == '422':
-                return 'YBR_FULL_422'
-            raise NotImplementedError()
+            return 'YBR_FULL_422'
         raise ValueError()
 
     @property

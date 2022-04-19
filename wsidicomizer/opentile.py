@@ -132,13 +132,7 @@ class OpenTileImageData(MetaImageData):
             )
         if self._tiled_page.photometric_interpretation == 'YCBCR':
             if self.transfer_syntax == JPEGBaseline8Bit:
-                if (
-                    self._tiled_page.subsampling is None
-                    or self._tiled_page.subsampling == (1, 1)
-                ):
-                    return 'YBR_FULL'
-                elif self._tiled_page.subsampling == (2, 2):
-                    return 'YBR_FULL_422'
+                return 'YBR_FULL_422'
             elif self.transfer_syntax == JPEG2000:
                 return 'YBR_ICT'
             elif self.transfer_syntax == JPEG2000Lossless:
