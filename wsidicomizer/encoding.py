@@ -53,7 +53,7 @@ class JpegEncoder(Encoder):
     def __init__(
         self,
         quality: int = 90,
-        subsampling: Optional[str] = '422'
+        subsampling: Optional[str] = '420'
     ) -> None:
         """Creates a JPEG encoder with specified settings.
 
@@ -61,9 +61,9 @@ class JpegEncoder(Encoder):
         ----------
         quality: int = 90
             The encoding quality. To not use higher than 95.
-        subsampling: Optional[str] = '422'
-            Subsampling option.
-
+        subsampling: Optional[str] = '420'
+            Subsampling option. Use '444' for no subsampling, '422' for 2x1
+            subsampling, and '420' for 2x2 subsampling.
         """
         self._quality = quality
         if subsampling not in ['444', '422', '420']:
