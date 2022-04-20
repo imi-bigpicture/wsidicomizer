@@ -25,7 +25,8 @@ from wsidicom.geometry import Point, Size, SizeMm
 from opentile import OpenTile
 from opentile.common import OpenTilePage, Tiler
 from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
+from wsidicomizer.dataset import (add_default_modules, add_from_tiler,
+                                  create_base_dataset)
 from wsidicomizer.encoding import Encoder, create_encoder
 
 
@@ -341,11 +342,12 @@ class OpenTileDicomizer(MetaDicomizer):
         Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
             Lists of created level, label and overivew instances.
         """
-        base_dataset = populate_base_dataset(
+        base_dataset = add_from_tiler(
             tiler,
             base_dataset,
             include_confidential
         )
+        base_dataset = add_default_modules(base_dataset)
         instance_number = 0
         level_instances = [
             cls._create_instance(

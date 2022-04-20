@@ -30,7 +30,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.dataset import add_default_modules, create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
@@ -536,6 +536,8 @@ class OpenSlideDicomizer(MetaDicomizer):
             subsampling=jpeg_subsampling
         )
         base_dataset = create_base_dataset(modules)
+        base_dataset = add_default_modules(base_dataset)
+
         slide = OpenSlide(filepath)
         instance_number = 0
         level_instances = [

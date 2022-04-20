@@ -20,7 +20,7 @@ from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
                                SpecimenSampling, SpecimenStaining)
 from opentile.common import Tiler
 from opentile.interface import OpenTile
-from pydicom.dataset import Dataset
+from pydicom import Dataset, DataElement
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID as Uid
@@ -71,22 +71,24 @@ def create_base_dataset(
     Dataset
         Combined base dataset.
     """
-    base_dataset = create_wsi_dataset()
-    if modules is None:
-        modules = create_default_modules()
+    dataset = Dataset()
+    dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
+    dataset.Modality = 'SM'
+
     if isinstance(modules, Sequence):
         for module in modules:
-            base_dataset.update(module)
+            dataset.update(module)
     elif isinstance(modules, Dataset):
-        base_dataset.update(modules)
-    else:
+        dataset.update(modules)
+    elif modules is not None:
         raise TypeError(
             'datasets parameter should be single or list of Datasets'
         )
-    return base_dataset
+    dataset = merge_dataset(dataset, create_wsi_dataset())
+    return dataset
 
 
-def populate_base_dataset(
+def add_from_tiler(
     tiler: Tiler,
     base_dataset: Dataset,
     include_confidential: bool = True
@@ -121,8 +123,7 @@ def populate_base_dataset(
             base_dataset.LossyImageCompressionMethod = value
         elif property == 'lossy_image_compression_ratio':
             base_dataset.LossyImageCompressionRatio = value
-        elif property == 'photometric_interpretation':
-            base_dataset.PhotometricInterpretation = value
+
     return base_dataset
 
 
@@ -172,13 +173,9 @@ def create_wsi_dataset(
     """
     dataset = Dataset()
 
-    # SOP common module (SOPInstanceUID written on save())
-    dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
-
     # dataset.StudyInstanceUID = uid_generator()
     # General series and Whole slide Microscopy modules
     dataset.SeriesInstanceUID = uid_generator()
-    dataset.Modality = 'SM'
 
     # Frame of reference module
     dataset.FrameOfReferenceUID = uid_generator()
@@ -470,13 +467,11 @@ def create_sample_preparation_step(
     else:
         fixative_code = None
 
-    processing_type = SpecimenPreparationProcedureCode('Staining').code
     processing_procedure = SpecimenStaining([
         SpecimenStainsCode(staining).code for staining in stainings
     ])
     sample_preparation_step = SpecimenPreparationStep(
         specimen_id=specimen_id,
-        processing_type=processing_type,
         processing_procedure=processing_procedure,
         embedding_medium=embedding_medium_code,
         fixative=fixative_code
@@ -524,9 +519,6 @@ def create_sample_sampling_step(
     )
     sample_sampling_step = SpecimenPreparationStep(
         specimen_id=sample_id,
-        processing_type=SpecimenPreparationProcedureCode(
-            'Sampling of tissue specimen'
-        ).code,
         processing_procedure=SpecimenSampling(
                 method=sampling_method_code.code,
                 parent_specimen_id=specimen_id,
@@ -719,3 +711,34 @@ def create_default_modules(
     modules.append(create_brightfield_optical_path_module())
 
     return modules
+
+
+def merge_dataset(first: Dataset, second: Dataset):
+    """Merge elements from second dataset not present in first dataset into
+    first dataset."""
+    SEQUENCES_TO_MERGE = [
+        'SharedFunctionalGroupsSequence',
+        'PixelMeasuresSequence'
+    ]
+    for element in second:
+        if element.keyword not in first:
+            first[element.keyword] = element
+        elif element.VR == 'SQ' and element.keyword in SEQUENCES_TO_MERGE:
+            merged_item = merge_dataset(
+                first[element.keyword][0],
+                element[0]
+            )
+            first[element.keyword] = DataElement(
+                element.keyword,
+                element.VR,
+                DicomSequence([merged_item])
+            )
+
+    return first
+
+
+def add_default_modules(base_dataset: Dataset) -> Dataset:
+    default_modules = create_default_modules()
+    for module in default_modules:
+        base_dataset = merge_dataset(base_dataset, module)
+    return base_dataset
