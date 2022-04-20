@@ -314,11 +314,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         CORNERS_Y = (BOTTOM, BOTTOM, TOP, TOP)
         CORNERS_X = (LEFT, RIGHT, LEFT, RIGHT)
         TRANSPARENCY = 3
-        background = np.array(self.blank_color)
         transparency = data[:, :, TRANSPARENCY]
         if np.all(transparency[CORNERS_Y, CORNERS_X] == 0):
             if np.all(transparency == 0):
                 return True
+        background = np.array(self.blank_color)
         if np.all(data[CORNERS_Y, CORNERS_X, 0:TRANSPARENCY] == background):
             if np.all(data[:, :, 0:TRANSPARENCY] == background):
                 return True
