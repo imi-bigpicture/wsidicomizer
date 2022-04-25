@@ -28,7 +28,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaImageData, MetaDicomizer
-from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.dataset import add_default_modules, create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
 
@@ -293,8 +293,8 @@ class CziImageData(MetaImageData):
             block_data.shape = self._size_to_numpy_shape(block_size)
             # Paste in block data into tile.
             image_data[
-            block_start_in_tile.y:block_end_in_tile.y,
-            block_start_in_tile.x:block_end_in_tile.x,
+                block_start_in_tile.y:block_end_in_tile.y,
+                block_start_in_tile.x:block_end_in_tile.x,
             ] = block_data[
                 tile_start_in_block.y:tile_end_in_block.y,
                 tile_start_in_block.x:tile_end_in_block.x
@@ -561,6 +561,7 @@ class CziDicomizer(MetaDicomizer):
             jpeg_subsampling
         )
         base_dataset = create_base_dataset(modules)
+        base_dataset = add_default_modules(base_dataset)
         base_level_instance = cls._create_instance(
             CziImageData(filepath, tile_size, encoder),
             base_dataset,

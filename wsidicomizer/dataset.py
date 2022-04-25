@@ -15,12 +15,9 @@
 import datetime
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
-                               SpecimenDescription, SpecimenPreparationStep,
+from highdicom.content import (SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
-from opentile.common import Tiler
-from opentile.interface import OpenTile
-from pydicom.dataset import Dataset
+from pydicom import DataElement, Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID as Uid
@@ -28,9 +25,10 @@ from pydicom.uid import generate_uid
 from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
                                   ConceptCode, SpecimenEmbeddingMediaCode,
                                   SpecimenFixativesCode,
-                                  SpecimenPreparationProcedureCode,
                                   SpecimenSamplingProcedureCode,
                                   SpecimenStainsCode)
+
+from opentile.common import Tiler
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
@@ -71,22 +69,24 @@ def create_base_dataset(
     Dataset
         Combined base dataset.
     """
-    base_dataset = create_wsi_dataset()
-    if modules is None:
-        modules = create_default_modules()
+    dataset = Dataset()
+    dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
+    dataset.Modality = 'SM'
+
     if isinstance(modules, Sequence):
         for module in modules:
-            base_dataset.update(module)
+            dataset.update(module)
     elif isinstance(modules, Dataset):
-        base_dataset.update(modules)
-    else:
+        dataset.update(modules)
+    elif modules is not None:
         raise TypeError(
             'datasets parameter should be single or list of Datasets'
         )
-    return base_dataset
+    dataset = merge_dataset(dataset, create_wsi_dataset())
+    return dataset
 
 
-def populate_base_dataset(
+def add_from_tiler(
     tiler: Tiler,
     base_dataset: Dataset,
     include_confidential: bool = True
@@ -121,49 +121,16 @@ def populate_base_dataset(
             base_dataset.LossyImageCompressionMethod = value
         elif property == 'lossy_image_compression_ratio':
             base_dataset.LossyImageCompressionRatio = value
-        elif property == 'photometric_interpretation':
-            base_dataset.PhotometricInterpretation = value
+
     return base_dataset
 
 
 def create_wsi_dataset(
-    offset: Tuple[float, float] = (0.0, 0.0),
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
-    """Return dataset containing (parts of) SOP common, general series, whole
-    slide icrosocy series, frame of reference, acquisition context, multi-frame
-    dimension, and whole slide microscopy image modules.
-
-    Some modules returned 'not complete', and completed during image data
-    import or file save():
-        SOP common module:
-            SOPInstanceUID
-        Whole slide microscopy image module:
-            ImageType
-            Aquisition DateTime
-            SamplesPerPixel
-            PhotometricInterpretation
-            PlanarConfiguration
-            NumberOfFrames
-            BitsAllocated
-            BitsStored
-            HighBit
-            PixelRepresentation
-            LossyImageCompression (and conditionals)
-            ImagedVolumeWidth
-            ImagedVolumeWidth
-            ImagedVolumeDepth
-            TotalPixelMatrixColumns
-            TotalPixelMatrixRows
-            FocusMethod
-            ExtendedDepthOfField (and conditionals)
-
-    Parameters
-    ----------
-    image_offset: Tuple[float, float] = 0.0
-        X and Y offset (in mm) to first pixel in image data.
-    uid_generator: Callable[..., Uid] = generate_uid
-        Function that can generate Uids.
+    """Return dataset containing (parts of) general series, whole slide
+    microsocy series, frame of reference, acquisition context, and multi-frame
+    dimension.
 
     Returns
     ----------
@@ -172,13 +139,8 @@ def create_wsi_dataset(
     """
     dataset = Dataset()
 
-    # SOP common module (SOPInstanceUID written on save())
-    dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
-
-    # dataset.StudyInstanceUID = uid_generator()
     # General series and Whole slide Microscopy modules
     dataset.SeriesInstanceUID = uid_generator()
-    dataset.Modality = 'SM'
 
     # Frame of reference module
     dataset.FrameOfReferenceUID = uid_generator()
@@ -195,16 +157,6 @@ def create_wsi_dataset(
     dataset.DimensionOrganizationSequence = DicomSequence(
         [dimension_organization_sequence]
     )
-
-    # Whole slide micropscopy image module (most filled when importing file)
-    dataset.BurnedInAnnotation = 'NO'
-    dataset.SpecimenLabelInImage = 'NO'
-    dataset.VolumetricProperties = 'VOLUME'
-    dataset.ImageOrientationSlide = [-1, 0, 0, 0, -1, 0]
-    offset_item = Dataset()
-    offset_item.x_offset = offset[0]
-    offset_item.y_offset = offset[1]
-    dataset.TotalPixelMatrixOriginSequence = DicomSequence([offset_item])
     return dataset
 
 
@@ -358,7 +310,7 @@ def create_device_module(
 
 def create_sample(
     sample_id: str,
-    stainings: Sequence[str],
+    stainings: Optional[Sequence[str]] = None,
     embedding_medium: Optional[str] = None,
     fixative: Optional[str] = None,
     specimen_id: Optional[str] = None,
@@ -374,7 +326,7 @@ def create_sample(
     ----------
     sample_id: str
         Identifier for the sample.
-    stainings: Sequence[str]
+    stainings: Optional[Sequence[str]] = None
         Stainings used. See SpecimenStainsCode.list() for allowed values.
     embedding_medium: Optional[str] = None
         Embedding medium used. See SpecimenEmbeddingMediaCode.list() for
@@ -404,13 +356,15 @@ def create_sample(
         Dataset containing a sample description.
     """
     sample_preparation_steps: List[SpecimenPreparationStep] = []
-    sample_preparation_step = create_sample_preparation_step(
-        sample_id,
-        stainings,
-        embedding_medium,
-        fixative
-    )
-    sample_preparation_steps.append(sample_preparation_step)
+    if stainings is not None:
+        sample_preparation_step = create_sample_preparation_step(
+            sample_id,
+            stainings,
+            embedding_medium,
+            fixative
+        )
+        sample_preparation_steps.append(sample_preparation_step)
+
     if specimen_id is not None:
         sample_sampling_step = create_sample_sampling_step(
             sample_id,
@@ -437,9 +391,9 @@ def create_sample(
 
 def create_sample_preparation_step(
     specimen_id: str,
-    stainings: Sequence[str],
-    embedding_medium: Optional[str],
-    fixative: Optional[str]
+    stainings: Sequence[str] = [],
+    embedding_medium: Optional[str] = None,
+    fixative: Optional[str] = None,
 ) -> SpecimenPreparationStep:
     """Create SpecimenPreparationStep for a preparation step.
 
@@ -447,7 +401,7 @@ def create_sample_preparation_step(
     ----------
     specimen_id: str
         ID of specimen that has been prepared.
-    stainings: Sequence[str]
+    stainings: Optional[Sequence[str]] = None
         Sequence of stainings used.
     embedding_medium: Optional[str] = None
         Embedding medium used.
@@ -470,13 +424,11 @@ def create_sample_preparation_step(
     else:
         fixative_code = None
 
-    processing_type = SpecimenPreparationProcedureCode('Staining').code
     processing_procedure = SpecimenStaining([
         SpecimenStainsCode(staining).code for staining in stainings
     ])
     sample_preparation_step = SpecimenPreparationStep(
         specimen_id=specimen_id,
-        processing_type=processing_type,
         processing_procedure=processing_procedure,
         embedding_medium=embedding_medium_code,
         fixative=fixative_code
@@ -524,9 +476,6 @@ def create_sample_sampling_step(
     )
     sample_sampling_step = SpecimenPreparationStep(
         specimen_id=sample_id,
-        processing_type=SpecimenPreparationProcedureCode(
-            'Sampling of tissue specimen'
-        ).code,
         processing_procedure=SpecimenSampling(
                 method=sampling_method_code.code,
                 parent_specimen_id=specimen_id,
@@ -679,10 +628,51 @@ def create_brightfield_optical_path_module(
     return dataset
 
 
+def create_whole_slide_microscopy_image_module(
+    offset: Tuple[float, float] = (0.0, 0.0),
+    image_orientation: Tuple[int, int, int, int, int, int] = (
+        -1, 0, 0, 0, -1, 0
+    )
+) -> Dataset:
+    """Return dataset containing (parts of) whole slide microscopy image.
+    module.
+
+    Parameters
+    ----------
+    image_offset: Tuple[float, float] = 0.0
+        X and Y offset (in mm) to first pixel in image data.
+    image_orientation: Tuple[int, int, int, int, int, int] = (
+        -1, 0, 0, 0, -1, 0
+    ),
+        Orientation of slide.
+    uid_generator: Callable[..., Uid] = generate_uid
+        Function that can generate Uids.
+
+    Returns
+    ----------
+    Dataset
+        Dataset containing (parts of) whole slide microscopy image.
+    """
+
+    dataset = Dataset()
+    dataset.BurnedInAnnotation = 'NO'
+    dataset.SpecimenLabelInImage = 'NO'
+    dataset.VolumetricProperties = 'VOLUME'
+    dataset.ImageOrientationSlide = list(image_orientation)
+    offset_item = Dataset()
+    offset_item.x_offset = offset[0]
+    offset_item.y_offset = offset[1]
+    dataset.TotalPixelMatrixOriginSequence = DicomSequence([offset_item])
+    dataset.FocusMethod = 'AUTO'
+    dataset.ExtendedDepthOfField = 'NO'
+
+    return dataset
+
+
 def create_default_modules(
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> List[Dataset]:
-    """Return default module dataset for testing.
+    """Return default module dataset to complement missing required properties.
 
     Parameters
     ----------
@@ -697,7 +687,7 @@ def create_default_modules(
     modules: List[Dataset] = []
 
     # Generic study module
-    modules.append(create_study_module())
+    modules.append(create_study_module(uid_generator=uid_generator))
 
     # Generic patient module
     modules.append(create_patient_module())
@@ -710,7 +700,6 @@ def create_default_modules(
         'Unkown',
         samples=[create_sample(
             sample_id='Unkown',
-            stainings=['water soluble eosin stain', 'hematoxylin stain'],
             uid_generator=uid_generator
         )]
     ))
@@ -718,4 +707,38 @@ def create_default_modules(
     # Generic optical path sequence
     modules.append(create_brightfield_optical_path_module())
 
+    # Generic (partial) whole slide microscopy image module
+    modules.append(create_whole_slide_microscopy_image_module())
+
     return modules
+
+
+def merge_dataset(first: Dataset, second: Dataset):
+    """Merge elements from second dataset not present in first dataset into
+    first dataset. Also merges sequences defined in SEQUENCES_TO_MERGE."""
+    SEQUENCES_TO_MERGE = [
+        'SharedFunctionalGroupsSequence',
+        'PixelMeasuresSequence'
+    ]
+    for element in second:
+        if element.keyword not in first:
+            first[element.keyword] = element
+        elif element.VR == 'SQ' and element.keyword in SEQUENCES_TO_MERGE:
+            merged_item = merge_dataset(
+                first[element.keyword][0],
+                element[0]
+            )
+            first[element.keyword] = DataElement(
+                element.keyword,
+                element.VR,
+                DicomSequence([merged_item])
+            )
+
+    return first
+
+
+def add_default_modules(base_dataset: Dataset) -> Dataset:
+    default_modules = create_default_modules()
+    for module in default_modules:
+        base_dataset = merge_dataset(base_dataset, module)
+    return base_dataset

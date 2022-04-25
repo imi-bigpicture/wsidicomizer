@@ -22,13 +22,14 @@ from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import (JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit,
                          generate_uid)
+from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit, generate_uid
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
 
 from wsidicomizer.encoding import Encoder
 
-from .dataset import get_image_type
+from .dataset import get_image_type, merge_dataset
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -91,45 +92,12 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-        shared_functional_group_sequence = Dataset()
-        if self.pixel_spacing is None:
-            if image_flavor == 'VOLUME':
-                raise ValueError(
-                    "Image flavor 'VOLUME' requires pixel spacing to be set"
-                )
-        else:
-
-            pixel_measure_sequence = Dataset()
-            pixel_measure_sequence.PixelSpacing = [
-                DSfloat(self.pixel_spacing.width, True),
-                DSfloat(self.pixel_spacing.height, True)
-            ]
-            pixel_measure_sequence.SpacingBetweenSlices = 0.0
-            pixel_measure_sequence.SliceThickness = 0.0
-            shared_functional_group_sequence.PixelMeasuresSequence = (
-                DicomSequence([pixel_measure_sequence])
-            )
-            dataset.SharedFunctionalGroupsSequence = DicomSequence(
-                [shared_functional_group_sequence]
-            )
-            dataset.ImagedVolumeWidth = (
-                self.image_size.width * self.pixel_spacing.width
-            )
-            dataset.ImagedVolumeHeight = (
-                self.image_size.height * self.pixel_spacing.height
-            )
-            dataset.ImagedVolumeDepth = 0.0
-
         dataset.DimensionOrganizationType = 'TILED_FULL'
         dataset.TotalPixelMatrixColumns = self.image_size.width
         dataset.TotalPixelMatrixRows = self.image_size.height
         dataset.Columns = self.tile_size.width
         dataset.Rows = self.tile_size.height
-        dataset.NumberOfFrames = (
-            self.tiled_size.width
-            * self.tiled_size.height
-        )
-
+        dataset.InstanceNumber = instance_number
         if image_data.transfer_syntax == JPEGBaseline8Bit:
             dataset.BitsAllocated = 8
             dataset.BitsStored = 8
@@ -167,6 +135,37 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         dataset.InstanceNumber = instance_number
         dataset.FocusMethod = 'AUTO'
         dataset.ExtendedDepthOfField = 'NO'
+
+        if self.pixel_spacing is None:
+            if image_flavor == 'VOLUME':
+                raise ValueError(
+                    "Image flavor 'VOLUME' requires pixel spacing to be set"
+                )
+        else:
+            dataset_to_merge = Dataset()
+            shared_functional_group_sequence = Dataset()
+            pixel_measure_sequence = Dataset()
+            pixel_measure_sequence.PixelSpacing = [
+                DSfloat(self.pixel_spacing.width, True),
+                DSfloat(self.pixel_spacing.height, True)
+            ]
+            pixel_measure_sequence.SpacingBetweenSlices = 0.0
+            pixel_measure_sequence.SliceThickness = 0.0
+            shared_functional_group_sequence.PixelMeasuresSequence = (
+                DicomSequence([pixel_measure_sequence])
+            )
+            dataset_to_merge.SharedFunctionalGroupsSequence = DicomSequence(
+                [shared_functional_group_sequence]
+            )
+            dataset_to_merge.ImagedVolumeWidth = (
+                self.image_size.width * self.pixel_spacing.width
+            )
+            dataset_to_merge.ImagedVolumeHeight = (
+                self.image_size.height * self.pixel_spacing.height
+            )
+            dataset_to_merge.ImagedVolumeDepth = 0.0
+            dataset = merge_dataset(dataset, dataset_to_merge)
+
         return WsiDataset(dataset)
 
     def _encode(
