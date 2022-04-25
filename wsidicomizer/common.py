@@ -20,14 +20,14 @@ import numpy as np
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import UID, JPEGBaseline8Bit, generate_uid
+from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit, generate_uid
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
 
 from wsidicomizer.encoding import Encoder
 
-from .dataset import get_image_type
+from .dataset import get_image_type, merge_dataset
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -95,14 +95,46 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-        shared_functional_group_sequence = Dataset()
+        dataset.DimensionOrganizationType = 'TILED_FULL'
+        dataset.TotalPixelMatrixColumns = self.image_size.width
+        dataset.TotalPixelMatrixRows = self.image_size.height
+        dataset.Columns = self.tile_size.width
+        dataset.Rows = self.tile_size.height
+        dataset.InstanceNumber = instance_number
+        if transfer_syntax == JPEGBaseline8Bit:
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            dataset.LossyImageCompression = '01'
+            dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+            dataset.PlanarConfiguration = 0
+        elif transfer_syntax == JPEG2000:
+            # TODO JPEG2000 can have 1-38 bit depth
+            # And might not be lossy
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            dataset.LossyImageCompression = '01'
+            dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_15444_1'
+            dataset.PlanarConfiguration = 0
+        if photometric_interpretation == 'YBR_FULL':
+            dataset.PhotometricInterpretation = (
+                photometric_interpretation
+            )
+            dataset.SamplesPerPixel = 3
+
         if self.pixel_spacing is None:
             if image_flavor == 'VOLUME':
                 raise ValueError(
                     "Image flavor 'VOLUME' requires pixel spacing to be set"
                 )
         else:
-
+            dataset_to_merge = Dataset()
+            shared_functional_group_sequence = Dataset()
             pixel_measure_sequence = Dataset()
             pixel_measure_sequence.PixelSpacing = [
                 DSfloat(self.pixel_spacing.width, True),
@@ -113,43 +145,18 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             shared_functional_group_sequence.PixelMeasuresSequence = (
                 DicomSequence([pixel_measure_sequence])
             )
-            dataset.SharedFunctionalGroupsSequence = DicomSequence(
+            dataset_to_merge.SharedFunctionalGroupsSequence = DicomSequence(
                 [shared_functional_group_sequence]
             )
-            dataset.ImagedVolumeWidth = (
+            dataset_to_merge.ImagedVolumeWidth = (
                 self.image_size.width * self.pixel_spacing.width
             )
-            dataset.ImagedVolumeHeight = (
+            dataset_to_merge.ImagedVolumeHeight = (
                 self.image_size.height * self.pixel_spacing.height
             )
-            dataset.ImagedVolumeDepth = 0.0
+            dataset_to_merge.ImagedVolumeDepth = 0.0
+            dataset = merge_dataset(dataset, dataset_to_merge)
 
-        dataset.DimensionOrganizationType = 'TILED_FULL'
-        dataset.TotalPixelMatrixColumns = self.image_size.width
-        dataset.TotalPixelMatrixRows = self.image_size.height
-        dataset.Columns = self.tile_size.width
-        dataset.Rows = self.tile_size.height
-        dataset.NumberOfFrames = (
-            self.tiled_size.width
-            * self.tiled_size.height
-        )
-
-        if transfer_syntax == JPEGBaseline8Bit:
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            # dataset.LossyImageCompressionRatio = 1
-            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-        if photometric_interpretation == 'YBR_FULL':
-            dataset.PhotometricInterpretation = photometric_interpretation
-            dataset.SamplesPerPixel = 3
-
-        dataset.PlanarConfiguration = 0
-
-        dataset.InstanceNumber = instance_number
-        dataset.FocusMethod = 'AUTO'
-        dataset.ExtendedDepthOfField = 'NO'
         return WsiDataset(dataset)
 
     def _encode(
