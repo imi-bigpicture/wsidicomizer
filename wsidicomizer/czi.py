@@ -28,7 +28,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaImageData, MetaDicomizer
-from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.dataset import add_default_modules, create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
 
@@ -117,6 +117,10 @@ class CziImageData(MetaImageData):
     @property
     def transfer_syntax(self) -> Uid:
         return self._encoder.transfer_syntax
+
+    @property
+    def photometric_interpretation(self) -> str:
+        return self._encoder.photometric_interpretation(self.samples_per_pixel)
 
     @property
     def pixel_spacing(self) -> SizeMm:
@@ -289,8 +293,8 @@ class CziImageData(MetaImageData):
             block_data.shape = self._size_to_numpy_shape(block_size)
             # Paste in block data into tile.
             image_data[
-            block_start_in_tile.y:block_end_in_tile.y,
-            block_start_in_tile.x:block_end_in_tile.x,
+                block_start_in_tile.y:block_end_in_tile.y,
+                block_start_in_tile.x:block_end_in_tile.x,
             ] = block_data[
                 tile_start_in_block.y:tile_end_in_block.y,
                 tile_start_in_block.x:tile_end_in_block.x
@@ -513,7 +517,7 @@ class CziDicomizer(MetaDicomizer):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
     ) -> WsiDicom:
         """Open czi file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
@@ -539,9 +543,10 @@ class CziDicomizer(MetaDicomizer):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x2 subsampling.
+            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
+            subsampling.
 
         Returns
         ----------
@@ -556,6 +561,7 @@ class CziDicomizer(MetaDicomizer):
             jpeg_subsampling
         )
         base_dataset = create_base_dataset(modules)
+        base_dataset = add_default_modules(base_dataset)
         base_level_instance = cls._create_instance(
             CziImageData(filepath, tile_size, encoder),
             base_dataset,

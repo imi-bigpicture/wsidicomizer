@@ -17,7 +17,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 from PIL import Image
 from pydicom import Dataset
-from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
+from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
@@ -25,7 +25,8 @@ from wsidicom.geometry import Point, Size, SizeMm
 from opentile import OpenTile
 from opentile.common import OpenTilePage, Tiler
 from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
+from wsidicomizer.dataset import (add_default_modules, add_from_tiler,
+                                  create_base_dataset)
 from wsidicomizer.encoding import Encoder, create_encoder
 
 
@@ -124,6 +125,31 @@ class OpenTileImageData(MetaImageData):
         """The pyramidal index in relation to the base layer."""
         return self._tiled_page.pyramid_index
 
+    @property
+    def photometric_interpretation(self) -> str:
+        if self.needs_transcoding:
+            return self._encoder.photometric_interpretation(
+                self.samples_per_pixel
+            )
+        if self._tiled_page.photometric_interpretation == 'YCBCR':
+            if self.transfer_syntax == JPEGBaseline8Bit:
+                return 'YBR_FULL_422'
+            elif self.transfer_syntax == JPEG2000:
+                return 'YBR_ICT'
+            elif self.transfer_syntax == JPEG2000Lossless:
+                return 'YBR_RCT'
+        elif self._tiled_page.photometric_interpretation == 'RGB':
+            return 'RGB'
+        elif self._tiled_page.photometric_interpretation == 'MINISBLACK':
+            return 'MONOCHROME2'
+        raise NotImplementedError(
+            "Non-implemented photometric interpretation."
+        )
+
+    @property
+    def samples_per_pixel(self) -> int:
+        return self._tiled_page.samples_per_pixel
+
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.
@@ -143,7 +169,7 @@ class OpenTileImageData(MetaImageData):
             Tile bytes.
         """
         if z not in self.focal_planes or path not in self.optical_paths:
-            raise ValueError
+            raise ValueError()
         if self.needs_transcoding:
             decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
             return self._encode(decoded_tile)
@@ -245,7 +271,7 @@ class OpenTileDicomizer(MetaDicomizer):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
     ) -> WsiDicom:
         """Open tiff file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
@@ -271,9 +297,10 @@ class OpenTileDicomizer(MetaDicomizer):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x2 subsampling.
+            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
+            subsampling.
 
         Returns
         ----------
@@ -341,11 +368,12 @@ class OpenTileDicomizer(MetaDicomizer):
         Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]
             Lists of created level, label and overivew instances.
         """
-        base_dataset = populate_base_dataset(
+        base_dataset = add_from_tiler(
             tiler,
             base_dataset,
             include_confidential
         )
+        base_dataset = add_default_modules(base_dataset)
         instance_number = 0
         level_instances = [
             cls._create_instance(
