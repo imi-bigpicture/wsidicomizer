@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
 import unittest
 
 import pytest
@@ -21,8 +22,11 @@ from .convert_test_functions import ConvertTestBase
 
 @pytest.mark.convert_svs
 class SvsConvertTest(ConvertTestBase, unittest.TestCase):
-    testdata_subfolder = 'svs'
-    suffix = '.svs'
+    test_data_dir = os.environ.get(
+        "SVS_TESTDIR",
+        "C:/temp/opentile/svs/"
+    )
+    input_filename = 'input.svs'
     include_levels = [4, 6]
     tile_size = None
 

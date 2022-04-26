@@ -30,7 +30,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import add_default_modules, create_base_dataset
+from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
@@ -86,14 +86,6 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
         return self._encoder.transfer_syntax
-
-    @property
-    def photometric_interpretation(self) -> str:
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
-
-    @property
-    def samples_per_pixel(self) -> int:
-        return 3
 
     @property
     def focal_planes(self) -> List[float]:
@@ -322,11 +314,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         CORNERS_Y = (BOTTOM, BOTTOM, TOP, TOP)
         CORNERS_X = (LEFT, RIGHT, LEFT, RIGHT)
         TRANSPARENCY = 3
+        background = np.array(self.blank_color)
         transparency = data[:, :, TRANSPARENCY]
         if np.all(transparency[CORNERS_Y, CORNERS_X] == 0):
             if np.all(transparency == 0):
                 return True
-        background = np.array(self.blank_color)
         if np.all(data[CORNERS_Y, CORNERS_X, 0:TRANSPARENCY] == background):
             if np.all(data[:, :, 0:TRANSPARENCY] == background):
                 return True
@@ -501,7 +493,7 @@ class OpenSlideDicomizer(MetaDicomizer):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '422'
     ) -> WsiDicom:
         """Open openslide file in filepath as WsiDicom object. Note that
         created instances always has a random UID.
@@ -527,10 +519,9 @@ class OpenSlideDicomizer(MetaDicomizer):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '422'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
+            no subsampling, '422' for 2x2 subsampling.
 
         Returns
         ----------
@@ -545,8 +536,6 @@ class OpenSlideDicomizer(MetaDicomizer):
             subsampling=jpeg_subsampling
         )
         base_dataset = create_base_dataset(modules)
-        base_dataset = add_default_modules(base_dataset)
-
         slide = OpenSlide(filepath)
         instance_number = 0
         level_instances = [

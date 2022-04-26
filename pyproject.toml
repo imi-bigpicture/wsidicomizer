@@ -17,20 +17,19 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-wsidicom = "^0.3.0"
-opentile = "^0.3.0"
+python = ">=3.7,<3.11"
+wsidicom = "^0.2.0"
+opentile = "^0.2.0"
 openslide-python = "^1.1.2"
 numpy = "^1.21.2"
 pydicom = "^2.2.1"
-highdicom = "^0.15.0"
+highdicom = "^0.9.2"
 czifile = "^2019.7.2"
 imagecodecs = "^2021.8.26"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 pytest-watch = "^4.2.0"
-pycodestyle = "^2.8.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

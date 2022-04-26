@@ -20,16 +20,14 @@ import numpy as np
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import (JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit,
-                         generate_uid)
-from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit, generate_uid
+from pydicom.uid import UID, JPEGBaseline8Bit, generate_uid
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
 
 from wsidicomizer.encoding import Encoder, JpegEncoder
 
-from .dataset import get_image_type, merge_dataset
+from .dataset import get_image_type
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -58,16 +56,27 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         raise NotImplementedError
 
     @property
-    @abstractmethod
+    def samples_per_pixel(self) -> int:
+        return 3
+
+    @property
     def photometric_interpretation(self) -> str:
-        raise NotImplementedError()
+        # Should be derived from the used subsample format
+        # DICOM 2022a part 3 IODs - C.8.12.4.1.5 Photometric Interpretation
+        # and Samples Per Pixel
+        if isinstance(self._encoder, JpegEncoder) and \
+            self._encoder.subsampling == '422':
+            return 'YBR_FULL_422'
+        # YBR_FULL is NOT a valid setting for any encoder under C.8.12.4.1.5!
+        return 'YBR_FULL'
 
     def create_instance_dataset(
         self,
         base_dataset: Dataset,
         image_flavor: str,
         instance_number: int,
-        image_data: ImageData
+        transfer_syntax: UID,
+        photometric_interpretation: str
     ) -> WsiDataset:
         """Return instance dataset for image_data based on base dataset.
 
@@ -78,8 +87,8 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         image_flavor:
             Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
         instance_number: int
-        image_data:
-            Image data to crate dataset for.
+        transfer_syntax: UID
+        photometric_interpretation: str
 
         Returns
         ----------
@@ -92,58 +101,14 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-        dataset.DimensionOrganizationType = 'TILED_FULL'
-        dataset.TotalPixelMatrixColumns = self.image_size.width
-        dataset.TotalPixelMatrixRows = self.image_size.height
-        dataset.Columns = self.tile_size.width
-        dataset.Rows = self.tile_size.height
-        dataset.InstanceNumber = instance_number
-        if image_data.transfer_syntax == JPEGBaseline8Bit:
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            dataset.LossyImageCompressionRatio = 1
-            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-            dataset.LossyImageCompression = '01'
-        elif image_data.transfer_syntax == JPEG2000:
-            # TODO JPEG2000 can have higher bitcount
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            dataset.LossyImageCompressionRatio = 1
-            dataset.LossyImageCompressionMethod = 'ISO_15444_1'
-            dataset.LossyImageCompression = '01'
-        elif image_data.transfer_syntax == JPEG2000Lossless:
-            # TODO JPEG2000 can have higher bitcount
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            dataset.LossyImageCompression = '00'
-        else:
-            raise ValueError("Non-supported transfer syntax.")
-
-        dataset.PhotometricInterpretation = (
-            image_data.photometric_interpretation
-        )
-        dataset.SamplesPerPixel = image_data.samples_per_pixel
-
-        dataset.PlanarConfiguration = 0
-
-        dataset.InstanceNumber = instance_number
-        dataset.FocusMethod = 'AUTO'
-        dataset.ExtendedDepthOfField = 'NO'
-
+        shared_functional_group_sequence = Dataset()
         if self.pixel_spacing is None:
             if image_flavor == 'VOLUME':
                 raise ValueError(
                     "Image flavor 'VOLUME' requires pixel spacing to be set"
                 )
         else:
-            dataset_to_merge = Dataset()
-            shared_functional_group_sequence = Dataset()
+
             pixel_measure_sequence = Dataset()
             pixel_measure_sequence.PixelSpacing = [
                 DSfloat(self.pixel_spacing.width, True),
@@ -156,24 +121,53 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             shared_functional_group_sequence.PixelMeasuresSequence = (
                 DicomSequence([pixel_measure_sequence])
             )
+            dataset.SharedFunctionalGroupsSequence = DicomSequence(
+                [shared_functional_group_sequence]
+            )
+            dataset.ImagedVolumeWidth = (
+                self.image_size.width * self.pixel_spacing.width
+            )
+            dataset.ImagedVolumeHeight = (
+                self.image_size.height * self.pixel_spacing.height
+            )
+            dataset.ImagedVolumeDepth = pixel_measure_sequence.SliceThickness
+            # DICOM 2022a part 3 IODs - C.8.12.9 Whole Slide Microscopy Image
+            # Frame Type Macro. Analogous to ImageType and shared by all
+            # frames so clone
             wsi_frame_type_item = Dataset()
             wsi_frame_type_item.FrameType = dataset.ImageType
             shared_functional_group_sequence.WholeSlideMicroscopyImageFrameTypeSequence = (
                 DicomSequence([wsi_frame_type_item])
             )
-            dataset_to_merge.SharedFunctionalGroupsSequence = DicomSequence(
-                [shared_functional_group_sequence]
-            )
-            dataset_to_merge.ImagedVolumeWidth = (
-                self.image_size.width * self.pixel_spacing.width
-            )
-            dataset_to_merge.ImagedVolumeHeight = (
-                self.image_size.height * self.pixel_spacing.height
-            )
-            dataset_to_merge.ImagedVolumeDepth = pixel_measure_sequence.SliceThickness
-            
-            dataset = merge_dataset(dataset, dataset_to_merge)
 
+        dataset.DimensionOrganizationType = 'TILED_FULL'
+        dataset.TotalPixelMatrixColumns = self.image_size.width
+        dataset.TotalPixelMatrixRows = self.image_size.height
+        dataset.Columns = self.tile_size.width
+        dataset.Rows = self.tile_size.height
+        dataset.NumberOfFrames = (
+            self.tiled_size.width
+            * self.tiled_size.height
+        )
+
+        if transfer_syntax == JPEGBaseline8Bit:
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            dataset.LossyImageCompression = '01'
+            dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+        if photometric_interpretation == 'YBR_FULL' or \
+            photometric_interpretation == 'YBR_FULL_422':
+            dataset.PhotometricInterpretation = photometric_interpretation
+            dataset.SamplesPerPixel = 3
+
+        dataset.PlanarConfiguration = 0
+
+        dataset.InstanceNumber = instance_number
+        dataset.FocusMethod = 'AUTO'
+        dataset.ExtendedDepthOfField = 'NO'
         return WsiDataset(dataset)
 
     def _encode(
@@ -219,7 +213,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '422'
     ) -> WsiDicom:
         """Open file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
@@ -245,10 +239,9 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '422'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
+            no subsampling, '422' for 2x2 subsampling.
 
         Returns
         ----------
@@ -286,7 +279,8 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             base_dataset,
             image_type,
             instance_number,
-            image_data
+            image_data.transfer_syntax,
+            image_data.photometric_interpretation
         )
 
         return WsiInstance(

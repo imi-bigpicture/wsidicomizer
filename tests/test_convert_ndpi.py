@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
 import unittest
 
 import pytest
@@ -21,8 +22,11 @@ from .convert_test_functions import ConvertTestBase
 
 @pytest.mark.convert_ndpi
 class NdpiConvertTest(ConvertTestBase, unittest.TestCase):
-    testdata_subfolder = 'ndpi'
-    suffix = '.ndpi'
+    test_data_dir = os.environ.get(
+        "NDPI_TESTDIR",
+        "C:/temp/opentile/ndpi/"
+    )
+    input_filename = 'input.ndpi'
     include_levels = [4, 6]
     tile_size = 1024
 

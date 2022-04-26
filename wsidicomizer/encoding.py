@@ -35,10 +35,6 @@ class Encoder(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def photometric_interpretation(self, channels: int) -> str:
-        raise NotImplementedError()
-
-    @abstractmethod
     def encode(
         self,
         data: np.ndarray
@@ -53,7 +49,7 @@ class JpegEncoder(Encoder):
     def __init__(
         self,
         quality: int = 90,
-        subsampling: Optional[str] = '420'
+        subsampling: Optional[str] = '422'
     ) -> None:
         """Creates a JPEG encoder with specified settings.
 
@@ -61,28 +57,18 @@ class JpegEncoder(Encoder):
         ----------
         quality: int = 90
             The encoding quality. To not use higher than 95.
-        subsampling: Optional[str] = '420'
-            Subsampling option. Use '444' for no subsampling, '422' for 2x1
-            subsampling, and '420' for 2x2 subsampling.
+        subsampling: Optional[str] = '422'
+            Subsampling option.
+
         """
         self._quality = quality
-        if subsampling not in ['444', '422', '420']:
-            raise NotImplementedError(
-                f"Only '444', '422' and '420' subsampling options implemented."
-            )
         self._subsampling = subsampling
+        self._outcolorspace = 'YCBCR'
 
     @property
     def transfer_syntax(self) -> UID:
         """Transfer syntax of encoder."""
         return JPEGBaseline8Bit
-
-    def photometric_interpretation(self, channels: int) -> str:
-        if channels == 1:
-            return 'MONOCHROME2'
-        elif channels == 3:
-            return 'YBR_FULL_422'
-        raise ValueError()
 
     @property
     def quality(self) -> int:
@@ -115,6 +101,7 @@ class JpegEncoder(Encoder):
         return jpeg8_encode(
             data,
             level=self._quality,
+            outcolorspace=self._outcolorspace,
             subsampling=self._subsampling
         )
 
@@ -138,15 +125,6 @@ class Jpeg2000Encoder(Encoder):
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000
-
-    def photometric_interpretation(self, channels: int) -> str:
-        if channels == 1:
-            return 'MONOCRHOME2'
-        elif channels == 3:
-            if self.transfer_syntax == JPEG2000Lossless:
-                return 'YBR_RCT'
-            return 'YBR_ICT'
-        raise ValueError()
 
     @property
     def transfer_syntax(self) -> UID:

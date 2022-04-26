@@ -113,11 +113,10 @@ def main():
     parser.add_argument(
         '--subsampling',
         type=str,
-        default='420',
+        default='422',
         help=(
             "Subsampling option if using jpeg for re-encoding. Use '444' for "
-            "no subsampling, '422' for 2x1 subsampling, and '420' for 2x2 "
-            "subsampling."
+            "no subsampling, '422' for 2x2 subsampling."
         )
     )
 
