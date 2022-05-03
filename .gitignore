@@ -5,3 +5,4 @@ Pipfile.lock*
 *__pycache__**
 .vscode
 typings
+tests/testdata/slides

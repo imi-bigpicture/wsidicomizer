@@ -20,14 +20,15 @@ import numpy as np
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit, generate_uid
+from pydicom.uid import (JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit,
+                         generate_uid)
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
 
 from wsidicomizer.encoding import Encoder
 
-from .dataset import get_image_type, merge_dataset
+from .dataset import get_image_type
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -53,24 +54,19 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
     @abstractmethod
     def pyramid_index(self) -> int:
         """Should return pyramid level for image data."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
-    def samples_per_pixel(self) -> int:
-        return 3
-
-    @property
+    @abstractmethod
     def photometric_interpretation(self) -> str:
-        # Should be derived from the used subsample format
-        return 'YBR_FULL'
+        raise NotImplementedError()
 
     def create_instance_dataset(
         self,
         base_dataset: Dataset,
         image_flavor: str,
         instance_number: int,
-        transfer_syntax: UID,
-        photometric_interpretation: str
+        image_data: ImageData
     ) -> WsiDataset:
         """Return instance dataset for image_data based on base dataset.
 
@@ -81,8 +77,8 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         image_flavor:
             Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
         instance_number: int
-        transfer_syntax: UID
-        photometric_interpretation: str
+        image_data:
+            Image data to crate dataset for.
 
         Returns
         ----------
@@ -95,46 +91,14 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             self.pyramid_index
         )
         dataset.SOPInstanceUID = generate_uid(prefix=None)
-        dataset.DimensionOrganizationType = 'TILED_FULL'
-        dataset.TotalPixelMatrixColumns = self.image_size.width
-        dataset.TotalPixelMatrixRows = self.image_size.height
-        dataset.Columns = self.tile_size.width
-        dataset.Rows = self.tile_size.height
-        dataset.InstanceNumber = instance_number
-        if transfer_syntax == JPEGBaseline8Bit:
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            dataset.LossyImageCompression = '01'
-            dataset.LossyImageCompressionRatio = 1
-            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-            dataset.PlanarConfiguration = 0
-        elif transfer_syntax == JPEG2000:
-            # TODO JPEG2000 can have 1-38 bit depth
-            # And might not be lossy
-            dataset.BitsAllocated = 8
-            dataset.BitsStored = 8
-            dataset.HighBit = 7
-            dataset.PixelRepresentation = 0
-            dataset.LossyImageCompression = '01'
-            dataset.LossyImageCompressionRatio = 1
-            dataset.LossyImageCompressionMethod = 'ISO_15444_1'
-            dataset.PlanarConfiguration = 0
-        if photometric_interpretation == 'YBR_FULL':
-            dataset.PhotometricInterpretation = (
-                photometric_interpretation
-            )
-            dataset.SamplesPerPixel = 3
-
+        shared_functional_group_sequence = Dataset()
         if self.pixel_spacing is None:
             if image_flavor == 'VOLUME':
                 raise ValueError(
                     "Image flavor 'VOLUME' requires pixel spacing to be set"
                 )
         else:
-            dataset_to_merge = Dataset()
-            shared_functional_group_sequence = Dataset()
+
             pixel_measure_sequence = Dataset()
             pixel_measure_sequence.PixelSpacing = [
                 DSfloat(self.pixel_spacing.width, True),
@@ -145,18 +109,64 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             shared_functional_group_sequence.PixelMeasuresSequence = (
                 DicomSequence([pixel_measure_sequence])
             )
-            dataset_to_merge.SharedFunctionalGroupsSequence = DicomSequence(
+            dataset.SharedFunctionalGroupsSequence = DicomSequence(
                 [shared_functional_group_sequence]
             )
-            dataset_to_merge.ImagedVolumeWidth = (
+            dataset.ImagedVolumeWidth = (
                 self.image_size.width * self.pixel_spacing.width
             )
-            dataset_to_merge.ImagedVolumeHeight = (
+            dataset.ImagedVolumeHeight = (
                 self.image_size.height * self.pixel_spacing.height
             )
-            dataset_to_merge.ImagedVolumeDepth = 0.0
-            dataset = merge_dataset(dataset, dataset_to_merge)
+            dataset.ImagedVolumeDepth = 0.0
 
+        dataset.DimensionOrganizationType = 'TILED_FULL'
+        dataset.TotalPixelMatrixColumns = self.image_size.width
+        dataset.TotalPixelMatrixRows = self.image_size.height
+        dataset.Columns = self.tile_size.width
+        dataset.Rows = self.tile_size.height
+        dataset.NumberOfFrames = (
+            self.tiled_size.width
+            * self.tiled_size.height
+        )
+
+        if image_data.transfer_syntax == JPEGBaseline8Bit:
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            # dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_10918_1'
+            dataset.LossyImageCompression = '01'
+        elif image_data.transfer_syntax == JPEG2000:
+            # TODO JPEG2000 can have higher bitcount
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            # dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_15444_1'
+            dataset.LossyImageCompression = '01'
+        elif image_data.transfer_syntax == JPEG2000Lossless:
+            # TODO JPEG2000 can have higher bitcount
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            dataset.LossyImageCompression = '00'
+        else:
+            raise ValueError("Non-supported transfer syntax.")
+
+        dataset.PhotometricInterpretation = (
+            image_data.photometric_interpretation
+        )
+        dataset.SamplesPerPixel = image_data.samples_per_pixel
+
+        dataset.PlanarConfiguration = 0
+
+        dataset.InstanceNumber = instance_number
+        dataset.FocusMethod = 'AUTO'
+        dataset.ExtendedDepthOfField = 'NO'
         return WsiDataset(dataset)
 
     def _encode(
@@ -268,8 +278,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             base_dataset,
             image_type,
             instance_number,
-            image_data.transfer_syntax,
-            image_data.photometric_interpretation
+            image_data
         )
 
         return WsiInstance(
