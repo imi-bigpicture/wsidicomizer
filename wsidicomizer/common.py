@@ -212,7 +212,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
     ) -> WsiDicom:
         """Open file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
@@ -238,9 +238,10 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x2 subsampling.
+            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
+            subsampling.
 
         Returns
         ----------
