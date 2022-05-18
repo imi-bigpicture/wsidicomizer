@@ -15,11 +15,8 @@
 import datetime
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-from highdicom.content import (IssuerOfIdentifier, SpecimenCollection,
-                               SpecimenDescription, SpecimenPreparationStep,
+from highdicom.content import (SpecimenDescription, SpecimenPreparationStep,
                                SpecimenSampling, SpecimenStaining)
-from opentile.common import Tiler
-from opentile.interface import OpenTile
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
@@ -28,9 +25,10 @@ from pydicom.uid import generate_uid
 from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
                                   ConceptCode, SpecimenEmbeddingMediaCode,
                                   SpecimenFixativesCode,
-                                  SpecimenPreparationProcedureCode,
                                   SpecimenSamplingProcedureCode,
                                   SpecimenStainsCode)
+
+from opentile.common import Tiler
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
@@ -470,13 +468,11 @@ def create_sample_preparation_step(
     else:
         fixative_code = None
 
-    processing_type = SpecimenPreparationProcedureCode('Staining').code
     processing_procedure = SpecimenStaining([
         SpecimenStainsCode(staining).code for staining in stainings
     ])
     sample_preparation_step = SpecimenPreparationStep(
         specimen_id=specimen_id,
-        processing_type=processing_type,
         processing_procedure=processing_procedure,
         embedding_medium=embedding_medium_code,
         fixative=fixative_code
@@ -524,9 +520,6 @@ def create_sample_sampling_step(
     )
     sample_sampling_step = SpecimenPreparationStep(
         specimen_id=sample_id,
-        processing_type=SpecimenPreparationProcedureCode(
-            'Sampling of tissue specimen'
-        ).code,
         processing_procedure=SpecimenSampling(
                 method=sampling_method_code.code,
                 parent_specimen_id=specimen_id,

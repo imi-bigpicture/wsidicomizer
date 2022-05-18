@@ -1,6 +1,7 @@
 {
     "svs": {
         "CMU-1/CMU-1.svs": {
+            "photometric_interpretation": "RGB",
             "read_region": [
                 {
                     "location": {
@@ -50,6 +51,7 @@
             ]
         },
         "svs1/input.svs": {
+            "photometric_interpretation": "RGB",
             "read_region": [
                 {
                     "location": {
@@ -101,6 +103,7 @@
     },
     "czi": {
         "czi1/input.czi": {
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {
@@ -120,6 +123,7 @@
     },
     "mirax": {
         "CMU-1/CMU-1.mrxs":{
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {
@@ -131,7 +135,7 @@
                         "width": 500,
                         "height": 500
                     },
-                    "md5": "b8063815e6feac06e38b796c980dcb9d"
+                    "md5": "f36fe66216a26450737d5e283e3859f0"
                 },
                 {
                     "location": {
@@ -143,7 +147,7 @@
                         "width": 500,
                         "height": 500
                     },
-                    "md5": "8be57551e4939d0af318245c0d4fe185"
+                    "md5": "dedee8b463450327d1bb3da24633c6be"
                 }
             ],
             "read_thumbnail": []
@@ -151,6 +155,7 @@
     },
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {
@@ -195,11 +200,12 @@
                         "width": 512,
                         "height": 512
                     },
-                    "md5": "6f3fc9b2bc12cc5571d7315711a7e0a1"
+                    "md5": "ea87500dc544f45c6f600811138dad23"
                 }
             ]
         },
         "ndpi1/input.ndpi": {
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {
@@ -244,11 +250,12 @@
                         "width": 512,
                         "height": 512
                     },
-                    "md5": "fe42bfe83acdc612b43ffde9a3f31e44"
+                    "md5": "995791915459762ac1c251fc8351b4f6"
                 }
             ]
         },
         "ndpi2/input.ndpi": {
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {
@@ -288,6 +295,7 @@
     },
     "philips_tiff": {
         "philips1/input.tif": {
+            "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
                     "location": {

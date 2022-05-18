@@ -183,7 +183,7 @@ class ConvertTestBase:
                     wsi.levels[0].size // pow(2, region['level'])
                 ).to_tuple()
                 # Only run test if level is in open slide wsi
-                if not level_size in open_wsi.level_dimensions:
+                if level_size not in open_wsi.level_dimensions:
                     continue
                 im = wsi.read_region(
                     (region["location"]["x"], region["location"]["y"]),
@@ -249,4 +249,17 @@ class ConvertTestBase:
                     open_im.filter(blur)
                 )
                 for band_rms in ImageStat.Stat(diff).rms:
+                    print(file)
                     self.assertLess(band_rms, 2, region)  # type: ignore
+
+    def test_photometric_interpretation(self):
+        self._skip_if_no_testdefinitions()
+        for file, test_definitions in self.test_definitions.items():
+            if not Path(file) in self.test_folders:
+                continue
+            (wsi, _, _) = self.test_folders[Path(file)]
+            image_data = wsi.levels[0].default_instance.image_data
+            self.assertEqual(
+                image_data.photometric_interpretation,
+                test_definitions['photometric_interpretation']
+            )
