@@ -38,7 +38,7 @@ class WsiDicomizer:
     def open(
         filepath: str,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: int = 512,
+        tile_size: Optional[int] = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -55,7 +55,7 @@ class WsiDicomizer:
             Path to file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: int = 512
+        tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int]
             Optional list of levels to include. Include all levels if None.
@@ -109,7 +109,7 @@ class WsiDicomizer:
         filepath: str,
         output_path: Optional[str] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: int = 512,
+        tile_size: Optional[int] = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -132,7 +132,7 @@ class WsiDicomizer:
             Folder path to save files to.
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: int = 512
+        tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
              Function that can gernerate unique identifiers.

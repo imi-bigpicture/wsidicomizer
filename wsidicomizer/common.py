@@ -26,7 +26,7 @@ from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
 
-from wsidicomizer.encoding import Encoder, JpegEncoder
+from wsidicomizer.encoding import Encoder
 
 from .dataset import get_image_type
 
@@ -126,7 +126,10 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             # frames so clone
             wsi_frame_type_item = Dataset()
             wsi_frame_type_item.FrameType = dataset.ImageType
-            shared_functional_group_sequence.WholeSlideMicroscopyImageFrameTypeSequence = (
+            (
+                shared_functional_group_sequence.
+                WholeSlideMicroscopyImageFrameTypeSequence
+            ) = (
                 DicomSequence([wsi_frame_type_item])
             )
 
@@ -216,7 +219,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         cls,
         filepath: str,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: int = 512,
+        tile_size: Optional[int] = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -234,7 +237,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: int = 512
+        tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
             Levels to include. If None, include all levels.
