@@ -20,7 +20,8 @@ import numpy as np
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import UID, JPEGBaseline8Bit, generate_uid
+from pydicom.uid import (JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit,
+                         generate_uid)
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
 from wsidicom.instance import WsiDataset
@@ -53,30 +54,19 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
     @abstractmethod
     def pyramid_index(self) -> int:
         """Should return pyramid level for image data."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @property
-    def samples_per_pixel(self) -> int:
-        return 3
-
-    @property
+    @abstractmethod
     def photometric_interpretation(self) -> str:
-        # Should be derived from the used subsample format
-        # DICOM 2022a part 3 IODs - C.8.12.4.1.5 Photometric Interpretation
-        # and Samples Per Pixel
-        if isinstance(self._encoder, JpegEncoder) and \
-            self._encoder.subsampling == '422':
-            return 'YBR_FULL_422'
-        # YBR_FULL is NOT a valid setting for any encoder under C.8.12.4.1.5!
-        return 'YBR_FULL'
+        raise NotImplementedError()
 
     def create_instance_dataset(
         self,
         base_dataset: Dataset,
         image_flavor: str,
         instance_number: int,
-        transfer_syntax: UID,
-        photometric_interpretation: str
+        image_data: ImageData
     ) -> WsiDataset:
         """Return instance dataset for image_data based on base dataset.
 
@@ -87,8 +77,8 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         image_flavor:
             Type of instance ('VOLUME', 'LABEL', 'OVERVIEW)
         instance_number: int
-        transfer_syntax: UID
-        photometric_interpretation: str
+        image_data:
+            Image data to crate dataset for.
 
         Returns
         ----------
@@ -150,7 +140,7 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             * self.tiled_size.height
         )
 
-        if transfer_syntax == JPEGBaseline8Bit:
+        if image_data.transfer_syntax == JPEGBaseline8Bit:
             dataset.BitsAllocated = 8
             dataset.BitsStored = 8
             dataset.HighBit = 7
@@ -158,10 +148,30 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
             dataset.LossyImageCompression = '01'
             dataset.LossyImageCompressionRatio = 1
             dataset.LossyImageCompressionMethod = 'ISO_10918_1'
-        if photometric_interpretation == 'YBR_FULL' or \
-            photometric_interpretation == 'YBR_FULL_422':
-            dataset.PhotometricInterpretation = photometric_interpretation
-            dataset.SamplesPerPixel = 3
+            dataset.LossyImageCompression = '01'
+        elif image_data.transfer_syntax == JPEG2000:
+            # TODO JPEG2000 can have higher bitcount
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            # dataset.LossyImageCompressionRatio = 1
+            dataset.LossyImageCompressionMethod = 'ISO_15444_1'
+            dataset.LossyImageCompression = '01'
+        elif image_data.transfer_syntax == JPEG2000Lossless:
+            # TODO JPEG2000 can have higher bitcount
+            dataset.BitsAllocated = 8
+            dataset.BitsStored = 8
+            dataset.HighBit = 7
+            dataset.PixelRepresentation = 0
+            dataset.LossyImageCompression = '00'
+        else:
+            raise ValueError("Non-supported transfer syntax.")
+
+        dataset.PhotometricInterpretation = (
+            image_data.photometric_interpretation
+        )
+        dataset.SamplesPerPixel = image_data.samples_per_pixel
 
         dataset.PlanarConfiguration = 0
 
@@ -213,7 +223,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
     ) -> WsiDicom:
         """Open file in filepath as WsiDicom object. Note that created
         instances always has a random UID.
@@ -239,9 +249,10 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         encoding_quality: int = 90
             Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
             for lossless jpeg2000.
-        jpeg_subsampling: str = '422'
+        jpeg_subsampling: str = '420'
             Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x2 subsampling.
+            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
+            subsampling.
 
         Returns
         ----------
@@ -279,8 +290,7 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             base_dataset,
             image_type,
             instance_number,
-            image_data.transfer_syntax,
-            image_data.photometric_interpretation
+            image_data
         )
 
         return WsiInstance(
