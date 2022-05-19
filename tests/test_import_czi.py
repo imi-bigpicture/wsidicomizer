@@ -12,11 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Tuple
+from typing import Optional, Tuple
 
 import pytest
 from wsidicom import WsiDicom
@@ -37,7 +36,7 @@ class CziImportTest(ConvertTestBase, unittest.TestCase):
     @classmethod
     def open(cls, path: Path) -> Tuple[
         WsiDicom,
-        OpenSlide,
+        Optional[OpenSlide],
         TemporaryDirectory
     ]:
         tempdir = TemporaryDirectory()

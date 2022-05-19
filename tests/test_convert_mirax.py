@@ -38,6 +38,7 @@ class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
     def setUpClass(cls):
         super().setUpClass()
         _, openslide, _ = list(cls.test_folders.values())[0]
+        assert(openslide is not None)
         cls.openslide_imagedata = OpenSlideLevelImageData(
             openslide,
             0,
