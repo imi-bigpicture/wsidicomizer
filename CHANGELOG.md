@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ...
 
+## [0.2.0] - 2022-05-23
+### Added
+- Missing attributes for DICOM compatibility.
+- \_\_version__ added.
+
+### Changed
+- Drop support for Python 3.7.
+- Photometric interpreration changed to YBR_FULL_422 for (non-monochrome) jpeg and YBR_ICT or YBR_RCT for jpeg 2000.
+- 420 subsampling as default when re-encoding jpeg.
+
+### Fixed
+- Correct naming of X/YOffsetInSlideCoordinateSystem attribute.
+- Spelling errors.
+
 ## [0.1.3] - 2022-02-14
 ### Changed
 - Allow None as pixelspacing.
@@ -32,8 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.3..HEAD
-[0.1.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.2..0.1.3
+
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.2.0..HEAD
+[0.2.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.3..0.2.0
+[0.1.3]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.2..0.1.3
 [0.1.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.1..0.1.2
 [0.1.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.1.0..0.1.1
 [0.1.0]: https://github.com/imi-bigpicture/wsidicomizer/tree/v0.1.0
