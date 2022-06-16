@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from dataclasses import dataclass
 from xml.etree import ElementTree
 from collections import defaultdict
 from pathlib import Path
@@ -68,6 +69,13 @@ def get_text_from_element(
     return text
 
 
+@dataclass
+class CziBlock:
+    entry: DirectoryEntryDV
+    start: Point
+    size: Size
+
+
 class CziImageData(MetaImageData):
     def __init__(
         self,
@@ -105,7 +113,6 @@ class CziImageData(MetaImageData):
         )
         self._focal_plane_mapping = self._get_focal_plane_mapping()
         self._channel_mapping = self._get_channel_mapping()
-        self._block_directory = self._czi.filtered_subblock_directory
         self._tile_directory = self._create_tile_directory()
         self._blank_decoded_tile = Image.fromarray(self._create_blank_tile())
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
@@ -170,14 +177,11 @@ class CziImageData(MetaImageData):
         return self._image_origin
 
     @property
-    def block_directory(self) -> List[DirectoryEntryDV]:
-        """Return list of DirectoryEntryDV sorted by mosaic index."""
-        assert(isinstance(self._block_directory, list))
-        return self._block_directory
-
-    @property
-    def tile_directory(self) -> Dict[Tuple[Point, float, str], Sequence[int]]:
-        """Return dict of tiles with mosaic indices."""
+    def tile_directory(
+        self
+    ) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+        """Return dict of block, block start, and block size by tile position,
+        focal plane and optical path."""
         return self._tile_directory
 
     @property
@@ -292,29 +296,27 @@ class CziImageData(MetaImageData):
             # should already have checked).
             return image_data
 
-        for block_index in self.tile_directory[tile_point, z, path]:
+        for block in self.tile_directory[tile_point, z, path]:
             # For each block covering the tile
-            block = self.block_directory[block_index]
-            block_data: np.ndarray = block.data_segment().data()
+            block_data: np.ndarray = block.entry.data_segment().data()
 
             # Start and end coordiantes for block and tile
-            block_start, block_size = self._get_block_start_and_size(block)
-            block_end = block_start + block_size
+            block_end = block.start + block.size
             tile_start = tile_point * self.tile_size
             tile_end = (tile_point + 1) * self.tile_size
 
             # The block and tile both cover the region between these points
-            tile_block_min_intersection = Point.max(tile_start, block_start)
+            tile_block_min_intersection = Point.max(tile_start, block.start)
             tile_block_max_intersection = Point.min(tile_end, block_end)
 
             # The intersects in relation to block and tile origin
             block_start_in_tile = tile_block_min_intersection - tile_start
             block_end_in_tile = tile_block_max_intersection - tile_start
-            tile_start_in_block = tile_block_min_intersection - block_start
-            tile_end_in_block = tile_block_max_intersection - block_start
+            tile_start_in_block = tile_block_min_intersection - block.start
+            tile_end_in_block = tile_block_max_intersection - block.start
 
             # Reshape the block data to remove leading 1-indices.
-            block_data.shape = self._size_to_numpy_shape(block_size)
+            block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
             image_data[
                 block_start_in_tile.y:block_end_in_tile.y,
@@ -348,7 +350,6 @@ class CziImageData(MetaImageData):
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
-            print("return blank tile")
             return self.blank_decoded_tile
         return Image.fromarray(self._get_tile(tile, z, path))
 
@@ -380,79 +381,41 @@ class CziImageData(MetaImageData):
 
     def _create_tile_directory(
         self
-    ) -> Dict[Tuple[Point, float, str], Sequence[int]]:
-        """Create a directory mapping tile points to list of block indices that
-        cover the tile.
+    ) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+        """Create a directory mapping tile points to list of blocks.
 
         Returns
         ----------
-        Dict[Tuple[Point, int, int], Sequence[int]]:
+        Dict[Tuple[Point, float, str], Sequence[CziBlock]]:
             Directory of tile point, focal plane and channel as key and
-            lists of block indices as item.
+            list of block, block start, and block size as item.
         """
-        tile_directory: DefaultDict[Tuple[Point, float, str], List[int]] = (
+        tile_directory: Dict[
+            Tuple[Point, float, str],
+            List[CziBlock]
+        ] = (
             defaultdict(list)
         )
-
-        for block_index, block in enumerate(self.block_directory):
+        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        for block in self._czi.filtered_subblock_directory:
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
                 (block_start+block_size) // self.tile_size
             )
             for tile in tile_region.iterate_all(include_end=True):
-                tile_directory[tile, z, c].append(block_index)
+                tile_directory[tile, z, c].append(
+                    CziBlock(block, block_start, block_size)
+                )
 
-        return dict(tile_directory)
-
-    def _get_block_start_and_size(
-        self,
-        block: DirectoryEntryDV
-    ) -> Tuple[Point, Size]:
-        """Return start coordinate and size for block realtive to image
-        origin.
-
-        Parameters
-        ----------
-        block: DirectoryEntryDV
-            Block to get start and size from.
-
-        Returns
-        ----------
-        Tuple[Point, Size]
-            Start point corrdinate and size for block.
-        """
-        x_start: Optional[int] = None
-        x_size: Optional[int] = None
-        y_start: Optional[int] = None
-        y_size: Optional[int] = None
-
-        for dimension_entry in block.dimension_entries:
-            if dimension_entry.dimension == 'X':
-                x_start = dimension_entry.start
-                x_size = dimension_entry.size
-            elif dimension_entry.dimension == 'Y':
-                y_start = dimension_entry.start
-                y_size = dimension_entry.size
-        if (
-            x_start is None or x_size is None or
-            y_start is None or y_size is None
-        ):
-            raise ValueError(
-                "Could not determine position of block"
-            )
-
-        return (
-            Point(x_start, y_start) - self.image_origin,
-            Size(x_size, y_size)
-        )
+        return tile_directory
 
     def _get_block_dimensions(
         self,
         block: DirectoryEntryDV
     ) -> Tuple[Point, Size, float, str]:
         """Return start coordinate and size for block realtive to image
-        origin.
+        origin and block focal plane and optical path.
 
         Parameters
         ----------
@@ -462,11 +425,16 @@ class CziImageData(MetaImageData):
         Returns
         ----------
         Tuple[Point, Size]
-            Start point corrdinate and size for block.
+            Start point corrdinate, size, focal plane and optical path for
+            block.
         """
-        start, size = self._get_block_start_and_size(block)
+        x_start: Optional[int] = None
+        x_size: Optional[int] = None
+        y_start: Optional[int] = None
+        y_size: Optional[int] = None
         z = 0.0
         c = '0'
+
         for dimension_entry in block.dimension_entries:
             if dimension_entry.dimension == 'X':
                 x_start = dimension_entry.start
@@ -478,12 +446,21 @@ class CziImageData(MetaImageData):
                 z = self._focal_plane_mapping[dimension_entry.start]
             elif dimension_entry.dimension == 'C':
                 c = self._channel_mapping[dimension_entry.start]
-        if start is None or size is None or z is None or c is None:
+
+        if (
+            x_start is None or x_size is None or
+            y_start is None or y_size is None
+        ):
             raise ValueError(
                 "Could not determine position of block"
             )
 
-        return start, size, z, c
+        return (
+            Point(x_start, y_start) - self.image_origin,
+            Size(x_size, y_size),
+            z,
+            c
+        )
 
     def _size_to_numpy_shape(self, size: Size) -> Tuple[int, ...]:
         """Return a tuple for use with numpy.shape."""
