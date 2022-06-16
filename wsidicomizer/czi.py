@@ -90,13 +90,19 @@ class CziImageData(MetaImageData):
         self._filepath = filepath
         self._czi = CziFile(filepath)
         self._czi._fh.lock = True
-        self._samples_per_pixel = self._get_samples_per_pixel()
+        self._samples_per_pixel = self._get_size('0')
 
         self._dtype = self._czi.dtype
         super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
-        self._image_size = Size(self._czi.shape[4], self._czi.shape[3])
-        self._image_origin = Point(self._czi.start[4], self._czi.start[3])
+        self._image_size = Size(
+            self._get_size('X'),
+            self._get_size('Y')
+        )
+        self._image_origin = Point(
+            self._get_start('X'),
+            self._get_start('Y')
+        )
         self._focal_plane_mapping = self._get_focal_plane_mapping()
         self._channel_mapping = self._get_channel_mapping()
         self._block_directory = self._czi.filtered_subblock_directory
@@ -216,6 +222,20 @@ class CziImageData(MetaImageData):
             elif dimension == 'Z':
                 z = value
         return x, y, z
+
+    def _get_size(self, axis: str) -> int:
+        index = self._get_axis_index(axis)
+        return self._czi.shape[index]
+
+    def _get_start(self, axis: str) -> int:
+        index = self._get_axis_index(axis)
+        return self._czi.start[index]
+
+    def _get_axis_index(self, axis: str) -> int:
+        index = str(self._czi.axes).index(axis.capitalize())
+        if not index >= 0:
+            raise ValueError(f'Axis {axis} not found in axes {self._czi.axes}')
+        return index
 
     def _get_pixel_spacing(self) -> SizeMm:
         """Get pixel spacing (mm per pixel) from metadata"""
@@ -358,7 +378,7 @@ class CziImageData(MetaImageData):
         self
     ) -> Dict[Tuple[Point, float, str], Sequence[int]]:
         """Create a directory mapping tile points to list of block indices that
-        cover the tile. This could be extended to also index z and c.
+        cover the tile.
 
         Returns
         ----------
@@ -428,7 +448,7 @@ class CziImageData(MetaImageData):
         block: DirectoryEntryDV
     ) -> Tuple[Point, Size, float, str]:
         """Return start coordinate and size for block realtive to image
-        origin. This could be extended to also get z and c.
+        origin.
 
         Parameters
         ----------
@@ -484,8 +504,8 @@ class CziImageData(MetaImageData):
             if z_scale is None:
                 raise ValueError("No z scale in metadata")
             start_z = start * z_scale
-            step_z = (start+increment*size_z)*z_scale
-            end_z = increment*z_scale
+            end_z = (start+increment*size_z)*z_scale
+            step_z = increment*z_scale
             return list(np.arange(start_z, end_z, step_z))
         except ValueError:
             return [0.0]
@@ -499,9 +519,6 @@ class CziImageData(MetaImageData):
             get_text_from_element(channel, 'Fluor')
             for channel in channels
         ]
-
-    def _get_samples_per_pixel(self) -> int:
-        return self._czi.shape[-1]
 
 
 class CziDicomizer(MetaDicomizer):
