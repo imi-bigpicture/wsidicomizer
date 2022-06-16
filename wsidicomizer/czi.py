@@ -71,9 +71,93 @@ def get_text_from_element(
 
 @dataclass
 class CziBlock:
+    index: int
     entry: DirectoryEntryDV
     start: Point
     size: Size
+
+
+class CziCache():
+    """"""
+    def __init__(self, size: int):
+        """Create cache for size items.
+
+        Parameters
+        ----------
+        size: int
+            Size of the cache.
+
+        """
+        self._size = size
+        self._content: Dict[int, np.ndarray] = {}
+        self._history: List[int] = []
+
+    def __len__(self) -> int:
+        return len(self._history)
+
+    def __str__(self) -> str:
+        return (
+            f"{type(self).__name__} of size {len(self)} "
+            f"and max size {self._size}"
+        )
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._size})"
+
+    def __setitem__(self, key: int, value: np.ndarray) -> None:
+        """Set item in cache. Remove old items if needed.
+
+        Parameters
+        ----------
+        key: int
+            Key for item to set.
+        value: np.ndarray:
+            Value for item to set.
+
+        """
+        self._content[key] = value
+        self._history.append(key)
+        self._remove_old()
+
+    def __getitem__(self, key: int) -> np.ndarray:
+        """Get item from cache.
+
+        Parameters
+        ----------
+        key: int
+            Block for item to get.
+
+        Returns
+        ----------
+        np.ndarray
+            Value for key.
+        """
+        return self._content[key]
+
+    def __contains__(self, key: int) -> bool:
+        """Return true if key in cache.
+
+        Parameters
+        ----------
+        key: int
+            Key to check for.
+
+        Returns
+        ----------
+        bool
+            True if key is in cache.
+        """
+        return key in self._content
+
+    @property
+    def size(self) -> int:
+        return self._size
+
+    def _remove_old(self) -> None:
+        """Remove old items in cache if needed."""
+        while len(self._history) > self._size:
+            key_to_remove = self._history.pop(0)
+            self._content.pop(key_to_remove)
 
 
 class CziImageData(MetaImageData):
@@ -118,6 +202,7 @@ class CziImageData(MetaImageData):
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
         self._pixel_spacing = self._get_pixel_spacing()
         self._focal_planes = sorted(self._focal_plane_mapping)
+        self._block_cache = CziCache(10)
 
     @property
     def pyramid_index(self) -> int:
@@ -298,7 +383,11 @@ class CziImageData(MetaImageData):
 
         for block in self.tile_directory[tile_point, z, path]:
             # For each block covering the tile
-            block_data: np.ndarray = block.entry.data_segment().data()
+            if block.index in self._block_cache:
+                block_data = self._block_cache[block.index]
+            else:
+                block_data: np.ndarray = block.entry.data_segment().data()
+                self._block_cache[block.index] = block_data
 
             # Start and end coordiantes for block and tile
             block_end = block.start + block.size
@@ -390,14 +479,11 @@ class CziImageData(MetaImageData):
             Directory of tile point, focal plane and channel as key and
             list of block, block start, and block size as item.
         """
-        tile_directory: Dict[
-            Tuple[Point, float, str],
-            List[CziBlock]
-        ] = (
+        tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = (
             defaultdict(list)
         )
         assert(isinstance(self._czi.filtered_subblock_directory, list))
-        for block in self._czi.filtered_subblock_directory:
+        for index, block in enumerate(self._czi.filtered_subblock_directory):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
@@ -405,7 +491,7 @@ class CziImageData(MetaImageData):
             )
             for tile in tile_region.iterate_all(include_end=True):
                 tile_directory[tile, z, c].append(
-                    CziBlock(block, block_start, block_size)
+                    CziBlock(index, block, block_start, block_size)
                 )
 
         return tile_directory
