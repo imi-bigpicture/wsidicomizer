@@ -172,6 +172,7 @@ class CziImageData(MetaImageData):
     @property
     def block_directory(self) -> List[DirectoryEntryDV]:
         """Return list of DirectoryEntryDV sorted by mosaic index."""
+        assert(isinstance(self._block_directory, list))
         return self._block_directory
 
     @property
@@ -225,10 +226,12 @@ class CziImageData(MetaImageData):
 
     def _get_size(self, axis: str) -> int:
         index = self._get_axis_index(axis)
+        assert(isinstance(self._czi.shape, tuple))
         return self._czi.shape[index]
 
     def _get_start(self, axis: str) -> int:
         index = self._get_axis_index(axis)
+        assert(isinstance(self._czi.start, tuple))
         return self._czi.start[index]
 
     def _get_axis_index(self, axis: str) -> int:
@@ -257,6 +260,7 @@ class CziImageData(MetaImageData):
         np.ndarray
             A blank tile as numpy array.
         """
+        assert(isinstance(self._czi.dtype, np.dtype))
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
             fill * np.iinfo(self._czi.dtype).max,
@@ -290,7 +294,7 @@ class CziImageData(MetaImageData):
 
         for block_index in self.tile_directory[tile_point, z, path]:
             # For each block covering the tile
-            block = self._block_directory[block_index]
+            block = self.block_directory[block_index]
             block_data: np.ndarray = block.data_segment().data()
 
             # Start and end coordiantes for block and tile
