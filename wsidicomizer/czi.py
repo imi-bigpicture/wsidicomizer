@@ -260,23 +260,22 @@ class CziImageData(MetaImageData):
             raise ValueError("Could not find pixel spacing in metadata")
         return SizeMm(x, y)/1000
 
-    def _create_blank_tile(self, fill: float = 1) -> np.ndarray:
+    def _create_blank_tile(self) -> np.ndarray:
         """Return blank tile in numpy array.
-
-        Parameters
-        ----------
-        fill: float = 1
-            Value to fill tile with.
 
         Returns
         ----------
         np.ndarray
             A blank tile as numpy array.
         """
+        if self.photometric_interpretation == 'MONOCHROME2':
+            fill_value = 0
+        else:
+            fill_value = 1
         assert(isinstance(self._czi.dtype, np.dtype))
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
-            fill * np.iinfo(self._czi.dtype).max,
+            fill_value * np.iinfo(self._czi.dtype).max,
             dtype=np.dtype(self._czi.dtype)
         )
 
@@ -578,7 +577,7 @@ class CziDicomizer(MetaDicomizer):
             WsiDicom object of czi file in filepath.
         """
         if tile_size is None:
-            raise ValueError("Tile size required for open slide")
+            raise ValueError("Tile size required for czi")
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
