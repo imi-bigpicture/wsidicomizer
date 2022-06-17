@@ -12,12 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from collections import defaultdict
 from dataclasses import dataclass
-from xml.etree import ElementTree
-from collections import defaultdict, Counter
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union
 from threading import Lock
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+from xml.etree import ElementTree
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
@@ -29,7 +30,7 @@ from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.common import MetaImageData, MetaDicomizer
+from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
@@ -73,82 +74,8 @@ def get_text_from_element(
 @dataclass
 class CziBlock:
     index: int
-    entry: DirectoryEntryDV
     start: Point
     size: Size
-
-
-class CziBlockReader():
-    """"""
-    def __init__(self, size: int):
-        """Create reader for blocks from czi file. Read blocks are cached.
-
-        Parameters
-        ----------
-        size: int
-            Size of the cache.
-
-        """
-        self._size = size
-        # Lock to prevent multiple threads updating cache simultaneously.
-        self._cache_lock = Lock()
-        # Lock to prevent multiple threads to read and decompress the same
-        # block. CziFile locks filehandle during read.
-        self._block_locks: Dict[int, Lock] = defaultdict(Lock)
-        self._block_cache: Dict[int, np.ndarray] = {}
-        self._cache_hits = Counter()
-
-    def __len__(self) -> int:
-        return len(self._block_cache)
-
-    def __str__(self) -> str:
-        return (
-            f"{type(self).__name__} of size {len(self)} "
-            f"and max size {self._size}"
-        )
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._size})"
-
-    @property
-    def size(self) -> int:
-        return self._size
-
-    def get(self, block: CziBlock) -> np.ndarray:
-        """Return decompressed image data for block."""
-        try:
-            data = self._block_cache[block.index]
-            self._cache_hits.update(hits=1)
-            return data
-        except KeyError:
-            self._cache_hits.update(miss=1)
-            return self._read_block(block)
-
-    def _read_block(self, block: CziBlock) -> np.ndarray:
-        """Read block data from file. Use lock for block to prevent multiple
-        reads (and decompressions) of same block."""
-        with self._block_locks[block.index]:
-            if block.index in self._block_cache:
-                # Block was cached before aquired lock
-                return self._block_cache[block.index]
-            # Read data from czi file. Filehandle is locked during read.
-            data = block.entry.data_segment().data()
-            # Update cache
-            with self._cache_lock:
-                self._add_to_cache(block, data)
-                self._remove_old_from_cache()
-                return data
-
-    def _remove_old_from_cache(self) -> None:
-        """Remove old items in cache if needed."""
-        while len(self._block_cache) > self._size:
-            key_to_remove = next(iter(self._block_cache))
-            self._block_cache.pop(key_to_remove)
-            self._block_locks.pop(key_to_remove)
-
-    def _add_to_cache(self, block: CziBlock, data: np.ndarray):
-        """Add decompressed data to cache."""
-        self._block_cache[block.index] = data
 
 
 class CziImageData(MetaImageData):
@@ -193,7 +120,9 @@ class CziImageData(MetaImageData):
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
         self._pixel_spacing = self._get_pixel_spacing()
         self._focal_planes = sorted(self._focal_plane_mapping)
-        self._block_reader = CziBlockReader(100)
+        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        self._block_directory = self._czi.filtered_subblock_directory
+        self._block_locks: Dict[int, Lock] = defaultdict(Lock)
 
     @property
     def pyramid_index(self) -> int:
@@ -271,6 +200,10 @@ class CziImageData(MetaImageData):
     def samples_per_pixel(self) -> int:
         return self._samples_per_pixel
 
+    @property
+    def block_directory(self) -> List[DirectoryEntryDV]:
+        return self._block_directory
+
     @staticmethod
     def detect_format(filepath: Path) -> Optional[str]:
         try:
@@ -347,6 +280,24 @@ class CziImageData(MetaImageData):
             dtype=np.dtype(self._czi.dtype)
         )
 
+    @lru_cache(100)
+    def _get_tile_data(self, block_index: int) -> np.ndarray:
+        """Get decompressed tile data from czi file. Cache the tile data. To
+        prevent multiple threads proceseing the same tile, use a lock for
+        each block."""
+        block_lock = self._block_locks[block_index]
+        if block_lock.locked():
+            # Another thread is already reading the block. Wait for lock and
+            # read from cache.
+            with block_lock:
+                return self._get_tile_data(block_index)
+
+        with block_lock:
+            # Lock block and read from block.
+            block = self.block_directory[block_index]
+            data = block.data_segment().data()
+            return data
+
     def _get_tile(
         self,
         tile_point: Point,
@@ -391,7 +342,8 @@ class CziImageData(MetaImageData):
             tile_end_in_block = tile_block_end_intersection - block.start
 
             # Get decompressed data
-            block_data = self._block_reader.get(block)
+            block_data = self._get_tile_data(block.index)
+            # block_data = self._block_reader.get_cached(block.index)
             # Reshape the block data to remove leading 1-indices.
             block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
@@ -479,7 +431,7 @@ class CziImageData(MetaImageData):
             )
             for tile in tile_region.iterate_all(include_end=True):
                 tile_directory[tile, z, c].append(
-                    CziBlock(index, block, block_start, block_size)
+                    CziBlock(index, block_start, block_size)
                 )
 
         return tile_directory
