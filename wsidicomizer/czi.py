@@ -14,9 +14,10 @@
 
 from dataclasses import dataclass
 from xml.etree import ElementTree
-from collections import defaultdict
+from collections import defaultdict, Counter
 from pathlib import Path
-from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+from threading import Lock
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
@@ -77,10 +78,10 @@ class CziBlock:
     size: Size
 
 
-class CziCache():
+class CziBlockReader():
     """"""
     def __init__(self, size: int):
-        """Create cache for size items.
+        """Create reader for blocks from czi file. Read blocks are cached.
 
         Parameters
         ----------
@@ -89,11 +90,16 @@ class CziCache():
 
         """
         self._size = size
-        self._content: Dict[int, np.ndarray] = {}
-        self._history: List[int] = []
+        # Lock to prevent multiple threads updating cache simultaneously.
+        self._cache_lock = Lock()
+        # Lock to prevent multiple threads to read and decompress the same
+        # block. CziFile locks filehandle during read.
+        self._block_locks: Dict[int, Lock] = defaultdict(Lock)
+        self._block_cache: Dict[int, np.ndarray] = {}
+        self._cache_hits = Counter()
 
     def __len__(self) -> int:
-        return len(self._history)
+        return len(self._block_cache)
 
     def __str__(self) -> str:
         return (
@@ -104,60 +110,45 @@ class CziCache():
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self._size})"
 
-    def __setitem__(self, key: int, value: np.ndarray) -> None:
-        """Set item in cache. Remove old items if needed.
-
-        Parameters
-        ----------
-        key: int
-            Key for item to set.
-        value: np.ndarray:
-            Value for item to set.
-
-        """
-        self._content[key] = value
-        self._history.append(key)
-        self._remove_old()
-
-    def __getitem__(self, key: int) -> np.ndarray:
-        """Get item from cache.
-
-        Parameters
-        ----------
-        key: int
-            Block for item to get.
-
-        Returns
-        ----------
-        np.ndarray
-            Value for key.
-        """
-        return self._content[key]
-
-    def __contains__(self, key: int) -> bool:
-        """Return true if key in cache.
-
-        Parameters
-        ----------
-        key: int
-            Key to check for.
-
-        Returns
-        ----------
-        bool
-            True if key is in cache.
-        """
-        return key in self._content
-
     @property
     def size(self) -> int:
         return self._size
 
-    def _remove_old(self) -> None:
+    def get(self, block: CziBlock) -> np.ndarray:
+        """Return decompressed image data for block."""
+        try:
+            data = self._block_cache[block.index]
+            self._cache_hits.update(hits=1)
+            return data
+        except KeyError:
+            self._cache_hits.update(miss=1)
+            return self._read_block(block)
+
+    def _read_block(self, block: CziBlock) -> np.ndarray:
+        """Read block data from file. Use lock for block to prevent multiple
+        reads (and decompressions) of same block."""
+        with self._block_locks[block.index]:
+            if block.index in self._block_cache:
+                # Block was cached before aquired lock
+                return self._block_cache[block.index]
+            # Read data from czi file. Filehandle is locked during read.
+            data = block.entry.data_segment().data()
+            # Update cache
+            with self._cache_lock:
+                self._add_to_cache(block, data)
+                self._remove_old_from_cache()
+                return data
+
+    def _remove_old_from_cache(self) -> None:
         """Remove old items in cache if needed."""
-        while len(self._history) > self._size:
-            key_to_remove = self._history.pop(0)
-            self._content.pop(key_to_remove)
+        while len(self._block_cache) > self._size:
+            key_to_remove = next(iter(self._block_cache))
+            self._block_cache.pop(key_to_remove)
+            self._block_locks.pop(key_to_remove)
+
+    def _add_to_cache(self, block: CziBlock, data: np.ndarray):
+        """Add decompressed data to cache."""
+        self._block_cache[block.index] = data
 
 
 class CziImageData(MetaImageData):
@@ -167,8 +158,8 @@ class CziImageData(MetaImageData):
         tile_size: int,
         encoder: Encoder
     ) -> None:
-        """Wraps a czi file to ImageData. Multiple z, c, or pyramid levels are
-        currently not supported.
+        """Wraps a czi file to ImageData. Multiple pyramid levels are currently
+        not supported.
 
         Parameters
         ----------
@@ -202,7 +193,7 @@ class CziImageData(MetaImageData):
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
         self._pixel_spacing = self._get_pixel_spacing()
         self._focal_planes = sorted(self._focal_plane_mapping)
-        self._block_cache = CziCache(10)
+        self._block_reader = CziBlockReader(100)
 
     @property
     def pyramid_index(self) -> int:
@@ -383,27 +374,24 @@ class CziImageData(MetaImageData):
 
         for block in self.tile_directory[tile_point, z, path]:
             # For each block covering the tile
-            if block.index in self._block_cache:
-                block_data = self._block_cache[block.index]
-            else:
-                block_data: np.ndarray = block.entry.data_segment().data()
-                self._block_cache[block.index] = block_data
 
-            # Start and end coordiantes for block and tile
+            # Start and end coordinates for block and tile
             block_end = block.start + block.size
             tile_start = tile_point * self.tile_size
             tile_end = (tile_point + 1) * self.tile_size
 
             # The block and tile both cover the region between these points
-            tile_block_min_intersection = Point.max(tile_start, block.start)
-            tile_block_max_intersection = Point.min(tile_end, block_end)
+            tile_block_start_intersection = Point.max(tile_start, block.start)
+            tile_block_end_intersection = Point.min(tile_end, block_end)
 
             # The intersects in relation to block and tile origin
-            block_start_in_tile = tile_block_min_intersection - tile_start
-            block_end_in_tile = tile_block_max_intersection - tile_start
-            tile_start_in_block = tile_block_min_intersection - block.start
-            tile_end_in_block = tile_block_max_intersection - block.start
+            block_start_in_tile = tile_block_start_intersection - tile_start
+            block_end_in_tile = tile_block_end_intersection - tile_start
+            tile_start_in_block = tile_block_start_intersection - block.start
+            tile_end_in_block = tile_block_end_intersection - block.start
 
+            # Get decompressed data
+            block_data = self._block_reader.get(block)
             # Reshape the block data to remove leading 1-indices.
             block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
