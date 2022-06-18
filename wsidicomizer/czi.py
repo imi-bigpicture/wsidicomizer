@@ -279,7 +279,7 @@ class CziImageData(MetaImageData):
             dtype=np.dtype(self._czi.dtype)
         )
 
-    @lru_cache(100)
+    @lru_cache
     def _get_tile_data(self, block_index: int) -> np.ndarray:
         """Get decompressed tile data from czi file. Cache the tile data. To
         prevent multiple threads proceseing the same tile, use a lock for
