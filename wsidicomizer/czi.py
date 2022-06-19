@@ -31,6 +31,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
+from wsidicomizer.config import settings
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
@@ -279,7 +280,7 @@ class CziImageData(MetaImageData):
             dtype=np.dtype(self._czi.dtype)
         )
 
-    @lru_cache
+    @lru_cache(settings.czi_block_cache_size)
     def _get_tile_data(self, block_index: int) -> np.ndarray:
         """Get decompressed tile data from czi file. Cache the tile data. To
         prevent multiple threads proceseing the same tile, use a lock for
