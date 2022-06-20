@@ -12,10 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import ctypes
 import math
 import os
 from abc import ABCMeta
-from ctypes import c_uint32
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
@@ -230,7 +230,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bounds_w = self._slide.properties.get('openslide.bounds-width', None)
         bounds_h = self._slide.properties.get('openslide.bounds-height', None)
         self._offset = Point(int(bounds_x), int(bounds_y))
-        if None not in [bounds_w, bounds_h]:
+        if bounds_w is not None and bounds_h is not None:
             self._image_size = (
                 Size(int(bounds_w), int(bounds_h)) // self.downsample
             )
@@ -319,15 +319,16 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         TOP = RIGHT = -1
         BOTTOM = LEFT = 0
-        CORNERS_Y = (BOTTOM, BOTTOM, TOP, TOP)
-        CORNERS_X = (LEFT, RIGHT, LEFT, RIGHT)
+        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
+        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
         TRANSPARENCY = 3
-        background = np.array(self.blank_color)
-        transparency = data[:, :, TRANSPARENCY]
-        if np.all(transparency[CORNERS_Y, CORNERS_X] == 0):
-            if np.all(transparency == 0):
+        corners_transparency = np.ix_(CORNERS_X, CORNERS_Y, [TRANSPARENCY])
+        if np.all(data[corners_transparency] == 0):
+            if np.all(data[:, :, TRANSPARENCY] == 0):
                 return True
-        if np.all(data[CORNERS_Y, CORNERS_X, 0:TRANSPARENCY] == background):
+        background = np.array(self.blank_color)
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(TRANSPARENCY))
+        if np.all(data[corners_rgb] == background):
             if np.all(data[:, :, 0:TRANSPARENCY] == background):
                 return True
         return False
@@ -400,17 +401,19 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             raise ValueError('Negative size not allowed')
 
         location_in_base_level = region.start * self.downsample + self._offset
-        buffer = (region.size.width * region.size.height * c_uint32)()
+        tile_data = np.empty(
+            region.size.to_tuple() + (4,),
+            dtype=ctypes.c_uint8
+        )
         _read_region(
             self._slide._osr,
-            buffer,
+            tile_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
             location_in_base_level.x,
             location_in_base_level.y,
             self._level_index,
             region.size.width,
             region.size.height
         )
-        tile_data: np.ndarray = np.frombuffer(buffer, dtype=np.dtype(np.uint8))
         tile_data.shape = (region.size.height, region.size.width, 4)
         if self._detect_blank_tile(tile_data):
             return None
