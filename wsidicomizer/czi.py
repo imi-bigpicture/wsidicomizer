@@ -12,10 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from xml.etree import ElementTree
 from collections import defaultdict
+from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-from typing import DefaultDict, Dict, List, Optional, Sequence, Tuple, Union
+from threading import Lock
+from typing import Dict, List, Optional, Sequence, Tuple, Union
+from xml.etree import ElementTree
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
@@ -27,7 +30,8 @@ from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.common import MetaImageData, MetaDicomizer
+from wsidicomizer.common import MetaDicomizer, MetaImageData
+from wsidicomizer.config import settings
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
@@ -68,6 +72,13 @@ def get_text_from_element(
     return text
 
 
+@dataclass
+class CziBlock:
+    index: int
+    start: Point
+    size: Size
+
+
 class CziImageData(MetaImageData):
     def __init__(
         self,
@@ -75,8 +86,8 @@ class CziImageData(MetaImageData):
         tile_size: int,
         encoder: Encoder
     ) -> None:
-        """Wraps a czi file to ImageData. Multiple z, c, or pyramid levels are
-        currently not supported.
+        """Wraps a czi file to ImageData. Multiple pyramid levels are currently
+        not supported.
 
         Parameters
         ----------
@@ -90,21 +101,29 @@ class CziImageData(MetaImageData):
         self._filepath = filepath
         self._czi = CziFile(filepath)
         self._czi._fh.lock = True
-        self._samples_per_pixel = self._get_samples_per_pixel()
+        self._samples_per_pixel = self._get_size(axis='0')
 
         self._dtype = self._czi.dtype
         super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
-        self._image_size = Size(self._czi.shape[4], self._czi.shape[3])
-        self._image_origin = Point(self._czi.start[4], self._czi.start[3])
+        self._image_size = Size(
+            self._get_size(axis='X'),
+            self._get_size(axis='Y')
+        )
+        self._image_origin = Point(
+            self._get_start(axis='X'),
+            self._get_start(axis='Y')
+        )
         self._focal_plane_mapping = self._get_focal_plane_mapping()
         self._channel_mapping = self._get_channel_mapping()
-        self._block_directory = self._czi.filtered_subblock_directory
         self._tile_directory = self._create_tile_directory()
         self._blank_decoded_tile = Image.fromarray(self._create_blank_tile())
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
         self._pixel_spacing = self._get_pixel_spacing()
         self._focal_planes = sorted(self._focal_plane_mapping)
+        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        self._block_directory = self._czi.filtered_subblock_directory
+        self._block_locks: Dict[int, Lock] = defaultdict(Lock)
 
     @property
     def pyramid_index(self) -> int:
@@ -164,13 +183,11 @@ class CziImageData(MetaImageData):
         return self._image_origin
 
     @property
-    def block_directory(self) -> List[DirectoryEntryDV]:
-        """Return list of DirectoryEntryDV sorted by mosaic index."""
-        return self._block_directory
-
-    @property
-    def tile_directory(self) -> Dict[Tuple[Point, float, str], Sequence[int]]:
-        """Return dict of tiles with mosaic indices."""
+    def tile_directory(
+        self
+    ) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+        """Return dict of block, block start, and block size by tile position,
+        focal plane and optical path."""
         return self._tile_directory
 
     @property
@@ -183,6 +200,10 @@ class CziImageData(MetaImageData):
     @property
     def samples_per_pixel(self) -> int:
         return self._samples_per_pixel
+
+    @property
+    def block_directory(self) -> List[DirectoryEntryDV]:
+        return self._block_directory
 
     @staticmethod
     def detect_format(filepath: Path) -> Optional[str]:
@@ -217,6 +238,22 @@ class CziImageData(MetaImageData):
                 z = value
         return x, y, z
 
+    def _get_size(self, axis: str) -> int:
+        index = self._get_axis_index(axis)
+        assert(isinstance(self._czi.shape, tuple))
+        return self._czi.shape[index]
+
+    def _get_start(self, axis: str) -> int:
+        index = self._get_axis_index(axis)
+        assert(isinstance(self._czi.start, tuple))
+        return self._czi.start[index]
+
+    def _get_axis_index(self, axis: str) -> int:
+        index = str(self._czi.axes).index(axis.capitalize())
+        if not index >= 0:
+            raise ValueError(f'Axis {axis} not found in axes {self._czi.axes}')
+        return index
+
     def _get_pixel_spacing(self) -> SizeMm:
         """Get pixel spacing (mm per pixel) from metadata"""
         x, y, _ = self._get_scaling()
@@ -224,24 +261,42 @@ class CziImageData(MetaImageData):
             raise ValueError("Could not find pixel spacing in metadata")
         return SizeMm(x, y)/1000
 
-    def _create_blank_tile(self, fill: float = 1) -> np.ndarray:
+    def _create_blank_tile(self) -> np.ndarray:
         """Return blank tile in numpy array.
-
-        Parameters
-        ----------
-        fill: float = 1
-            Value to fill tile with.
 
         Returns
         ----------
         np.ndarray
             A blank tile as numpy array.
         """
+        if self.photometric_interpretation == 'MONOCHROME2':
+            fill_value = 0
+        else:
+            fill_value = 1
+        assert(isinstance(self._czi.dtype, np.dtype))
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
-            fill * np.iinfo(self._czi.dtype).max,
+            fill_value * np.iinfo(self._czi.dtype).max,
             dtype=np.dtype(self._czi.dtype)
         )
+
+    @lru_cache(settings.czi_block_cache_size)
+    def _get_tile_data(self, block_index: int) -> np.ndarray:
+        """Get decompressed tile data from czi file. Cache the tile data. To
+        prevent multiple threads proceseing the same tile, use a lock for
+        each block."""
+        block_lock = self._block_locks[block_index]
+        if block_lock.locked():
+            # Another thread is already reading the block. Wait for lock and
+            # read from cache.
+            with block_lock:
+                return self._get_tile_data(block_index)
+
+        with block_lock:
+            # Lock block and read from block.
+            block = self.block_directory[block_index]
+            data = block.data_segment().data()
+            return data
 
     def _get_tile(
         self,
@@ -268,29 +323,29 @@ class CziImageData(MetaImageData):
             # should already have checked).
             return image_data
 
-        for block_index in self.tile_directory[tile_point, z, path]:
+        for block in self.tile_directory[tile_point, z, path]:
             # For each block covering the tile
-            block = self._block_directory[block_index]
-            block_data: np.ndarray = block.data_segment().data()
 
-            # Start and end coordiantes for block and tile
-            block_start, block_size = self._get_block_start_and_size(block)
-            block_end = block_start + block_size
+            # Start and end coordinates for block and tile
+            block_end = block.start + block.size
             tile_start = tile_point * self.tile_size
             tile_end = (tile_point + 1) * self.tile_size
 
             # The block and tile both cover the region between these points
-            tile_block_min_intersection = Point.max(tile_start, block_start)
-            tile_block_max_intersection = Point.min(tile_end, block_end)
+            tile_block_start_intersection = Point.max(tile_start, block.start)
+            tile_block_end_intersection = Point.min(tile_end, block_end)
 
             # The intersects in relation to block and tile origin
-            block_start_in_tile = tile_block_min_intersection - tile_start
-            block_end_in_tile = tile_block_max_intersection - tile_start
-            tile_start_in_block = tile_block_min_intersection - block_start
-            tile_end_in_block = tile_block_max_intersection - block_start
+            block_start_in_tile = tile_block_start_intersection - tile_start
+            block_end_in_tile = tile_block_end_intersection - tile_start
+            tile_start_in_block = tile_block_start_intersection - block.start
+            tile_end_in_block = tile_block_end_intersection - block.start
 
+            # Get decompressed data
+            block_data = self._get_tile_data(block.index)
+            # block_data = self._block_reader.get_cached(block.index)
             # Reshape the block data to remove leading 1-indices.
-            block_data.shape = self._size_to_numpy_shape(block_size)
+            block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
             image_data[
                 block_start_in_tile.y:block_end_in_tile.y,
@@ -324,7 +379,6 @@ class CziImageData(MetaImageData):
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
-            print("return blank tile")
             return self.blank_decoded_tile
         return Image.fromarray(self._get_tile(tile, z, path))
 
@@ -356,79 +410,38 @@ class CziImageData(MetaImageData):
 
     def _create_tile_directory(
         self
-    ) -> Dict[Tuple[Point, float, str], Sequence[int]]:
-        """Create a directory mapping tile points to list of block indices that
-        cover the tile. This could be extended to also index z and c.
+    ) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+        """Create a directory mapping tile points to list of blocks.
 
         Returns
         ----------
-        Dict[Tuple[Point, int, int], Sequence[int]]:
+        Dict[Tuple[Point, float, str], Sequence[CziBlock]]:
             Directory of tile point, focal plane and channel as key and
-            lists of block indices as item.
+            list of block, block start, and block size as item.
         """
-        tile_directory: DefaultDict[Tuple[Point, float, str], List[int]] = (
+        tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = (
             defaultdict(list)
         )
-
-        for block_index, block in enumerate(self.block_directory):
+        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        for index, block in enumerate(self._czi.filtered_subblock_directory):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
                 (block_start+block_size) // self.tile_size
             )
             for tile in tile_region.iterate_all(include_end=True):
-                tile_directory[tile, z, c].append(block_index)
+                tile_directory[tile, z, c].append(
+                    CziBlock(index, block_start, block_size)
+                )
 
-        return dict(tile_directory)
-
-    def _get_block_start_and_size(
-        self,
-        block: DirectoryEntryDV
-    ) -> Tuple[Point, Size]:
-        """Return start coordinate and size for block realtive to image
-        origin.
-
-        Parameters
-        ----------
-        block: DirectoryEntryDV
-            Block to get start and size from.
-
-        Returns
-        ----------
-        Tuple[Point, Size]
-            Start point corrdinate and size for block.
-        """
-        x_start: Optional[int] = None
-        x_size: Optional[int] = None
-        y_start: Optional[int] = None
-        y_size: Optional[int] = None
-
-        for dimension_entry in block.dimension_entries:
-            if dimension_entry.dimension == 'X':
-                x_start = dimension_entry.start
-                x_size = dimension_entry.size
-            elif dimension_entry.dimension == 'Y':
-                y_start = dimension_entry.start
-                y_size = dimension_entry.size
-        if (
-            x_start is None or x_size is None or
-            y_start is None or y_size is None
-        ):
-            raise ValueError(
-                "Could not determine position of block"
-            )
-
-        return (
-            Point(x_start, y_start) - self.image_origin,
-            Size(x_size, y_size)
-        )
+        return tile_directory
 
     def _get_block_dimensions(
         self,
         block: DirectoryEntryDV
     ) -> Tuple[Point, Size, float, str]:
         """Return start coordinate and size for block realtive to image
-        origin. This could be extended to also get z and c.
+        origin and block focal plane and optical path.
 
         Parameters
         ----------
@@ -438,11 +451,16 @@ class CziImageData(MetaImageData):
         Returns
         ----------
         Tuple[Point, Size]
-            Start point corrdinate and size for block.
+            Start point corrdinate, size, focal plane and optical path for
+            block.
         """
-        start, size = self._get_block_start_and_size(block)
+        x_start: Optional[int] = None
+        x_size: Optional[int] = None
+        y_start: Optional[int] = None
+        y_size: Optional[int] = None
         z = 0.0
         c = '0'
+
         for dimension_entry in block.dimension_entries:
             if dimension_entry.dimension == 'X':
                 x_start = dimension_entry.start
@@ -454,12 +472,21 @@ class CziImageData(MetaImageData):
                 z = self._focal_plane_mapping[dimension_entry.start]
             elif dimension_entry.dimension == 'C':
                 c = self._channel_mapping[dimension_entry.start]
-        if start is None or size is None or z is None or c is None:
+
+        if (
+            x_start is None or x_size is None or
+            y_start is None or y_size is None
+        ):
             raise ValueError(
                 "Could not determine position of block"
             )
 
-        return start, size, z, c
+        return (
+            Point(x_start, y_start) - self.image_origin,
+            Size(x_size, y_size),
+            z,
+            c
+        )
 
     def _size_to_numpy_shape(self, size: Size) -> Tuple[int, ...]:
         """Return a tuple for use with numpy.shape."""
@@ -484,8 +511,8 @@ class CziImageData(MetaImageData):
             if z_scale is None:
                 raise ValueError("No z scale in metadata")
             start_z = start * z_scale
-            step_z = (start+increment*size_z)*z_scale
-            end_z = increment*z_scale
+            end_z = (start+increment*size_z)*z_scale
+            step_z = increment*z_scale
             return list(np.arange(start_z, end_z, step_z))
         except ValueError:
             return [0.0]
@@ -499,9 +526,6 @@ class CziImageData(MetaImageData):
             get_text_from_element(channel, 'Fluor')
             for channel in channels
         ]
-
-    def _get_samples_per_pixel(self) -> int:
-        return self._czi.shape[-1]
 
 
 class CziDicomizer(MetaDicomizer):
@@ -554,7 +578,7 @@ class CziDicomizer(MetaDicomizer):
             WsiDicom object of czi file in filepath.
         """
         if tile_size is None:
-            raise ValueError("Tile size required for open slide")
+            raise ValueError("Tile size required for czi")
         encoder = create_encoder(
             encoding_format,
             encoding_quality,
