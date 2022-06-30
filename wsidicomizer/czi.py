@@ -101,18 +101,18 @@ class CziImageData(MetaImageData):
         self._filepath = filepath
         self._czi = CziFile(filepath)
         self._czi._fh.lock = True
-        self._samples_per_pixel = self._get_size('0')
+        self._samples_per_pixel = self._get_size(axis='0')
 
         self._dtype = self._czi.dtype
         super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
         self._image_size = Size(
-            self._get_size('X'),
-            self._get_size('Y')
+            self._get_size(axis='X'),
+            self._get_size(axis='Y')
         )
         self._image_origin = Point(
-            self._get_start('X'),
-            self._get_start('Y')
+            self._get_start(axis='X'),
+            self._get_start(axis='Y')
         )
         self._focal_plane_mapping = self._get_focal_plane_mapping()
         self._channel_mapping = self._get_channel_mapping()
