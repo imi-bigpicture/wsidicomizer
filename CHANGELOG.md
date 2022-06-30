@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] - ...
+### Added
+- Block cache for reading czi files to avoid multiple decompressions.
+
+### Changed
+- Set background color for czi files based on photometric interpretation.
+
+### Fixed
+- Focal plane and image size parsing for czi files.
 
 ## [0.2.0] - 2022-05-23
 ### Added
