@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wsidicomizer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Tool for converting wsi-files to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 license = "Apache-2.0"
