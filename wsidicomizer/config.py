@@ -16,7 +16,7 @@ class Settings:
     """Class containing settings. Settings are to be accessed through the
     global variable settings."""
     def __init__(self) -> None:
-        self._czi_block_cache_size = 128
+        self._czi_block_cache_size = 8
 
     @property
     def czi_block_cache_size(self) -> int:
