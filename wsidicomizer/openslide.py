@@ -47,16 +47,10 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         os.environ['PATH'] = (
             openslide_dir + os.pathsep + os.environ['PATH']
         )
-"""
-OpenSlideImageData uses proteted functions from OpenSlide to get image data as
-numpy arrays instead of pillow images. The proteted function _read_region is
-used to get raw  data from the OpenSlide C API. We consider this safe, as these
-directly map to the Openslide C API and are thus not likely  to change.
-"""
 
 from openslide import OpenSlide
 from openslide._convert import argb2rgba as convert_argb_to_rgba
-from openslide.lowlevel import (ArgumentError, _read_region,
+from openslide.lowlevel import (_read_region,
                                 get_associated_image_names)
 
 
@@ -107,7 +101,7 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         """Close the open slide object, if not already closed."""
         try:
             self._slide.close()
-        except ArgumentError:
+        except ctypes.ArgumentError:
             # Slide already closed
             pass
 
@@ -153,10 +147,10 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         return self.image_size
 
     @property
-    def pixel_spacing(self) -> SizeMm:
+    def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
         # TODO figure out pixel spacing for label and overview in openslide.
-        return SizeMm(1, 1)
+        return None
 
     @property
     def pyramid_index(self) -> int:
@@ -317,6 +311,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bool
             True if tile is blank.
         """
+
         TOP = RIGHT = -1
         BOTTOM = LEFT = 0
         CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
@@ -399,28 +394,34 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError('Negative size not allowed')
+        CHANNELS = 4
+        TRANSPARENCY = 3
 
         location_in_base_level = region.start * self.downsample + self._offset
-        tile_data = np.empty(
-            region.size.to_tuple() + (4,),
+
+        region_data = np.empty(
+            region.size.to_tuple() + (CHANNELS,),
             dtype=ctypes.c_uint8
         )
+
         _read_region(
             self._slide._osr,
-            tile_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+            region_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
             location_in_base_level.x,
             location_in_base_level.y,
             self._level_index,
             region.size.width,
             region.size.height
         )
-        tile_data.shape = (region.size.height, region.size.width, 4)
-        if self._detect_blank_tile(tile_data):
+        region_data.shape = (region.size.height, region.size.width, CHANNELS)
+        if self._detect_blank_tile(region_data):
             return None
-        convert_argb_to_rgba(tile_data)
-        image = Image.fromarray(tile_data)
+
+        convert_argb_to_rgba(region_data.view(ctypes.c_uint32))
+
+        image = Image.fromarray(region_data)
         no_alpha = Image.new('RGB', image.size, self.blank_color)
-        no_alpha.paste(image, mask=image.split()[3])
+        no_alpha.paste(image, mask=image.split()[TRANSPARENCY])
         return no_alpha
 
     def _get_encoded_tile(
