@@ -49,10 +49,11 @@ if os.name == 'nt':  # On windows, add path to openslide to dll path
         )
 
 """
-OpenSlideImageData uses proteted functions from OpenSlide to get image data as
-numpy arrays instead of pillow images. The proteted function _read_region is
-used to get raw  data from the OpenSlide C API. We consider this safe, as these
-directly map to the Openslide C API and are thus not likely to change.
+OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
+data as numpy arrays instead of pillow images. The proteted function
+_read_region is used to get raw data from the OpenSlide C API and argb2rgba is
+used to convert argb to rgba. We consider this safe, as these directly map
+to the Openslide C API and are thus not likely to change that often.
 """
 
 from openslide import OpenSlide
