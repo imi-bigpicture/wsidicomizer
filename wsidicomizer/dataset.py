@@ -129,8 +129,8 @@ def create_wsi_dataset(
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
-    slide microscopy series, frame of reference, acquisition context, multi-frame
-    dimension, and whole slide microscopy image modules.
+    slide microscopy series, frame of reference, acquisition context,
+    multi-frame dimension, and whole slide microscopy image modules.
 
     Some modules returned 'not complete', and completed during image data
     import or file save():
@@ -257,7 +257,7 @@ def create_patient_module(
     birth_date: Optional[datetime.date] = None,
     sex: str = "",
     identity_removed: bool = False,
-    de_indentification_methods: Sequence[Union[str, Code]] = [],
+    de_indentification_methods: Optional[Sequence[Union[str, Code]]] = None,
     age_at_extraction: Optional[str] = None
 ) -> Dataset:
     """Create patient and patient study modules.
@@ -275,7 +275,7 @@ def create_patient_module(
     identity_removed: bool = False
         True if partient idendity has been removed from attributes in dataset
         and in image data.
-    de_indentification_methods: Sequence[Union[str, Code]] = []
+    de_indentification_methods: Optional[Sequence[Union[str, Code]]] = None
         Method of de-indentification. Can be descriptive strings and/or coded
         values.
     age_at_extraction: Optional[str] = None
@@ -286,6 +286,8 @@ def create_patient_module(
     Dataset
         Dataset containing patient and patient study modules.
     """
+    if de_indentification_methods is None:
+        de_indentification_methods = []
     dataset = Dataset()
     dataset.PatientName = name
     dataset.PatientID = id

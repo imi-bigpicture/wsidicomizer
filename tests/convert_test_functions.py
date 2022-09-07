@@ -34,7 +34,7 @@ REGION_DEFINITIONS_FILE = 'tests/testdata/region_definitions.json'
 
 
 class ConvertTestBase:
-    include_levels: Sequence[int] = []
+    include_levels: Sequence[int]
     suffix: str
     testdata_subfolder: str
     tile_size: Optional[int] = None
