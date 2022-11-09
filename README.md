@@ -7,7 +7,7 @@
 # Supported formats
 *wsidicomizer* currently supports the following formats:
 - Aperio svs (lossless)
-- Hamamtsu ndpi (lossless)
+- Hamamatsu ndpi (lossless)
 - Hamamatsu vms (lossy)
 - Philips tiff (lossless)
 - Mirax mrxs (lossy)
