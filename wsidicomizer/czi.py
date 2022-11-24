@@ -121,7 +121,7 @@ class CziImageData(MetaImageData):
         self._blank_encoded_tile = self._encode(self._create_blank_tile())
         self._pixel_spacing = self._get_pixel_spacing()
         self._focal_planes = sorted(self._focal_plane_mapping)
-        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
         self._block_locks: Dict[int, Lock] = defaultdict(Lock)
 
@@ -240,12 +240,12 @@ class CziImageData(MetaImageData):
 
     def _get_size(self, axis: str) -> int:
         index = self._get_axis_index(axis)
-        assert(isinstance(self._czi.shape, tuple))
+        assert isinstance(self._czi.shape, tuple)
         return self._czi.shape[index]
 
     def _get_start(self, axis: str) -> int:
         index = self._get_axis_index(axis)
-        assert(isinstance(self._czi.start, tuple))
+        assert isinstance(self._czi.start, tuple)
         return self._czi.start[index]
 
     def _get_axis_index(self, axis: str) -> int:
@@ -273,7 +273,7 @@ class CziImageData(MetaImageData):
             fill_value = 0
         else:
             fill_value = 1
-        assert(isinstance(self._czi.dtype, np.dtype))
+        assert isinstance(self._czi.dtype, np.dtype)
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
             fill_value * np.iinfo(self._czi.dtype).max,
@@ -422,7 +422,7 @@ class CziImageData(MetaImageData):
         tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = (
             defaultdict(list)
         )
-        assert(isinstance(self._czi.filtered_subblock_directory, list))
+        assert isinstance(self._czi.filtered_subblock_directory, list)
         for index, block in enumerate(self._czi.filtered_subblock_directory):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(

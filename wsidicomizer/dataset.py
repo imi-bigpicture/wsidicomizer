@@ -104,23 +104,28 @@ def populate_base_dataset(
     Dataset
         Dataset with added properties.
     """
-    for property, value in tiler.properties.items():
-        if property == 'aquisition_datetime' and include_confidential:
-            base_dataset.AcquisitionDateTime = value
-        elif property == 'device_serial_number' and include_confidential:
-            base_dataset.DeviceSerialNumber = value
-        elif property == 'manufacturer':
-            base_dataset.Manufacturer = value
-        elif property == 'model':
-            base_dataset.ManufacturerModelName = value
-        elif property == 'software_versions':
-            base_dataset.SoftwareVersions = value
-        elif property == 'lossy_image_compression_method':
-            base_dataset.LossyImageCompressionMethod = value
-        elif property == 'lossy_image_compression_ratio':
-            base_dataset.LossyImageCompressionRatio = value
-        elif property == 'photometric_interpretation':
-            base_dataset.PhotometricInterpretation = value
+
+    properties = {
+        'Manufacturer': tiler.metadata.scanner_manufacturer,
+        'ManufacturerModelName': tiler.metadata.scanner_model,
+        'SoftwareVersions': tiler.metadata.scanner_software_versions,
+    }
+    confidential_properties = {
+        'AcquisitionDateTime': tiler.metadata.aquisition_datetime,
+        'DeviceSerialNumber': tiler.metadata.scanner_serial_number
+    }
+    if include_confidential:
+        properties.update(confidential_properties)
+    for property_name, property_value in tiler.metadata.properties.items():
+        if property_name == 'lossy_image_compression_method':
+            properties['LossyImageCompressionMethod'] = property_value
+        elif property_name == 'lossy_image_compression_ratio':
+            properties['LossyImageCompressionRatio'] = property_value
+
+    for property_name, property_value in properties.items():
+        if property is not None:
+            setattr(base_dataset, property_name, property_value)
+
     return base_dataset
 
 
