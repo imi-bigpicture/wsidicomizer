@@ -372,7 +372,7 @@ class OpenTileDicomizer(MetaDicomizer):
             Lists of created level, label and overivew instances.
         """
         base_dataset = populate_base_dataset(
-            tiler,
+            tiler.metadata,
             base_dataset,
             include_confidential
         )

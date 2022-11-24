@@ -28,7 +28,7 @@ from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
                                   SpecimenSamplingProcedureCode,
                                   SpecimenStainsCode)
 
-from opentile.common import Tiler
+from opentile.common import Metadata
 
 
 def get_image_type(image_flavor: str, level_index: int) -> List[str]:
@@ -85,15 +85,15 @@ def create_base_dataset(
 
 
 def populate_base_dataset(
-    tiler: Tiler,
+    metadata: Metadata,
     base_dataset: Dataset,
     include_confidential: bool = True
 ) -> Dataset:
     """Populate dataset with properties from tiler, if present.
     Parameters
     ----------
-    tiler: Tiler
-        A opentile Tiler.
+    metadata: Metadata
+        A object holding metadata.
     base_dataset: Dataset
         Dataset to append properties to.
     include_confidential: bool = True
@@ -106,17 +106,17 @@ def populate_base_dataset(
     """
 
     properties = {
-        'Manufacturer': tiler.metadata.scanner_manufacturer,
-        'ManufacturerModelName': tiler.metadata.scanner_model,
-        'SoftwareVersions': tiler.metadata.scanner_software_versions,
+        'Manufacturer': metadata.scanner_manufacturer,
+        'ManufacturerModelName': metadata.scanner_model,
+        'SoftwareVersions': metadata.scanner_software_versions,
     }
     confidential_properties = {
-        'AcquisitionDateTime': tiler.metadata.aquisition_datetime,
-        'DeviceSerialNumber': tiler.metadata.scanner_serial_number
+        'AcquisitionDateTime': metadata.aquisition_datetime,
+        'DeviceSerialNumber': metadata.scanner_serial_number
     }
     if include_confidential:
         properties.update(confidential_properties)
-    for property_name, property_value in tiler.metadata.properties.items():
+    for property_name, property_value in metadata.properties.items():
         if property_name == 'lossy_image_compression_method':
             properties['LossyImageCompressionMethod'] = property_value
         elif property_name == 'lossy_image_compression_ratio':
