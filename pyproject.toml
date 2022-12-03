@@ -26,6 +26,7 @@ pydicom = "^2.2.1"
 highdicom = "^0.15.0"
 czifile = "^2019.7.2"
 imagecodecs = "^2022.9.26"
+python-dateutil = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
