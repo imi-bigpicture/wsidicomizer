@@ -20,6 +20,7 @@ from tempfile import TemporaryDirectory
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import pytest
+
 from PIL import Image, ImageChops, ImageFilter, ImageStat
 from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
@@ -38,6 +39,8 @@ class ConvertTestBase:
     suffix: str
     testdata_subfolder: str
     tile_size: Optional[int] = None
+    encode_format: str = 'jpeg'
+    encode_quality: int = 90
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -96,7 +99,9 @@ class ConvertTestBase:
             str(path),
             output_path=str(tempdir.name),
             tile_size=cls.tile_size,
-            include_levels=cls.include_levels
+            include_levels=cls.include_levels,
+            encoding_format=cls.encode_format,
+            encoding_quality=cls.encode_quality
         )
         wsi = WsiDicom.open(str(tempdir.name))
         open_wsi = OpenSlide(str(path))
@@ -172,29 +177,39 @@ class ConvertTestBase:
 
     def test_read_region_openslide(self):
         self._skip_if_no_testdefinitions()
+        test_runned = False
         for file, test_definitions in self.test_definitions.items():
             if not Path(file) in self.test_folders:
                 continue
+
             (wsi, open_wsi, _) = self.test_folders[Path(file)]
             if open_wsi is None:
                 continue
             for region in test_definitions['read_region']:
-                level_size = (
-                    wsi.levels[0].size // pow(2, region['level'])
-                ).to_tuple()
-                # Only run test if level is in open slide wsi
-                if level_size not in open_wsi.level_dimensions:
+                level_index = region['level']
+                # Only run test if level is in wsi (no downsampling)
+                if level_index not in wsi.levels.levels:
                     continue
+                open_wsi_downsample = pow(
+                    2,
+                    min(self.include_levels) + level_index
+                )
+                # Only run test if level is in open slide wsi
+                if open_wsi_downsample not in open_wsi.level_downsamples:
+                    continue
+                open_wsi_level = open_wsi.level_downsamples.index(
+                    open_wsi_downsample
+                )
+                scale = int(open_wsi.level_downsamples[open_wsi_level])
+
                 im = wsi.read_region(
                     (region["location"]["x"], region["location"]["y"]),
-                    region["level"],
+                    level_index,
                     (region["size"]["width"], region["size"]["height"])
                 )
-                index = open_wsi.level_dimensions.index(level_size)
-                scale = int(open_wsi.level_downsamples[index])
                 try:
-                    offset_x = open_wsi.properties['openslide.bounds-x']
-                    offset_y = open_wsi.properties['openslide.bounds-y']
+                    offset_x = int(open_wsi.properties['openslide.bounds-x'])
+                    offset_y = int(open_wsi.properties['openslide.bounds-y'])
                 except KeyError:
                     offset_x = offset_y = 0
                 scaled_location_x = (
@@ -205,7 +220,7 @@ class ConvertTestBase:
                 )
                 open_im = open_wsi.read_region(
                     (scaled_location_x, scaled_location_y),
-                    index,
+                    open_wsi_level,
                     (region["size"]["width"], region["size"]["height"])
                 )
                 no_alpha = Image.new(
@@ -216,14 +231,15 @@ class ConvertTestBase:
                 no_alpha.paste(open_im, mask=open_im.split()[3])
                 open_im = no_alpha
 
-                blur = ImageFilter.GaussianBlur(2)
-                diff = ImageChops.difference(
-                    im.filter(blur),
-                    open_im.filter(blur)
-                )
-                print(scaled_location_x, scaled_location_y, index)
+                diff = ImageChops.difference(im, open_im)
+                test_runned = True
                 for band_rms in ImageStat.Stat(diff).rms:
-                    self.assertLess(band_rms, 2, region)  # type: ignore
+                    self.assertLess(band_rms, 0.01, region)  # type: ignore
+            if not test_runned:
+                raise SkipTest(
+                    f'no levels matched  for {self.testdata_subfolder}, '
+                    'skipping'
+                )
 
     def test_read_thumbnail_openslide(self):
         self._skip_if_no_testdefinitions()

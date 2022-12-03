@@ -23,7 +23,7 @@ from .convert_test_functions import ConvertTestBase
 class PhilipsConvertTest(ConvertTestBase, unittest.TestCase):
     testdata_subfolder = 'philips_tiff'
     suffix = '.tif'
-    include_levels = [4, 6]
+    include_levels = [4, 5, 6]
 
     def __init__(self, *args, **kwargs):
         super(ConvertTestBase, self).__init__(*args, **kwargs)
