@@ -30,6 +30,8 @@ class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
     suffix = '.mrxs'
     include_levels = [4, 6]
     tile_size: int = 1024
+    encode_format = 'jpeg2000'  # Use lossless to enable pixel comparision
+    encode_quality = 0
 
     def __init__(self, *args, **kwargs):
         super(ConvertTestBase, self).__init__(*args, **kwargs)
@@ -38,7 +40,7 @@ class MiraxConvertTest(ConvertTestBase, unittest.TestCase):
     def setUpClass(cls):
         super().setUpClass()
         _, openslide, _ = list(cls.test_folders.values())[0]
-        assert(openslide is not None)
+        assert openslide is not None
         cls.openslide_imagedata = OpenSlideLevelImageData(
             openslide,
             0,

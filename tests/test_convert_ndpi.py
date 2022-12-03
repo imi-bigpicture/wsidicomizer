@@ -23,7 +23,7 @@ from .convert_test_functions import ConvertTestBase
 class NdpiConvertTest(ConvertTestBase, unittest.TestCase):
     testdata_subfolder = 'ndpi'
     suffix = '.ndpi'
-    include_levels = [4, 6]
+    include_levels = [4, 5, 6]
     tile_size = 1024
 
     def __init__(self, *args, **kwargs):
