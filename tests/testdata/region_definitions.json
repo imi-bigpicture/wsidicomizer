@@ -123,7 +123,7 @@
     },
     "mirax": {
         "CMU-1/CMU-1.mrxs":{
-            "photometric_interpretation": "YBR_FULL_422",
+            "photometric_interpretation": "YBR_RCT",
             "read_region": [
                 {
                     "location": {
@@ -135,7 +135,7 @@
                         "width": 500,
                         "height": 500
                     },
-                    "md5": "f36fe66216a26450737d5e283e3859f0"
+                    "md5": "fe29e76f5904d65253d8eb742b244789"
                 },
                 {
                     "location": {
@@ -147,7 +147,7 @@
                         "width": 500,
                         "height": 500
                     },
-                    "md5": "dedee8b463450327d1bb3da24633c6be"
+                    "md5": "4f4c904ed9257e385fc8f0818337d9e7"
                 }
             ],
             "read_thumbnail": []
