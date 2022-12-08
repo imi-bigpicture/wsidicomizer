@@ -1,6 +1,8 @@
-{
+test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
+            "convert": True,
+            "include_levels": [0, 2, 4],
             "photometric_interpretation": "RGB",
             "read_region": [
                 {
@@ -8,7 +10,7 @@
                         "x": 900,
                         "y": 1200
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -20,7 +22,7 @@
                         "x": 450,
                         "y": 600
                     },
-                    "level": 1,
+                    "level": 5,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -32,12 +34,26 @@
                         "x": 225,
                         "y": 300
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 200,
                         "height": 200
                     },
                     "md5": "2225853ad4952b9f1854f9cb97c6736b"
+                }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 16400,
+                        "y": 21200
+                    },
+                    "level": 0,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
+                    "md5": "51cc84bd6c1c71a7a7c3e736b3bd3970"
                 }
             ],
             "read_thumbnail": [
@@ -51,6 +67,8 @@
             ]
         },
         "svs1/input.svs": {
+            "convert": True,
+            "include_levels": [0, 2, 4],
             "photometric_interpretation": "RGB",
             "read_region": [
                 {
@@ -58,7 +76,7 @@
                         "x": 500,
                         "y": 500
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -70,7 +88,7 @@
                         "x": 0,
                         "y": 0
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -82,13 +100,27 @@
                         "x": 100,
                         "y": 100
                     },
-                    "level": 1,
+                    "level": 5,
                     "size": {
                         "width": 200,
                         "height": 200
                     },
                     "md5": "51cc84bd6c1c71a7a7c3e736b3bd3970"
                 }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 8000,
+                        "y": 8000
+                    },
+                    "level": 0,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
+                    "md5": "51cc84bd6c1c71a7a7c3e736b3bd3970"
+                },
             ],
             "read_thumbnail": [
                 {
@@ -103,6 +135,9 @@
     },
     "czi": {
         "czi1/input.czi": {
+            "convert": False,
+            "include_levels": [0],
+            "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
@@ -118,11 +153,17 @@
                     "md5": "aa9e76930398facc8c7910e053a7f418"
                 }
             ],
+            "read_region_openslide": [],
             "read_thumbnail": []
         }
     },
     "mirax": {
-        "CMU-1/CMU-1.mrxs":{
+        "CMU-1/CMU-1.mrxs": {
+            "convert": True,
+            "include_levels": [4, 6],
+            "tile_size": 1024,
+            "encode_format": 'jpeg2000',
+            "encode_quality": 0,
             "photometric_interpretation": "YBR_RCT",
             "read_region": [
                 {
@@ -130,7 +171,7 @@
                         "x": 50,
                         "y": 100
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 500,
                         "height": 500
@@ -142,7 +183,7 @@
                         "x": 400,
                         "y": 500
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 500,
                         "height": 500
@@ -150,11 +191,38 @@
                     "md5": "4f4c904ed9257e385fc8f0818337d9e7"
                 }
             ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 50,
+                        "y": 100
+                    },
+                    "level": 6,
+                    "size": {
+                        "width": 500,
+                        "height": 500
+                    },
+                },
+                {
+                    "location": {
+                        "x": 400,
+                        "y": 500
+                    },
+                    "level": 4,
+                    "size": {
+                        "width": 500,
+                        "height": 500
+                    },
+                }
+            ],
             "read_thumbnail": []
         }
     },
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
+            "convert": True,
+            "include_levels": [4, 6],
+            "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
@@ -162,7 +230,7 @@
                         "x": 940,
                         "y": 1500
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -174,7 +242,7 @@
                         "x": 470,
                         "y": 750
                     },
-                    "level": 1,
+                    "level": 5,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -186,12 +254,36 @@
                         "x": 235,
                         "y": 375
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 200,
                         "height": 200
                     },
                     "md5": "29949c1bbf444113b8f07d0ba454b25e"
+                }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 940,
+                        "y": 1500
+                    },
+                    "level": 4,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
+                },
+                {
+                    "location": {
+                        "x": 235,
+                        "y": 375
+                    },
+                    "level": 6,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
                 }
             ],
             "read_thumbnail": [
@@ -205,6 +297,9 @@
             ]
         },
         "ndpi1/input.ndpi": {
+            "convert": True,
+            "include_levels": [4, 6],
+            "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
@@ -212,7 +307,7 @@
                         "x": 0,
                         "y": 0
                     },
-                    "level": 4,
+                    "level": 8,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -224,7 +319,7 @@
                         "x": 100,
                         "y": 100
                     },
-                    "level": 4,
+                    "level": 8,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -236,12 +331,25 @@
                         "x": 0,
                         "y": 0
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 500,
                         "height": 500
                     },
                     "md5": "15f166e1facb38aba2eb47f7622c5c3c"
+                }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 0,
+                        "y": 0
+                    },
+                    "level": 6,
+                    "size": {
+                        "width": 500,
+                        "height": 500
+                    },
                 }
             ],
             "read_thumbnail": [
@@ -255,6 +363,9 @@
             ]
         },
         "ndpi2/input.ndpi": {
+            "convert": True,
+            "include_levels": [4, 6],
+            "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
@@ -262,7 +373,7 @@
                         "x": 3000,
                         "y": 3000
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 500,
                         "height": 500
@@ -274,12 +385,36 @@
                         "x": 1000,
                         "y": 1000
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 500,
                         "height": 500
                     },
                     "md5": "59afbe85473f23038e97ee40213862b4"
+                }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 3000,
+                        "y": 3000
+                    },
+                    "level": 4,
+                    "size": {
+                        "width": 500,
+                        "height": 500
+                    },
+                },
+                {
+                    "location": {
+                        "x": 1000,
+                        "y": 1000
+                    },
+                    "level": 6,
+                    "size": {
+                        "width": 500,
+                        "height": 500
+                    },
                 }
             ],
             "read_thumbnail": [
@@ -295,6 +430,8 @@
     },
     "philips_tiff": {
         "philips1/input.tif": {
+            "convert": True,
+            "include_levels": [4, 5, 6],
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
@@ -302,7 +439,7 @@
                         "x": 500,
                         "y": 1000
                     },
-                    "level": 1,
+                    "level": 5,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -314,7 +451,7 @@
                         "x": 150,
                         "y": 300
                     },
-                    "level": 2,
+                    "level": 6,
                     "size": {
                         "width": 200,
                         "height": 200
@@ -326,12 +463,47 @@
                         "x": 1000,
                         "y": 2000
                     },
-                    "level": 0,
+                    "level": 4,
                     "size": {
                         "width": 200,
                         "height": 200
                     },
                     "md5": "b35b1013f4009ce11f29b82a52444191"
+                }
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {
+                        "x": 500,
+                        "y": 1000
+                    },
+                    "level": 5,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
+                },
+                {
+                    "location": {
+                        "x": 150,
+                        "y": 300
+                    },
+                    "level": 6,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
+                },
+                {
+                    "location": {
+                        "x": 1000,
+                        "y": 2000
+                    },
+                    "level": 4,
+                    "size": {
+                        "width": 200,
+                        "height": 200
+                    },
                 }
             ],
             "read_thumbnail": [
