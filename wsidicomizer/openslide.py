@@ -17,6 +17,7 @@ import math
 import os
 from abc import ABCMeta
 from pathlib import Path
+import re
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -107,19 +108,9 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         """
         super().__init__(encoder)
         self._slide = open_slide
-        slide_background_color_string = self._slide.properties[
-            PROPERTY_NAME_BACKGROUND_COLOR
-        ]
-        if slide_background_color_string is None:
-            self._blank_color = super()._get_blank_color(
-                self.photometric_interpretation
-            )
-        else:
-            self._blank_color = (
-                int(slide_background_color_string[0:2], 16),
-                int(slide_background_color_string[2:4], 16),
-                int(slide_background_color_string[4:6], 16)
-            )
+        self._blank_color = self._get_blank_color(
+            self.photometric_interpretation
+        )
 
     @property
     def files(self) -> List[Path]:
@@ -157,6 +148,40 @@ class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
         except ctypes.ArgumentError:
             # Slide already closed
             pass
+
+    def _get_blank_color(
+        self,
+        photometric_interpretation: str
+    ) -> Tuple[int, int, int]:
+        """Return color to use blank tiles. Parses background color from
+        openslide if present.
+
+        Parameters
+        ----------
+        photometric_interpretation: str
+            The photomoetric interpretation of the dataset
+
+        Returns
+        ----------
+        Tuple[int, int, int]
+            RGB color.
+
+        """
+        slide_background_color_string = self._slide.properties[
+            PROPERTY_NAME_BACKGROUND_COLOR
+        ]
+        if slide_background_color_string is not None:
+            rgb = re.findall(
+                r'([0-9a-fA-F]{2})',
+                slide_background_color_string
+            )
+            if len(rgb) == 3:
+                return (
+                    int(rgb[0], 16),
+                    int(rgb[1], 16),
+                    int(rgb[2], 16)
+                )
+        return super()._get_blank_color(photometric_interpretation)
 
 
 class OpenSlideAssociatedImageData(OpenSlideImageData):
