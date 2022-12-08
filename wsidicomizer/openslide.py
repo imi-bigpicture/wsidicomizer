@@ -227,8 +227,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             )
         except KeyError:
             raise Exception(
-                "Could not determine pixel spacing as openslide properties "
-                "'openslide.mpp-x' and/or 'openslide.mpp-y' is missing in file"
+                "Could not determine pixel spacing as openslide did not "
+                "provide mpp from the file."
             )
 
         # Get set image origin and size to bounds if available
