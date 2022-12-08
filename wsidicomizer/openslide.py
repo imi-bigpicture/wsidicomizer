@@ -16,9 +16,12 @@ import ctypes
 import math
 import os
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+import re
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+
+from opentile.metadata import Metadata
 from PIL import Image
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
@@ -29,7 +32,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.wsidicom import WsiDicom
 
 from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset
+from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
 if os.name == 'nt':  # On windows, add path to openslide to dll path
@@ -55,10 +58,36 @@ used to convert argb to rgba. We consider this safe, as these directly map
 to the Openslide C API and are thus not likely to change that often.
 """
 
-from openslide import OpenSlide
+from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,
+                       PROPERTY_NAME_BOUNDS_HEIGHT, PROPERTY_NAME_BOUNDS_WIDTH,
+                       PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
+                       PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y,
+                       PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR,
+                       OpenSlide)
 from openslide._convert import argb2rgba as convert_argb_to_rgba
-from openslide.lowlevel import (_read_region,
-                                get_associated_image_names)
+from openslide.lowlevel import _read_region, get_associated_image_names
+
+
+class OpenSlideMetadata(Metadata):
+    def __init__(self, slide: OpenSlide):
+        magnification = slide.properties.get(
+            PROPERTY_NAME_OBJECTIVE_POWER
+        )
+        if magnification is not None:
+            self._magnification = float(magnification)
+        else:
+            self._magnification = None
+        self._scanner_manufacturer = slide.properties.get(
+            PROPERTY_NAME_VENDOR
+        )
+
+    @property
+    def magnification(self) -> Optional[float]:
+        return self._magnification
+
+    @property
+    def scanner_manufacturer(self) -> Optional[str]:
+        return self._scanner_manufacturer
 
 
 class OpenSlideImageData(MetaImageData):
@@ -78,6 +107,9 @@ class OpenSlideImageData(MetaImageData):
         """
         super().__init__(encoder)
         self._slide = open_slide
+        self._blank_color = self._get_blank_color(
+            self.photometric_interpretation
+        )
 
     @property
     def files(self) -> List[Path]:
@@ -104,6 +136,10 @@ class OpenSlideImageData(MetaImageData):
     def optical_paths(self) -> List[str]:
         return ['0']
 
+    @property
+    def blank_color(self) -> Tuple[int, int, int]:
+        return self._blank_color
+
     def close(self) -> None:
         """Close the open slide object, if not already closed."""
         try:
@@ -111,6 +147,40 @@ class OpenSlideImageData(MetaImageData):
         except ctypes.ArgumentError:
             # Slide already closed
             pass
+
+    def _get_blank_color(
+        self,
+        photometric_interpretation: str
+    ) -> Tuple[int, int, int]:
+        """Return color to use blank tiles. Parses background color from
+        openslide if present.
+
+        Parameters
+        ----------
+        photometric_interpretation: str
+            The photomoetric interpretation of the dataset
+
+        Returns
+        ----------
+        Tuple[int, int, int]
+            RGB color.
+
+        """
+        slide_background_color_string = self._slide.properties[
+            PROPERTY_NAME_BACKGROUND_COLOR
+        ]
+        if slide_background_color_string is not None:
+            rgb = re.findall(
+                r'([0-9a-fA-F]{2})',
+                slide_background_color_string
+            )
+            if len(rgb) == 3:
+                return (
+                    int(rgb[0], 16),
+                    int(rgb[1], 16),
+                    int(rgb[2], 16)
+                )
+        return super()._get_blank_color(photometric_interpretation)
 
 
 class OpenSlideAssociatedImageData(OpenSlideImageData):
@@ -232,10 +302,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             )
 
         # Get set image origin and size to bounds if available
-        bounds_x = self._slide.properties.get('openslide.bounds-x', 0)
-        bounds_y = self._slide.properties.get('openslide.bounds-y', 0)
-        bounds_w = self._slide.properties.get('openslide.bounds-width', None)
-        bounds_h = self._slide.properties.get('openslide.bounds-height', None)
+        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X, 0)
+        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y, 0)
+        bounds_w = self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH)
+        bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
         self._offset = Point(int(bounds_x), int(bounds_y))
         if bounds_w is not None and bounds_h is not None:
             self._image_size = (
@@ -561,9 +631,13 @@ class OpenSlideDicomizer(MetaDicomizer):
             encoding_quality,
             subsampling=jpeg_subsampling
         )
-        base_dataset = create_base_dataset(modules)
-
         slide = OpenSlide(filepath)
+        metadata = OpenSlideMetadata(slide)
+        base_dataset = populate_base_dataset(
+            metadata,
+            create_base_dataset(modules),
+            include_confidential
+        )
         instance_number = 0
         level_instances = [
             cls._create_instance(

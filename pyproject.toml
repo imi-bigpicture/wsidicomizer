@@ -19,13 +19,14 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 wsidicom = "^0.4.0"
-opentile = "^0.3.0"
+opentile = "^0.4.2"
 openslide-python = "^1.1.2"
 numpy = "^1.22.0"
 pydicom = "^2.2.1"
 highdicom = "^0.15.0"
 czifile = "^2019.7.2"
-imagecodecs = "^2021.8.26"
+imagecodecs = "^2022.9.26"
+python-dateutil = "^2.8.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -22,6 +22,7 @@ from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
                       WsiDicomOverviews, WsiInstance)
 from wsidicom.geometry import Point, Size, SizeMm
 
+from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from opentile import OpenTile
 from opentile.common import OpenTilePage, Tiler
 from wsidicomizer.common import MetaDicomizer, MetaImageData
@@ -84,7 +85,7 @@ class OpenTileImageData(MetaImageData):
         return self._needs_transcoding
 
     @property
-    def native_compression(self) -> str:
+    def native_compression(self) -> COMPRESSION:
         """Return compression method used in image data."""
         return self._tiled_page.compression
 
@@ -130,19 +131,22 @@ class OpenTileImageData(MetaImageData):
             return self._encoder.photometric_interpretation(
                 self.samples_per_pixel
             )
-        if self._tiled_page.photometric_interpretation == 'YCBCR':
+        if self._tiled_page.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
                 return 'YBR_FULL_422'
             elif self.transfer_syntax == JPEG2000:
                 return 'YBR_ICT'
             elif self.transfer_syntax == JPEG2000Lossless:
                 return 'YBR_RCT'
-        elif self._tiled_page.photometric_interpretation == 'RGB':
+        elif self._tiled_page.photometric_interpretation == PHOTOMETRIC.RGB:
             return 'RGB'
-        elif self._tiled_page.photometric_interpretation == 'MINISBLACK':
+        elif self._tiled_page.photometric_interpretation == (
+            PHOTOMETRIC.MINISBLACK
+        ):
             return 'MONOCHROME2'
         raise NotImplementedError(
-            "Non-implemented photometric interpretation."
+            "Non-implemented photometric interpretation. ",
+            self._tiled_page.photometric_interpretation
         )
 
     @property
@@ -248,9 +252,9 @@ class OpenTileImageData(MetaImageData):
     def get_transfer_syntax(self) -> UID:
         """Return transfer syntax (Uid) for compression type in image data."""
         compression = self.native_compression
-        if compression == 'COMPRESSION.JPEG':
+        if compression == COMPRESSION.JPEG:
             return JPEGBaseline8Bit
-        elif compression == 'COMPRESSION.APERIO_JP2000_RGB':
+        elif compression == COMPRESSION.APERIO_JP2000_RGB:
             return JPEG2000
         raise NotImplementedError(
             f'Not supported compression {compression}'
@@ -263,7 +267,7 @@ class OpenTileDicomizer(MetaDicomizer):
         cls,
         filepath: str,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
+        tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -281,7 +285,7 @@ class OpenTileDicomizer(MetaDicomizer):
             Path to tiff file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int]
+        tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
             Levels to include. If None, include all levels.
@@ -368,7 +372,7 @@ class OpenTileDicomizer(MetaDicomizer):
             Lists of created level, label and overivew instances.
         """
         base_dataset = populate_base_dataset(
-            tiler,
+            tiler.metadata,
             base_dataset,
             include_confidential
         )
