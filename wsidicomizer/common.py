@@ -56,11 +56,6 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
         """Should return pyramid level for image data."""
         raise NotImplementedError()
 
-    @property
-    @abstractmethod
-    def photometric_interpretation(self) -> str:
-        raise NotImplementedError()
-
     def create_instance_dataset(
         self,
         base_dataset: Dataset,

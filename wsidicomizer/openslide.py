@@ -15,7 +15,6 @@
 import ctypes
 import math
 import os
-from abc import ABCMeta
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
@@ -62,7 +61,7 @@ from openslide.lowlevel import (_read_region,
                                 get_associated_image_names)
 
 
-class OpenSlideImageData(MetaImageData, metaclass=ABCMeta):
+class OpenSlideImageData(MetaImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -219,12 +218,18 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         )
         self._pyramid_index = int(math.log2(self.downsample))
 
-        base_mpp_x = float(self._slide.properties['openslide.mpp-x'])
-        base_mpp_y = float(self._slide.properties['openslide.mpp-y'])
-        self._pixel_spacing = SizeMm(
-            base_mpp_x * self.downsample / 1000.0,
-            base_mpp_y * self.downsample / 1000.0
-        )
+        try:
+            base_mpp_x = float(self._slide.properties['openslide.mpp-x'])
+            base_mpp_y = float(self._slide.properties['openslide.mpp-y'])
+            self._pixel_spacing = SizeMm(
+                base_mpp_x * self.downsample / 1000.0,
+                base_mpp_y * self.downsample / 1000.0
+            )
+        except KeyError:
+            raise Exception(
+                "Could not determine pixel spacing as openslide did not "
+                "provide mpp from the file."
+            )
 
         # Get set image origin and size to bounds if available
         bounds_x = self._slide.properties.get('openslide.bounds-x', 0)
