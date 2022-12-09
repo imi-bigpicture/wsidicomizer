@@ -53,8 +53,8 @@ jobs:
         with:
           script: |
             core.setFailed('test images were not cached')
-      - name: Set up libjpegturbo Ubuntu
-        run: sudo apt-get install -y libjpeg-turbo
+      - name: Set up libturbojpeg
+        run: sudo apt-get install -y libturbojpeg
       - name: Set up openslide
         run: sudo apt-get install -y openslide
       - name: Update pip and install pytest
