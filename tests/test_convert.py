@@ -26,13 +26,9 @@ from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.interface import WsiDicomizer
-from wsidicomizer.openslide import load_openslide_dll
+from wsidicomizer.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
-
-load_openslide_dll()
-
-from openslide import OpenSlide  # NOQA
 
 testdata_dir = Path(os.environ.get('OPENTILE_TESTDIR', 'tests/testdata'))
 
