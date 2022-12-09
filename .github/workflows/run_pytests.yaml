@@ -55,8 +55,8 @@ jobs:
             core.setFailed('test images were not cached')
       - name: Set up libturbojpeg
         run: sudo apt-get install -y libturbojpeg
-      - name: Set up openslide
-        run: sudo apt-get install -y openslide
+      - name: Set up libopenslide0
+        run: sudo apt-get install -y libopenslide0
       - name: Update pip and install pytest
         run: |
           python -m pip install -U pip
