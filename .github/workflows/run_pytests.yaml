@@ -62,7 +62,7 @@ jobs:
           python -m pip install -U pip
           python -m pip install pytest
 
-      - name: Install opentile
+      - name: Install wsidicomizer
         run: python -m pip install .
 
       - name: Run tests
