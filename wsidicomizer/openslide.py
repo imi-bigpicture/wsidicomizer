@@ -35,20 +35,25 @@ from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
-if os.name == 'nt':  # On windows, add path to openslide to dll path
-    try:
-        openslide_dir = os.environ['OPENSLIDE']
-    except KeyError:
-        raise ValueError(
-            "Enviroment variable 'OPENSLIDE'"
-            "needs to be set to OpenSlide bin path"
-        )
-    try:
-        os.add_dll_directory(openslide_dir)
-    except AttributeError:
-        os.environ['PATH'] = (
-            openslide_dir + os.pathsep + os.environ['PATH']
-        )
+
+def load_openslide_dll():
+    if os.name == 'nt':  # On windows, add path to openslide to dll path
+        try:
+            openslide_dir = os.environ['OPENSLIDE']
+        except KeyError:
+            raise ValueError(
+                "Enviroment variable 'OPENSLIDE'"
+                "needs to be set to OpenSlide bin path"
+            )
+        try:
+            os.add_dll_directory(openslide_dir)
+        except AttributeError:
+            os.environ['PATH'] = (
+                openslide_dir + os.pathsep + os.environ['PATH']
+            )
+
+
+load_openslide_dll()  # NOQA
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
@@ -58,14 +63,14 @@ used to convert argb to rgba. We consider this safe, as these directly map
 to the Openslide C API and are thus not likely to change that often.
 """
 
-from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,
+from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,  # NOQA
                        PROPERTY_NAME_BOUNDS_HEIGHT, PROPERTY_NAME_BOUNDS_WIDTH,
                        PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
                        PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y,
                        PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR,
                        OpenSlide)
-from openslide._convert import argb2rgba as convert_argb_to_rgba
-from openslide.lowlevel import _read_region, get_associated_image_names
+from openslide._convert import argb2rgba as convert_argb_to_rgba  # NOQA
+from openslide.lowlevel import _read_region, get_associated_image_names  # NOQA
 
 
 class OpenSlideMetadata(Metadata):
@@ -289,8 +294,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._pyramid_index = int(math.log2(self.downsample))
 
         try:
-            base_mpp_x = float(self._slide.properties['openslide.mpp-x'])
-            base_mpp_y = float(self._slide.properties['openslide.mpp-y'])
+            base_mpp_x = float(self._slide.properties[PROPERTY_NAME_MPP_X])
+            base_mpp_y = float(self._slide.properties[PROPERTY_NAME_MPP_Y])
             self._pixel_spacing = SizeMm(
                 base_mpp_x * self.downsample / 1000.0,
                 base_mpp_y * self.downsample / 1000.0
