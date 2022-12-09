@@ -28,7 +28,7 @@ FILES: Dict[str, Dict[str, Any]] = {
         'url': 'https://data.cytomine.coop/open/openslide/hamamatsu-ndpi/CMU-1.ndpi',  # NOQA
         'md5': {'CMU-1.ndpi': 'fb89dea54f85fb112e418a3cf4c7888a'}
     },
-    'slides/mirax/CMU-1/CMU-1.mrxs': {
+    'slides/mirax/CMU-1/CMU-1.zip': {
         'url': 'https://data.cytomine.coop/open/openslide/mirax-mrxs/CMU-1.zip',  # NOQA
         'md5': {
             'CMU-1/Data0000.dat': 'c3bed9f24edbc4833cb55d7feb7b82a4',
@@ -75,25 +75,26 @@ def download_file(url: str, filename: Path):
 
 
 def main():
-    print("Downloading and/or checking testdata from openslide.")
-    test_data_path = os.environ.get("OPENTILE_TESTDIR")
+    print('Downloading and/or checking testdata from openslide.')
+    test_data_path = os.environ.get('OPENTILE_TESTDIR')
     if test_data_path is None:
         test_data_dir = Path(DEFAULT_DIR)
         print(
-            "Env 'OPENTILE_TESTDIR' not set, downloading to default folder "
-            f"{test_data_dir}."
+            'Env "OPENTILE_TESTDIR" not set, downloading to default folder '
+            f'{test_data_dir}.'
         )
     else:
         test_data_dir = Path(test_data_path)
-        print(f"Downloading to {test_data_dir}")
+        print(f'Downloading to {test_data_dir}')
+
     os.makedirs(test_data_dir, exist_ok=True)
     for file, file_settings in FILES.items():
         file_path = test_data_dir.joinpath(file)
-        if file_path.exists():
-            print(f"{file} found, skipping download")
+        if file_path.parent.exists():
+            print(f'Folder for {file} found, skipping download')
         else:
             url = file_settings['url']
-            print(f"{file} not found, downloading from {url}")
+            print(f'Folder for {file} not found, downloading from {url}')
             os.makedirs(file_path.parent, exist_ok=True)
             download_file(url, file_path)
 
@@ -104,13 +105,21 @@ def main():
 
         for relative_path, hash in file_settings['md5'].items():
             saved_file_path = file_path.parent.joinpath(relative_path)
+            if not saved_file_path.exists():
+                raise ValueError(
+                    f'Did not find {saved_file_path}. Try removing the '
+                    'parent folder and try again.'
+                )
             with open(saved_file_path, 'rb') as saved_file_io:
                 data = saved_file_io.read()
                 if not hash == md5(data).hexdigest():
-                    raise ValueError(f"Checksum faild for {saved_file_path}")
+                    raise ValueError(
+                        f'Checksum faild for {saved_file_path}. Try removing '
+                        'the parent folder and try again.'
+                    )
                 else:
-                    print(f"{saved_file_path} checksum OK")
+                    print(f'{saved_file_path} checksum OK')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
