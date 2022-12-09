@@ -30,7 +30,7 @@ from wsidicomizer.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
 
-testdata_dir = Path(os.environ.get('OPENTILE_TESTDIR', 'tests/testdata'))
+testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 
 @pytest.mark.convert
