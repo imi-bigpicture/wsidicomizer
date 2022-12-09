@@ -7,13 +7,6 @@ jobs:
     name: cache test images
     runs-on: ubuntu-latest
     steps:
-      # see:
-      #   - https://github.com/actions/checkout/issues/135
-      #   - https://github.com/actions/runner/issues/1246
-      - name: Prevent cache-miss on windows
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Load test images from cache

@@ -76,11 +76,12 @@ def download_file(url: str, filename: Path):
 
 def main():
     print('Downloading and/or checking testdata from openslide.')
-    test_data_path = os.environ.get('OPENTILE_TESTDIR')
+    test_data_path = os.environ.get('WSIDICOMIZER_TESTDATA')
     if test_data_path is None:
         test_data_dir = Path(DEFAULT_DIR)
         print(
-            'Env "OPENTILE_TESTDIR" not set, downloading to default folder '
+            'Env "WSIDICOMIZER_TESTDATA" not set, '
+            'downloading to default folder '
             f'{test_data_dir}.'
         )
     else:
