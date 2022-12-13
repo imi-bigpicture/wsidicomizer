@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 from pydicom.dataset import Dataset
 
@@ -120,6 +121,15 @@ def main():
             "subsampling."
         )
     )
+    parser.add_argument(
+        '--offset-table',
+        type=str,
+        default='bot',
+        help=(
+            "Offset table to use, 'bot' basic offset table, 'eot' extended "
+            "offset table, 'None' - no offset table."
+        )
+    )
 
     args = parser.parse_args()
     if not args.dataset:
@@ -131,7 +141,9 @@ def main():
         levels = None
     else:
         levels = args.levels
-
+    offset_table: Optional[str] = args.offset_table
+    if offset_table == 'None':
+        offset_table = None
     WsiDicomizer.convert(
         filepath=str(args.input),
         output_path=str(args.output),
@@ -145,7 +157,8 @@ def main():
         chunk_size=args.chunk_size,
         encoding_format=args.format,
         encoding_quality=args.quality,
-        jpeg_subsampling=args.subsampling
+        jpeg_subsampling=args.subsampling,
+        offset_table=offset_table
     )
 
 
