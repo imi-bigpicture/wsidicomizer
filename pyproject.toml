@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wsidicomizer"
-version = "0.3.1"
+version = "0.4.0"
 description = "Tool for converting wsi-files to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 license = "Apache-2.0"
@@ -18,8 +18,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-wsidicom = "^0.4.0"
-opentile = "^0.4.2"
+wsidicom = "^0.5.0"
+opentile = "^0.5.0"
 openslide-python = "^1.1.2"
 numpy = "^1.22.0"
 pydicom = "^2.2.1"
@@ -27,12 +27,12 @@ highdicom = "^0.15.0"
 czifile = "^2019.7.2"
 imagecodecs = "^2022.9.26"
 python-dateutil = "^2.8.2"
-parameterized = "^0.8.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 pytest-watch = "^4.2.0"
 pycodestyle = "^2.8.0"
+parameterized = "^0.8.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
