@@ -24,6 +24,7 @@ from pydicom.uid import (JPEG2000, JPEG2000Lossless, JPEGBaseline8Bit,
                          generate_uid)
 from pydicom.valuerep import DSfloat
 from wsidicom import ImageData, WsiDicom, WsiInstance
+from wsidicom.image_data import ImageOrigin
 from wsidicom.instance import WsiDataset
 
 from wsidicomizer.encoding import Encoder
@@ -55,6 +56,11 @@ class MetaImageData(ImageData, metaclass=ABCMeta):
     def pyramid_index(self) -> int:
         """Should return pyramid level for image data."""
         raise NotImplementedError()
+
+    @property
+    def image_origin(self) -> ImageOrigin:
+        """Return a default ImageOrigin."""
+        return ImageOrigin()
 
     def create_instance_dataset(
         self,
