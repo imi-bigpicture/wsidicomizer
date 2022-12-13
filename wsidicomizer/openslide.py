@@ -166,9 +166,9 @@ class OpenSlideImageData(MetaImageData):
             RGB color.
 
         """
-        slide_background_color_string = self._slide.properties[
+        slide_background_color_string = self._slide.properties.get(
             PROPERTY_NAME_BACKGROUND_COLOR
-        ]
+        )
         if slide_background_color_string is not None:
             rgb = re.findall(
                 r'([0-9a-fA-F]{2})',
