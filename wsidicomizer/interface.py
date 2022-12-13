@@ -119,7 +119,8 @@ class WsiDicomizer:
         chunk_size: Optional[int] = None,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '420',
+        offset_table: Optional[str] = 'bot'
     ) -> List[str]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
@@ -158,6 +159,9 @@ class WsiDicomizer:
             Subsampling option if using jpeg for re-encoding. Use '444' for
             no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
             subsampling.
+        offset_table: Optional[str] = 'bot'
+            Offset table to use, 'bot' basic offset table, 'eot' extended
+            offset table, None - no offset table.
 
         Returns
         ----------
@@ -188,7 +192,8 @@ class WsiDicomizer:
                 output_path,
                 uid_generator,
                 workers,
-                chunk_size
+                chunk_size,
+                offset_table
             )
 
         return [str(filepath) for filepath in created_files]
