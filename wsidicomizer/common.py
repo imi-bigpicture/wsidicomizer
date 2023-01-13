@@ -241,7 +241,9 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Levels to include. If None, include all levels.
+            Pyramid levels to include. If None, include all levels.
+            Use negative indices to specify reverse indexing from highest
+            level.
         include_label: bool = True
             Inclube label.
         include_overview: bool = True
@@ -301,3 +303,16 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             instance_dataset,
             image_data
         )
+
+    @staticmethod
+    def _is_included_level(
+        level: int,
+        present_levels: Sequence[int],
+        include_levels: Optional[Sequence[int]] = None
+    ) -> bool:
+        """Return true if pyramid level is in included levels."""
+        if include_levels is None:
+            return True
+
+        absolute_levels = [present_levels[level] for level in include_levels]
+        return level in absolute_levels

@@ -632,6 +632,7 @@ class OpenSlideDicomizer(MetaDicomizer):
             subsampling=jpeg_subsampling
         )
         slide = OpenSlide(filepath)
+        pyramid_levels = cls._get_pyramid_levels(slide)
         metadata = OpenSlideMetadata(slide)
         base_dataset = populate_base_dataset(
             metadata,
@@ -652,7 +653,11 @@ class OpenSlideDicomizer(MetaDicomizer):
                 instance_number+level_index
             )
             for level_index in range(slide.level_count)
-            if include_levels is None or level_index in include_levels
+            if cls._is_included_level(
+                pyramid_levels[level_index],
+                pyramid_levels,
+                include_levels
+            )
         ]
         instance_number += len(level_instances)
         if include_label and 'label' in slide.associated_images:
@@ -683,3 +688,11 @@ class OpenSlideDicomizer(MetaDicomizer):
     def is_supported(filepath: str) -> bool:
         """Return True if file in filepath is supported by OpenSlide."""
         return OpenSlide.detect_format(str(filepath)) is not None
+
+    @staticmethod
+    def _get_pyramid_levels(slide: OpenSlide) -> List[int]:
+        """Return list of pyramid levels present in openslide slide."""
+        return [
+            int(math.log2(int(downsample)))
+            for downsample in slide.level_downsamples
+        ]

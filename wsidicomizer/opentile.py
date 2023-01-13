@@ -385,7 +385,11 @@ class OpenTileDicomizer(MetaDicomizer):
                 instance_number+index
             )
             for index, level in enumerate(tiler.levels)
-            if include_levels is None or level.pyramid_index in include_levels
+            if cls._is_included_level(
+                level.pyramid_index,
+                [level.pyramid_index for level in tiler.levels],
+                include_levels
+            )
         ]
         instance_number += len(level_instances)
         label_instances = [
