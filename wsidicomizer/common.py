@@ -308,11 +308,30 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
     def _is_included_level(
         level: int,
         present_levels: Sequence[int],
-        include_levels: Optional[Sequence[int]] = None
+        include_indices: Optional[Sequence[int]] = None
     ) -> bool:
-        """Return true if pyramid level is in included levels."""
-        if include_levels is None:
-            return True
+        """Return true if pyramid level is in included levels.
 
-        absolute_levels = [present_levels[level] for level in include_levels]
+        Parameters
+        ----------
+        level: int
+            Pyramid level to check.
+        present_levels: Sequence[int]
+            List of pyramid levels present.
+        include_indices: Optional[Sequence[int]] = None
+            Optional list indices (in present levels) to include, e.g. [0, 1]
+            includes the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes the two highest levels.
+
+        Returns
+        ----------
+        bool
+            True if level should be included.
+        """
+        if include_indices is None:
+            return True
+        absolute_levels = [
+            present_levels[level] for level in include_indices
+            if -len(present_levels) <= level < len(present_levels)
+        ]
         return level in absolute_levels
