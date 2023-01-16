@@ -57,11 +57,13 @@ class WsiDicomizer:
             Module datasets to use in files. If none, use default modules.
         tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
-        include_levels: Sequence[int]
-            Optional list of levels to include. Include all levels if None.
-        include_label: bool
+        include_levels: Optional[Sequence[int]] = None
+            Optional list indices (in present levels) to include, e.g. [0, 1]
+            includes the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes the two highest levels.
+        include_label: bool = True
             Include label(s), default true.
-        include_overwiew: bool
+        include_overwiew: bool = True
             Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
@@ -137,11 +139,13 @@ class WsiDicomizer:
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
              Function that can gernerate unique identifiers.
-        include_levels: Sequence[int]
-            Optional list of levels to include. Include all levels if None.
-        include_label: bool
+        include_levels: Optional[Sequence[int]] = None
+            Optional list indices (in present levels) to include, e.g. [0, 1]
+            includes the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes the two highest levels.
+        include_label: bool = True
             Include label(s), default true.
-        include_overwiew: bool
+        include_overwiew: bool = True
             Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.

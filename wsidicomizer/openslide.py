@@ -604,7 +604,10 @@ class OpenSlideDicomizer(MetaDicomizer):
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Levels to include. If None, include all levels.
+            Optional list of level indices to include. If None include all
+            levels, if empty sequence exlude all levels. E.g. [0, 1]
+            includes only the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes only the two highest levels.
         include_label: bool = True
             Inclube label.
         include_overview: bool = True
@@ -634,6 +637,7 @@ class OpenSlideDicomizer(MetaDicomizer):
             subsampling=jpeg_subsampling
         )
         slide = OpenSlide(filepath)
+        pyramid_levels = cls._get_pyramid_levels(slide)
         metadata = OpenSlideMetadata(slide)
         base_dataset = populate_base_dataset(
             metadata,
@@ -654,7 +658,11 @@ class OpenSlideDicomizer(MetaDicomizer):
                 instance_number+level_index
             )
             for level_index in range(slide.level_count)
-            if include_levels is None or level_index in include_levels
+            if cls._is_included_level(
+                pyramid_levels[level_index],
+                pyramid_levels,
+                include_levels
+            )
         ]
         instance_number += len(level_instances)
         if include_label and 'label' in slide.associated_images:
@@ -685,3 +693,11 @@ class OpenSlideDicomizer(MetaDicomizer):
     def is_supported(filepath: str) -> bool:
         """Return True if file in filepath is supported by OpenSlide."""
         return OpenSlide.detect_format(str(filepath)) is not None
+
+    @staticmethod
+    def _get_pyramid_levels(slide: OpenSlide) -> List[int]:
+        """Return list of pyramid levels present in openslide slide."""
+        return [
+            int(math.log2(int(downsample)))
+            for downsample in slide.level_downsamples
+        ]
