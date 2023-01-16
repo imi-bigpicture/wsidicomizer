@@ -241,7 +241,10 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Levels to include. If None, include all levels.
+            Optional list of level indices to include. If None include all
+            levels, if empty sequence exlude all levels. E.g. [0, 1]
+            includes only the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes only the two highest levels.
         include_label: bool = True
             Inclube label.
         include_overview: bool = True
@@ -301,3 +304,39 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
             instance_dataset,
             image_data
         )
+
+    @staticmethod
+    def _is_included_level(
+        level: int,
+        present_levels: Sequence[int],
+        include_indices: Optional[Sequence[int]] = None
+    ) -> bool:
+        """Return true if pyramid level is in included levels.
+
+        Parameters
+        ----------
+        level: int
+            Pyramid level to check.
+        present_levels: Sequence[int]
+            List of pyramid levels present.
+        include_indices: Optional[Sequence[int]] = None
+            Optional list indices (in present levels) to include, e.g. [0, 1]
+            includes the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes the two highest levels. Default of None
+            will not limit the selection. An empty sequence will exluded all
+            levels.
+
+        Returns
+        ----------
+        bool
+            True if level should be included.
+        """
+        if level not in present_levels:
+            return False
+        if include_indices is None:
+            return True
+        absolute_levels = [
+            present_levels[level] for level in include_indices
+            if -len(present_levels) <= level < len(present_levels)
+        ]
+        return level in absolute_levels

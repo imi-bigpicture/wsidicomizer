@@ -2,7 +2,8 @@ test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
             "convert": True,
-            "include_levels": [0, 2, 4],
+            "include_levels": [0, 1, 2],
+            "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "read_region": [
                 {
@@ -68,7 +69,8 @@ test_parameters = {
         },
         "svs1/input.svs": {
             "convert": True,
-            "include_levels": [0, 2, 4],
+            "include_levels": [0, 1, 2],
+            "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "read_region": [
                 {
@@ -137,6 +139,7 @@ test_parameters = {
         "czi1/input.czi": {
             "convert": False,
             "include_levels": [0],
+            "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
@@ -161,35 +164,37 @@ test_parameters = {
         "CMU-1/CMU-1.mrxs": {
             "convert": True,
             "include_levels": [4, 6],
+            "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "encode_format": 'jpeg2000',
             "encode_quality": 0,
             "photometric_interpretation": "YBR_RCT",
             "read_region": [
-                {
-                    "location": {
-                        "x": 50,
-                        "y": 100
-                    },
-                    "level": 6,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                    "md5": "fe29e76f5904d65253d8eb742b244789"
-                },
-                {
-                    "location": {
-                        "x": 400,
-                        "y": 500
-                    },
-                    "level": 4,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                    "md5": "4f4c904ed9257e385fc8f0818337d9e7"
-                }
+                # OpenSlide produces different results across platforms
+                # {
+                #     "location": {
+                #         "x": 50,
+                #         "y": 100
+                #     },
+                #     "level": 6,
+                #     "size": {
+                #         "width": 500,
+                #         "height": 500
+                #     },
+                #     "md5": "fe29e76f5904d65253d8eb742b244789"
+                # },
+                # {
+                #     "location": {
+                #         "x": 400,
+                #         "y": 500
+                #     },
+                #     "level": 4,
+                #     "size": {
+                #         "width": 500,
+                #         "height": 500
+                #     },
+                #     "md5": "4f4c904ed9257e385fc8f0818337d9e7"
+                # }
             ],
             "read_region_openslide": [
                 {
@@ -221,7 +226,8 @@ test_parameters = {
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
             "convert": True,
-            "include_levels": [4, 6],
+            "include_levels": [2, 3],
+            "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
@@ -298,7 +304,8 @@ test_parameters = {
         },
         "ndpi1/input.ndpi": {
             "convert": True,
-            "include_levels": [4, 6],
+            "include_levels": [2, 3],
+            "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
@@ -365,6 +372,7 @@ test_parameters = {
         "ndpi2/input.ndpi": {
             "convert": True,
             "include_levels": [4, 6],
+            "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
@@ -432,6 +440,7 @@ test_parameters = {
         "philips1/input.tif": {
             "convert": True,
             "include_levels": [4, 5, 6],
+            "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
             "read_region": [
                 {
