@@ -34,7 +34,7 @@ testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 
 @pytest.mark.convert
-class ConvertTest(unittest.TestCase):
+class WsiDicomizerConvertTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_folders = {

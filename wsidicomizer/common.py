@@ -328,6 +328,8 @@ class MetaDicomizer(WsiDicom, metaclass=ABCMeta):
         bool
             True if level should be included.
         """
+        if level not in present_levels:
+            return False
         if include_indices is None:
             return True
         absolute_levels = [
