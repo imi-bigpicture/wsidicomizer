@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
-## [0.5.0] - 2022-01-16
+## [0.5.1] - 2023-01-16
+
+### Fixed
+
+- Fixed changelog date.
+
+## [0.5.0] - 2023-01-16
 
 ### Changed
 
@@ -96,7 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.1..HEAD
+[0.5.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.0..0.5.1
 [0.5.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.4.0..0.5.0
 [0.4.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.3.1..0.4.0
 [0.3.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.3.0..0.3.1
