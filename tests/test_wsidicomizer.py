@@ -61,7 +61,11 @@ class WsiDicomizerTests(unittest.TestCase):
         include_indices: Optional[Sequence[int]]
 
     ):
-        is_included = MetaDicomizer._is_included_level(level, present_levels)
+        is_included = MetaDicomizer._is_included_level(
+            level,
+            present_levels,
+            include_indices
+        )
         self.assertFalse(is_included)
 
     @parameterized.expand(
