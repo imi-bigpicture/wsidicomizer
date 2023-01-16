@@ -288,9 +288,10 @@ class OpenTileDicomizer(MetaDicomizer):
         tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes the two highest levels.
+            Optional list of level indices to include. If None include all
+            levels, if empty sequence exlude all levels. E.g. [0, 1]
+            includes only the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes only the two highest levels.
         include_label: bool = True
             Inclube label.
         include_overview: bool = True
