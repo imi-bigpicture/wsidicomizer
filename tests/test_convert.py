@@ -13,11 +13,11 @@
 #    limitations under the License.
 
 import os
+import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, Optional, Sequence, Tuple
-import unittest
 
 import pytest
 from parameterized import parameterized
@@ -26,13 +26,11 @@ from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.interface import WsiDicomizer
+from wsidicomizer.openslide import OpenSlide
 
-os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
-
-from openslide import OpenSlide
 from .testdata.test_parameters import test_parameters
 
-testdata_dir = Path(os.environ.get('OPENTILE_TESTDIR', 'tests/testdata'))
+testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 
 @pytest.mark.convert

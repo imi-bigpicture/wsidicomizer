@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - include_levels now takes a list of level indices instead of pyramid levels.
+- Do not overwrite metadata in base dataset with metadata from file.
 
 ## [0.4.0] - 2022-12-13
 
