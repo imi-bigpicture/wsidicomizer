@@ -145,7 +145,8 @@ class ConvertTest(unittest.TestCase):
         [
             (
                 file_format,
-                file, region,
+                file,
+                region,
                 file_parameters['lowest_included_pyramid_level']
             )
             for file_format, format_files in test_parameters.items()
@@ -201,7 +202,8 @@ class ConvertTest(unittest.TestCase):
         [
             (
                 file_format,
-                file, region,
+                file,
+                region,
                 file_parameters['lowest_included_pyramid_level']
             )
             for file_format, format_files in test_parameters.items()
