@@ -123,7 +123,10 @@ def populate_base_dataset(
             properties['LossyImageCompressionRatio'] = property_value
 
     for property_name, property_value in properties.items():
-        if property is not None:
+        if (
+            not hasattr(base_dataset, property_name)
+            and property_value is not None
+        ):
             setattr(base_dataset, property_name, property_value)
 
     return base_dataset
