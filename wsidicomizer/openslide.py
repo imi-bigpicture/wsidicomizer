@@ -602,7 +602,9 @@ class OpenSlideDicomizer(MetaDicomizer):
         tile_size: Optional[int]
             Tile size to use if not defined by file.
         include_levels: Sequence[int] = None
-            Levels to include. If None, include all levels.
+            Optional list indices (in present levels) to include, e.g. [0, 1]
+            includes the two lowest levels. Negative indicies can be used,
+            e.g. [-1, -2] includes the two highest levels.
         include_label: bool = True
             Inclube label.
         include_overview: bool = True
