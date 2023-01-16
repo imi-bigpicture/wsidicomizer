@@ -13,11 +13,11 @@
 #    limitations under the License.
 
 import os
+import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, Optional, Sequence, Tuple
-import unittest
 
 import pytest
 from parameterized import parameterized
@@ -26,17 +26,15 @@ from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.interface import WsiDicomizer
+from wsidicomizer.openslide import OpenSlide
 
-os.add_dll_directory(os.environ['OPENSLIDE'])  # NOQA
-
-from openslide import OpenSlide
 from .testdata.test_parameters import test_parameters
 
-testdata_dir = Path(os.environ.get('OPENTILE_TESTDIR', 'tests/testdata'))
+testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 
 @pytest.mark.convert
-class ConvertTest(unittest.TestCase):
+class WsiDicomizerConvertTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_folders = {
@@ -143,7 +141,12 @@ class ConvertTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (file_format, file, region, min(file_parameters['include_levels']))
+            (
+                file_format,
+                file,
+                region,
+                file_parameters['lowest_included_pyramid_level']
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters['read_region']
@@ -195,7 +198,12 @@ class ConvertTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (file_format, file, region, min(file_parameters['include_levels']))
+            (
+                file_format,
+                file,
+                region,
+                file_parameters['lowest_included_pyramid_level']
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters['read_region_openslide']
