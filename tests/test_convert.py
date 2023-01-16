@@ -143,7 +143,11 @@ class ConvertTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (file_format, file, region, min(file_parameters['include_levels']))
+            (
+                file_format,
+                file, region,
+                file_parameters['lowest_included_pyramid_level']
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters['read_region']
@@ -195,7 +199,11 @@ class ConvertTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (file_format, file, region, min(file_parameters['include_levels']))
+            (
+                file_format,
+                file, region,
+                file_parameters['lowest_included_pyramid_level']
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters['read_region_openslide']
