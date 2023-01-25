@@ -153,14 +153,14 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.5.0"
+version = "0.6.0"
 description = "Read tiles from wsi-TIFF files"
 category = "main"
 optional = false
-python-versions = ">=3.8,<3.11"
+python-versions = ">=3.8,<3.12"
 
 [package.dependencies]
-imagecodecs = ">=2022.9.26,<2023.0.0"
+imagecodecs = ">=2022.12.24,<2023.0.0"
 numpy = ">=1.22.0,<2.0.0"
 Pillow = ">=9.1.1,<10.0.0"
 PyTurboJPEG = ">=1.6.1,<2.0.0"
@@ -386,11 +386,11 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.5.0"
+version = "0.6.0"
 description = "Tools for handling DICOM based whole scan images"
 category = "main"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = ">=3.8,<3.12"
 
 [package.dependencies]
 numpy = ">=1.22.0,<2.0.0"
@@ -399,8 +399,8 @@ pydicom = ">=2.1.0,<3.0.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.8,<3.11"
-content-hash = "d32c10357583c0e22cbba08c2d8aa9dc7a068050b9d76b48a5a77c68aeb6f658"
+python-versions = ">=3.8,<3.12"
+content-hash = "de8513fce35ee4387276693f6a351f1ab6610e254d83640cbcbaf9b810f72f2a"
 
 [metadata.files]
 atomicwrites = [
@@ -603,8 +603,8 @@ openslide-python = [
     {file = "openslide_python-1.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:7045ec7c460a95cc991fc9527f0535cadf3086fc2e899af093534ae1f4c5c384"},
 ]
 opentile = [
-    {file = "opentile-0.5.0-py3-none-any.whl", hash = "sha256:7452a677a93c1885b3fb492f075b7b65a5b9d8ccd7692af14aca5600c0a32e2b"},
-    {file = "opentile-0.5.0.tar.gz", hash = "sha256:06557475a7ef7413dc68f73beccf72ab81cffd52f02128d56f093140c4554822"},
+    {file = "opentile-0.6.0-py3-none-any.whl", hash = "sha256:9aa6e9a14530a9cf9381f7413255d35fa552831ca40fcd464fde539a03fbad4a"},
+    {file = "opentile-0.6.0.tar.gz", hash = "sha256:9538503db9eca26305257500337f4061d334c7e583f4c9cca23bbcc25995be99"},
 ]
 packaging = [
     {file = "packaging-23.0-py3-none-any.whl", hash = "sha256:714ac14496c3e68c99c29b00845f7a2b85f3bb6f1078fd9f72fd20f0570002b2"},
@@ -812,6 +812,6 @@ watchdog = [
     {file = "watchdog-2.2.1.tar.gz", hash = "sha256:cdcc23c9528601a8a293eb4369cbd14f6b4f34f07ae8769421252e9c22718b6f"},
 ]
 wsidicom = [
-    {file = "wsidicom-0.5.0-py3-none-any.whl", hash = "sha256:70d9390c727a0310d6e9257bab18fe245461068bad0c434952c05e65ac9bc982"},
-    {file = "wsidicom-0.5.0.tar.gz", hash = "sha256:cfc90724099f355250105a4eecd2f53fa1cb2415d5f92e44a7ea4d2c773221f8"},
+    {file = "wsidicom-0.6.0-py3-none-any.whl", hash = "sha256:6e77a9cd61584b3ebe2f16881abcf9b80f76d755254cc9038518ca8837401fa2"},
+    {file = "wsidicom-0.6.0.tar.gz", hash = "sha256:0b6ec232964c391637b4a414ab21dffb63acb275f01bc0c4b673691760640a9d"},
 ]
