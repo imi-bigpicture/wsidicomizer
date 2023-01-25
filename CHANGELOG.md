@@ -1,4 +1,4 @@
-# wsidicom changelog
+# wsidicomizer changelog
 
 All notable changes to this project will be documented in this file.
 
