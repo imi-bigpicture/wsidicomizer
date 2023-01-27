@@ -35,22 +35,17 @@ from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
-
-if os.name == 'nt':  # On windows, add path to openslide to dll path
-    try:
-        openslide_dir = os.environ['OPENSLIDE']
-    except KeyError:
-        raise ValueError(
-            "Enviroment variable 'OPENSLIDE'"
-            "needs to be set to OpenSlide bin path"
-        )
-    try:
-        os.add_dll_directory(openslide_dir)
-    except AttributeError:
-        os.environ['PATH'] = (
-            openslide_dir + os.pathsep + os.environ['PATH']
-        )
-
+# On windows, add env variable `OPENSLIDE` to dll path if specified.
+# Otherwise openslide must be in default path.
+if os.name == 'nt':
+    openslide_dir = os.environ.get('OPENSLIDE')
+    if openslide_dir is not None:
+        try:
+            os.add_dll_directory(openslide_dir)
+        except AttributeError:
+            os.environ['PATH'] = (
+                openslide_dir + os.pathsep + os.environ['PATH']
+            )
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
