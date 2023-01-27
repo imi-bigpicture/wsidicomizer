@@ -31,7 +31,7 @@ jobs:
 
   tests:
     needs: [cache_test_images]
-    name: pytest py${{ matrix.python-version }}
+    name: pytest ${{ matrix.os }}::py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       max-parallel: 6
