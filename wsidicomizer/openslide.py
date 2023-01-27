@@ -39,11 +39,22 @@ from wsidicomizer.encoding import Encoder, create_encoder
 # the Path environmental variable.
 if os.name == 'nt':
     openslide_lib_path = find_library('libopenslide-0')
+    if openslide_lib_path is not None:
+        openslide_dir = str(Path(openslide_lib_path).parent)
+    else:
+        openslide_lib_dir = os.environ.get('OPENSLIDE')
+        if openslide_lib_dir is not None:
+            openslide_lib_path = Path(openslide_lib_dir).joinpath(
+                'libopenslide-0.dll'
+            )
+            if not openslide_lib_path.exists():
+                openslide_lib_path = None
     if openslide_lib_path is None:
         raise ModuleNotFoundError(
             "Could not find libopenslide-0.dll in the directories specified "
-            "in the Path environmental variable. Please add the directory "
-            "with libopenslide-0.dll to the Path environmental variable"
+            "in the `Path` or `OPENSLIDE` environmental variable. Please add "
+            "the directory with openslide bin content to the `Path` or  "
+            "OPENSLIDE environmental variable."
         )
     openslide_dir = str(Path(openslide_lib_path).parent)
     os.add_dll_directory(openslide_dir)
