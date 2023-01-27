@@ -123,10 +123,6 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         path: Path
     ) -> List[Tuple[str, str]]:
         standard_path = os.path.join(testdata_dir, 'dicom-validator')
-        standard_path = os.path.join(
-            os.path.expanduser("~"),
-            'dicom-validator'
-        )
         edition_reader = EditionReader(standard_path)
         revision_path = edition_reader.get_revision('current')
         assert isinstance(revision_path, str)
