@@ -92,7 +92,7 @@ jobs:
           7z e libjpeg-turbo-2.1.3-vc64.exe -oC:\turbojpeg bin/turbojpeg.dll
           echo C:\turbojpeg >> $GITHUB_PATH
           Invoke-WebRequest -Uri https://github.com/openslide/openslide-winbuild/releases/download/v20221217/openslide-win64-20221217.zip -OutFile openslide-win64-20221217.zip -UserAgent "NativeHost"
-          7z x openslide-win64-20221217.zip -oC:\openslide openslide-win64-20221217\bin
+          7z e openslide-win64-20221217.zip -oC:\openslide openslide-win64-20221217\bin
           echo C:\openslide >> $GITHUB_PATH
 
       - name: Install dependencies
