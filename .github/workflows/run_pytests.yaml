@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Set up Python
         id: setup-python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Load test images from cache
@@ -49,7 +49,7 @@ jobs:
           path: WSIDICOMIZER_TESTDATA
       - name: Check test images are loaded
         if: steps.cache-test-images.outputs.cache-hit != 'true'
-        uses: actions/github-script@v3
+        uses: actions/github-script@v6
         with:
           script: |
             core.setFailed('test images were not cached')
