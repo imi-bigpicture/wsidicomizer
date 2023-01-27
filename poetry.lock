@@ -60,6 +60,17 @@ numpy = ">=1.11.3"
 tifffile = ">=2019.7.2"
 
 [[package]]
+name = "dicom-validator"
+version = "0.3.4"
+description = "Python DICOM tools using input from DICOM specs in docbook format"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pydicom = "*"
+
+[[package]]
 name = "docopt"
 version = "0.6.2"
 description = "Pythonic argument parser, that will make you smile"
@@ -400,7 +411,7 @@ pydicom = ">=2.1.0,<3.0.0"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.12"
-content-hash = "de8513fce35ee4387276693f6a351f1ab6610e254d83640cbcbaf9b810f72f2a"
+content-hash = "ca23f8ba491aa647494d1137f5e504f7f411994a810f240a34ea7ac6eff030b0"
 
 [metadata.files]
 atomicwrites = [
@@ -511,6 +522,10 @@ colorama = [
 czifile = [
     {file = "czifile-2019.7.2-py2.py3-none-any.whl", hash = "sha256:561ba0312e5b9c95db784768d7c81803f62bc323eab42bd5812586ce6dc58db8"},
     {file = "czifile-2019.7.2.tar.gz", hash = "sha256:04c0e6bed3b24d1bf42bc2cf899a5a08986641379305ce88600fd1c710486436"},
+]
+dicom-validator = [
+    {file = "dicom-validator-0.3.4.tar.gz", hash = "sha256:2e5446c4beaea24aec45bad0e97b98881c8939b2798512dc70aab2900ac37567"},
+    {file = "dicom_validator-0.3.4-py3-none-any.whl", hash = "sha256:468b9018e719c3ac86038d7b04a9dad05407320ff53ac663153f83380d49f031"},
 ]
 docopt = [
     {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},

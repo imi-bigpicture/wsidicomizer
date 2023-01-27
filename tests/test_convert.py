@@ -17,9 +17,11 @@ import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pytest
+from dicom_validator.spec_reader.edition_reader import EditionReader
+from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from parameterized import parameterized
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
@@ -33,7 +35,7 @@ from .testdata.test_parameters import test_parameters
 testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 
-@pytest.mark.convert
+@pytest.mark.integrationtest
 class WsiDicomizerConvertTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -114,6 +116,46 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 f'File {file} for format {file_format} not found.'
             )
         return paths
+
+    @classmethod
+    def validate(
+        cls,
+        path: Path
+    ) -> List[Tuple[str, str]]:
+        standard_path = os.path.join(testdata_dir, 'dicom-validator')
+        standard_path = os.path.join(
+            os.path.expanduser("~"),
+            'dicom-validator'
+        )
+        edition_reader = EditionReader(standard_path)
+        revision_path = edition_reader.get_revision('current')
+        assert isinstance(revision_path, str)
+        json_path = os.path.join(revision_path, 'json')
+        validator = DicomFileValidator(
+            EditionReader.load_iod_info(json_path),
+            EditionReader.load_module_info(json_path),
+            EditionReader.load_dict_info(json_path)
+        )
+        result: Dict[str, Dict[str, str]] = validator.validate_dir(path)
+        return [
+            (error, tag)
+            for tag_error in result.values()
+            for tag, error in tag_error.items()
+        ]
+
+    @parameterized.expand(
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+            if file_parameters['convert']
+        ]
+    )
+    def test_validate(self, file_format: str, file: str):
+        (_, converted_path) = self.get_paths(file_format, file)
+        assert converted_path is not None
+        errors = self.validate(converted_path.name)
+        self.assertEqual(errors, [])
 
     @parameterized.expand(
         [
