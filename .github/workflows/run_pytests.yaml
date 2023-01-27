@@ -70,6 +70,7 @@ jobs:
         with:
           key: test-images-cache-${{ hashFiles('tests/download_test_images.py') }}
           path: WSIDICOMIZER_TESTDATA
+          enableCrossOsArchive: true
       - name: Check test images are loaded
         if: steps.cache-test-images.outputs.cache-hit != 'true'
         uses: actions/github-script@v6
