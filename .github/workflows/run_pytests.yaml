@@ -97,8 +97,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            core.addPath('C:\openslide')
-            core.addPath('C:\turbojpeg')
+            core.addPath('C:\\openslide')
+            core.addPath('C:\\turbojpeg')
 
       - name: Install dependencies
         run: |
