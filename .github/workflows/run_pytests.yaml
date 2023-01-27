@@ -116,5 +116,6 @@ jobs:
 
       - name: Run tests
         env:
+          TURBOJPEG: C:\turbojpeg
           WSIDICOMIZER_TESTDIR: WSIDICOMIZER_TESTDATA
         run: python -m poetry run pytest
