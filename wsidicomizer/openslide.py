@@ -39,15 +39,14 @@ from wsidicomizer.encoding import Encoder, create_encoder
 # the Path environmental variable.
 if os.name == 'nt':
     openslide_lib_path = find_library('libopenslide-0')
-    if openslide_lib_path is not None:
-        openslide_dir = str(Path(openslide_lib_path).parent)
-        os.add_dll_directory(openslide_dir)
-    else:
+    if openslide_lib_path is None:
         raise ModuleNotFoundError(
             "Could not find libopenslide-0.dll in the directories specified "
-            "in the Path environmental variable. Please add the directory with"
-            "libopenslide-0.dll to the Path environmental variable"
+            "in the Path environmental variable. Please add the directory "
+            "with libopenslide-0.dll to the Path environmental variable"
         )
+    openslide_dir = str(Path(openslide_lib_path).parent)
+    os.add_dll_directory(openslide_dir)
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
