@@ -15,12 +15,12 @@
 import ctypes
 import math
 import os
-from pathlib import Path
 import re
+from ctypes.util import find_library
+from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-
 from opentile.metadata import Metadata
 from PIL import Image
 from pydicom import Dataset
@@ -35,22 +35,29 @@ from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
-
-if os.name == 'nt':  # On windows, add path to openslide to dll path
-    try:
-        openslide_dir = os.environ['OPENSLIDE']
-    except KeyError:
-        raise ValueError(
-            "Enviroment variable 'OPENSLIDE'"
-            "needs to be set to OpenSlide bin path"
+# On windows, use find_library to find directory with openslide dll in
+# the Path environmental variable.
+if os.name == 'nt':
+    openslide_lib_path = find_library('libopenslide-0')
+    if openslide_lib_path is not None:
+        openslide_dir = str(Path(openslide_lib_path).parent)
+    else:
+        openslide_lib_dir = os.environ.get('OPENSLIDE')
+        if openslide_lib_dir is not None:
+            openslide_lib_path = Path(openslide_lib_dir).joinpath(
+                'libopenslide-0.dll'
+            )
+            if not openslide_lib_path.exists():
+                openslide_lib_path = None
+    if openslide_lib_path is None:
+        raise ModuleNotFoundError(
+            "Could not find libopenslide-0.dll in the directories specified "
+            "in the `Path` or `OPENSLIDE` environmental variable. Please add "
+            "the directory with openslide bin content to the `Path` or  "
+            "OPENSLIDE environmental variable."
         )
-    try:
-        os.add_dll_directory(openslide_dir)
-    except AttributeError:
-        os.environ['PATH'] = (
-            openslide_dir + os.pathsep + os.environ['PATH']
-        )
-
+    openslide_dir = str(Path(openslide_lib_path).parent)
+    os.add_dll_directory(openslide_dir)
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
