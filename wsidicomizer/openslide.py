@@ -15,12 +15,12 @@
 import ctypes
 import math
 import os
-from pathlib import Path
 import re
+from ctypes.util import find_library
+from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-
 from opentile.metadata import Metadata
 from PIL import Image
 from pydicom import Dataset
@@ -35,17 +35,19 @@ from wsidicomizer.common import MetaDicomizer, MetaImageData
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder, create_encoder
 
-# On windows, add env variable `OPENSLIDE` to dll path if specified.
-# Otherwise openslide must be in default path.
+# On windows, use find_library to find directory with openslide dll in
+# the Path environmental variable.
 if os.name == 'nt':
-    openslide_dir = os.environ.get('OPENSLIDE')
-    if openslide_dir is not None:
-        try:
-            os.add_dll_directory(openslide_dir)
-        except AttributeError:
-            os.environ['PATH'] = (
-                openslide_dir + os.pathsep + os.environ['PATH']
-            )
+    openslide_lib_path = find_library('libopenslide-0')
+    if openslide_lib_path is not None:
+        openslide_dir = str(Path(openslide_lib_path).parent)
+        os.add_dll_directory(openslide_dir)
+    else:
+        raise ModuleNotFoundError(
+            "Could not find libopenslide-0.dll in the directories specified "
+            "in the Path environmental variable. Please add the directory with"
+            "libopenslide-0.dll to the Path environmental variable"
+        )
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
