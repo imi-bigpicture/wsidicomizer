@@ -11,6 +11,7 @@ from typing import (ContextManager, Dict, Generator, List, Optional, Sequence,
 import numpy as np
 import ome_types
 import scyjava
+import jpype.imports
 from jpype.types import JArray
 from PIL import Image
 from pydicom import Dataset
@@ -37,7 +38,6 @@ if not scyjava.jvm_started():
 """
 Load bioformats modules using jpype and scyjava
 """
-
 from loci.common.services import ServiceFactory  # type: ignore # noqa
 from loci.formats import ImageReader, Memoizer  # type: ignore # noqa
 from loci.formats.services import OMEXMLService  # type: ignore # noqa
