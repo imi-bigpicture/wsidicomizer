@@ -1,4 +1,4 @@
-#    Copyright 2021 SECTRA AB
+#    Copyright 2021, 2022, 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,34 +18,38 @@ from typing import Callable, List, Optional, Sequence, Type, Union
 from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
+from PIL.Image import Image as PILImage
 
-from wsidicomizer.common import MetaDicomizer
+from wsidicomizer.base_dicomizer import BaseDicomizer
 from wsidicomizer.czi import CziDicomizer
+from wsidicomizer.encoding import Encoder
 from wsidicomizer.openslide import OpenSlideDicomizer
 from wsidicomizer.opentile import OpenTileDicomizer
 
 # List of supported Dicomizers in prioritization order.
-SUPPORTED_TILE_SOURCES: List[Type[MetaDicomizer]] = [
+SUPPORTED_DICOMIZERS: List[Type[BaseDicomizer]] = [
     OpenTileDicomizer,
     CziDicomizer,
     OpenSlideDicomizer
 ]
 
 
-class WsiDicomizer:
+class WsiDicomizer(WsiDicom):
     """Interface for Dicomizing files."""
-    @staticmethod
+    @classmethod
     def open(
-        filepath: str,
+        cls,
+        filepath: Union[str, Path],
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = 512,
+        tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
+        jpeg_subsampling: str = '420',
+        label: Optional[Union[PILImage, str, Path]] = None
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
@@ -55,7 +59,7 @@ class WsiDicomizer:
             Path to file
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int] = 512
+        tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
@@ -76,34 +80,44 @@ class WsiDicomizer:
             Subsampling option if using jpeg for re-encoding. Use '444' for
             no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
             subsampling.
+        label: Optional[Union[PILImage, str, Path]] = None
+            Optional label image to use instead of label found in file.
+
 
         Returns
         ----------
         WsiDicom
             WsiDicom object of file.
         """
-        selected_tile_source = next(
+        if not isinstance(filepath, Path):
+            filepath = Path(filepath)
+
+        selected_dicomizer = next(
             (
-                tile_source for tile_source in SUPPORTED_TILE_SOURCES
-                if tile_source.is_supported(filepath)
+                dicomizer for dicomizer in SUPPORTED_DICOMIZERS
+                if dicomizer.is_supported(filepath)
             ),
             None
         )
-        if selected_tile_source is None:
+        if selected_dicomizer is None:
             raise NotImplementedError(f"{filepath} is not supported")
-
-        return selected_tile_source.open(
-            filepath,
-            modules,
-            tile_size,
-            include_levels,
-            include_label,
-            include_overview,
-            include_confidential,
+        encoder = Encoder.create_encoder(
             encoding_format,
             encoding_quality,
-            jpeg_subsampling
+            subsampling=jpeg_subsampling
         )
+
+        dicomizer = selected_dicomizer(
+            filepath,
+            encoder,
+            tile_size,
+            modules,
+            include_confidential
+        )
+        levels = dicomizer.create_levels(include_levels)
+        labels = dicomizer.create_labels(include_label, label)
+        overviews = dicomizer.create_oveviews(include_overview)
+        return cls(levels, labels, overviews)
 
     @classmethod
     def convert(
@@ -111,7 +125,7 @@ class WsiDicomizer:
         filepath: str,
         output_path: Optional[str] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = 512,
+        tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -122,7 +136,8 @@ class WsiDicomizer:
         encoding_format: str = 'jpeg',
         encoding_quality: int = 90,
         jpeg_subsampling: str = '420',
-        offset_table: Optional[str] = 'bot'
+        offset_table: Optional[str] = 'bot',
+        label: Optional[Union[PILImage, str, Path]] = None
     ) -> List[str]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
@@ -135,7 +150,7 @@ class WsiDicomizer:
             Folder path to save files to.
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
             Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int] = 512
+        tile_size: int = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
              Function that can gernerate unique identifiers.
@@ -166,6 +181,8 @@ class WsiDicomizer:
         offset_table: Optional[str] = 'bot'
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, None - no offset table.
+        label: Optional[Union[PILImage, str, Path]] = None
+            Optional label image to use instead of label found in file.
 
         Returns
         ----------
@@ -182,7 +199,8 @@ class WsiDicomizer:
             include_confidential,
             encoding_format,
             encoding_quality,
-            jpeg_subsampling
+            jpeg_subsampling,
+            label
         ) as wsi:
             if output_path is None:
                 output_path = str(Path(filepath).parents[0].joinpath(
@@ -191,7 +209,7 @@ class WsiDicomizer:
             try:
                 os.mkdir(output_path)
             except FileExistsError:
-                ValueError(f'Output path {output_path} already excists')
+                ValueError(f'Output path {output_path} already exists')
             created_files = wsi.save(
                 output_path,
                 uid_generator,

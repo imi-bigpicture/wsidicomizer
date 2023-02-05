@@ -20,7 +20,7 @@ from typing import Optional
 
 from pydicom.dataset import Dataset
 
-from wsidicomizer.interface import WsiDicomizer
+from wsidicomizer.wsidicomizer import WsiDicomizer
 
 
 def main():
