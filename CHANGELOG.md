@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+### Added
+
+- Parameter to change label to given image.
+
+### Changed
+
+- Refactored to enable re-use of instance creation methods.
+
 ## [0.6.0] - 2023-01-25
 
 ### Changed
