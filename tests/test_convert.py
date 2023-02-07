@@ -336,3 +336,13 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 image_data.photometric_interpretation,
                 photometric_interpretation
             )
+
+    def test_replace_label(self):
+        path = next(
+            paths[0]
+            for paths in self.test_folders.values()
+            if paths is not None
+        )
+        image = Image.new('RGB', (256, 256), (128, 128, 128))
+        with WsiDicomizer.open(path, label=image) as wsi:
+            self.assertEqual(image, wsi.read_label())
