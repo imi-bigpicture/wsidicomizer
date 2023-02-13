@@ -18,4 +18,4 @@ from wsidicomizer.dataset import (create_brightfield_optical_path_module,
                                   create_study_module)
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
