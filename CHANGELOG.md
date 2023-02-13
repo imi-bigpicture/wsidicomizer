@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.7.0] - 2023-02-13
+
+### Added
+
+- Parameter to change label to given image.
+
+### Changed
+
+- Refactored to enable re-use of instance creation methods.
+
 ## [0.6.0] - 2023-01-25
 
 ### Changed
@@ -108,7 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.6.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.7.0..HEAD
+[0.7.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.6.0..0.7.0
 [0.6.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.1..0.6.0
 [0.5.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.0..0.5.1
 [0.5.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.4.0..0.5.0

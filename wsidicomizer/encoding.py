@@ -44,7 +44,41 @@ class Encoder(metaclass=ABCMeta):
         data: np.ndarray
     ) -> bytes:
         """Should return data as encoded bytes."""
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @classmethod
+    def create_encoder(
+        cls,
+        format: str,
+        quality: float,
+        subsampling: Optional[str] = None
+    ) -> 'Encoder':
+        """Creates an encoder with specified settings.
+
+        Parameters
+        ----------
+        format: str
+            Format for encoder, either 'jpeg' or 'jpeg2000.
+        quality: float
+            The encoding quality.
+        subsampling: Optional[str] = None
+            Subsampling setting (for jpeg).
+
+        Returns
+        ----------
+        Enocer
+            Encoder for settings.
+        """
+        if format == 'jpeg':
+            return JpegEncoder(
+                quality=int(quality),
+                subsampling=subsampling
+            )
+        elif format == 'jpeg2000':
+            return Jpeg2000Encoder(
+                quality=quality
+            )
+        raise ValueError("Encoder format must be 'jpeg' or 'jpeg2000'")
 
 
 class JpegEncoder(Encoder):
@@ -179,36 +213,3 @@ class Jpeg2000Encoder(Encoder):
             level=self._quality,
             codecformat='J2K',
         )
-
-
-def create_encoder(
-    format: str,
-    quality: float,
-    subsampling: Optional[str] = None
-) -> Encoder:
-    """Creates an encoder with specified settings.
-
-    Parameters
-    ----------
-    format: str
-        Format for encoder, either 'jpeg' or 'jpeg2000.
-    quality: float
-        The encoding quality.
-    subsampling: Optional[str] = None
-        Subsampling setting (for jpeg).
-
-    Returns
-    ----------
-    Enocer
-        Encoder for settings.
-    """
-    if format == 'jpeg':
-        return JpegEncoder(
-            quality=int(quality),
-            subsampling=subsampling
-        )
-    elif format == 'jpeg2000':
-        return Jpeg2000Encoder(
-            quality=quality
-        )
-    raise ValueError("Encoder format must be 'jpeg' or 'jpeg2000'")

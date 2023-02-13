@@ -1,4 +1,4 @@
-#    Copyright 2021 SECTRA AB
+#    Copyright 2021, 2022, 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import ctypes
+from enum import Enum
 import math
 import os
 import re
@@ -23,17 +24,15 @@ from typing import List, Optional, Sequence, Tuple, Union
 import numpy as np
 from opentile.metadata import Metadata
 from PIL import Image
+from PIL.Image import Image as PILImage
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
-from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews)
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
-from wsidicomizer.encoding import Encoder, create_encoder
+from wsidicomizer.base_dicomizer import BaseDicomizer
+from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.encoding import Encoder
 
 # On windows, use find_library to find directory with openslide dll in
 # the Path environmental variable.
@@ -77,6 +76,11 @@ from openslide._convert import argb2rgba as convert_argb_to_rgba
 from openslide.lowlevel import _read_region, get_associated_image_names
 
 
+class OpenSlideAssociatedImageType(Enum):
+    LABEL = 'label'
+    MACRO = 'macro'
+
+
 class OpenSlideMetadata(Metadata):
     def __init__(self, slide: OpenSlide):
         magnification = slide.properties.get(
@@ -99,7 +103,7 @@ class OpenSlideMetadata(Metadata):
         return self._scanner_manufacturer
 
 
-class OpenSlideImageData(MetaImageData):
+class OpenSlideImageData(DicomizerImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
@@ -196,7 +200,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
     def __init__(
         self,
         open_slide: OpenSlide,
-        image_type: str,
+        image_type: OpenSlideAssociatedImageType,
         encoder: Encoder
     ):
         """Wraps a OpenSlide associated image (label or overview) to ImageData.
@@ -205,17 +209,20 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         ----------
         open_slide: OpenSlide
             OpenSlide object to wrap.
-        image_type: str
+        image_type: OpenSlideAssociatedImageType
             Type of image to wrap.
         encoded: Encoder
             Encoder to use.
         """
         super().__init__(open_slide, encoder)
         self._image_type = image_type
-        if image_type not in get_associated_image_names(self._slide._osr):
-            raise ValueError(f"{image_type} not in {self._slide}")
+        if (
+            image_type.value
+            not in get_associated_image_names(self._slide._osr)
+        ):
+            raise ValueError(f"{image_type.value} not in {self._slide}")
 
-        image = self._slide.associated_images[image_type]
+        image = self._slide.associated_images[image_type.value]
         no_alpha = Image.new('RGB', image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[3])
         self._image_size = Size.from_tuple(no_alpha.size)
@@ -258,7 +265,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         tile: Point,
         z: float,
         path: str
-    ) -> Image.Image:
+    ) -> PILImage:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
@@ -360,7 +367,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         region: Region,
         path: str,
         z: float
-    ) -> Image.Image:
+    ) -> PILImage:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         openslide object.
 
@@ -375,7 +382,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        Image.Image
+        PILImage
             Stitched image
         """
         if z not in self.focal_planes:
@@ -444,7 +451,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             self._blank_encoded_frame_size = size
         return self._blank_encoded_frame
 
-    def _get_blank_decoded_frame(self, size: Size) -> Image.Image:
+    def _get_blank_decoded_frame(self, size: Size) -> PILImage:
         """Return cached blank decoded frame for size, or create frame if
         cached frame not available or of wrong size.
 
@@ -469,7 +476,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
     def _get_region(
         self,
         region: Region
-    ) -> Optional[Image.Image]:
+    ) -> Optional[PILImage]:
         """Return Image read from region in openslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
         background color
@@ -481,7 +488,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        Optional[Image.Image]
+        Optional[PILImage]
             Image of region, or None if region is blank.
         """
         if region.size.width < 0 or region.size.height < 0:
@@ -555,7 +562,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         tile_point: Point,
         z: float,
         path: str
-    ) -> Image.Image:
+    ) -> PILImage:
         """Return Image for tile. Image mode is RGB.
 
         Parameters
@@ -569,7 +576,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        Image.Image
+        PILImage
             Tile as Image.
         """
         if z not in self.focal_planes:
@@ -584,122 +591,74 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         return tile
 
 
-class OpenSlideDicomizer(MetaDicomizer):
-    @classmethod
-    def open(
-        cls,
-        filepath: str,
+class OpenSlideDicomizer(BaseDicomizer):
+    def __init__(
+        self,
+        filepath: Path,
+        encoder: Encoder,
+        tile_size: int,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
-        encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
-    ) -> WsiDicom:
-        """Open openslide file in filepath as WsiDicom object. Note that
-        created instances always has a random UID.
-
-        Parameters
-        ----------
-        filepath: str
-            Path to tiff file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int]
-            Tile size to use if not defined by file.
-        include_levels: Sequence[int] = None
-            Optional list of level indices to include. If None include all
-            levels, if empty sequence exlude all levels. E.g. [0, 1]
-            includes only the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes only the two highest levels.
-        include_label: bool = True
-            Inclube label.
-        include_overview: bool = True
-            Include overview.
-        include_confidential: bool = True
-            Include confidential metadata. Not implemented.
-        encoding_format: str = 'jpeg'
-            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: int = 90
-            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
-            for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
-            Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
-
-        Returns
-        ----------
-        WsiDicom
-            WsiDicom object of openslide file in filepath.
-        """
-        if tile_size is None:
-            raise ValueError("Tile size required for open slide")
-        encoder = create_encoder(
-            encoding_format,
-            encoding_quality,
-            subsampling=jpeg_subsampling
-        )
-        slide = OpenSlide(filepath)
-        pyramid_levels = cls._get_pyramid_levels(slide)
-        metadata = OpenSlideMetadata(slide)
-        base_dataset = populate_base_dataset(
-            metadata,
-            create_base_dataset(modules),
+    ) -> None:
+        self._slide = OpenSlide(filepath)
+        self._pyramid_levels = self._get_pyramid_levels(self._slide)
+        self._metadata = OpenSlideMetadata(self._slide)
+        super().__init__(
+            filepath,
+            encoder,
+            tile_size,
+            modules,
             include_confidential
         )
-        instance_number = 0
-        level_instances = [
-            cls._create_instance(
-                OpenSlideLevelImageData(
-                    slide,
-                    level_index,
-                    tile_size,
-                    encoder
-                ),
-                base_dataset,
-                'VOLUME',
-                instance_number+level_index
-            )
-            for level_index in range(slide.level_count)
-            if cls._is_included_level(
-                pyramid_levels[level_index],
-                pyramid_levels,
-                include_levels
-            )
-        ]
-        instance_number += len(level_instances)
-        if include_label and 'label' in slide.associated_images:
-            label_instances = [cls._create_instance(
-                OpenSlideAssociatedImageData(slide, 'label', encoder),
-                base_dataset,
-                'LABEL',
-                instance_number
-            )]
-        else:
-            label_instances = []
-        instance_number += len(label_instances)
-        if include_overview and 'macro' in slide.associated_images:
-            overview_instances = [cls._create_instance(
-                OpenSlideAssociatedImageData(slide, 'macro', encoder),
-                base_dataset,
-                'OVERVIEW',
-                instance_number
-            )]
-        else:
-            overview_instances = []
-        levels = WsiDicomLevels.open(level_instances)
-        labels = WsiDicomLabels.open(label_instances)
-        overviews = WsiDicomOverviews.open(overview_instances)
-        return cls(levels, labels, overviews)
+
+    @property
+    def has_label(self) -> bool:
+        return (
+            OpenSlideAssociatedImageType.LABEL.value
+            in self._slide.associated_images
+        )
+
+    @property
+    def has_overview(self) -> bool:
+        return (
+            OpenSlideAssociatedImageType.MACRO.value
+            in self._slide.associated_images
+        )
+
+    @property
+    def metadata(self) -> Metadata:
+        return self._metadata
+
+    @property
+    def pyramid_levels(self) -> List[int]:
+        return self._pyramid_levels
 
     @staticmethod
-    def is_supported(filepath: str) -> bool:
+    def is_supported(filepath: Path) -> bool:
         """Return True if file in filepath is supported by OpenSlide."""
         return OpenSlide.detect_format(str(filepath)) is not None
+
+    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+        return OpenSlideLevelImageData(
+            self._slide,
+            level_index,
+            self._tile_size,
+            self._encoder
+        )
+
+    def _create_label_image_data(self) -> DicomizerImageData:
+        return OpenSlideAssociatedImageData(
+            self._slide,
+            OpenSlideAssociatedImageType.LABEL,
+            self._encoder
+        )
+
+    def _create_overview_image_data(self) -> DicomizerImageData:
+        return OpenSlideAssociatedImageData(
+            self._slide,
+            OpenSlideAssociatedImageType.MACRO,
+            self._encoder
+        )
 
     @staticmethod
     def _get_pyramid_levels(slide: OpenSlide) -> List[int]:

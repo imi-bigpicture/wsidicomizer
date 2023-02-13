@@ -31,29 +31,6 @@ from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
 from opentile.common import Metadata
 
 
-def get_image_type(image_flavor: str, level_index: int) -> List[str]:
-    """Return image type.
-
-    Parameters
-    ----------
-    image_flavor: str
-        Image flavor ('VOLUME', 'LABEL', 'OVERVIEW')
-    level_index: int:
-        Pyramidal level index of the image.
-
-    Returns
-    ----------
-    List[str]
-        Image type.
-    """
-    if image_flavor == 'VOLUME' and level_index == 0:
-        resampled = 'NONE'
-    else:
-        resampled = 'RESAMPLED'
-
-    return ['ORIGINAL', 'PRIMARY', image_flavor, resampled]
-
-
 def create_base_dataset(
     modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
 ) -> Dataset:

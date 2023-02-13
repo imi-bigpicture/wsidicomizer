@@ -27,7 +27,7 @@ from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
-from wsidicomizer.interface import WsiDicomizer
+from wsidicomizer.wsidicomizer import WsiDicomizer
 from wsidicomizer.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
@@ -37,6 +37,8 @@ testdata_dir = Path(os.environ.get('WSIDICOMIZER_TESTDIR', 'tests/testdata'))
 
 @pytest.mark.integrationtest
 class WsiDicomizerConvertTests(unittest.TestCase):
+    DEFAULT_TILE_SIZE = 512
+
     @classmethod
     def setUpClass(cls):
         cls.test_folders = {
@@ -68,7 +70,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         if not file_parameters['convert']:
             return file_path, None
         include_levels = file_parameters['include_levels']
-        tile_size = file_parameters.get('tile_size')
+        tile_size = file_parameters.get('tile_size', cls.DEFAULT_TILE_SIZE)
         converted_path = cls.convert(
             file_path,
             include_levels,
@@ -80,7 +82,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
     def convert(
         path: Path,
         include_levels: Sequence[int],
-        tile_size: Optional[int] = None
+        tile_size: int
     ) -> TemporaryDirectory:
         tempdir = TemporaryDirectory()
         WsiDicomizer.convert(
@@ -334,3 +336,13 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 image_data.photometric_interpretation,
                 photometric_interpretation
             )
+
+    def test_replace_label(self):
+        path = next(
+            paths[0]
+            for paths in self.test_folders.values()
+            if paths is not None
+        )
+        image = Image.new('RGB', (256, 256), (128, 128, 128))
+        with WsiDicomizer.open(path, label=image) as wsi:
+            self.assertEqual(image, wsi.read_label())

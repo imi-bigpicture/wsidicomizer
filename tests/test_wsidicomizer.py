@@ -18,7 +18,7 @@ from typing import Optional, Sequence
 import pytest
 from parameterized import parameterized
 
-from wsidicomizer.common import MetaDicomizer
+from wsidicomizer.base_dicomizer import BaseDicomizer
 
 
 @pytest.mark.unittest
@@ -37,7 +37,7 @@ class WsiDicomizerTests(unittest.TestCase):
         present_levels: Sequence[int],
         include_indices: Optional[Sequence[int]]
     ):
-        is_included = MetaDicomizer._is_included_level(
+        is_included = BaseDicomizer._is_included_level(
             level,
             present_levels,
             include_indices
@@ -61,7 +61,7 @@ class WsiDicomizerTests(unittest.TestCase):
         include_indices: Optional[Sequence[int]]
 
     ):
-        is_included = MetaDicomizer._is_included_level(
+        is_included = BaseDicomizer._is_included_level(
             level,
             present_levels,
             include_indices
@@ -88,7 +88,7 @@ class WsiDicomizerTests(unittest.TestCase):
         present_levels: Sequence[int],
         include_indices: Sequence[int]
     ):
-        is_included = MetaDicomizer._is_included_level(
+        is_included = BaseDicomizer._is_included_level(
             level,
             present_levels,
             include_indices
@@ -116,7 +116,7 @@ class WsiDicomizerTests(unittest.TestCase):
         present_levels: Sequence[int],
         include_indices: Sequence[int]
     ):
-        is_included = MetaDicomizer._is_included_level(
+        is_included = BaseDicomizer._is_included_level(
             level,
             present_levels,
             include_indices

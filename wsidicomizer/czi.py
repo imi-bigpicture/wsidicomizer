@@ -1,4 +1,4 @@
-#    Copyright 2021 SECTRA AB
+#    Copyright 2021, 2022, 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -21,22 +21,20 @@ from threading import Lock
 from typing import Dict, List, Optional, Sequence, Tuple, Type, TypeVar, Union
 from xml.etree import ElementTree
 
-from dateutil import parser as dateparser
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
+from dateutil import parser as dateparser
 from opentile.metadata import Metadata
 from PIL import Image
+from PIL.Image import Image as PILImage
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
-from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews)
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicom.wsidicom import WsiDicom
 
-from wsidicomizer.common import MetaDicomizer, MetaImageData
+from wsidicomizer.base_dicomizer import BaseDicomizer
+from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.config import settings
-from wsidicomizer.dataset import create_base_dataset
-from wsidicomizer.encoding import Encoder, create_encoder
+from wsidicomizer.encoding import Encoder
 
 ElementType = TypeVar('ElementType', str, int, float)
 
@@ -254,10 +252,10 @@ class CziBlock:
     size: Size
 
 
-class CziImageData(MetaImageData):
+class CziImageData(DicomizerImageData):
     def __init__(
         self,
-        filepath: str,
+        filepath: Path,
         tile_size: int,
         encoder: Encoder
     ) -> None:
@@ -332,7 +330,7 @@ class CziImageData(MetaImageData):
         return self._metadata.channel_mapping
 
     @cached_property
-    def blank_decoded_tile(self) -> Image.Image:
+    def blank_decoded_tile(self) -> PILImage:
         return Image.fromarray(self._create_blank_tile())
 
     @cached_property
@@ -464,7 +462,7 @@ class CziImageData(MetaImageData):
         tile: Point,
         z: float,
         path: str
-    ) -> Image.Image:
+    ) -> PILImage:
         """Return Image for tile.
 
         Parameters
@@ -478,7 +476,7 @@ class CziImageData(MetaImageData):
 
         Returns
         ----------
-        Image.Image
+        PILImage
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
@@ -617,75 +615,57 @@ class CziImageData(MetaImageData):
         return size.height, size.width, self.samples_per_pixel
 
 
-class CziDicomizer(MetaDicomizer):
-    @classmethod
-    def open(
-        cls,
-        filepath: str,
+class CziDicomizer(BaseDicomizer):
+    def __init__(
+        self,
+        filepath: Path,
+        encoder: Encoder,
+        tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
-        encoding_quality: int = 90,
-        jpeg_subsampling: str = '420'
-    ) -> WsiDicom:
-        """Open czi file in filepath as WsiDicom object. Note that created
-        instances always has a random UID.
-
-        Parameters
-        ----------
-        filepath: str
-            Path to tiff file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
-        tile_size: Optional[int]
-            Tile size to use if not defined by file.
-        include_levels: Sequence[int] = None
-            Levels to include. Not implemented.
-        include_label: bool = True
-            Inclube label. Not implemented.
-        include_overview: bool = True
-            Include overview. Not implemented.
-        include_confidential: bool = True
-            Include confidential metadata. Not implemented.
-        encoding_format: str = 'jpeg'
-            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: int = 90
-            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
-            for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
-            Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
-
-        Returns
-        ----------
-        WsiDicom
-            WsiDicom object of czi file in filepath.
-        """
-        if tile_size is None:
-            raise ValueError("Tile size required for czi")
-        encoder = create_encoder(
-            encoding_format,
-            encoding_quality,
-            jpeg_subsampling
+    ) -> None:
+        self._imaga_data = CziImageData(
+            filepath,
+            tile_size,
+            encoder
         )
-        base_dataset = create_base_dataset(modules)
-        base_level_instance = cls._create_instance(
-            CziImageData(filepath, tile_size, encoder),
-            base_dataset,
-            'VOLUME',
-            0
+        self._metadata = self._imaga_data.metadata
+        super().__init__(
+            filepath,
+            encoder,
+            tile_size,
+            modules,
+            include_confidential
         )
-        levels = WsiDicomLevels.open([base_level_instance])
-        labels = WsiDicomLabels.open([])
-        overviews = WsiDicomOverviews.open([])
-        return cls(levels, labels, overviews)
+
+    @property
+    def has_label(self) -> bool:
+        return False
+
+    @property
+    def has_overview(self) -> bool:
+        return False
+
+    @property
+    def pyramid_levels(self) -> List[int]:
+        return [0]
+
+    @property
+    def metadata(self) -> Metadata:
+        return self._metadata
 
     @staticmethod
-    def is_supported(filepath: str) -> bool:
+    def is_supported(filepath: Path) -> bool:
         """Return True if file in filepath is supported by CziFile."""
-        return CziImageData.detect_format(Path(filepath)) is not None
+        return CziImageData.detect_format(filepath) is not None
+
+    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+        if level_index != 0:
+            raise ValueError()  # TODO
+        return CziImageData(self._filepath, self._tile_size, self._encoder)
+
+    def _create_label_image_data(self) -> DicomizerImageData:
+        return super()._create_label_image_data()
+
+    def _create_overview_image_data(self) -> DicomizerImageData:
+        return super()._create_overview_image_data()
