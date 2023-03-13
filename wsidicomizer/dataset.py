@@ -350,7 +350,7 @@ def create_device_module(
 
 def create_sample(
     sample_id: str,
-    stainings: Sequence[str],
+    stainings: Optional[Sequence[str]] = None,
     embedding_medium: Optional[str] = None,
     fixative: Optional[str] = None,
     specimen_id: Optional[str] = None,
@@ -366,7 +366,7 @@ def create_sample(
     ----------
     sample_id: str
         Identifier for the sample.
-    stainings: Sequence[str]
+    stainings: Optional[str] = None
         Stainings used. See SpecimenStainsCode.list() for allowed values.
     embedding_medium: Optional[str] = None
         Embedding medium used. See SpecimenEmbeddingMediaCode.list() for
@@ -396,13 +396,14 @@ def create_sample(
         Dataset containing a sample description.
     """
     sample_preparation_steps: List[SpecimenPreparationStep] = []
-    sample_preparation_step = create_sample_preparation_step(
-        sample_id,
-        stainings,
-        embedding_medium,
-        fixative
-    )
-    sample_preparation_steps.append(sample_preparation_step)
+    if stainings is not None:
+        sample_preparation_step = create_sample_preparation_step(
+            sample_id,
+            stainings,
+            embedding_medium,
+            fixative
+        )
+        sample_preparation_steps.append(sample_preparation_step)
     if specimen_id is not None:
         sample_sampling_step = create_sample_sampling_step(
             sample_id,
