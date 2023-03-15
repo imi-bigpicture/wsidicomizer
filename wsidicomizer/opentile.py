@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from opentile import OpenTile
 from opentile.common import OpenTilePage
@@ -22,7 +22,8 @@ from PIL import Image
 from pydicom import Dataset
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.geometry import Point, Size, SizeMm, PointMm
+from wsidicom.image_data import ImageOrigin
 
 from wsidicomizer.base_dicomizer import BaseDicomizer
 from wsidicomizer.image_data import DicomizerImageData
@@ -33,7 +34,8 @@ class OpenTileImageData(DicomizerImageData):
     def __init__(
         self,
         tiled_page: OpenTilePage,
-        encoder: Encoder
+        encoder: Encoder,
+        image_offset: Optional[Tuple[float, float]] = None
     ):
         """Wraps a OpenTilePage to ImageData.
 
@@ -61,6 +63,12 @@ class OpenTileImageData(DicomizerImageData):
             )
         else:
             self._pixel_spacing = None
+        # if image_offset is not None:
+        #     self._image_origin = ImageOrigin(
+        #         origin=PointMm(image_offset[0], image_offset[1])
+        #     )
+        # else:
+        self._image_origin = ImageOrigin()
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiled_page}"
@@ -123,6 +131,10 @@ class OpenTileImageData(DicomizerImageData):
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
         return self._tiled_page.pyramid_index
+
+    @property
+    def image_origin(self) -> ImageOrigin:
+        return self._image_origin
 
     @property
     def photometric_interpretation(self) -> str:

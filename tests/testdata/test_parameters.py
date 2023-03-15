@@ -5,6 +5,10 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -72,6 +76,10 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -142,6 +150,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -169,6 +181,10 @@ test_parameters = {
             "encode_format": 'jpeg2000',
             "encode_quality": 0,
             "photometric_interpretation": "YBR_RCT",
+            "image_origin": {
+                "x": 2.3061675,
+                "y": 20.79015
+            },
             "read_region": [
                 # OpenSlide produces different results across platforms
                 # {
@@ -230,6 +246,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -308,6 +328,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -375,6 +399,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -442,6 +470,10 @@ test_parameters = {
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {

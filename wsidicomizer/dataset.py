@@ -110,7 +110,6 @@ def populate_base_dataset(
 
 
 def create_wsi_dataset(
-    offset: Tuple[float, float] = (0.0, 0.0),
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
@@ -143,8 +142,6 @@ def create_wsi_dataset(
 
     Parameters
     ----------
-    image_offset: Tuple[float, float] = 0.0
-        X and Y offset (in mm) to first pixel in image data.
     uid_generator: Callable[..., Uid] = generate_uid
         Function that can generate Uids.
 
@@ -186,11 +183,6 @@ def create_wsi_dataset(
     dataset.BurnedInAnnotation = 'NO'
     dataset.SpecimenLabelInImage = 'NO'
     dataset.VolumetricProperties = 'VOLUME'
-    dataset.ImageOrientationSlide = [-1, 0, 0, 0, -1, 0]
-    offset_item = Dataset()
-    offset_item.XOffsetInSlideCoordinateSystem = offset[0]
-    offset_item.YOffsetInSlideCoordinateSystem = offset[1]
-    dataset.TotalPixelMatrixOriginSequence = DicomSequence([offset_item])
     # AcquisitionDateTime is required
     dt = datetime.datetime.now()
     dataset.AcquisitionDateTime = dt.strftime('%Y%m%d%H%M%S.%f')

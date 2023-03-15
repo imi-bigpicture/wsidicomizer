@@ -338,7 +338,7 @@ class CziImageData(DicomizerImageData):
         return self._encode(self._create_blank_tile())
 
     @cached_property
-    def image_origin(self) -> Point:
+    def pixel_image_origin(self) -> Point:
         """Return coordinate of the top-left of the image."""
         return Point(
             self._get_start(axis='X'),
@@ -602,7 +602,7 @@ class CziImageData(DicomizerImageData):
             raise ValueError("Could not determine position of block.")
 
         return (
-            Point(x_start, y_start) - self.image_origin,
+            Point(x_start, y_start) - self.pixel_image_origin,
             Size(x_size, y_size),
             z,
             c
