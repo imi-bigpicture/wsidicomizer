@@ -63,12 +63,12 @@ class OpenTileImageData(DicomizerImageData):
             )
         else:
             self._pixel_spacing = None
-        # if image_offset is not None:
-        #     self._image_origin = ImageOrigin(
-        #         origin=PointMm(image_offset[0], image_offset[1])
-        #     )
-        # else:
-        self._image_origin = ImageOrigin()
+        if image_offset is not None:
+            self._image_origin = ImageOrigin(
+                origin=PointMm(image_offset[0], image_offset[1])
+            )
+        else:
+            self._image_origin = ImageOrigin()
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiled_page}"
@@ -314,7 +314,7 @@ class OpenTileDicomizer(BaseDicomizer):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder)
+        return OpenTileImageData(level, self._encoder, self.metadata.image_offset)
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]
