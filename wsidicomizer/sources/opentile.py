@@ -25,7 +25,7 @@ from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.geometry import Point, Size, SizeMm, PointMm
 from wsidicom.image_data import ImageOrigin
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
+from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
 
@@ -272,13 +272,16 @@ class OpenTileImageData(DicomizerImageData):
         )
 
 
-class OpenTileDicomizer(BaseDicomizer):
+class OpenTileSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int,
+        tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
@@ -288,8 +291,14 @@ class OpenTileDicomizer(BaseDicomizer):
             encoder,
             tile_size,
             modules,
+            include_levels,
+            include_label,
+            include_overview,
             include_confidential
         )
+
+    def close(self):
+        self._tiler.close()
 
     @property
     def has_label(self) -> bool:

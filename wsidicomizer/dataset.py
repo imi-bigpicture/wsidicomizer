@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Module containing helper methods for creating DICOM datasets."""
+
 import datetime
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 

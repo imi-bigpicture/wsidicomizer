@@ -12,16 +12,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Module containing a base Source implementation suitable for use with non-DICOM
+files."""
+
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
-from PIL.Image import Image as PILImage
+
 from opentile.metadata import Metadata
 from pydicom import Dataset, config
 from pydicom.dataset import Dataset
-from wsidicom import (WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews, WsiInstance)
-from wsidicom.dataset import ImageType
+from wsidicom.instance import ImageType, WsiDataset, WsiInstance
+from wsidicom.source import Source
+from wsidicom.graphical_annotations import AnnotationInstance
 
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder
@@ -31,9 +34,12 @@ config.enforce_valid_values = True
 config.future_behavior()
 
 
-class BaseDicomizer(metaclass=ABCMeta):
-    """Metaclass for Dicomizers. Subclasses should implement is_supported() and
-    open().
+class DicomizerSource(Source, metaclass=ABCMeta):
+    """
+    Metaclass for Dicomizer sources. Subclasses should implement the method
+    is_supported(), _create_level_image_data(), _create_label_image_data(), and
+     _create_overview_image_data() and the properties metadata, pyramid_levels,
+     has_label, and has_overview. Subclasses can override the __init__().
     """
     def __init__(
         self,
@@ -41,12 +47,18 @@ class BaseDicomizer(metaclass=ABCMeta):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
         self._modules = modules
+        self._include_levels = include_levels
+        self._include_label = include_label
+        self._include_overview = include_overview
         self._include_confidential = include_confidential
         self._base_dataset = populate_base_dataset(
             self.metadata,
@@ -99,25 +111,13 @@ class BaseDicomizer(metaclass=ABCMeta):
         """Return image data instance for overview."""
         raise NotImplementedError()
 
-    def create_levels(
-        self,
-        include_levels: Optional[Sequence[int]] = None,
-    ) -> WsiDicomLevels:
-        """Return levels from file
+    @property
+    def base_dataset(self) -> WsiDataset:
+        return WsiDataset(self._base_dataset)
 
-        Parameters
-        ----------
-        include_levels: Optional[Sequence[int]] = None
-            Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes the two highest levels.
-
-        Returns
-        ----------
-        WsiDicomLevels
-            Created levels.
-        """
-        level_instances = [
+    @property
+    def level_instances(self) -> List[WsiInstance]:
+        return [
             WsiInstance.create_instance(
                 self._create_level_image_data(level_index),
                 self._base_dataset,
@@ -127,71 +127,37 @@ class BaseDicomizer(metaclass=ABCMeta):
             if self._is_included_level(
                 self.pyramid_levels[level_index],
                 self.pyramid_levels,
-                include_levels
+                self._include_levels
             )
         ]
-        return WsiDicomLevels.open(level_instances)
 
-    def create_labels(
-        self,
-        include_label: bool,
-        label: Optional[Union[PILImage, str, Path]] = None
-    ) -> Optional[WsiDicomLabels]:
-        """Return labels from file
+    @property
+    def label_instances(self) -> List[WsiInstance]:
+        if not self.has_label or not self._include_label:
+            return []
 
-        Parameters
-        ----------
-        include_label: bool
-            Include label(s).
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
-
-        Returns
-        ----------
-        Optional[WsiDicomLabels]
-            Created labels.
-        """
-        if include_label:
-            if label is not None:
-                label_instance = WsiInstance.create_label(
-                    label,
-                    self._base_dataset,
-                )
-            elif self.has_label:
-                label_instance = WsiInstance.create_instance(
+        label = WsiInstance.create_instance(
                     self._create_label_image_data(),
                     self._base_dataset,
                     ImageType.LABEL
                 )
-            else:
-                return None
-            return WsiDicomLabels.open([label_instance])
-        return None
+        return [label]
 
-    def create_oveviews(
-        self,
-        include_overview: bool
-    ) -> Optional[WsiDicomOverviews]:
-        """Return overviews from file
+    @property
+    def overview_instances(self) -> List[WsiInstance]:
+        if not self.has_overview or not self._include_overview:
+            return []
 
-        Parameters
-        ----------
-        include_overwiew: bool
-            Include overview(s).
-
-        Returns
-        ----------
-        Optional[WsiDicomOverviews]
-            Created overviews.
-        """
-        if include_overview and self.has_overview:
-            overview_instance = WsiInstance.create_instance(
+        overview = WsiInstance.create_instance(
                 self._create_overview_image_data(),
                 self._base_dataset,
                 ImageType.OVERVIEW
             )
-            return WsiDicomOverviews.open([overview_instance])
-        return None
+        return [overview]
+
+    @property
+    def annotation_instances(self) -> List[AnnotationInstance]:
+        return []
 
     @staticmethod
     def _is_included_level(

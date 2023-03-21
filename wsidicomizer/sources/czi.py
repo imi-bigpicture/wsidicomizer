@@ -31,7 +31,7 @@ from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
+from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.config import settings
 from wsidicomizer.encoding import Encoder
@@ -615,13 +615,16 @@ class CziImageData(DicomizerImageData):
         return size.height, size.width, self.samples_per_pixel
 
 
-class CziDicomizer(BaseDicomizer):
+class CziSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._imaga_data = CziImageData(
@@ -635,8 +638,14 @@ class CziDicomizer(BaseDicomizer):
             encoder,
             tile_size,
             modules,
+            include_levels,
+            include_label,
+            include_overview,
             include_confidential
         )
+
+    def close(self) -> None:
+        return self._imaga_data.close()
 
     @property
     def has_label(self) -> bool:

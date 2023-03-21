@@ -11,26 +11,30 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+"""
+Main module containing the WsiDicomizer class that allows non-DICOM files to be opened
+like DICOM instances, enabling viewing and saving.
+"""
+
 import os
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
+from PIL.Image import Image as PILImage
 from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
-from PIL.Image import Image as PILImage
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
-from wsidicomizer.czi import CziDicomizer
+from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
-from wsidicomizer.openslide import OpenSlideDicomizer
-from wsidicomizer.opentile import OpenTileDicomizer
+from wsidicomizer.sources import CziSource, OpenSlideSource, OpenTileSource
 
 # List of supported Dicomizers in prioritization order.
-SUPPORTED_DICOMIZERS: List[Type[BaseDicomizer]] = [
-    OpenTileDicomizer,
-    CziDicomizer,
-    OpenSlideDicomizer
+SUPPORTED_DICOMIZERS: List[Type[DicomizerSource]] = [
+    OpenTileSource,
+    CziSource,
+    OpenSlideSource
 ]
 
 
@@ -112,12 +116,12 @@ class WsiDicomizer(WsiDicom):
             encoder,
             tile_size,
             modules,
+            include_levels,
+            include_label,
+            include_overview,
             include_confidential
         )
-        levels = dicomizer.create_levels(include_levels)
-        labels = dicomizer.create_labels(include_label, label)
-        overviews = dicomizer.create_oveviews(include_overview)
-        return cls(levels, labels, overviews)
+        return cls(dicomizer, label)
 
     @classmethod
     def convert(

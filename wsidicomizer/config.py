@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Module containing settings for WsiDicomizer."""
+
 class Settings:
     """Class containing settings. Settings are to be accessed through the
     global variable settings."""

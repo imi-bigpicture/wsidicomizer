@@ -28,7 +28,7 @@ from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicomizer.openslide import OpenSlide
+from wsidicomizer.sources.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
 

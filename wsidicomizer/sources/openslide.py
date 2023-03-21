@@ -31,7 +31,8 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.image_data import ImageOrigin
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
+from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -602,13 +603,16 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         return tile
 
 
-class OpenSlideDicomizer(BaseDicomizer):
+class OpenSlideSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int,
+        tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        include_levels: Optional[Sequence[int]] = None,
+        include_label: bool = True,
+        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._slide = OpenSlide(filepath)
@@ -619,8 +623,14 @@ class OpenSlideDicomizer(BaseDicomizer):
             encoder,
             tile_size,
             modules,
+            include_levels,
+            include_label,
+            include_overview,
             include_confidential
         )
+
+    def close(self) -> None:
+        return self._slide.close()
 
     @property
     def has_label(self) -> bool:

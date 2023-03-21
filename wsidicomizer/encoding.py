@@ -12,6 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""
+Modulule containing image encodes that can be used to encode raw or decoded images
+using implemented image encoders.
+"""
+
 from abc import ABCMeta, abstractmethod
 from typing import Union, Optional
 import numpy as np
