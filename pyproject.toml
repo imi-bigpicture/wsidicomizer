@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "wsidicomizer"
-version = "0.7.0"
-description = "Tool for converting wsi-files to DICOM"
+version = "0.8.0"
+description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 license = "Apache-2.0"
 readme = "README.md"
@@ -18,10 +18,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.12"
-# wsidicom = "^0.7.0"
-wsidicom = { path = "../wsidicom", develop = true }
-opentile = "^0.6.0"
-# opentile = { path = "../opentile", develop = true }
+wsidicom = "^0.8.0"
+opentile = "^0.8.0"
 openslide-python = "^1.1.2"
 numpy = "^1.22.0"
 pydicom = "^2.2.1"
