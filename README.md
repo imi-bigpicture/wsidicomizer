@@ -1,10 +1,11 @@
 # *wsidicomizer*
 
-*wsidicomizer* is a Python library for converting files wsi files to DICOM. The aims of the project are:
+*wsidicomizer* is a Python library for opening WSIs in proprietary formats and optionally convert them to DICOM. The aims of the project are:
 
+- Provide read support for various proprietary formats.
 - Provide lossless conversion for files supported by opentile.
 - Provide 'as good as possible' conversion for other formats.
-- Simplify the encoding of wsi metadata into DICOM.
+- Simplify the encoding of WSI metadata into DICOM.
 
 ## Supported formats
 
@@ -41,7 +42,7 @@ Please note that this is an early release and the API is not frozen yet. Functio
 
 ## Requirements
 
-*wsidicomizer* requires python >=3.7 and uses numpy, pydicom, highdicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
+*wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
 
 ## Limitations
 

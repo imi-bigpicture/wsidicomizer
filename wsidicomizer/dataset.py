@@ -110,7 +110,6 @@ def populate_base_dataset(
 
 
 def create_wsi_dataset(
-    offset: Tuple[float, float] = (0.0, 0.0),
     uid_generator: Callable[..., Uid] = generate_uid
 ) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
@@ -143,8 +142,6 @@ def create_wsi_dataset(
 
     Parameters
     ----------
-    image_offset: Tuple[float, float] = 0.0
-        X and Y offset (in mm) to first pixel in image data.
     uid_generator: Callable[..., Uid] = generate_uid
         Function that can generate Uids.
 
@@ -186,11 +183,6 @@ def create_wsi_dataset(
     dataset.BurnedInAnnotation = 'NO'
     dataset.SpecimenLabelInImage = 'NO'
     dataset.VolumetricProperties = 'VOLUME'
-    dataset.ImageOrientationSlide = [-1, 0, 0, 0, -1, 0]
-    offset_item = Dataset()
-    offset_item.XOffsetInSlideCoordinateSystem = offset[0]
-    offset_item.YOffsetInSlideCoordinateSystem = offset[1]
-    dataset.TotalPixelMatrixOriginSequence = DicomSequence([offset_item])
     # AcquisitionDateTime is required
     dt = datetime.datetime.now()
     dataset.AcquisitionDateTime = dt.strftime('%Y%m%d%H%M%S.%f')
@@ -350,7 +342,7 @@ def create_device_module(
 
 def create_sample(
     sample_id: str,
-    stainings: Sequence[str],
+    stainings: Optional[Sequence[str]] = None,
     embedding_medium: Optional[str] = None,
     fixative: Optional[str] = None,
     specimen_id: Optional[str] = None,
@@ -366,7 +358,7 @@ def create_sample(
     ----------
     sample_id: str
         Identifier for the sample.
-    stainings: Sequence[str]
+    stainings: Optional[str] = None
         Stainings used. See SpecimenStainsCode.list() for allowed values.
     embedding_medium: Optional[str] = None
         Embedding medium used. See SpecimenEmbeddingMediaCode.list() for
@@ -396,13 +388,14 @@ def create_sample(
         Dataset containing a sample description.
     """
     sample_preparation_steps: List[SpecimenPreparationStep] = []
-    sample_preparation_step = create_sample_preparation_step(
-        sample_id,
-        stainings,
-        embedding_medium,
-        fixative
-    )
-    sample_preparation_steps.append(sample_preparation_step)
+    if stainings is not None:
+        sample_preparation_step = create_sample_preparation_step(
+            sample_id,
+            stainings,
+            embedding_medium,
+            fixative
+        )
+        sample_preparation_steps.append(sample_preparation_step)
     if specimen_id is not None:
         sample_sampling_step = create_sample_sampling_step(
             sample_id,

@@ -13,11 +13,11 @@
 #    limitations under the License.
 
 import ctypes
-from enum import Enum
 import math
 import os
 import re
 from ctypes.util import find_library
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
@@ -28,11 +28,12 @@ from PIL.Image import Image as PILImage
 from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
+from wsidicom.image_data import ImageOrigin
 
 from wsidicomizer.base_dicomizer import BaseDicomizer
-from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.image_data import DicomizerImageData
 
 # On windows, use find_library to find directory with openslide dll in
 # the Path environmental variable.
@@ -336,6 +337,12 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
+        self._image_origin = ImageOrigin(
+            PointMm(
+                self._offset.x*base_mpp_x / 1000,
+                self._offset.y*base_mpp_y / 1000
+            )
+        )
 
     @property
     def image_size(self) -> Size:
@@ -361,6 +368,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
         return self._pyramid_index
+
+    @property
+    def image_origin(self) -> ImageOrigin:
+        return self._image_origin
 
     def stitch_tiles(
         self,

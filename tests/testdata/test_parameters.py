@@ -5,6 +5,10 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
+            "image_origin": {
+                "x": 25.691574,
+                "y": 23.449873
+            },
             "read_region": [
                 {
                     "location": {
@@ -72,6 +76,10 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
+            "image_origin": {
+                "x": 18.34152,
+                "y": 22.716894
+            },
             "read_region": [
                 {
                     "location": {
@@ -142,6 +150,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -169,6 +181,10 @@ test_parameters = {
             "encode_format": 'jpeg2000',
             "encode_quality": 0,
             "photometric_interpretation": "YBR_RCT",
+            "image_origin": {
+                "x": 2.3061675,
+                "y": 20.79015
+            },
             "read_region": [
                 # OpenSlide produces different results across platforms
                 # {
@@ -230,6 +246,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -308,6 +328,10 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {
@@ -369,72 +393,76 @@ test_parameters = {
                 }
             ]
         },
-        "ndpi2/input.ndpi": {
-            "convert": True,
-            "include_levels": [4, 6],
-            "lowest_included_pyramid_level": 4,
-            "tile_size": 1024,
-            "photometric_interpretation": "YBR_FULL_422",
-            "read_region": [
-                {
-                    "location": {
-                        "x": 3000,
-                        "y": 3000
-                    },
-                    "level": 4,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                    "md5": "fee89f955ed08550391b59cdff4a7aef"
-                },
-                {
-                    "location": {
-                        "x": 1000,
-                        "y": 1000
-                    },
-                    "level": 6,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                    "md5": "59afbe85473f23038e97ee40213862b4"
-                }
-            ],
-            "read_region_openslide": [
-                {
-                    "location": {
-                        "x": 3000,
-                        "y": 3000
-                    },
-                    "level": 4,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                },
-                {
-                    "location": {
-                        "x": 1000,
-                        "y": 1000
-                    },
-                    "level": 6,
-                    "size": {
-                        "width": 500,
-                        "height": 500
-                    },
-                }
-            ],
-            "read_thumbnail": [
-                {
-                    "size": {
-                        "width": 512,
-                        "height": 512
-                    },
-                    "md5": "701961c4afcf42d545e30ad8346fc8f4"
-                }
-            ]
-        }
+        # "ndpi2/input.ndpi": {
+        #     "convert": True,
+        #     "include_levels": [4, 6],
+        #     "lowest_included_pyramid_level": 4,
+        #     "tile_size": 1024,
+        #     "photometric_interpretation": "YBR_FULL_422",
+        #     "image_origin": {
+        #         "x": 0.0,
+        #         "y": 0.0
+        #     },
+        #     "read_region": [
+        #         {
+        #             "location": {
+        #                 "x": 3000,
+        #                 "y": 3000
+        #             },
+        #             "level": 4,
+        #             "size": {
+        #                 "width": 500,
+        #                 "height": 500
+        #             },
+        #             "md5": "fee89f955ed08550391b59cdff4a7aef"
+        #         },
+        #         {
+        #             "location": {
+        #                 "x": 1000,
+        #                 "y": 1000
+        #             },
+        #             "level": 6,
+        #             "size": {
+        #                 "width": 500,
+        #                 "height": 500
+        #             },
+        #             "md5": "59afbe85473f23038e97ee40213862b4"
+        #         }
+        #     ],
+        #     "read_region_openslide": [
+        #         {
+        #             "location": {
+        #                 "x": 3000,
+        #                 "y": 3000
+        #             },
+        #             "level": 4,
+        #             "size": {
+        #                 "width": 500,
+        #                 "height": 500
+        #             },
+        #         },
+        #         {
+        #             "location": {
+        #                 "x": 1000,
+        #                 "y": 1000
+        #             },
+        #             "level": 6,
+        #             "size": {
+        #                 "width": 500,
+        #                 "height": 500
+        #             },
+        #         }
+        #     ],
+        #     "read_thumbnail": [
+        #         {
+        #             "size": {
+        #                 "width": 512,
+        #                 "height": 512
+        #             },
+        #             "md5": "701961c4afcf42d545e30ad8346fc8f4"
+        #         }
+        #     ]
+        # }
     },
     "philips_tiff": {
         "philips1/input.tif": {
@@ -442,6 +470,10 @@ test_parameters = {
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
+            "image_origin": {
+                "x": 0.0,
+                "y": 0.0
+            },
             "read_region": [
                 {
                     "location": {

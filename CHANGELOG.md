@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.8.0] - 2023-03-21
+
+### Added
+
+- Set image offset from opentile and openslide properties.
+
+### Added
+
+- Parameter to change label to given image.
+
 ## [0.7.0] - 2023-02-13
 
 ### Added
@@ -118,7 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.7.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.8.0..HEAD
+[0.8.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.7.0..0.8.0
 [0.7.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.6.0..0.7.0
 [0.6.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.1..0.6.0
 [0.5.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.0..0.5.1

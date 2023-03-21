@@ -346,3 +346,27 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         image = Image.new('RGB', (256, 256), (128, 128, 128))
         with WsiDicomizer.open(path, label=image) as wsi:
             self.assertEqual(image, wsi.read_label())
+
+    @parameterized.expand(
+        [
+            (file_format, file, file_parameters['image_origin'])
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ]
+    )
+    def test_image_origin(
+        self,
+        file_format: str,
+        file: str,
+        expected_image_origin: Dict[str, float]
+    ):
+        with self.open_wsi(file_format, file) as wsi:
+            image_origin = wsi.levels[0].default_instance.image_origin
+            self.assertEqual(
+                image_origin.origin.x,
+                expected_image_origin['x']
+            )
+            self.assertEqual(
+                image_origin.origin.y,
+                expected_image_origin['y']
+            )
