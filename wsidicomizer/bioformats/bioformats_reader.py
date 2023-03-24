@@ -1,3 +1,17 @@
+#    Copyright 2023 SECTRA AB
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 import os
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
@@ -5,31 +19,21 @@ from pathlib import Path
 from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
 from threading import Lock
-from typing import (ContextManager, Dict, Generator, List, Optional, Sequence,
-                    Tuple, Type, Union)
+from typing import Dict, Generator, List, Optional, Type, Union
 
+import jpype.imports  # Needed for loci import to work
 import numpy as np
 import ome_types
 import scyjava
-import jpype.imports
 from jpype.types import JArray
-from PIL import Image
-from pydicom import Dataset
-from pydicom.uid import UID
-from wsidicom import (WsiDicom, WsiDicomLabels, WsiDicomLevels,
-                      WsiDicomOverviews, WsiInstance)
-from wsidicom.geometry import Point, Region, Size, SizeMm
-
-from wsidicomizer.common import MetaDicomizer, MetaImageData
-from wsidicomizer.dataset import create_base_dataset
-from wsidicomizer.encoding import Encoder, create_encoder
+from wsidicom.geometry import Region, Size, SizeMm
 
 """
 Set version of bioformats jar to use with the environmental variable
 "BIOFORMATS_VERSION". Note the bioformats jar either has a BSD or GPL-2
 license.
 """
-bioformats_version = os.getenv('BIOFORMATS_VERSION', 'bsd:6.11.0')
+bioformats_version = os.getenv('BIOFORMATS_VERSION', 'bsd:6.12.0')
 scyjava.config.endpoints.append(f'ome:formats-{bioformats_version}')
 
 if not scyjava.jvm_started():
@@ -147,7 +151,7 @@ class ReaderPool:
                 self._tempdir.cleanup()
 
 
-class BioFormatsReader:
+class BioformatsReader:
     def __init__(
         self,
         filepath: Path,
@@ -183,11 +187,11 @@ class BioFormatsReader:
                 pixels = self.metadata.images[image].pixels
                 name = self.metadata.images[image].name
                 resolutions = reader.getResolutionCount()
-                print(
-                    image, name, order, rgb_channel_count, indexed,
-                    interleaved, rgb, (width, height), pixels.physical_size_x,
-                    level, resolutions
-                )
+                # print(
+                #     image, name, order, rgb_channel_count, indexed,
+                #     interleaved, rgb, (width, height), pixels.physical_size_x,
+                #     level, resolutions
+                # )
 
             self._resolution_counts = [
                 self._get_resolution_count(reader, image_index)
@@ -201,6 +205,16 @@ class BioFormatsReader:
                 )
                 for image_index in range(self.images_count)
             }
+
+    @staticmethod
+    def is_supported(filepath: Path) -> bool:
+        try:
+            reader = ImageReader()
+            reader.setId(str(filepath))
+            reader.close()
+        except Exception:
+            return False
+        return True
 
     @staticmethod
     def _get_resolution_count(reader: Memoizer, image_index: int) -> int:
@@ -308,7 +322,6 @@ class BioFormatsReader:
         ):
             return None
         scale = self._resolution_scales[image_index][resolution_index]
-        print(image_index, resolution_index, scale)
         return SizeMm(
             float(pixels.physical_size_x),
             float(pixels.physical_size_y)
@@ -419,279 +432,3 @@ class BioFormatsReader:
             metadata = str(metadata_store.dumpXML())
 
         return metadata
-
-
-class BioFormatsImageData(MetaImageData):
-    def __init__(
-        self,
-        reader: BioFormatsReader,
-        tile_size: int,
-        encoder: Encoder,
-        image_index: int,
-        resolution_index: int
-    ) -> None:
-        super().__init__(encoder)
-        self._tile_size = Size(tile_size, tile_size)
-        self._image_reader = reader
-        self._image_index = image_index
-        self._resolution_index = resolution_index
-        self._image_region = Region(Point(0, 0), self.image_size)
-
-    @property
-    def image_region(self) -> Region:
-        return self._image_region
-
-    @property
-    def pyramid_index(self) -> int:
-        """Return pyramid level for image data."""
-        return 0
-
-    @property
-    def files(self) -> List[Path]:
-        return [Path(self._image_reader.filepath)]
-
-    @property
-    def transfer_syntax(self) -> UID:
-        """Return the uid of the transfer syntax of the image."""
-        return self._encoder.transfer_syntax
-
-    @property
-    def image_size(self) -> Size:
-        """Return the pixel size of the image."""
-        return self._image_reader.size(
-            self._image_index,
-            self._resolution_index
-        )
-
-    @property
-    def tile_size(self) -> Size:
-        """Return the pixel tile size of the image, or pixel size of
-        the image if not tiled."""
-        return self._tile_size
-
-    @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
-        """Return the size of the pixels in mm/pixel."""
-        return self._image_reader.pixel_spacing(
-            self._image_index,
-            self._resolution_index
-        )
-
-    @property
-    def samples_per_pixel(self) -> int:
-        """Return number of samples per pixel (e.g. 3 for RGB)."""
-        return self._image_reader.samples_per_pixel(self._image_index)
-
-    @property
-    def photometric_interpretation(self) -> str:
-        """Return the photophotometric interpretation of the image
-        data."""
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
-
-    def _get_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str
-    ) -> ContextManager[np.ndarray]:
-        # TODO if cropping region the returned image should still be same size
-        region = Region(tile_point*self.tile_size, self.tile_size)
-        cropped_region = self.image_region.crop(region)
-        return self._image_reader.read_image(
-            self._image_index,
-            self._resolution_index,
-            cropped_region
-        )
-
-    def _get_decoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> Image.Image:
-        """Return Image for tile defined by tile (x, y), z,
-        and optical path."""
-        with self._get_tile(tile, z, path) as data:
-            return Image.fromarray(data)
-
-    def _get_encoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> bytes:
-        """Return image bytes for tile defined by tile (x, y), z,
-        and optical path."""
-        with self._get_tile(tile, z, path) as data:
-            return self._encode(data)
-
-    def close(self) -> None:
-        """Close any open files."""
-        self._image_reader.close()
-
-    @staticmethod
-    def detect_format(filepath: str) -> bool:
-        try:
-            reader = ImageReader(filepath)
-            reader.close()
-        except Exception:
-            return False
-        return True
-
-
-class BioFormatsDicomizer(MetaDicomizer):
-    @classmethod
-    def open(
-        cls,
-        filepath: str,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        tile_size: Optional[int] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
-        include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
-        encoding_quality: int = 90,
-        jpeg_subsampling: str = '420',
-        readers: Optional[int] = None,
-        cache_path: Optional[str] = None
-    ) -> WsiDicom:
-        if tile_size is None:
-            raise ValueError("Tile size required for bioformats")
-        encoder = create_encoder(
-            encoding_format,
-            encoding_quality,
-            jpeg_subsampling
-        )
-        base_dataset = create_base_dataset(modules)
-        reader = BioFormatsReader(
-            Path(filepath),
-            readers,
-            cache_path
-        )
-        level_instances, label_instances, overview_instances = (
-            cls._create_instances(
-                reader,
-                tile_size,
-                encoder,
-                base_dataset,
-                include_levels,
-                include_label,
-                include_overview
-            )
-        )
-        levels = WsiDicomLevels.open(level_instances)
-        labels = WsiDicomLabels.open(label_instances)
-        overviews = WsiDicomOverviews.open(overview_instances)
-        return cls(levels, labels, overviews)
-
-    @staticmethod
-    def is_supported(filepath: str) -> bool:
-        """Return True if file in filepath is supported by Bio-Formats."""
-        return BioFormatsImageData.detect_format(filepath)
-
-    @staticmethod
-    def _get_image_indices(
-        reader: BioFormatsReader
-    ) -> Tuple[int, Optional[int], Optional[int]]:
-        image_indices = list(range(reader.images_count))
-        overview_image_index = None
-        label_image_index = None
-
-        for image_index in image_indices.copy():
-            image_name = reader.image_name(image_index)
-            if image_name is None:
-                continue
-            if (
-                'macro' in image_name.lower()
-                or 'overview' in image_name.lower()
-            ):
-                overview_image_index = image_index
-                image_indices.remove(image_index)
-            elif 'label' in image_name.lower():
-                label_image_index = image_index
-                image_indices.remove(image_index)
-
-        pyramid_image_index = 0
-        largest_image_width = None
-        for image_index in image_indices:
-            image_width = reader.size(image_index).width
-            if (
-                largest_image_width is None
-                or largest_image_width < image_width
-            ):
-                pyramid_image_index = image_index
-                largest_image_width = image_width
-        return pyramid_image_index, label_image_index, overview_image_index
-
-    @classmethod
-    def _create_instances(
-        cls,
-        reader: BioFormatsReader,
-        tile_size: int,
-        encoder: Encoder,
-        base_dataset: Dataset,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
-    ) -> Tuple[List[WsiInstance], List[WsiInstance], List[WsiInstance]]:
-        pyramid_image_index, label_image_index, overview_image_index = (
-            cls._get_image_indices(reader)
-        )
-
-        level_instances = [
-            cls._create_instance(
-                BioFormatsImageData(
-                    reader,
-                    tile_size,
-                    encoder,
-                    pyramid_image_index,
-                    resolution_index
-                ),
-                base_dataset,
-                'VOLUME',
-                instance_number
-            )
-            for instance_number, resolution_index
-            in enumerate(range(reader.resolution_count(pyramid_image_index)))
-            if include_levels is None or resolution_index in include_levels
-        ]
-        instance_count = len(level_instances)
-
-        if include_label and label_image_index is not None:
-            instance = cls._create_instance(
-                BioFormatsImageData(
-                    reader,
-                    tile_size,
-                    encoder,
-                    label_image_index,
-                    0
-                ),
-                base_dataset,
-                'LABEL',
-                instance_count
-            )
-            instance_count += 1
-            label_instances = [instance]
-        else:
-            label_instances = []
-
-        if include_overview and overview_image_index is not None:
-            instance = cls._create_instance(
-                BioFormatsImageData(
-                    reader,
-                    tile_size,
-                    encoder,
-                    overview_image_index,
-                    0
-                ),
-                base_dataset,
-                'OVERVIEW',
-                instance_count
-            )
-            instance_count += 1
-            overview_instances = [instance]
-        else:
-            overview_instances = []
-
-        return level_instances, label_instances, overview_instances

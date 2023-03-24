@@ -109,25 +109,25 @@ class WsiDicomizer(WsiDicom):
         if not isinstance(filepath, Path):
             filepath = Path(filepath)
 
-        selected_dicomizer = None
+        selected_source = None
         if preferred_source is None:
-            selected_dicomizer = next(
+            selected_source = next(
                 (
-                    dicomizer
-                    for dicomizer in loaded_sources
-                    if dicomizer.is_supported(filepath)
+                    source
+                    for source in loaded_sources
+                    if source.is_supported(filepath)
                 ),
                 None,
             )
         elif preferred_source.is_supported(filepath):
-            selected_dicomizer = preferred_source
-        if selected_dicomizer is None:
+            selected_source = preferred_source
+        if selected_source is None:
             raise NotImplementedError(f"{filepath} is not supported")
         encoder = Encoder.create_encoder(
             encoding_format, encoding_quality, subsampling=jpeg_subsampling
         )
 
-        dicomizer = selected_dicomizer(
+        source = selected_source(
             filepath,
             encoder,
             tile_size,
@@ -138,7 +138,7 @@ class WsiDicomizer(WsiDicom):
             include_confidential,
             **source_args,
         )
-        return cls(dicomizer, label)
+        return cls(source, label)
 
     @classmethod
     def convert(

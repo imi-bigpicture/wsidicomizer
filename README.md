@@ -15,6 +15,7 @@
 - Hamamatsu ndpi (lossless)
 - Philips tiff (lossless)
 - Zeiss czi (lossy, only base level)
+- Optional: Formats supported by Bioformats (lossy)
 
 With the `OpenSlide` extra the following formats are also supported:
 
@@ -54,6 +55,33 @@ Please note that this is an early release and the API is not frozen yet. Functio
 ## Requirements
 
 *wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
+
+## Bioformats support
+
+### Installation
+
+Support for reading images using Bioformats java library can optionally be enabled by installing *wsidicomizer* with the `bioformats` extra:
+
+```console
+pip install wsidicomizer[bioformats]
+```
+
+The `bioformats` extra enables usage of the `bioformats` module and the `bioformats_wsidicomizer`-cli command. The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
+
+### Using
+
+As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therfore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
+
+```python
+import scyjava
+scyjava.shutdown_jvm()
+```
+
+Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class, instead the `BioformatsDicomizer`-class should be used. Similarly, the Bioformats support is only available in the `bioformats_wsidicomizer`-cli command.
+
+### Bioformats version
+
+The Bioformats java library is avaiable in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only avaible in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
 
 ## Limitations
 
