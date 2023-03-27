@@ -28,14 +28,19 @@ from wsidicom import WsiDicom
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
-from wsidicomizer.sources import CziSource, OpenSlideSource, OpenTileSource
+from wsidicomizer.sources import CziSource, OpenTileSource
 
 # List of supported Dicomizers in prioritization order.
 SUPPORTED_DICOMIZERS: List[Type[DicomizerSource]] = [
     OpenTileSource,
     CziSource,
-    OpenSlideSource
 ]
+
+try:
+    from wsidicomizer.extras.openslide import OpenSlideSource
+    SUPPORTED_DICOMIZERS.append(OpenSlideSource)
+except ImportError:
+    pass
 
 
 class WsiDicomizer(WsiDicom):

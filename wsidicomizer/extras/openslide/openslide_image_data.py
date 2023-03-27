@@ -14,51 +14,22 @@
 
 import ctypes
 import math
-import os
 import re
-from ctypes.util import find_library
-from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
-from opentile.metadata import Metadata
 from PIL import Image
 from PIL.Image import Image as PILImage
-from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.image_data import ImageOrigin
 
-from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
-# On windows, use find_library to find directory with openslide dll in
-# the Path environmental variable.
-if os.name == 'nt':
-    openslide_lib_path = find_library('libopenslide-0')
-    if openslide_lib_path is not None:
-        openslide_dir = str(Path(openslide_lib_path).parent)
-    else:
-        openslide_lib_dir = os.environ.get('OPENSLIDE')
-        if openslide_lib_dir is not None:
-            openslide_lib_path = Path(openslide_lib_dir).joinpath(
-                'libopenslide-0.dll'
-            )
-            if not openslide_lib_path.exists():
-                openslide_lib_path = None
-    if openslide_lib_path is None:
-        raise ModuleNotFoundError(
-            "Could not find libopenslide-0.dll in the directories specified "
-            "in the `Path` or `OPENSLIDE` environmental variable. Please add "
-            "the directory with openslide bin content to the `Path` or  "
-            "OPENSLIDE environmental variable."
-        )
-    openslide_dir = str(Path(openslide_lib_path).parent)
-    os.add_dll_directory(openslide_dir)
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
@@ -72,7 +43,6 @@ from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,
                        PROPERTY_NAME_BOUNDS_HEIGHT, PROPERTY_NAME_BOUNDS_WIDTH,
                        PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
                        PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y,
-                       PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR,
                        OpenSlide)
 from openslide._convert import argb2rgba as convert_argb_to_rgba
 from openslide.lowlevel import _read_region, get_associated_image_names
@@ -81,28 +51,6 @@ from openslide.lowlevel import _read_region, get_associated_image_names
 class OpenSlideAssociatedImageType(Enum):
     LABEL = 'label'
     MACRO = 'macro'
-
-
-class OpenSlideMetadata(Metadata):
-    def __init__(self, slide: OpenSlide):
-        magnification = slide.properties.get(
-            PROPERTY_NAME_OBJECTIVE_POWER
-        )
-        if magnification is not None:
-            self._magnification = float(magnification)
-        else:
-            self._magnification = None
-        self._scanner_manufacturer = slide.properties.get(
-            PROPERTY_NAME_VENDOR
-        )
-
-    @property
-    def magnification(self) -> Optional[float]:
-        return self._magnification
-
-    @property
-    def scanner_manufacturer(self) -> Optional[str]:
-        return self._scanner_manufacturer
 
 
 class OpenSlideImageData(DicomizerImageData):
@@ -601,90 +549,3 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return tile
-
-
-class OpenSlideSource(DicomizerSource):
-    def __init__(
-        self,
-        filepath: Path,
-        encoder: Encoder,
-        tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
-        include_confidential: bool = True,
-    ) -> None:
-        self._slide = OpenSlide(filepath)
-        self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._metadata = OpenSlideMetadata(self._slide)
-        super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            modules,
-            include_levels,
-            include_label,
-            include_overview,
-            include_confidential
-        )
-
-    def close(self) -> None:
-        return self._slide.close()
-
-    @property
-    def has_label(self) -> bool:
-        return (
-            OpenSlideAssociatedImageType.LABEL.value
-            in self._slide.associated_images
-        )
-
-    @property
-    def has_overview(self) -> bool:
-        return (
-            OpenSlideAssociatedImageType.MACRO.value
-            in self._slide.associated_images
-        )
-
-    @property
-    def metadata(self) -> Metadata:
-        return self._metadata
-
-    @property
-    def pyramid_levels(self) -> List[int]:
-        return self._pyramid_levels
-
-    @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by OpenSlide."""
-        return OpenSlide.detect_format(str(filepath)) is not None
-
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        return OpenSlideLevelImageData(
-            self._slide,
-            level_index,
-            self._tile_size,
-            self._encoder
-        )
-
-    def _create_label_image_data(self) -> DicomizerImageData:
-        return OpenSlideAssociatedImageData(
-            self._slide,
-            OpenSlideAssociatedImageType.LABEL,
-            self._encoder
-        )
-
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        return OpenSlideAssociatedImageData(
-            self._slide,
-            OpenSlideAssociatedImageType.MACRO,
-            self._encoder
-        )
-
-    @staticmethod
-    def _get_pyramid_levels(slide: OpenSlide) -> List[int]:
-        """Return list of pyramid levels present in openslide slide."""
-        return [
-            int(math.log2(int(downsample)))
-            for downsample in slide.level_downsamples
-        ]

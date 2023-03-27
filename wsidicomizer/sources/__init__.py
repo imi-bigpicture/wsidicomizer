@@ -15,5 +15,4 @@
 """Module containing implemented sources for reading non-DICOM files."""
 
 from wsidicomizer.sources.czi import CziSource
-from wsidicomizer.sources.openslide import OpenSlideSource
 from wsidicomizer.sources.opentile import OpenTileSource

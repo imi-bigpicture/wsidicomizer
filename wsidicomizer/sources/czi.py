@@ -368,7 +368,7 @@ class CziImageData(DicomizerImageData):
                 block_start // self.tile_size,
                 (block_start+block_size) // self.tile_size
             )
-            for tile in tile_region.iterate_all(include_end=True):
+            for tile in tile_region.iterate_all():
                 tile_directory[tile, z, c].append(
                     CziBlock(index, block_start, block_size)
                 )

@@ -28,7 +28,7 @@ from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicomizer.sources.openslide import OpenSlide
+from wsidicomizer.extras.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
 
@@ -209,7 +209,10 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             self.assertEqual(
                 md5(im.tobytes()).hexdigest(),
                 region['md5'],
-                msg=region
+                msg=(
+                    f"{file_format}: {file} lowest level {lowest_included_level} "
+                    f"{region}"
+                )
             )
 
     @parameterized.expand(
@@ -233,7 +236,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             self.assertEqual(
                 md5(im.tobytes()).hexdigest(),
                 thumbnail['md5'],
-                msg=thumbnail
+                msg=f"{file_format}: {file} {thumbnail}"
             )
 
     @parameterized.expand(
@@ -287,7 +290,14 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             (255, 255, 255)
         )
         reference_no_alpha.paste(reference, mask=reference.split()[3])
-        self.assertEqual(converted, reference_no_alpha)
+        self.assertEqual(
+            converted,
+            reference_no_alpha,
+            msg=(
+                    f"{file_format}: {file} lowest level {lowest_included_level} "
+                    f"{region}"
+                )
+            )
 
     @parameterized.expand(
         [
@@ -315,7 +325,11 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             ).convert('RGB')
         diff = ImageChops.difference(im, open_im)
         for band_rms in ImageStat.Stat(diff).rms:
-            self.assertLess(band_rms, 4, (file_format, file, thumbnail))
+            self.assertLess(
+                band_rms,
+                4,
+                msg=f"{file_format}: {file} {thumbnail}"
+            )
 
     @parameterized.expand(
         [
