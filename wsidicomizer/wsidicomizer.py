@@ -131,8 +131,8 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def convert(
         cls,
-        filepath: str,
-        output_path: Optional[str] = None,
+        filepath: Union[str, Path],
+        output_path: Optional[Union[str, Path]] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
@@ -153,7 +153,7 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        filepath: str
+        filepath: Union[str, Path],
             Path to file
         output_path: str = None
             Folder path to save files to.

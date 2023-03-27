@@ -15,9 +15,10 @@
 
 from typing import Optional
 
-from openslide import (PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR,
-                       OpenSlide)
 from opentile.metadata import Metadata
+
+from wsidicomizer.extras.openslide.openslide import (
+    PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR, OpenSlide)
 
 
 class OpenSlideMetadata(Metadata):

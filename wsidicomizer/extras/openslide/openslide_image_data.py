@@ -15,6 +15,7 @@
 import ctypes
 import math
 import re
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -26,10 +27,13 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.image_data import ImageOrigin
 
-from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.extras.openslide.openslide import (
+    PROPERTY_NAME_BACKGROUND_COLOR, PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH, PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y, OpenSlide, _read_region,
+    convert_argb_to_rgba, get_associated_image_names)
 from wsidicomizer.image_data import DicomizerImageData
-
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
@@ -38,14 +42,6 @@ _read_region is used to get raw data from the OpenSlide C API and argb2rgba is
 used to convert argb to rgba. We consider this safe, as these directly map
 to the Openslide C API and are thus not likely to change that often.
 """
-
-from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,
-                       PROPERTY_NAME_BOUNDS_HEIGHT, PROPERTY_NAME_BOUNDS_WIDTH,
-                       PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
-                       PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y,
-                       OpenSlide)
-from openslide._convert import argb2rgba as convert_argb_to_rgba
-from openslide.lowlevel import _read_region, get_associated_image_names
 
 
 class OpenSlideAssociatedImageType(Enum):
@@ -326,7 +322,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self,
         region: Region,
         path: str,
-        z: float
+        z: float,
+        threads: int
     ) -> PILImage:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         openslide object.

@@ -27,8 +27,10 @@ from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
 
+from wsidicomizer.extras.openslide.openslide import (PROPERTY_NAME_BOUNDS_X,
+                                                     PROPERTY_NAME_BOUNDS_Y,
+                                                     OpenSlide)
 from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicomizer.extras.openslide import OpenSlide
 
 from .testdata.test_parameters import test_parameters
 
@@ -103,8 +105,8 @@ class WsiDicomizerConvertTests(unittest.TestCase):
     ) -> WsiDicom:
         (original_path, converted_path) = cls.get_paths(file_format, file)
         if converted_path is not None:
-            return WsiDicom.open(str(converted_path.name))
-        return WsiDicomizer.open(str(original_path))
+            return WsiDicom.open(converted_path.name)
+        return WsiDicomizer.open(original_path)
 
     @classmethod
     def get_paths(
@@ -192,7 +194,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for region in file_parameters['read_region']
         ]
     )
-    def test_read_region(
+    def test_read_region_from_converted_file_should_match_hash(
         self,
         file_format: str,
         file: str,
@@ -223,7 +225,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for thumbnail in file_parameters['read_thumbnail']
         ]
     )
-    def test_read_thumbnail(
+    def test_read_thumbnail_from_converted_file_should_match_hash(
         self,
         file_format: str,
         file: str,
@@ -252,7 +254,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for region in file_parameters['read_region_openslide']
         ]
     )
-    def test_read_region_openslide(
+    def test_read_region_from_converted_file_should_match_openslide(
         self,
         file_format: str,
         file: str,
@@ -274,12 +276,14 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             # If scale is not integer image can be blurry
             assert scale.is_integer
             scale = int(scale)
-            offset_x = int(wsi.properties.get('openslide.bounds-x', 0))
-            offset_y = int(wsi.properties.get('openslide.bounds-y', 0))
-            scaled_location_x = (region['location']['x'] * scale) + offset_x
-            scaled_location_y = (region['location']['y'] * scale) + offset_y
+            offset_x = int(wsi.properties.get(PROPERTY_NAME_BOUNDS_X, 0))
+            offset_y = int(wsi.properties.get(PROPERTY_NAME_BOUNDS_Y, 0))
+            scaled_location = (
+                (region['location']['x'] * scale) + offset_x,
+                (region['location']['y'] * scale) + offset_y
+            )
             reference = wsi.read_region(
-                (scaled_location_x, scaled_location_y),
+                scaled_location,
                 region['level'],
                 (region['size']['width'], region['size']['height'])
             )
@@ -291,11 +295,12 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         )
         reference_no_alpha.paste(reference, mask=reference.split()[3])
         self.assertEqual(
-            converted,
-            reference_no_alpha,
+            md5(converted.tobytes()).hexdigest(),
+            md5(reference_no_alpha.tobytes()).hexdigest(),
             msg=(
-                    f"{file_format}: {file} lowest level {lowest_included_level} "
-                    f"{region}"
+                    f"{file_format}: {file} {region} "
+                    "does not match openslide at ",
+                    scaled_location, region['level'], region['size']['height']
                 )
             )
 
@@ -307,7 +312,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for thumbnail in file_parameters['read_thumbnail']
         ]
     )
-    def test_read_thumbnail_openslide(
+    def test_read_thumbnail_from_converted_file_should_almost_match_thumbnail(
         self,
         file_format: str,
         file: str,
@@ -351,15 +356,15 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 photometric_interpretation
             )
 
-    def test_replace_label(self):
+    def test_replace_label_should_equal_new_label(self):
         path = next(
             paths[0]
             for paths in self.test_folders.values()
             if paths is not None
         )
-        image = Image.new('RGB', (256, 256), (128, 128, 128))
-        with WsiDicomizer.open(path, label=image) as wsi:
-            self.assertEqual(image, wsi.read_label())
+        new_label = Image.new('RGB', (256, 256), (128, 128, 128))
+        with WsiDicomizer.open(path, label=new_label) as wsi:
+            self.assertEqual(new_label, wsi.read_label())
 
     @parameterized.expand(
         [
