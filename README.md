@@ -17,7 +17,7 @@
 - Zeiss czi (lossy, only base level)
 - Optional: Formats supported by Bioformats (lossy)
 
-With the `OpenSlide` extra the following formats are also supported:
+With the `openslide` extra the following formats are also supported:
 
 - Mirax mrxs (lossy)
 - Leica scn (lossy)
@@ -25,6 +25,8 @@ With the `OpenSlide` extra the following formats are also supported:
 - Trestle tif (lossy)
 - Ventana bif, tif (lossy)
 - Hamamatsu vms, vmu (lossy)
+
+The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/6.12.0/supported-formats.html).
 
 ## Installation
 
@@ -34,15 +36,7 @@ With the `OpenSlide` extra the following formats are also supported:
 pip install wsidicomizer
 ```
 
-***Install with OpenSlide extra***
-
-```console
-pip install wsidicomizer --extras openslide
-```
-
-***Install OpenSlide***
-The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
-For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
+See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
 
 ***Install libjpeg-turbo***
 Install libjpeg-turbo either as binary from <https://libjpeg-turbo.org/> or using your package manager.
@@ -54,38 +48,7 @@ Please note that this is an early release and the API is not frozen yet. Functio
 
 ## Requirements
 
-*wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, openslide-python, PyTurboJPEG, opentile, and wsidicom.
-
-## Bioformats support
-
-### Installation
-
-Support for reading images using Bioformats java library can optionally be enabled by installing *wsidicomizer* with the `bioformats` extra:
-
-```console
-pip install wsidicomizer[bioformats]
-```
-
-The `bioformats` extra enables usage of the `bioformats` module and the `bioformats_wsidicomizer`-cli command. The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
-
-### Using
-
-As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therfore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
-
-```python
-import scyjava
-scyjava.shutdown_jvm()
-```
-
-Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class, instead the `BioformatsDicomizer`-class should be used. Similarly, the Bioformats support is only available in the `bioformats_wsidicomizer`-cli command.
-
-### Bioformats version
-
-The Bioformats java library is avaiable in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only avaible in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
-
-## Limitations
-
-Files with z-stacks or multiple focal paths are currently not supported. DICOM properties related to slice thickness, focal plane thickness, and imaged volume are saved as 0 and not with proper values.
+*wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, PyTurboJPEG, opentile, and wsidicom.
 
 ## Basic cli-usage
 
@@ -174,6 +137,50 @@ region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
 
+## Openslide support
+
+### Installation
+
+Support for reading images using Openslide c library can optionally be enabled by installing *wsidicomizer* with the `openslide` extra:
+
+```console
+pip install wsidicomizer --extras openslide
+```
+
+The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
+For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
+
+## Bioformats support
+
+### Installation
+
+Support for reading images using Bioformats java library can optionally be enabled by installing *wsidicomizer* with the `bioformats` extra:
+
+```console
+pip install wsidicomizer --extras bioformats
+```
+
+The `bioformats` extra enables usage of the `bioformats` module and the `bioformats_wsidicomizer`-cli command. The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
+
+### Using
+
+As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therfore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
+
+```python
+import scyjava
+scyjava.shutdown_jvm()
+```
+
+Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class, instead the `BioformatsDicomizer`-class should be used. Similarly, the Bioformats support is only available in the `bioformats_wsidicomizer`-cli command.
+
+### Bioformats version
+
+The Bioformats java library is avaiable in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only avaible in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
+
+## Limitations
+
+Files with z-stacks or multiple focal paths are currently not supported.
+
 ## Other DICOM python tools
 
 - [pydicom](https://pydicom.github.io/)
@@ -187,12 +194,6 @@ We welcome any contributions to help improve this tool for the WSI DICOM communi
 We recommend first creating an issue before creating potential contributions to check that the contribution is in line with the goals of the project. To submit your contribution, please issue a pull request on the imi-bigpicture/wsidicomizer repository with your changes for review.
 
 Our aim is to provide constructive and positive code reviews for all submissions. The project relies on gradual typing and roughly follows PEP8. However, we are not dogmatic. Most important is that the code is easy to read and understand.
-
-## TODOs
-
-- Packaging of libjpeg-turbo into an 'ready-to-use' distribution.
-- Look into if OpenSlide python will provide a 'ready-to-use' distribution.
-- Interface for coding annotations (geometrical, diagnosis using for example structured reporting).
 
 ## Acknowledgement
 

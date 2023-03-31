@@ -12,4 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from wsidicomizer.bioformats.bioformats_dicomizer import BioformatsDicomizer
+"""Module containing dicomizer source for reading files with bioformats."""
+
+from wsidicomizer.extras.bioformats.bioformats_dicomizer import \
+    BioformatsDicomizer

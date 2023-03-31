@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Image data read by bioformats."""
+
 from pathlib import Path
 from typing import ContextManager, List, Optional
 
@@ -20,8 +22,8 @@ from PIL import Image
 from pydicom.uid import UID
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
-from wsidicomizer.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
 
 

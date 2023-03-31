@@ -12,12 +12,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Cli for bioformats source."""
 
 from typing import Optional, Sequence
 
 from pydicom import Dataset
-from wsidicomizer.bioformats.bioformats_dicomizer import BioformatsDicomizer
+
 from wsidicomizer.cli import WsiDicomizerCli
+from wsidicomizer.extras.bioformats.bioformats_dicomizer import \
+    BioformatsDicomizer
 
 
 class BioformatsCli(WsiDicomizerCli):

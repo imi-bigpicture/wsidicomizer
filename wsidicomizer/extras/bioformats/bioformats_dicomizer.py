@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Dicomizer for bioformats source."""
+
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
@@ -20,8 +22,8 @@ from pydicom import Dataset
 from wsidicom import WsiDicom
 
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicomizer.bioformats.bioformats_source import BioformatsSource
 
 
 class BioformatsDicomizer(WsiDicomizer):

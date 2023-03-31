@@ -12,17 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Source using bioformats."""
+
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset
 
-from wsidicomizer.bioformats.bioformats_image_data import BioformatsImageData
-from wsidicomizer.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.extras.bioformats.bioformats_image_data import \
+    BioformatsImageData
+from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
 
 

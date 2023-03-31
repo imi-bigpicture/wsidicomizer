@@ -11,10 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added TiffSlide as a source.
 
+## [0.9.0] - 2023-03-31
+
+### Added
+
+- Support for using Bioformats reader (optional dependency).
+
 ### Changed
 
 - Refactoring to match new Source-pattern in wsidicom.
-- OpenSlide is now an extra dependency that needs to be specifically installed.
+- Openslide is now an optional dependency that needs to be specifically installed.
 
 ## [0.8.0] - 2023-03-21
 
@@ -137,7 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.8.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.0..HEAD
+[0.9.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.8.0..0.9.0
 [0.8.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.7.0..0.8.0
 [0.7.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.6.0..0.7.0
 [0.6.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.5.1..0.6.0
