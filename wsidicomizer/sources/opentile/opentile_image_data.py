@@ -12,22 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+"""Image data for opentile compatible file."""
 
-from opentile import OpenTile
+from pathlib import Path
+from typing import List, Optional, Sequence, Tuple
+
 from opentile.common import OpenTilePage
-from opentile.metadata import Metadata
 from PIL import Image
-from pydicom import Dataset
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.geometry import Point, Size, SizeMm, PointMm
-from wsidicom.image_data import ImageOrigin
+from wsidicom.instance import ImageOrigin
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
-from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.image_data import DicomizerImageData
 
 
 class OpenTileImageData(DicomizerImageData):
@@ -35,7 +33,7 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiled_page: OpenTilePage,
         encoder: Encoder,
-        image_offset: Optional[Tuple[float, float]] = None
+        image_offset: Optional[Tuple[float, float]] = None,
     ):
         """Wraps a OpenTilePage to ImageData.
 
@@ -58,9 +56,7 @@ class OpenTileImageData(DicomizerImageData):
         self._tile_size = Size(*self._tiled_page.tile_size.to_tuple())
         self._tiled_size = Size(*self._tiled_page.tiled_size.to_tuple())
         if self._tiled_page.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(
-                *self._tiled_page.pixel_spacing.to_tuple()
-            )
+            self._pixel_spacing = SizeMm(*self._tiled_page.pixel_spacing.to_tuple())
         else:
             self._pixel_spacing = None
         if image_offset is not None:
@@ -139,25 +135,21 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def photometric_interpretation(self) -> str:
         if self.needs_transcoding:
-            return self._encoder.photometric_interpretation(
-                self.samples_per_pixel
-            )
+            return self._encoder.photometric_interpretation(self.samples_per_pixel)
         if self._tiled_page.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
-                return 'YBR_FULL_422'
+                return "YBR_FULL_422"
             elif self.transfer_syntax == JPEG2000:
-                return 'YBR_ICT'
+                return "YBR_ICT"
             elif self.transfer_syntax == JPEG2000Lossless:
-                return 'YBR_RCT'
+                return "YBR_RCT"
         elif self._tiled_page.photometric_interpretation == PHOTOMETRIC.RGB:
-            return 'RGB'
-        elif self._tiled_page.photometric_interpretation == (
-            PHOTOMETRIC.MINISBLACK
-        ):
-            return 'MONOCHROME2'
+            return "RGB"
+        elif self._tiled_page.photometric_interpretation == (PHOTOMETRIC.MINISBLACK):
+            return "MONOCHROME2"
         raise NotImplementedError(
             "Non-implemented photometric interpretation. ",
-            self._tiled_page.photometric_interpretation
+            self._tiled_page.photometric_interpretation,
         )
 
     @property
@@ -189,12 +181,7 @@ class OpenTileImageData(DicomizerImageData):
             return self._encode(decoded_tile)
         return self._tiled_page.get_tile(tile.to_tuple())
 
-    def _get_decoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
         """Return Image for tile.
 
         Parameters
@@ -213,15 +200,10 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Image.fromarray(
-            self._tiled_page.get_decoded_tile(tile.to_tuple())
-        )
+        return Image.fromarray(self._tiled_page.get_decoded_tile(tile.to_tuple()))
 
     def get_encoded_tiles(
-        self,
-        tiles: Sequence[Point],
-        z: float,
-        path: str
+        self, tiles: Sequence[Point], z: float, path: str
     ) -> List[bytes]:
         """Return list of image bytes for tiles. Returns transcoded tiles if
         non-supported encoding.
@@ -267,59 +249,4 @@ class OpenTileImageData(DicomizerImageData):
             return JPEGBaseline8Bit
         elif compression == COMPRESSION.APERIO_JP2000_RGB:
             return JPEG2000
-        raise NotImplementedError(
-            f'Not supported compression {compression}'
-        )
-
-
-class OpenTileDicomizer(BaseDicomizer):
-    def __init__(
-        self,
-        filepath: Path,
-        encoder: Encoder,
-        tile_size: int,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_confidential: bool = True,
-    ) -> None:
-        self._tiler = OpenTile.open(filepath, tile_size)
-        self._metadata = self._tiler.metadata
-        super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            modules,
-            include_confidential
-        )
-
-    @property
-    def has_label(self) -> bool:
-        return len(self._tiler.labels) > 0
-
-    @property
-    def has_overview(self) -> bool:
-        return len(self._tiler.overviews) > 0
-
-    @property
-    def metadata(self) -> Metadata:
-        return self._metadata
-
-    @property
-    def pyramid_levels(self) -> List[int]:
-        return [level.pyramid_index for level in self._tiler.levels]
-
-    @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by OpenTile."""
-        return OpenTile.detect_format(filepath) is not None
-
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder, self.metadata.image_offset)
-
-    def _create_label_image_data(self) -> DicomizerImageData:
-        label = self._tiler.labels[0]
-        return OpenTileImageData(label, self._encoder)
-
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        overview = self._tiler.overviews[0]
-        return OpenTileImageData(overview, self._encoder)
+        raise NotImplementedError(f"Not supported compression {compression}")

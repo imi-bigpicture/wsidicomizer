@@ -13,23 +13,34 @@
 
 - Aperio svs (lossless)
 - Hamamatsu ndpi (lossless)
-- Hamamatsu vms (lossy)
 - Philips tiff (lossless)
-- Mirax mrxs (lossy)
-- Trestle tiff (lossy)
-- Ventana bif (lossy)
 - Zeiss czi (lossy, only base level)
+
+With the `OpenSlide` extra the following formats are also supported:
+
+- Mirax mrxs (lossy)
+- Leica scn (lossy)
+- Sakura svslide (lossy)
+- Trestle tif (lossy)
+- Ventana bif, tif (lossy)
+- Hamamatsu vms, vmu (lossy)
 
 ## Installation
 
-***Download wsidicomizer from git***
+***Install wsidicomizer from pypi***
 
 ```console
 pip install wsidicomizer
 ```
 
+***Install with OpenSlide extra***
+
+```console
+pip install wsidicomizer --extras openslide
+```
+
 ***Install OpenSlide***
-Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
+The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
 For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
 
 ***Install libjpeg-turbo***
@@ -152,7 +163,6 @@ Our aim is to provide constructive and positive code reviews for all submissions
 ## TODOs
 
 - Packaging of libjpeg-turbo into an 'ready-to-use' distribution.
-
 - Look into if OpenSlide python will provide a 'ready-to-use' distribution.
 - Interface for coding annotations (geometrical, diagnosis using for example structured reporting).
 

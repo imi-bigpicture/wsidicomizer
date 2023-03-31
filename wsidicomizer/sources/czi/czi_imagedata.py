@@ -1,4 +1,5 @@
 #    Copyright 2021, 2022, 2023 SECTRA AB
+#    Copyright 2021, 2022, 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,237 +13,26 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Source for reading czi file."""
+
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
 from functools import cached_property, lru_cache
 from pathlib import Path
 from threading import Lock
-from typing import Dict, List, Optional, Sequence, Tuple, Type, TypeVar, Union
-from xml.etree import ElementTree
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
-from dateutil import parser as dateparser
-from opentile.metadata import Metadata
 from PIL import Image
 from PIL.Image import Image as PILImage
-from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
-from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.config import settings
 from wsidicomizer.encoding import Encoder
-
-ElementType = TypeVar('ElementType', str, int, float)
-
-
-class CziMetadata(Metadata):
-    def __init__(
-        self,
-        czi: CziFile
-    ):
-        metadata_xml = czi.metadata()
-        if metadata_xml is None or not isinstance(metadata_xml, str):
-            raise ValueError("No metadata string in file.")
-        self._metadata = ElementTree.fromstring(metadata_xml)
-
-    @property
-    def aquisition_datetime(self) -> Optional[datetime]:
-        value = self.get_value_from_element(
-            self._metadata,
-            'AcquisitionDateAndTime',
-            str,
-            nested=['Metadata', 'Information', 'Image']
-        )
-        return dateparser.parse(value)
-
-    @property
-    def scanner_model(self) -> Optional[str]:
-        information = self.get_nested_element(['Metadata', 'Information'])
-        image = self.get_nested_element(['Image'], information)
-        microscope_ref = self.get_element(image, 'MicroscopeRef').get('Id')
-        microscopes = self.get_nested_element(
-            ['Instrument', 'Microscopes'],
-            information
-        ).findall('Microscope')
-        try:
-            microscope = next(
-                microscope for microscope in microscopes
-                if microscope.get('Id') == microscope_ref
-            )
-        except StopIteration:
-            return None
-        return microscope.get('Name')
-
-    @property
-    def magnification(self) -> Optional[float]:
-        information = self.get_nested_element(['Metadata', 'Information'])
-        objective_refs = [
-            objective.get('Id') for objective in
-            self.get_nested_element(
-                ['Image', 'ObjectiveSettings'],
-                information
-            ).findall('ObjectiveRef')
-        ]
-        if len(objective_refs) != 1:
-            return None
-        objectives = self.get_nested_element(
-            ['Instrument', 'Objectives'],
-            information
-        ).findall('Objective')
-        try:
-            objective = next(
-                objective for objective in objectives
-                if objective.get('Id') == objective_refs[0]
-            )
-        except StopIteration:
-            return None
-        try:
-            return self.get_value_from_element(
-                objective,
-                'NominalMagnification',
-                float
-            )
-        except ValueError:
-            return None
-
-    @property
-    def scanner_software_versions(self) -> Optional[List[str]]:
-        application = self.get_nested_element(
-            ['Metadata', 'Information', 'Application']
-        )
-        try:
-            name = self.get_value_from_element(application, 'Name', str)
-            version = self.get_value_from_element(application, 'Version', str)
-        except ValueError:
-            return None
-        return [name + ' ' + version]
-
-    @cached_property
-    def scaling(
-        self
-    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-        scaling_elements = self.get_nested_element(
-            ['Metadata', 'Scaling', 'Items']
-        )
-        x: Optional[float] = None
-        y: Optional[float] = None
-        z: Optional[float] = None
-        for distance in scaling_elements.findall('Distance'):
-            dimension = distance.get('Id')
-            # Value is in m per pixel, result in mm per pixel
-            value = self.get_value_from_element(
-                distance,
-                'Value',
-                float,
-            ) * pow(10, 6)
-            if dimension == 'X':
-                x = value
-            elif dimension == 'Y':
-                y = value
-            elif dimension == 'Z':
-                z = value
-        return x, y, z
-
-    @cached_property
-    def pixel_spacing(self) -> SizeMm:
-        """Get pixel spacing (mm per pixel) from metadata"""
-        x, y, _ = self.scaling
-        if x is None or y is None:
-            raise ValueError("Could not find pixel spacing in metadata")
-        return SizeMm(x, y)/1000
-
-    @cached_property
-    def focal_plane_mapping(self) -> List[float]:
-        image = self.get_nested_element(
-            ["Metadata", 'Information', 'Image']
-        )
-        try:
-            size_z = self.get_value_from_element(image, 'SizeZ', int, 0)
-            z_interval = self.get_nested_element(
-                ['Dimensions', 'Z', 'Positions', 'Interval'],
-                image
-            )
-            start = self.get_value_from_element(z_interval, 'Start', int)
-            increment = self.get_value_from_element(
-                z_interval,
-                'Increment',
-                int
-            )
-            _, _, z_scale = self.scaling
-            if z_scale is None:
-                raise ValueError("No z scale in metadata")
-            start_z = start * z_scale
-            end_z = (start+increment*size_z)*z_scale
-            step_z = increment*z_scale
-            return list(np.arange(start_z, end_z, step_z))
-        except ValueError:
-            return [0.0]
-
-    @cached_property
-    def channel_mapping(self) -> List[str]:
-        channels = self.get_nested_element(
-            ['Metadata', 'Information', 'Image', 'Dimensions', 'Channels']
-        )
-        return [
-            self.get_value_from_element(channel, 'Fluor', str)
-            for channel in channels
-        ]
-
-    def get_nested_element(
-        self,
-        tags: Sequence[str],
-        element: Optional[ElementTree.Element] = None
-    ) -> ElementTree.Element:
-        if element is None:
-            element = self._metadata
-        found_element = element
-        for tag in tags:
-            found_element = found_element.find(tag)
-            if found_element is None:
-                raise ValueError(f"Tag {tag} not found in element")
-        return found_element
-
-    def get_value_from_element(
-        self,
-        element: ElementTree.Element,
-        tag: str,
-        value_type: Type[ElementType],
-        default: Optional[ElementType] = None,
-        nested: Optional[Sequence[str]] = None
-    ) -> ElementType:
-        if nested is not None:
-            element = self.get_nested_element(nested, element)
-        try:
-            element = self.get_element(element, tag)
-            text = element.text
-            if text is None:
-                raise ValueError("Text not found in element")
-        except ValueError as exception:
-            if default is not None:
-                return default
-            raise ValueError(
-                f"Tag {tag} or text not found in element"
-            ) from exception
-        try:
-            return value_type(text)
-        except ValueError as exception:
-            raise ValueError(
-                f'Failed to convert tag {tag} value {text} to {value_type}.'
-            ) from exception
-
-    @staticmethod
-    def get_element(
-        element: ElementTree.Element,
-        tag: str
-    ) -> ElementTree.Element:
-        found_element = element.find(tag)
-        if found_element is None:
-            raise ValueError(f"Tag {tag} not found in element")
-        return found_element
+from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
 
 @dataclass
@@ -253,12 +43,7 @@ class CziBlock:
 
 
 class CziImageData(DicomizerImageData):
-    def __init__(
-        self,
-        filepath: Path,
-        tile_size: int,
-        encoder: Encoder
-    ) -> None:
+    def __init__(self, filepath: Path, tile_size: int, encoder: Encoder) -> None:
         """Wraps a czi file to ImageData. Multiple pyramid levels are currently
         not supported.
 
@@ -305,10 +90,7 @@ class CziImageData(DicomizerImageData):
     @cached_property
     def image_size(self) -> Size:
         """The pixel size of the image."""
-        return Size(
-            self._get_size(axis='X'),
-            self._get_size(axis='Y')
-        )
+        return Size(self._get_size(axis="X"), self._get_size(axis="Y"))
 
     @property
     def tile_size(self) -> Size:
@@ -338,17 +120,12 @@ class CziImageData(DicomizerImageData):
         return self._encode(self._create_blank_tile())
 
     @cached_property
-    def pixel_image_origin(self) -> Point:
+    def pixel_origin(self) -> Point:
         """Return coordinate of the top-left of the image."""
-        return Point(
-            self._get_start(axis='X'),
-            self._get_start(axis='Y')
-        )
+        return Point(self._get_start(axis="X"), self._get_start(axis="Y"))
 
     @cached_property
-    def tile_directory(
-        self
-    ) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+    def tile_directory(self) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
         """Return dict of block, block start, and block size by tile position,
         focal plane and optical path
 
@@ -358,17 +135,17 @@ class CziImageData(DicomizerImageData):
             Directory of tile point, focal plane and channel as key and
             list of block, block start, and block size as item.
         """
-        tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = (
-            defaultdict(list)
+        tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = defaultdict(
+            list
         )
         assert isinstance(self._czi.filtered_subblock_directory, list)
         for index, block in enumerate(self._czi.filtered_subblock_directory):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
-                (block_start+block_size) // self.tile_size
+                (block_start + block_size) // self.tile_size,
             )
-            for tile in tile_region.iterate_all(include_end=True):
+            for tile in tile_region.iterate_all():
                 tile_directory[tile, z, c].append(
                     CziBlock(index, block_start, block_size)
                 )
@@ -381,7 +158,7 @@ class CziImageData(DicomizerImageData):
 
     @cached_property
     def samples_per_pixel(self) -> int:
-        return self._get_size(axis='0')
+        return self._get_size(axis="0")
 
     @property
     def block_directory(self) -> List[DirectoryEntryDV]:
@@ -392,7 +169,7 @@ class CziImageData(DicomizerImageData):
         try:
             czi = CziFile(filepath)
             czi.close()
-            return 'czi'
+            return "czi"
         except ValueError:
             return None
 
@@ -400,12 +177,7 @@ class CziImageData(DicomizerImageData):
         """Close wrapped file."""
         self._czi.close()
 
-    def _get_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str
-    ) -> np.ndarray:
+    def _get_tile(self, tile_point: Point, z: float, path: str) -> np.ndarray:
         """Return tile data as numpy array for tile.
 
         Parameters
@@ -449,20 +221,15 @@ class CziImageData(DicomizerImageData):
             block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
             image_data[
-                block_start_in_tile.y:block_end_in_tile.y,
-                block_start_in_tile.x:block_end_in_tile.x,
+                block_start_in_tile.y : block_end_in_tile.y,
+                block_start_in_tile.x : block_end_in_tile.x,
             ] = block_data[
-                tile_start_in_block.y:tile_end_in_block.y,
-                tile_start_in_block.x:tile_end_in_block.x
+                tile_start_in_block.y : tile_end_in_block.y,
+                tile_start_in_block.x : tile_end_in_block.x,
             ]
         return image_data
 
-    def _get_decoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> PILImage:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> PILImage:
         """Return Image for tile.
 
         Parameters
@@ -518,7 +285,7 @@ class CziImageData(DicomizerImageData):
     def _get_axis_index(self, axis: str) -> int:
         index = str(self._czi.axes).index(axis.capitalize())
         if not index >= 0:
-            raise ValueError(f'Axis {axis} not found in axes {self._czi.axes}')
+            raise ValueError(f"Axis {axis} not found in axes {self._czi.axes}")
         return index
 
     def _create_blank_tile(self) -> np.ndarray:
@@ -529,7 +296,7 @@ class CziImageData(DicomizerImageData):
         np.ndarray
             A blank tile as numpy array.
         """
-        if self.photometric_interpretation == 'MONOCHROME2':
+        if self.photometric_interpretation == "MONOCHROME2":
             fill_value = 0
         else:
             fill_value = 1
@@ -537,7 +304,7 @@ class CziImageData(DicomizerImageData):
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
             fill_value * np.iinfo(self._czi.dtype).max,
-            dtype=np.dtype(self._czi.dtype)
+            dtype=np.dtype(self._czi.dtype),
         )
 
     @lru_cache(settings.czi_block_cache_size)
@@ -559,8 +326,7 @@ class CziImageData(DicomizerImageData):
             return data
 
     def _get_block_dimensions(
-        self,
-        block: DirectoryEntryDV
+        self, block: DirectoryEntryDV
     ) -> Tuple[Point, Size, float, str]:
         """Return start coordinate and size for block realtive to image
         origin and block focal plane and optical path.
@@ -581,91 +347,27 @@ class CziImageData(DicomizerImageData):
         y_start: Optional[int] = None
         y_size: Optional[int] = None
         z = 0.0
-        c = '0'
+        c = "0"
 
         for dimension_entry in block.dimension_entries:
-            if dimension_entry.dimension == 'X':
+            if dimension_entry.dimension == "X":
                 x_start = dimension_entry.start
                 x_size = dimension_entry.size
-            elif dimension_entry.dimension == 'Y':
+            elif dimension_entry.dimension == "Y":
                 y_start = dimension_entry.start
                 y_size = dimension_entry.size
-            elif dimension_entry.dimension == 'Z':
+            elif dimension_entry.dimension == "Z":
                 z = self.metadata.focal_plane_mapping[dimension_entry.start]
-            elif dimension_entry.dimension == 'C':
+            elif dimension_entry.dimension == "C":
                 c = self.metadata.channel_mapping[dimension_entry.start]
 
-        if (
-            x_start is None or x_size is None or
-            y_start is None or y_size is None
-        ):
+        if x_start is None or x_size is None or y_start is None or y_size is None:
             raise ValueError("Could not determine position of block.")
 
-        return (
-            Point(x_start, y_start) - self.pixel_image_origin,
-            Size(x_size, y_size),
-            z,
-            c
-        )
+        return (Point(x_start, y_start) - self.pixel_origin, Size(x_size, y_size), z, c)
 
     def _size_to_numpy_shape(self, size: Size) -> Tuple[int, ...]:
         """Return a tuple for use with numpy.shape."""
         if self.samples_per_pixel == 1:
             return size.height, size.width
         return size.height, size.width, self.samples_per_pixel
-
-
-class CziDicomizer(BaseDicomizer):
-    def __init__(
-        self,
-        filepath: Path,
-        encoder: Encoder,
-        tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_confidential: bool = True,
-    ) -> None:
-        self._imaga_data = CziImageData(
-            filepath,
-            tile_size,
-            encoder
-        )
-        self._metadata = self._imaga_data.metadata
-        super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            modules,
-            include_confidential
-        )
-
-    @property
-    def has_label(self) -> bool:
-        return False
-
-    @property
-    def has_overview(self) -> bool:
-        return False
-
-    @property
-    def pyramid_levels(self) -> List[int]:
-        return [0]
-
-    @property
-    def metadata(self) -> Metadata:
-        return self._metadata
-
-    @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by CziFile."""
-        return CziImageData.detect_format(filepath) is not None
-
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        if level_index != 0:
-            raise ValueError()  # TODO
-        return CziImageData(self._filepath, self._tile_size, self._encoder)
-
-    def _create_label_image_data(self) -> DicomizerImageData:
-        return super()._create_label_image_data()
-
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        return super()._create_overview_image_data()

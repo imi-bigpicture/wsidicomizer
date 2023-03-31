@@ -12,9 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Module containing settings for WsiDicomizer."""
+
+
 class Settings:
     """Class containing settings. Settings are to be accessed through the
     global variable settings."""
+
     def __init__(self) -> None:
         self._czi_block_cache_size = 8
 

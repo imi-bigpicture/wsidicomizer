@@ -12,52 +12,38 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Image data for openslide compatible file."""
+
 import ctypes
 import math
-import os
 import re
-from ctypes.util import find_library
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
-from opentile.metadata import Metadata
 from PIL import Image
 from PIL.Image import Image as PILImage
-from pydicom import Dataset
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
-from wsidicom.image_data import ImageOrigin
+from wsidicom.instance import ImageOrigin
 
-from wsidicomizer.base_dicomizer import BaseDicomizer
 from wsidicomizer.encoding import Encoder
+from wsidicomizer.extras.openslide.openslide import (
+    PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH,
+    PROPERTY_NAME_BOUNDS_X,
+    PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_MPP_X,
+    PROPERTY_NAME_MPP_Y,
+    OpenSlide,
+    _read_region,
+    convert_argb_to_rgba,
+    get_associated_image_names,
+)
 from wsidicomizer.image_data import DicomizerImageData
-
-# On windows, use find_library to find directory with openslide dll in
-# the Path environmental variable.
-if os.name == 'nt':
-    openslide_lib_path = find_library('libopenslide-0')
-    if openslide_lib_path is not None:
-        openslide_dir = str(Path(openslide_lib_path).parent)
-    else:
-        openslide_lib_dir = os.environ.get('OPENSLIDE')
-        if openslide_lib_dir is not None:
-            openslide_lib_path = Path(openslide_lib_dir).joinpath(
-                'libopenslide-0.dll'
-            )
-            if not openslide_lib_path.exists():
-                openslide_lib_path = None
-    if openslide_lib_path is None:
-        raise ModuleNotFoundError(
-            "Could not find libopenslide-0.dll in the directories specified "
-            "in the `Path` or `OPENSLIDE` environmental variable. Please add "
-            "the directory with openslide bin content to the `Path` or  "
-            "OPENSLIDE environmental variable."
-        )
-    openslide_dir = str(Path(openslide_lib_path).parent)
-    os.add_dll_directory(openslide_dir)
 
 """
 OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
@@ -67,49 +53,14 @@ used to convert argb to rgba. We consider this safe, as these directly map
 to the Openslide C API and are thus not likely to change that often.
 """
 
-from openslide import (PROPERTY_NAME_BACKGROUND_COLOR,
-                       PROPERTY_NAME_BOUNDS_HEIGHT, PROPERTY_NAME_BOUNDS_WIDTH,
-                       PROPERTY_NAME_BOUNDS_X, PROPERTY_NAME_BOUNDS_Y,
-                       PROPERTY_NAME_MPP_X, PROPERTY_NAME_MPP_Y,
-                       PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR,
-                       OpenSlide)
-from openslide._convert import argb2rgba as convert_argb_to_rgba
-from openslide.lowlevel import _read_region, get_associated_image_names
-
 
 class OpenSlideAssociatedImageType(Enum):
-    LABEL = 'label'
-    MACRO = 'macro'
-
-
-class OpenSlideMetadata(Metadata):
-    def __init__(self, slide: OpenSlide):
-        magnification = slide.properties.get(
-            PROPERTY_NAME_OBJECTIVE_POWER
-        )
-        if magnification is not None:
-            self._magnification = float(magnification)
-        else:
-            self._magnification = None
-        self._scanner_manufacturer = slide.properties.get(
-            PROPERTY_NAME_VENDOR
-        )
-
-    @property
-    def magnification(self) -> Optional[float]:
-        return self._magnification
-
-    @property
-    def scanner_manufacturer(self) -> Optional[str]:
-        return self._scanner_manufacturer
+    LABEL = "label"
+    MACRO = "macro"
 
 
 class OpenSlideImageData(DicomizerImageData):
-    def __init__(
-        self,
-        open_slide: OpenSlide,
-        encoder: Encoder
-    ):
+    def __init__(self, open_slide: OpenSlide, encoder: Encoder):
         """Wraps a OpenSlide image to ImageData.
 
         Parameters
@@ -121,9 +72,7 @@ class OpenSlideImageData(DicomizerImageData):
         """
         super().__init__(encoder)
         self._slide = open_slide
-        self._blank_color = self._get_blank_color(
-            self.photometric_interpretation
-        )
+        self._blank_color = self._get_blank_color(self.photometric_interpretation)
 
     @property
     def files(self) -> List[Path]:
@@ -148,7 +97,7 @@ class OpenSlideImageData(DicomizerImageData):
 
     @property
     def optical_paths(self) -> List[str]:
-        return ['0']
+        return ["0"]
 
     @property
     def blank_color(self) -> Tuple[int, int, int]:
@@ -162,10 +111,7 @@ class OpenSlideImageData(DicomizerImageData):
             # Slide already closed
             pass
 
-    def _get_blank_color(
-        self,
-        photometric_interpretation: str
-    ) -> Tuple[int, int, int]:
+    def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
         """Return color to use blank tiles. Parses background color from
         openslide if present.
 
@@ -184,16 +130,9 @@ class OpenSlideImageData(DicomizerImageData):
             PROPERTY_NAME_BACKGROUND_COLOR
         )
         if slide_background_color_string is not None:
-            rgb = re.findall(
-                r'([0-9a-fA-F]{2})',
-                slide_background_color_string
-            )
+            rgb = re.findall(r"([0-9a-fA-F]{2})", slide_background_color_string)
             if len(rgb) == 3:
-                return (
-                    int(rgb[0], 16),
-                    int(rgb[1], 16),
-                    int(rgb[2], 16)
-                )
+                return (int(rgb[0], 16), int(rgb[1], 16), int(rgb[2], 16))
         return super()._get_blank_color(photometric_interpretation)
 
 
@@ -202,7 +141,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         self,
         open_slide: OpenSlide,
         image_type: OpenSlideAssociatedImageType,
-        encoder: Encoder
+        encoder: Encoder,
     ):
         """Wraps a OpenSlide associated image (label or overview) to ImageData.
 
@@ -217,14 +156,11 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         """
         super().__init__(open_slide, encoder)
         self._image_type = image_type
-        if (
-            image_type.value
-            not in get_associated_image_names(self._slide._osr)
-        ):
+        if image_type.value not in get_associated_image_names(self._slide._osr):
             raise ValueError(f"{image_type.value} not in {self._slide}")
 
         image = self._slide.associated_images[image_type.value]
-        no_alpha = Image.new('RGB', image.size, self.blank_color)
+        no_alpha = Image.new("RGB", image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[3])
         self._image_size = Size.from_tuple(no_alpha.size)
         self._decoded_image = no_alpha
@@ -251,22 +187,12 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         """The pyramidal index in relation to the base layer."""
         return 0
 
-    def _get_encoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def _get_decoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> PILImage:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> PILImage:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
@@ -274,11 +200,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
 
 class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
-        self,
-        open_slide: OpenSlide,
-        level_index: int,
-        tile_size: int,
-        encoder: Encoder
+        self, open_slide: OpenSlide, level_index: int, tile_size: int, encoder: Encoder
     ):
         super().__init__(open_slide, encoder)
         """Wraps a OpenSlide level to ImageData.
@@ -300,9 +222,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._image_size = Size.from_tuple(
             self._slide.level_dimensions[self._level_index]
         )
-        self._downsample = int(
-            self._slide.level_downsamples[self._level_index]
-        )
+        self._downsample = int(self._slide.level_downsamples[self._level_index])
         self._pyramid_index = int(math.log2(self.downsample))
 
         try:
@@ -310,7 +230,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             base_mpp_y = float(self._slide.properties[PROPERTY_NAME_MPP_Y])
             self._pixel_spacing = SizeMm(
                 base_mpp_x * self.downsample / 1000.0,
-                base_mpp_y * self.downsample / 1000.0
+                base_mpp_y * self.downsample / 1000.0,
             )
         except KeyError:
             raise Exception(
@@ -325,9 +245,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
         self._offset = Point(int(bounds_x), int(bounds_y))
         if bounds_w is not None and bounds_h is not None:
-            self._image_size = (
-                Size(int(bounds_w), int(bounds_h)) // self.downsample
-            )
+            self._image_size = Size(int(bounds_w), int(bounds_h)) // self.downsample
         else:
             self._image_size = Size.from_tuple(
                 self._slide.level_dimensions[self._level_index]
@@ -339,8 +257,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_decoded_frame_size = None
         self._image_origin = ImageOrigin(
             PointMm(
-                self._offset.x*base_mpp_x / 1000,
-                self._offset.y*base_mpp_y / 1000
+                self._offset.x * base_mpp_x / 1000, self._offset.y * base_mpp_y / 1000
             )
         )
 
@@ -374,10 +291,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         return self._image_origin
 
     def stitch_tiles(
-        self,
-        region: Region,
-        path: str,
-        z: float
+        self, region: Region, path: str, z: float, threads: int
     ) -> PILImage:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         openslide object.
@@ -397,9 +311,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Stitched image
         """
         if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
+            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
         image_data = self._get_region(region)
         if image_data is None:
             image_data = self._get_blank_decoded_frame(region.size)
@@ -454,9 +368,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         """
         if self._blank_encoded_frame_size != size:
             frame = np.full(
-                size.to_tuple() + (3,),
-                self.blank_color,
-                dtype=np.dtype(np.uint8)
+                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
             )
             self._blank_encoded_frame = self._encode(frame)
             self._blank_encoded_frame_size = size
@@ -476,18 +388,12 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bytes
             Decoded blank frame.
         """
-        if (
-            self._blank_decoded_frame is None
-            or self._blank_decoded_frame_size != size
-        ):
-            frame = Image.new('RGB', size.to_tuple(), self.blank_color)
+        if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
+            frame = Image.new("RGB", size.to_tuple(), self.blank_color)
             self._blank_decoded_frame = frame
         return self._blank_decoded_frame
 
-    def _get_region(
-        self,
-        region: Region
-    ) -> Optional[PILImage]:
+    def _get_region(self, region: Region) -> Optional[PILImage]:
         """Return Image read from region in openslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
         background color
@@ -503,15 +409,14 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Image of region, or None if region is blank.
         """
         if region.size.width < 0 or region.size.height < 0:
-            raise ValueError('Negative size not allowed')
+            raise ValueError("Negative size not allowed")
         CHANNELS = 4
         TRANSPARENCY = 3
 
         location_in_base_level = region.start * self.downsample + self._offset
 
         region_data = np.empty(
-            region.size.to_tuple() + (CHANNELS,),
-            dtype=ctypes.c_uint8
+            region.size.to_tuple() + (CHANNELS,), dtype=ctypes.c_uint8
         )
 
         _read_region(
@@ -521,7 +426,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             location_in_base_level.y,
             self._level_index,
             region.size.width,
-            region.size.height
+            region.size.height,
         )
         region_data.shape = (region.size.height, region.size.width, CHANNELS)
         if self._detect_blank_tile(region_data):
@@ -530,16 +435,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         convert_argb_to_rgba(region_data.view(ctypes.c_uint32))
 
         image = Image.fromarray(region_data)
-        no_alpha = Image.new('RGB', image.size, self.blank_color)
+        no_alpha = Image.new("RGB", image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[TRANSPARENCY])
         return no_alpha
 
-    def _get_encoded_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str
-    ) -> bytes:
+    def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
         encoded as jpeg.
 
@@ -558,22 +458,15 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Tile bytes.
         """
         if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
-        tile = self._get_region(
-            Region(tile_point*self.tile_size, self.tile_size)
-        )
+            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_encoded_frame(self.tile_size)
         return self._encode(np.asarray(tile))
 
-    def _get_decoded_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str
-    ) -> PILImage:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> PILImage:
         """Return Image for tile. Image mode is RGB.
 
         Parameters
@@ -591,90 +484,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Tile as Image.
         """
         if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f'focal plane {z}', str(self))
+            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f'optical path {path}', str(self))
-        tile = self._get_region(
-            Region(tile_point*self.tile_size, self.tile_size)
-        )
+            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return tile
-
-
-class OpenSlideDicomizer(BaseDicomizer):
-    def __init__(
-        self,
-        filepath: Path,
-        encoder: Encoder,
-        tile_size: int,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_confidential: bool = True,
-    ) -> None:
-        self._slide = OpenSlide(filepath)
-        self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._metadata = OpenSlideMetadata(self._slide)
-        super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            modules,
-            include_confidential
-        )
-
-    @property
-    def has_label(self) -> bool:
-        return (
-            OpenSlideAssociatedImageType.LABEL.value
-            in self._slide.associated_images
-        )
-
-    @property
-    def has_overview(self) -> bool:
-        return (
-            OpenSlideAssociatedImageType.MACRO.value
-            in self._slide.associated_images
-        )
-
-    @property
-    def metadata(self) -> Metadata:
-        return self._metadata
-
-    @property
-    def pyramid_levels(self) -> List[int]:
-        return self._pyramid_levels
-
-    @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by OpenSlide."""
-        return OpenSlide.detect_format(str(filepath)) is not None
-
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        return OpenSlideLevelImageData(
-            self._slide,
-            level_index,
-            self._tile_size,
-            self._encoder
-        )
-
-    def _create_label_image_data(self) -> DicomizerImageData:
-        return OpenSlideAssociatedImageData(
-            self._slide,
-            OpenSlideAssociatedImageType.LABEL,
-            self._encoder
-        )
-
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        return OpenSlideAssociatedImageData(
-            self._slide,
-            OpenSlideAssociatedImageType.MACRO,
-            self._encoder
-        )
-
-    @staticmethod
-    def _get_pyramid_levels(slide: OpenSlide) -> List[int]:
-        """Return list of pyramid levels present in openslide slide."""
-        return [
-            int(math.log2(int(downsample)))
-            for downsample in slide.level_downsamples
-        ]
