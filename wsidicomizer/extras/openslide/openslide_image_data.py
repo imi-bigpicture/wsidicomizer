@@ -27,7 +27,7 @@ from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
-from wsidicom.image_data import ImageOrigin
+from wsidicom.instance import ImageOrigin
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import (
@@ -257,8 +257,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_decoded_frame_size = None
         self._image_origin = ImageOrigin(
             PointMm(
-                self._offset.x*base_mpp_x / 1000,
-                self._offset.y*base_mpp_y / 1000
+                self._offset.x * base_mpp_x / 1000, self._offset.y * base_mpp_y / 1000
             )
         )
 

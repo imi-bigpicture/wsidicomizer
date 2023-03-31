@@ -15,14 +15,14 @@
 """Image data for opentile compatible file."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from opentile.common import OpenTilePage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.geometry import Point, Size, SizeMm, PointMm
-from wsidicom.image_data import ImageOrigin
+from wsidicom.instance import ImageOrigin
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
@@ -33,7 +33,7 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiled_page: OpenTilePage,
         encoder: Encoder,
-        image_offset: Optional[Tuple[float, float]] = None
+        image_offset: Optional[Tuple[float, float]] = None,
     ):
         """Wraps a OpenTilePage to ImageData.
 

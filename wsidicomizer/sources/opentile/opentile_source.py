@@ -79,7 +79,7 @@ class OpenTileSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder)
+        return OpenTileImageData(level, self._encoder, self.metadata.image_offset)
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]

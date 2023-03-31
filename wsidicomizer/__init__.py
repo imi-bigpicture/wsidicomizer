@@ -22,4 +22,4 @@ from wsidicomizer.dataset import (
 )
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-__version__ = "0.7.0"
+__version__ = "0.9.0"
