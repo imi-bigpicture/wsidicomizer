@@ -17,18 +17,25 @@
 import datetime
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
-from highdicom.content import (SpecimenDescription, SpecimenPreparationStep,
-                               SpecimenSampling, SpecimenStaining)
+from highdicom.content import (
+    SpecimenDescription,
+    SpecimenPreparationStep,
+    SpecimenSampling,
+    SpecimenStaining,
+)
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID as Uid
 from pydicom.uid import generate_uid
-from wsidicom.conceptcode import (AnatomicPathologySpecimenTypesCode,
-                                  ConceptCode, SpecimenEmbeddingMediaCode,
-                                  SpecimenFixativesCode,
-                                  SpecimenSamplingProcedureCode,
-                                  SpecimenStainsCode)
+from wsidicom.conceptcode import (
+    AnatomicPathologySpecimenTypesCode,
+    ConceptCode,
+    SpecimenEmbeddingMediaCode,
+    SpecimenFixativesCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
+)
 
 from opentile.common import Metadata
 
@@ -57,16 +64,12 @@ def create_base_dataset(
     elif isinstance(modules, Dataset):
         base_dataset.update(modules)
     else:
-        raise TypeError(
-            'datasets parameter should be single or list of Datasets'
-        )
+        raise TypeError("datasets parameter should be single or list of Datasets")
     return base_dataset
 
 
 def populate_base_dataset(
-    metadata: Metadata,
-    base_dataset: Dataset,
-    include_confidential: bool = True
+    metadata: Metadata, base_dataset: Dataset, include_confidential: bool = True
 ) -> Dataset:
     """Populate dataset with properties from tiler, if present.
     Parameters
@@ -85,27 +88,24 @@ def populate_base_dataset(
     """
 
     properties = {
-        'Manufacturer': metadata.scanner_manufacturer,
-        'ManufacturerModelName': metadata.scanner_model,
-        'SoftwareVersions': metadata.scanner_software_versions,
+        "Manufacturer": metadata.scanner_manufacturer,
+        "ManufacturerModelName": metadata.scanner_model,
+        "SoftwareVersions": metadata.scanner_software_versions,
     }
     confidential_properties = {
-        'AcquisitionDateTime': metadata.aquisition_datetime,
-        'DeviceSerialNumber': metadata.scanner_serial_number
+        "AcquisitionDateTime": metadata.aquisition_datetime,
+        "DeviceSerialNumber": metadata.scanner_serial_number,
     }
     if include_confidential:
         properties.update(confidential_properties)
     for property_name, property_value in metadata.properties.items():
-        if property_name == 'lossy_image_compression_method':
-            properties['LossyImageCompressionMethod'] = property_value
-        elif property_name == 'lossy_image_compression_ratio':
-            properties['LossyImageCompressionRatio'] = property_value
+        if property_name == "lossy_image_compression_method":
+            properties["LossyImageCompressionMethod"] = property_value
+        elif property_name == "lossy_image_compression_ratio":
+            properties["LossyImageCompressionRatio"] = property_value
 
     for property_name, property_value in properties.items():
-        if (
-            not hasattr(base_dataset, property_name)
-            and property_value is not None
-        ):
+        if not hasattr(base_dataset, property_name) and property_value is not None:
             setattr(base_dataset, property_name, property_value)
 
     return base_dataset
@@ -155,18 +155,18 @@ def create_wsi_dataset(
     dataset = Dataset()
 
     # SOP common module (SOPInstanceUID written on save())
-    dataset.SOPClassUID = '1.2.840.10008.5.1.4.1.1.77.1.6'
+    dataset.SOPClassUID = "1.2.840.10008.5.1.4.1.1.77.1.6"
 
     # dataset.StudyInstanceUID = uid_generator()
     # General series and Whole slide Microscopy modules
-    dataset.SeriesNumber = ''
+    dataset.SeriesNumber = ""
     dataset.SeriesInstanceUID = uid_generator()
-    dataset.Modality = 'SM'
-    dataset.LossyImageCompression = '00'
+    dataset.Modality = "SM"
+    dataset.LossyImageCompression = "00"
 
     # Frame of reference module
     dataset.FrameOfReferenceUID = uid_generator()
-    dataset.PositionReferenceIndicator = 'SLIDE_CORNER'
+    dataset.PositionReferenceIndicator = "SLIDE_CORNER"
 
     # Acquisition context module (empty)
     dataset.AcquisitionContextSequence = DicomSequence()
@@ -187,7 +187,7 @@ def create_wsi_dataset(
     dataset.VolumetricProperties = 'VOLUME'
     # AcquisitionDateTime is required
     dt = datetime.datetime.now()
-    dataset.AcquisitionDateTime = dt.strftime('%Y%m%d%H%M%S.%f')
+    dataset.AcquisitionDateTime = dt.strftime("%Y%m%d%H%M%S.%f")
 
     return dataset
 
@@ -198,7 +198,7 @@ def create_study_module(
     study_time: Optional[datetime.time] = None,
     study_accession_number: str = "",
     referring_physician_name: str = "",
-    uid_generator: Callable[..., Uid] = generate_uid
+    uid_generator: Callable[..., Uid] = generate_uid,
 ) -> Dataset:
     """Create general study module.
 
@@ -237,7 +237,7 @@ def create_patient_module(
     sex: str = "",
     identity_removed: bool = False,
     de_indentification_methods: Optional[Sequence[Union[str, Code]]] = None,
-    age_at_extraction: Optional[str] = None
+    age_at_extraction: Optional[str] = None,
 ) -> Dataset:
     """Create patient and patient study modules.
 
@@ -272,12 +272,12 @@ def create_patient_module(
     dataset.PatientID = id
     dataset.PatientBirthDate = birth_date
     dataset.PatientSex = sex
-    dataset.PatientIdentityRemoved = 'YES' if identity_removed else 'NO'
+    dataset.PatientIdentityRemoved = "YES" if identity_removed else "NO"
     if identity_removed and de_indentification_methods is None:
         raise ValueError(
-            'de-intification method must be specified if '
-            'patient identity has been removed'
-            )
+            "de-intification method must be specified if "
+            "patient identity has been removed"
+        )
     de_indentification_method_strings: List[str] = []
     de_indentification_method_codes: List[Code] = []
 
@@ -288,7 +288,7 @@ def create_patient_module(
             de_indentification_method_codes.append(de_indentification_method)
         else:
             raise TypeError(
-                'De-indentification methods should be string or coded value'
+                "De-indentification methods should be string or coded value"
             )
     if de_indentification_method_strings != []:
         dataset.DeidentificationMethod = de_indentification_method_strings
@@ -296,8 +296,7 @@ def create_patient_module(
         dataset.DeidentificationMethodCodeSequence = DicomSequence(
             [
                 ConceptCode.from_code(de_indentification_method_code).to_ds()
-                for de_indentification_method_code
-                in de_indentification_method_codes
+                for de_indentification_method_code in de_indentification_method_codes
             ]
         )
     if age_at_extraction is not None:
@@ -307,10 +306,10 @@ def create_patient_module(
 
 
 def create_device_module(
-    manufacturer: str = 'Unknown',
-    model_name: str = 'Unknown',
-    serial_number: str = 'Unknown',
-    software_versions: Sequence[str] = ['Unknown']
+    manufacturer: str = "Unknown",
+    model_name: str = "Unknown",
+    serial_number: str = "Unknown",
+    software_versions: Sequence[str] = ["Unknown"],
 ) -> Dataset:
     """Create extended equipment module.
 
@@ -332,10 +331,10 @@ def create_device_module(
     """
     dataset = Dataset()
     properties = {
-        'Manufacturer': manufacturer,
-        'ManufacturerModelName': model_name,
-        'DeviceSerialNumber': serial_number,
-        'SoftwareVersions': software_versions
+        "Manufacturer": manufacturer,
+        "ManufacturerModelName": model_name,
+        "DeviceSerialNumber": serial_number,
+        "SoftwareVersions": software_versions,
     }
     for name, value in properties.items():
         setattr(dataset, name, value)
@@ -352,7 +351,7 @@ def create_sample(
     specimen_sampling_method: Optional[str] = None,
     anatomical_sites: Optional[Sequence[Tuple[Code, Sequence[Code]]]] = None,
     location: Optional[Union[str, Tuple[float, float, float]]] = None,
-    uid_generator: Callable[..., Uid] = generate_uid
+    uid_generator: Callable[..., Uid] = generate_uid,
 ) -> Dataset:
     """Create sample description.
 
@@ -392,18 +391,12 @@ def create_sample(
     sample_preparation_steps: List[SpecimenPreparationStep] = []
     if stainings is not None:
         sample_preparation_step = create_sample_preparation_step(
-            sample_id,
-            stainings,
-            embedding_medium,
-            fixative
+            sample_id, stainings, embedding_medium, fixative
         )
         sample_preparation_steps.append(sample_preparation_step)
     if specimen_id is not None:
         sample_sampling_step = create_sample_sampling_step(
-            sample_id,
-            specimen_id,
-            specimen_sampling_method,
-            specimen_type
+            sample_id, specimen_id, specimen_sampling_method, specimen_type
         )
         sample_preparation_steps.append(sample_sampling_step)
 
@@ -411,13 +404,10 @@ def create_sample(
         specimen_id=sample_id,
         specimen_uid=uid_generator(),
         specimen_preparation_steps=sample_preparation_steps,
-        specimen_location=location
+        specimen_location=location,
     )
     if anatomical_sites is not None:
-        specimen = add_anatomical_sites_to_specimen(
-            specimen,
-            anatomical_sites
-        )
+        specimen = add_anatomical_sites_to_specimen(specimen, anatomical_sites)
 
     return specimen
 
@@ -426,7 +416,7 @@ def create_sample_preparation_step(
     specimen_id: str,
     stainings: Sequence[str],
     embedding_medium: Optional[str],
-    fixative: Optional[str]
+    fixative: Optional[str],
 ) -> SpecimenPreparationStep:
     """Create SpecimenPreparationStep for a preparation step.
 
@@ -447,9 +437,7 @@ def create_sample_preparation_step(
         SpecimenPreparationStep for a preparation step.
     """
     if embedding_medium is not None:
-        embedding_medium_code = (
-            SpecimenEmbeddingMediaCode(embedding_medium).code
-        )
+        embedding_medium_code = SpecimenEmbeddingMediaCode(embedding_medium).code
     else:
         embedding_medium_code = None
     if fixative is not None:
@@ -457,14 +445,14 @@ def create_sample_preparation_step(
     else:
         fixative_code = None
 
-    processing_procedure = SpecimenStaining([
-        SpecimenStainsCode(staining).code for staining in stainings
-    ])
+    processing_procedure = SpecimenStaining(
+        [SpecimenStainsCode(staining).code for staining in stainings]
+    )
     sample_preparation_step = SpecimenPreparationStep(
         specimen_id=specimen_id,
         processing_procedure=processing_procedure,
         embedding_medium=embedding_medium_code,
-        fixative=fixative_code
+        fixative=fixative_code,
     )
     return sample_preparation_step
 
@@ -473,7 +461,7 @@ def create_sample_sampling_step(
     sample_id: str,
     specimen_id: str,
     specimen_sampling_method: Optional[str],
-    specimen_type: Optional[str]
+    specimen_type: Optional[str],
 ) -> SpecimenPreparationStep:
     """Create SpecimenPreparationStep for a sampling step.
 
@@ -495,32 +483,25 @@ def create_sample_sampling_step(
     """
     if specimen_sampling_method is None:
         raise ValueError(
-            'Specimen sampling method required if '
-            'specimen id is defined'
+            "Specimen sampling method required if " "specimen id is defined"
         )
     if specimen_type is None:
-        raise ValueError(
-            'Specimen type required if '
-            'specimen id is defined'
-        )
+        raise ValueError("Specimen type required if " "specimen id is defined")
     specimen_type_code = AnatomicPathologySpecimenTypesCode(specimen_type)
-    sampling_method_code = SpecimenSamplingProcedureCode(
-        specimen_sampling_method
-    )
+    sampling_method_code = SpecimenSamplingProcedureCode(specimen_sampling_method)
     sample_sampling_step = SpecimenPreparationStep(
         specimen_id=sample_id,
         processing_procedure=SpecimenSampling(
-                method=sampling_method_code.code,
-                parent_specimen_id=specimen_id,
-                parent_specimen_type=specimen_type_code.code
-        )
+            method=sampling_method_code.code,
+            parent_specimen_id=specimen_id,
+            parent_specimen_type=specimen_type_code.code,
+        ),
     )
     return sample_sampling_step
 
 
 def add_anatomical_sites_to_specimen(
-    specimen: Dataset,
-    anatomical_sites: Sequence[Tuple[Code, Sequence[Code]]]
+    specimen: Dataset, anatomical_sites: Sequence[Tuple[Code, Sequence[Code]]]
 ) -> Dataset:
     """Add anatomical site and anatomical site modifier codes to specimen.
 
@@ -539,35 +520,27 @@ def add_anatomical_sites_to_specimen(
     """
     anatomical_site_datasets: List[Dataset] = []
     for (anatomical_site, modifiers) in anatomical_sites:
-        anatomical_site_dataset = (
-            ConceptCode.from_code(anatomical_site).to_ds()
-        )
+        anatomical_site_dataset = ConceptCode.from_code(anatomical_site).to_ds()
 
         if modifiers != []:
             modifier_datasets: List[Dataset] = []
             for modifier in modifiers:
                 modifier_dataset = Dataset()
                 modifier_dataset.CodeValue = modifier.value
-                modifier_dataset.CodingSchemeDesignator = (
-                    modifier.scheme_designator
-                )
+                modifier_dataset.CodingSchemeDesignator = modifier.scheme_designator
                 modifier_dataset.CodeMeaning = modifier.meaning
                 modifier_datasets.append(modifier_dataset)
 
             (
-                anatomical_site_dataset
-                .PrimaryAnatomicStructureModifierSequence
+                anatomical_site_dataset.PrimaryAnatomicStructureModifierSequence
             ) = DicomSequence(modifier_datasets)
         anatomical_site_datasets.append(anatomical_site_dataset)
-    specimen.PrimaryAnatomicStructureSequence = DicomSequence(
-        anatomical_site_datasets
-    )
+    specimen.PrimaryAnatomicStructureSequence = DicomSequence(anatomical_site_datasets)
     return specimen
 
 
 def create_specimen_module(
-    slide_id: str,
-    samples: Union[Dataset, Sequence[Dataset]]
+    slide_id: str, samples: Union[Dataset, Sequence[Dataset]]
 ) -> Dataset:
     """Create specimen module.
 
@@ -589,39 +562,31 @@ def create_specimen_module(
     dataset.IssuerOfTheContainerIdentifierSequence = DicomSequence()
 
     container_type_code_sequence = Dataset()
-    container_type_code_sequence.CodeValue = '258661006'
-    container_type_code_sequence.CodingSchemeDesignator = 'SCT'
-    container_type_code_sequence.CodeMeaning = 'Slide'
-    dataset.ContainerTypeCodeSequence = (
-        DicomSequence([container_type_code_sequence])
-    )
+    container_type_code_sequence.CodeValue = "258661006"
+    container_type_code_sequence.CodingSchemeDesignator = "SCT"
+    container_type_code_sequence.CodeMeaning = "Slide"
+    dataset.ContainerTypeCodeSequence = DicomSequence([container_type_code_sequence])
 
     container_component_sequence = Dataset()
-    container_component_sequence.ContainerComponentMaterial = 'GLASS'
+    container_component_sequence.ContainerComponentMaterial = "GLASS"
     container_component_type_code_sequence = Dataset()
-    container_component_type_code_sequence.CodeValue = '433472003'
-    container_component_type_code_sequence.CodingSchemeDesignator = 'SCT'
-    container_component_type_code_sequence.CodeMeaning = (
-        'Microscope slide coverslip'
+    container_component_type_code_sequence.CodeValue = "433472003"
+    container_component_type_code_sequence.CodingSchemeDesignator = "SCT"
+    container_component_type_code_sequence.CodeMeaning = "Microscope slide coverslip"
+    container_component_sequence.ContainerComponentTypeCodeSequence = DicomSequence(
+        [container_component_type_code_sequence]
     )
-    container_component_sequence.ContainerComponentTypeCodeSequence = (
-        DicomSequence([container_component_type_code_sequence])
-    )
-    dataset.ContainerComponentSequence = (
-        DicomSequence([container_component_sequence])
-    )
+    dataset.ContainerComponentSequence = DicomSequence([container_component_sequence])
     if not isinstance(samples, Sequence):
         samples = [samples]
-    specimen_description_sequence = (
-        DicomSequence(samples)
-    )
+    specimen_description_sequence = DicomSequence(samples)
     dataset.SpecimenDescriptionSequence = specimen_description_sequence
 
     return dataset
 
 
 def create_brightfield_optical_path_module(
-    magnification: Optional[float] = None
+    magnification: Optional[float] = None,
 ) -> Dataset:
     """Create optical path module for brightfield illumination conditions.
 
@@ -637,20 +602,18 @@ def create_brightfield_optical_path_module(
     """
     dataset = Dataset()
     optical_path_item = Dataset()
-    optical_path_item.OpticalPathIdentifier = '0'
+    optical_path_item.OpticalPathIdentifier = "0"
     illumination_type_code_sequence = Dataset()
-    illumination_type_code_sequence.CodeValue = '111744'
-    illumination_type_code_sequence.CodingSchemeDesignator = 'DCM'
-    illumination_type_code_sequence.CodeMeaning = (
-        'Brightfield illumination'
-    )
+    illumination_type_code_sequence.CodeValue = "111744"
+    illumination_type_code_sequence.CodingSchemeDesignator = "DCM"
+    illumination_type_code_sequence.CodeMeaning = "Brightfield illumination"
     optical_path_item.IlluminationTypeCodeSequence = DicomSequence(
         [illumination_type_code_sequence]
     )
     illumination_color_code_sequence = Dataset()
-    illumination_color_code_sequence.CodeValue = 'R-102C0'
-    illumination_color_code_sequence.CodingSchemeDesignator = 'SRT'
-    illumination_color_code_sequence.CodeMeaning = 'Full Spectrum'
+    illumination_color_code_sequence.CodeValue = "R-102C0"
+    illumination_color_code_sequence.CodingSchemeDesignator = "SRT"
+    illumination_color_code_sequence.CodeMeaning = "Full Spectrum"
     optical_path_item.IlluminationColorCodeSequence = DicomSequence(
         [illumination_color_code_sequence]
     )
@@ -689,14 +652,18 @@ def create_default_modules(
     modules.append(create_device_module())
 
     # Generic specimen module
-    modules.append(create_specimen_module(
-        'Unknown',
-        samples=[create_sample(
-            sample_id='Unknown',
-            stainings=['water soluble eosin stain', 'hematoxylin stain'],
-            uid_generator=uid_generator
-        )]
-    ))
+    modules.append(
+        create_specimen_module(
+            "Unknown",
+            samples=[
+                create_sample(
+                    sample_id="Unknown",
+                    stainings=["water soluble eosin stain", "hematoxylin stain"],
+                    uid_generator=uid_generator,
+                )
+            ],
+        )
+    )
 
     # Generic optical path sequence
     modules.append(create_brightfield_optical_path_module())

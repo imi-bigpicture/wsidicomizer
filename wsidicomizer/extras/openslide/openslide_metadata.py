@@ -12,27 +12,27 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Metadata for openslide file."""
 
 from typing import Optional
 
 from opentile.metadata import Metadata
 
 from wsidicomizer.extras.openslide.openslide import (
-    PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR, OpenSlide)
+    PROPERTY_NAME_OBJECTIVE_POWER,
+    PROPERTY_NAME_VENDOR,
+    OpenSlide,
+)
 
 
 class OpenSlideMetadata(Metadata):
     def __init__(self, slide: OpenSlide):
-        magnification = slide.properties.get(
-            PROPERTY_NAME_OBJECTIVE_POWER
-        )
+        magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
             self._magnification = float(magnification)
         else:
             self._magnification = None
-        self._scanner_manufacturer = slide.properties.get(
-            PROPERTY_NAME_VENDOR
-        )
+        self._scanner_manufacturer = slide.properties.get(PROPERTY_NAME_VENDOR)
 
     @property
     def magnification(self) -> Optional[float]:

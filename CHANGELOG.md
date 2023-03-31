@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+### Changed
+
+- Refactoring to match new Source-pattern in wsidicom.
+- OpenSlide is now an extra dependency that needs to be specifically installed.
+
 ## [0.8.0] - 2023-03-21
 
 ### Added

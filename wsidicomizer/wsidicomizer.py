@@ -31,20 +31,22 @@ from wsidicomizer.encoding import Encoder
 from wsidicomizer.sources import CziSource, OpenTileSource
 
 # List of supported Dicomizers in prioritization order.
-SUPPORTED_DICOMIZERS: List[Type[DicomizerSource]] = [
+loaded_sources: List[Type[DicomizerSource]] = [
     OpenTileSource,
     CziSource,
 ]
 
 try:
     from wsidicomizer.extras.openslide import OpenSlideSource
-    SUPPORTED_DICOMIZERS.append(OpenSlideSource)
+
+    loaded_sources.append(OpenSlideSource)
 except ImportError:
     pass
 
 
 class WsiDicomizer(WsiDicom):
     """Interface for Dicomizing files."""
+
     @classmethod
     def open(
         cls,
@@ -55,10 +57,10 @@ class WsiDicomizer(WsiDicom):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
+        encoding_format: str = "jpeg",
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420',
-        label: Optional[Union[PILImage, str, Path]] = None
+        jpeg_subsampling: str = "420",
+        label: Optional[Union[PILImage, str, Path]] = None,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
@@ -103,17 +105,16 @@ class WsiDicomizer(WsiDicom):
 
         selected_dicomizer = next(
             (
-                dicomizer for dicomizer in SUPPORTED_DICOMIZERS
+                dicomizer
+                for dicomizer in loaded_sources
                 if dicomizer.is_supported(filepath)
             ),
-            None
+            None,
         )
         if selected_dicomizer is None:
             raise NotImplementedError(f"{filepath} is not supported")
         encoder = Encoder.create_encoder(
-            encoding_format,
-            encoding_quality,
-            subsampling=jpeg_subsampling
+            encoding_format, encoding_quality, subsampling=jpeg_subsampling
         )
 
         dicomizer = selected_dicomizer(
@@ -124,7 +125,7 @@ class WsiDicomizer(WsiDicom):
             include_levels,
             include_label,
             include_overview,
-            include_confidential
+            include_confidential,
         )
         return cls(dicomizer, label)
 
@@ -142,11 +143,11 @@ class WsiDicomizer(WsiDicom):
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = 'jpeg',
+        encoding_format: str = "jpeg",
         encoding_quality: int = 90,
-        jpeg_subsampling: str = '420',
-        offset_table: Optional[str] = 'bot',
-        label: Optional[Union[PILImage, str, Path]] = None
+        jpeg_subsampling: str = "420",
+        offset_table: Optional[str] = "bot",
+        label: Optional[Union[PILImage, str, Path]] = None,
     ) -> List[str]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
@@ -209,22 +210,18 @@ class WsiDicomizer(WsiDicom):
             encoding_format,
             encoding_quality,
             jpeg_subsampling,
-            label
+            label,
         ) as wsi:
             if output_path is None:
-                output_path = str(Path(filepath).parents[0].joinpath(
-                    Path(filepath).stem
-                ))
+                output_path = str(
+                    Path(filepath).parents[0].joinpath(Path(filepath).stem)
+                )
             try:
                 os.mkdir(output_path)
             except FileExistsError:
-                ValueError(f'Output path {output_path} already exists')
+                ValueError(f"Output path {output_path} already exists")
             created_files = wsi.save(
-                output_path,
-                uid_generator,
-                workers,
-                chunk_size,
-                offset_table
+                output_path, uid_generator, workers, chunk_size, offset_table
             )
 
         return [str(filepath) for filepath in created_files]

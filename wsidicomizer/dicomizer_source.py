@@ -41,6 +41,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
      _create_overview_image_data() and the properties metadata, pyramid_levels,
      has_label, and has_overview. Subclasses can override the __init__().
     """
+
     def __init__(
         self,
         filepath: Path,
@@ -61,9 +62,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._include_overview = include_overview
         self._include_confidential = include_confidential
         self._base_dataset = populate_base_dataset(
-            self.metadata,
-            create_base_dataset(modules),
-            include_confidential
+            self.metadata, create_base_dataset(modules), include_confidential
         )
 
     @staticmethod
@@ -102,7 +101,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_label_image_data(self,) -> DicomizerImageData:
+    def _create_label_image_data(
+        self,
+    ) -> DicomizerImageData:
         """Return image data instance for label."""
         raise NotImplementedError()
 
@@ -121,13 +122,13 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             WsiInstance.create_instance(
                 self._create_level_image_data(level_index),
                 self._base_dataset,
-                ImageType.VOLUME
+                ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
             if self._is_included_level(
                 self.pyramid_levels[level_index],
                 self.pyramid_levels,
-                self._include_levels
+                self._include_levels,
             )
         ]
 
@@ -137,10 +138,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             return []
 
         label = WsiInstance.create_instance(
-                    self._create_label_image_data(),
-                    self._base_dataset,
-                    ImageType.LABEL
-                )
+            self._create_label_image_data(), self._base_dataset, ImageType.LABEL
+        )
         return [label]
 
     @property
@@ -149,10 +148,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             return []
 
         overview = WsiInstance.create_instance(
-                self._create_overview_image_data(),
-                self._base_dataset,
-                ImageType.OVERVIEW
-            )
+            self._create_overview_image_data(), self._base_dataset, ImageType.OVERVIEW
+        )
         return [overview]
 
     @property
@@ -163,7 +160,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def _is_included_level(
         level: int,
         present_levels: Sequence[int],
-        include_indices: Optional[Sequence[int]] = None
+        include_indices: Optional[Sequence[int]] = None,
     ) -> bool:
         """Return true if pyramid level is in included levels.
 
@@ -190,7 +187,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         if include_indices is None:
             return True
         absolute_levels = [
-            present_levels[level] for level in include_indices
+            present_levels[level]
+            for level in include_indices
             if -len(present_levels) <= level < len(present_levels)
         ]
         return level in absolute_levels

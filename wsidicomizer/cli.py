@@ -27,110 +27,108 @@ from wsidicomizer.wsidicomizer import WsiDicomizer
 
 def main():
     parser = argparse.ArgumentParser(
-        description=('Convert combatible wsi file to DICOM')
+        description=("Convert combatible wsi file to DICOM")
     )
 
     parser.add_argument(
-        '-i', '--input',
-        type=Path,
-        required=True,
-        help='Path to input wsi file.'
+        "-i", "--input", type=Path, required=True, help="Path to input wsi file."
     )
     parser.add_argument(
-        '-o', '--output',
+        "-o",
+        "--output",
         type=Path,
         help=(
-            'Path to output folder. Folder will be created and must not '
-            'excist. If not specified a folder named after the input file is '
-            'created in the same path.'
-        )
-    )
-    parser.add_argument(
-        '-t', '--tile-size',
-        type=int,
-        default=512,
-        help=(
-            'Tile size (same for width and height). Required for ndpi and '
-            'openslide formats E.g. 512'
-        )
-    )
-    parser.add_argument(
-        '-d', '--dataset',
-        type=Path,
-        help=(
-            'Path to json DICOM dataset. Can be used to define additional '
-            'DICOM modules to include in the files'
-        )
-    )
-    parser.add_argument(
-        '-l', '--levels',
-        type=int,
-        nargs='+',
-        help=(
-            'Pyramid levels to include, if not all. E.g. 0 1 for base and '
-            'first pyramid layer. '
+            "Path to output folder. Folder will be created and must not "
+            "excist. If not specified a folder named after the input file is "
+            "created in the same path."
         ),
     )
     parser.add_argument(
-        '--no-label',
-        action="store_true",
-        help='If not to include label'
+        "-t",
+        "--tile-size",
+        type=int,
+        default=512,
+        help=(
+            "Tile size (same for width and height). Required for ndpi and "
+            "openslide formats E.g. 512"
+        ),
     )
     parser.add_argument(
-        '--no-overview',
-        action="store_true",
-        help='If not to include overview'
+        "-d",
+        "--dataset",
+        type=Path,
+        help=(
+            "Path to json DICOM dataset. Can be used to define additional "
+            "DICOM modules to include in the files"
+        ),
     )
     parser.add_argument(
-        '--no-confidential',
-        action="store_true",
-        help='If not to include confidential metadata'
+        "-l",
+        "--levels",
+        type=int,
+        nargs="+",
+        help=(
+            "Pyramid levels to include, if not all. E.g. 0 1 for base and "
+            "first pyramid layer. "
+        ),
     )
     parser.add_argument(
-        '-w', '--workers',
+        "--no-label", action="store_true", help="If not to include label"
+    )
+    parser.add_argument(
+        "--no-overview", action="store_true", help="If not to include overview"
+    )
+    parser.add_argument(
+        "--no-confidential",
+        action="store_true",
+        help="If not to include confidential metadata",
+    )
+    parser.add_argument(
+        "-w",
+        "--workers",
         type=int,
         default=os.cpu_count(),
-        help='Number of worker threads to use'
+        help="Number of worker threads to use",
     )
     parser.add_argument(
-        '--chunk-size',
+        "--chunk-size",
         type=int,
         default=100,
-        help='Number of tiles to give each worker at a time'
+        help="Number of tiles to give each worker at a time",
     )
     parser.add_argument(
-        '--format',
+        "--format",
         type=str,
-        default='jpeg',
-        help="Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'."
+        default="jpeg",
+        help="Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.",
     )
     parser.add_argument(
-        '--quality',
+        "--quality",
         type=int,
         default=90,
         help=(
             "Quality to use if re-encoding. Do not use > 95 for jpeg. "
             "Use 100 for lossless jpeg2000."
-        )
+        ),
     )
     parser.add_argument(
-        '--subsampling',
+        "--subsampling",
         type=str,
-        default='420',
+        default="420",
         help=(
             "Subsampling option if using jpeg for re-encoding. Use '444' for "
             "no subsampling, '422' for 2x1 subsampling, and '420' for 2x2 "
             "subsampling."
-        )
+        ),
     )
     parser.add_argument(
-        '--offset-table',
+        "--offset-table",
         type=str,
-        default='bot',
+        default="bot",
         help=(
             "Offset table to use, 'bot' basic offset table, 'eot' extended "
             "offset table, 'None' - no offset table."
-        )
+        ),
     )
 
     args = parser.parse_args()
@@ -144,7 +142,7 @@ def main():
     else:
         levels = args.levels
     offset_table: Optional[str] = args.offset_table
-    if offset_table == 'None':
+    if offset_table == "None":
         offset_table = None
     WsiDicomizer.convert(
         filepath=str(args.input),
@@ -160,7 +158,7 @@ def main():
         encoding_format=args.format,
         encoding_quality=args.quality,
         jpeg_subsampling=args.subsampling,
-        offset_table=offset_table
+        offset_table=offset_table,
     )
 
 

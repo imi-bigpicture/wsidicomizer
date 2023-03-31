@@ -44,20 +44,14 @@ class Encoder(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def encode(
-        self,
-        data: np.ndarray
-    ) -> bytes:
+    def encode(self, data: np.ndarray) -> bytes:
         """Should return data as encoded bytes."""
         raise NotImplementedError()
 
     @classmethod
     def create_encoder(
-        cls,
-        format: str,
-        quality: float,
-        subsampling: Optional[str] = None
-    ) -> 'Encoder':
+        cls, format: str, quality: float, subsampling: Optional[str] = None
+    ) -> "Encoder":
         """Creates an encoder with specified settings.
 
         Parameters
@@ -74,26 +68,17 @@ class Encoder(metaclass=ABCMeta):
         Enocer
             Encoder for settings.
         """
-        if format == 'jpeg':
-            return JpegEncoder(
-                quality=int(quality),
-                subsampling=subsampling
-            )
-        elif format == 'jpeg2000':
-            return Jpeg2000Encoder(
-                quality=quality
-            )
+        if format == "jpeg":
+            return JpegEncoder(quality=int(quality), subsampling=subsampling)
+        elif format == "jpeg2000":
+            return Jpeg2000Encoder(quality=quality)
         raise ValueError("Encoder format must be 'jpeg' or 'jpeg2000'")
 
 
 class JpegEncoder(Encoder):
     """Encoder for JPEG."""
 
-    def __init__(
-        self,
-        quality: int = 90,
-        subsampling: Optional[str] = '420'
-    ) -> None:
+    def __init__(self, quality: int = 90, subsampling: Optional[str] = "420") -> None:
         """Creates a JPEG encoder with specified settings.
 
         Parameters
@@ -105,7 +90,7 @@ class JpegEncoder(Encoder):
             subsampling, and '420' for 2x2 subsampling.
         """
         self._quality = quality
-        if subsampling not in ['444', '422', '420']:
+        if subsampling not in ["444", "422", "420"]:
             raise NotImplementedError(
                 f"Only '444', '422' and '420' subsampling options implemented."
             )
@@ -118,9 +103,9 @@ class JpegEncoder(Encoder):
 
     def photometric_interpretation(self, channels: int) -> str:
         if channels == 1:
-            return 'MONOCHROME2'
+            return "MONOCHROME2"
         elif channels == 3:
-            return 'YBR_FULL_422'
+            return "YBR_FULL_422"
         raise ValueError()
 
     @property
@@ -133,10 +118,7 @@ class JpegEncoder(Encoder):
         """Subsampling of encoder"""
         return self._subsampling
 
-    def encode(
-        self,
-        data: np.ndarray
-    ) -> bytes:
+    def encode(self, data: np.ndarray) -> bytes:
         """Encodes data as JPEG. Converts data to uint8 before conversion.
 
         Parameters
@@ -151,18 +133,11 @@ class JpegEncoder(Encoder):
         """
         if data.dtype != np.dtype(np.uint8):
             data = (255 * (data / np.iinfo(data.dtype).max)).astype(np.uint8)
-        return jpeg8_encode(
-            data,
-            level=self._quality,
-            subsampling=self._subsampling
-        )
+        return jpeg8_encode(data, level=self._quality, subsampling=self._subsampling)
 
 
 class Jpeg2000Encoder(Encoder):
-    def __init__(
-        self,
-        quality: float = 20.0
-    ) -> None:
+    def __init__(self, quality: float = 20.0) -> None:
         """Creates a JPEG2000 encoder with specified settings.
 
         Parameters
@@ -180,11 +155,11 @@ class Jpeg2000Encoder(Encoder):
 
     def photometric_interpretation(self, channels: int) -> str:
         if channels == 1:
-            return 'MONOCRHOME2'
+            return "MONOCRHOME2"
         elif channels == 3:
             if self.transfer_syntax == JPEG2000Lossless:
-                return 'YBR_RCT'
-            return 'YBR_ICT'
+                return "YBR_RCT"
+            return "YBR_ICT"
         raise ValueError()
 
     @property
@@ -197,10 +172,7 @@ class Jpeg2000Encoder(Encoder):
         """Quality setting of encoder"""
         return self._quality
 
-    def encode(
-        self,
-        data: np.ndarray
-    ) -> bytes:
+    def encode(self, data: np.ndarray) -> bytes:
         """Encodes data as JPEG2000.
 
         Parameters
@@ -216,5 +188,5 @@ class Jpeg2000Encoder(Encoder):
         return jpeg2k_encode(
             data,
             level=self._quality,
-            codecformat='J2K',
+            codecformat="J2K",
         )

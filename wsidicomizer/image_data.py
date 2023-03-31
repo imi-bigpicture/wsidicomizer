@@ -29,12 +29,10 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     Metaclass for Dicomizer image data. Subclasses should implement all the abstract
     methods and properties in the base ImageData-class, and the pyramid_index property.
     """
+
     _default_z = None
 
-    def __init__(
-        self,
-        encoder: Encoder
-    ):
+    def __init__(self, encoder: Encoder):
         """Metaclass for Dicomized image data.
 
         Parameters
@@ -55,10 +53,7 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
         """Return a default ImageOrigin."""
         return ImageOrigin()
 
-    def _encode(
-        self,
-        image_data: np.ndarray
-    ) -> bytes:
+    def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
         options.
 

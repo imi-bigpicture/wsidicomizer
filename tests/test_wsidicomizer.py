@@ -23,24 +23,17 @@ from wsidicomizer.dicomizer_source import DicomizerSource
 
 @pytest.mark.unittest
 class WsiDicomizerTests(unittest.TestCase):
-
     @parameterized.expand(
-        [
-            (0, [0, 1, 2], None),
-            (1, [0, 1, 2], None),
-            (2, [0, 1, 2], None)
-        ]
+        [(0, [0, 1, 2], None), (1, [0, 1, 2], None), (2, [0, 1, 2], None)]
     )
     def test_is_included_level_include_indices_is_none(
         self,
         level: int,
         present_levels: Sequence[int],
-        include_indices: Optional[Sequence[int]]
+        include_indices: Optional[Sequence[int]],
     ):
         is_included = DicomizerSource._is_included_level(
-            level,
-            present_levels,
-            include_indices
+            level, present_levels, include_indices
         )
         self.assertTrue(is_included)
 
@@ -51,20 +44,17 @@ class WsiDicomizerTests(unittest.TestCase):
             (0, [], None),
             (-1, [0, 1, 2], [0, 1, 2]),
             (3, [0, 1, 2], [0, 1, 2]),
-            (0, [], [0, 1, 2])
+            (0, [], [0, 1, 2]),
         ]
     )
     def test_is_included_level_level_not_in_present_levels_is_none(
         self,
         level: int,
         present_levels: Sequence[int],
-        include_indices: Optional[Sequence[int]]
-
+        include_indices: Optional[Sequence[int]],
     ):
         is_included = DicomizerSource._is_included_level(
-            level,
-            present_levels,
-            include_indices
+            level, present_levels, include_indices
         )
         self.assertFalse(is_included)
 
@@ -83,15 +73,10 @@ class WsiDicomizerTests(unittest.TestCase):
         ]
     )
     def test_is_included_level_level_index_is_in_included_indices(
-        self,
-        level: int,
-        present_levels: Sequence[int],
-        include_indices: Sequence[int]
+        self, level: int, present_levels: Sequence[int], include_indices: Sequence[int]
     ):
         is_included = DicomizerSource._is_included_level(
-            level,
-            present_levels,
-            include_indices
+            level, present_levels, include_indices
         )
         self.assertTrue(is_included)
 
@@ -111,14 +96,9 @@ class WsiDicomizerTests(unittest.TestCase):
         ]
     )
     def test_is_included_level_level_index_is_not_in_included_indices(
-        self,
-        level: int,
-        present_levels: Sequence[int],
-        include_indices: Sequence[int]
+        self, level: int, present_levels: Sequence[int], include_indices: Sequence[int]
     ):
         is_included = DicomizerSource._is_included_level(
-            level,
-            present_levels,
-            include_indices
+            level, present_levels, include_indices
         )
         self.assertFalse(is_included)
