@@ -73,10 +73,6 @@ class OpenTileImageData(DicomizerImageData):
         return f"{type(self).__name__}({self._tiled_page})"
 
     @property
-    def files(self) -> List[Path]:
-        return [Path(self._tiled_page.filepath)]
-
-    @property
     def transfer_syntax(self) -> UID:
         """The uid of the transfer syntax of the image."""
         return self._transfer_syntax

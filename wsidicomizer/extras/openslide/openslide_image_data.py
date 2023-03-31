@@ -75,10 +75,6 @@ class OpenSlideImageData(DicomizerImageData):
         self._blank_color = self._get_blank_color(self.photometric_interpretation)
 
     @property
-    def files(self) -> List[Path]:
-        return [Path(self._slide._filename)]
-
-    @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
         return self._encoder.transfer_syntax
@@ -102,14 +98,6 @@ class OpenSlideImageData(DicomizerImageData):
     @property
     def blank_color(self) -> Tuple[int, int, int]:
         return self._blank_color
-
-    def close(self) -> None:
-        """Close the open slide object, if not already closed."""
-        try:
-            self._slide.close()
-        except ctypes.ArgumentError:
-            # Slide already closed
-            pass
 
     def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
         """Return color to use blank tiles. Parses background color from

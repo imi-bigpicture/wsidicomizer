@@ -72,10 +72,6 @@ class CziImageData(DicomizerImageData):
         return 0
 
     @property
-    def files(self) -> List[Path]:
-        return [Path(self._filepath)]
-
-    @property
     def transfer_syntax(self) -> Uid:
         return self._encoder.transfer_syntax
 
