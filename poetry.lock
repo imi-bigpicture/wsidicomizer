@@ -784,26 +784,24 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.8.1"
+version = "0.9.0"
 description = "Read tiles from wsi-TIFF files"
 category = "main"
 optional = false
 python-versions = ">=3.8,<3.12"
-files = []
-develop = true
+files = [
+    {file = "opentile-0.9.0-py3-none-any.whl", hash = "sha256:87e312162e5ef3d7b325dc5c792aeb3631be49397d5869f429e1686dffe18c1e"},
+    {file = "opentile-0.9.0.tar.gz", hash = "sha256:61c5a01ec0f31381f5cdb0cc2281e04babcbeb57ac743d58e9961e68d9d16bc5"},
+]
 
 [package.dependencies]
-defusedxml = "^0.7.1"
-imagecodecs = "^2022.12.24"
-numpy = "^1.22.0"
-ome-types = "^0.3.1"
-Pillow = "^9.1.1"
-PyTurboJPEG = "^1.6.1"
-tifffile = "^2022.5.4"
-
-[package.source]
-type = "directory"
-url = "../opentile"
+defusedxml = ">=0.7.1,<0.8.0"
+imagecodecs = ">=2022.12.24,<2023.0.0"
+numpy = ">=1.22.0,<2.0.0"
+ome-types = ">=0.3.1,<0.4.0"
+Pillow = ">=9.1.1,<10.0.0"
+PyTurboJPEG = ">=1.6.1,<2.0.0"
+tifffile = ">=2022.5.4,<2023.0.0"
 
 [[package]]
 name = "packaging"
@@ -1307,28 +1305,26 @@ all = ["fsspec", "imagecodecs (>=2022.2.22)", "lxml", "matplotlib (>=3.3)", "zar
 
 [[package]]
 name = "tiffslide"
-version = "2.1.1.post0+gc7c747c.d20230401"
+version = "2.1.1"
 description = "tifffile-based drop-in replacement for openslide-python"
 category = "main"
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = true
+files = [
+    {file = "tiffslide-2.1.1-py3-none-any.whl", hash = "sha256:b3570d48550aa29f061c9476fc5b73f6647350373fb8289584eb8b3774319cb6"},
+    {file = "tiffslide-2.1.1.tar.gz", hash = "sha256:f85ebbe1197169cdfc9f208e14b3de2afd28f6f3290ad0ee0365b4c1b8b20490"},
+]
 
 [package.dependencies]
 fsspec = "<2022.11.0 || >2022.11.0,<2023.1.0 || >2023.1.0"
 imagecodecs = "*"
 pillow = "*"
 tifffile = ">=2021.6.14"
-typing_extensions = ">=4.0"
+typing-extensions = ">=4.0"
 zarr = "*"
 
 [package.extras]
 dev = ["black", "mypy", "pre-commit", "pytest (>=6)", "pytest-cov"]
-
-[package.source]
-type = "directory"
-url = "../tiffslide"
 
 [[package]]
 name = "tomli"
@@ -1477,4 +1473,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "7cdbb4ef6ae047fc4674c20ecc351bc360d49c91d1b13400a90f4d7ccc678d76"
+content-hash = "476d9a3ee8a5b69c155b6e0ec398b6db3f2ff8dab87dc5665b5e335045a1a627"
