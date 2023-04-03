@@ -1,4 +1,4 @@
-#    Copyright 2021, 2022, 2023 SECTRA AB
+#    Copyright 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,9 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Image data for openslide compatible file."""
+"""Image data for tiffslide compatible file."""
 
-import ctypes
 import math
 import re
 from enum import Enum
@@ -24,12 +23,7 @@ import numpy as np
 from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
-from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
-from wsidicom.instance import ImageOrigin
-
-from wsidicomizer.encoding import Encoder
-from wsidicomizer.extras.openslide.openslide import (
+from tiffslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
     PROPERTY_NAME_BOUNDS_HEIGHT,
     PROPERTY_NAME_BOUNDS_WIDTH,
@@ -37,40 +31,34 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_Y,
     PROPERTY_NAME_MPP_X,
     PROPERTY_NAME_MPP_Y,
-    OpenSlide,
-    _read_region,
-    convert_argb_to_rgba,
-    get_associated_image_names,
+    TiffSlide,
 )
+from wsidicom.errors import WsiDicomNotFoundError
+from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
+from wsidicom.instance import ImageOrigin
+
+from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
-"""
-OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
-data as numpy arrays instead of pillow images. The proteted function
-_read_region is used to get raw data from the OpenSlide C API and argb2rgba is
-used to convert argb to rgba. We consider this safe, as these directly map
-to the Openslide C API and are thus not likely to change that often.
-"""
 
-
-class OpenSlideAssociatedImageType(Enum):
+class TiffSlideAssociatedImageType(Enum):
     LABEL = "label"
     MACRO = "macro"
 
 
-class OpenSlideImageData(DicomizerImageData):
-    def __init__(self, open_slide: OpenSlide, encoder: Encoder):
-        """Wraps a OpenSlide image to ImageData.
+class TiffSlideImageData(DicomizerImageData):
+    def __init__(self, tiff_slide: TiffSlide, encoder: Encoder):
+        """Wraps a TiffSlide image to ImageData.
 
         Parameters
         ----------
-        open_slide: OpenSlide
-            OpenSlide object to wrap.
+        tiff_slide: TiffSlide
+            TiffSlide object to wrap.
         encoded: Encoder
             Encoder to use.
         """
         super().__init__(encoder)
-        self._slide = open_slide
+        self._slide = tiff_slide
         self._blank_color = self._get_blank_color(self.photometric_interpretation)
 
     @property
@@ -100,7 +88,7 @@ class OpenSlideImageData(DicomizerImageData):
 
     def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
         """Return color to use blank tiles. Parses background color from
-        openslide if present.
+        tiffslide if present.
 
         Parameters
         ----------
@@ -123,35 +111,33 @@ class OpenSlideImageData(DicomizerImageData):
         return super()._get_blank_color(photometric_interpretation)
 
 
-class OpenSlideAssociatedImageData(OpenSlideImageData):
+class TiffSlideAssociatedImageData(TiffSlideImageData):
     def __init__(
         self,
-        open_slide: OpenSlide,
-        image_type: OpenSlideAssociatedImageType,
+        tiff_slide: TiffSlide,
+        image_type: TiffSlideAssociatedImageType,
         encoder: Encoder,
     ):
-        """Wraps a OpenSlide associated image (label or overview) to ImageData.
+        """Wraps a TiffSlide associated image (label or overview) to ImageData.
 
         Parameters
         ----------
-        open_slide: OpenSlide
-            OpenSlide object to wrap.
-        image_type: OpenSlideAssociatedImageType
+        tiff_slide: TiffSlide
+            TiffSlide object to wrap.
+        image_type: TiffSlideAssociatedImageType
             Type of image to wrap.
         encoded: Encoder
             Encoder to use.
         """
-        super().__init__(open_slide, encoder)
+        super().__init__(tiff_slide, encoder)
         self._image_type = image_type
-        if image_type.value not in get_associated_image_names(self._slide._osr):
+        if image_type.value not in self._slide.associated_images:
             raise ValueError(f"{image_type.value} not in {self._slide}")
 
         image = self._slide.associated_images[image_type.value]
-        no_alpha = Image.new("RGB", image.size, self.blank_color)
-        no_alpha.paste(image, mask=image.split()[3])
-        self._image_size = Size.from_tuple(no_alpha.size)
-        self._decoded_image = no_alpha
-        self._encoded_image = self._encode(np.asarray(no_alpha))
+        self._image_size = Size.from_tuple(image.size)
+        self._decoded_image = image
+        self._encoded_image = self._encode(np.asarray(image))
 
     @property
     def image_size(self) -> Size:
@@ -166,7 +152,6 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
-        # TODO figure out pixel spacing for label and overview in openslide.
         return None
 
     @property
@@ -185,33 +170,32 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         return self._decoded_image
 
 
-class OpenSlideLevelImageData(OpenSlideImageData):
+class TiffSlideLevelImageData(TiffSlideImageData):
     def __init__(
-        self, open_slide: OpenSlide, level_index: int, tile_size: int, encoder: Encoder
+        self, tiff_slide: TiffSlide, level_index: int, tile_size: int, encoder: Encoder
     ):
-        super().__init__(open_slide, encoder)
-        """Wraps a OpenSlide level to ImageData.
+        super().__init__(tiff_slide, encoder)
+        """Wraps a TiffSlide level to ImageData.
 
         Parameters
         ----------
-        open_slide: OpenSlide
-            OpenSlide object to wrap.
+        tiff_slide: TiffSlide
+            TiffSlide object to wrap.
         level_index: int
-            Level in OpenSlide object to wrap
+            Level in TiffSlide object to wrap
         tile_size: int
             Output tile size.
         encoded: Encoder
             Encoder to use.
         """
         self._tile_size = Size(tile_size, tile_size)
-        self._slide = open_slide
+        self._slide = tiff_slide
         self._level_index = level_index
         self._image_size = Size.from_tuple(
             self._slide.level_dimensions[self._level_index]
         )
         self._downsample = self._slide.level_downsamples[self._level_index]
         self._pyramid_index = int(round(math.log2(self.downsample)))
-
         try:
             base_mpp_x = float(self._slide.properties[PROPERTY_NAME_MPP_X])
             base_mpp_y = float(self._slide.properties[PROPERTY_NAME_MPP_Y])
@@ -221,16 +205,19 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             )
         except KeyError:
             raise Exception(
-                "Could not determine pixel spacing as openslide did not "
+                "Could not determine pixel spacing as tiffslide did not "
                 "provide mpp from the file."
             )
 
         # Get set image origin and size to bounds if available
-        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X, 0)
-        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y, 0)
+        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X)
+        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y)
         bounds_w = self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH)
         bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
-        self._offset = Point(int(bounds_x), int(bounds_y))
+        if bounds_x is not None and bounds_y is not None:
+            self._offset = Point(int(bounds_x), int(bounds_y))
+        else:
+            self._offset = Point(0, 0)
         if bounds_w is not None and bounds_h is not None:
             self._image_size = Size(int(bounds_w), int(bounds_h)) // int(
                 round(self.downsample)
@@ -283,7 +270,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self, region: Region, path: str, z: float, threads: int
     ) -> PILImage:
         """Overrides ImageData stitch_tiles() to read reagion directly from
-        openslide object.
+        tiffslide object.
 
         Parameters
         ----------
@@ -306,7 +293,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         image_data = self._get_region(region)
         if image_data is None:
             image_data = self._get_blank_decoded_frame(region.size)
-        return image_data
+        return Image.fromarray(image_data)
 
     def _detect_blank_tile(self, data: np.ndarray) -> bool:
         """Detect if tile data is a blank tile, i.e. either has full
@@ -329,15 +316,10 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         BOTTOM = LEFT = 0
         CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
         CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
-        TRANSPARENCY = 3
-        corners_transparency = np.ix_(CORNERS_X, CORNERS_Y, [TRANSPARENCY])
-        if np.all(data[corners_transparency] == 0):
-            if np.all(data[:, :, TRANSPARENCY] == 0):
-                return True
         background = np.array(self.blank_color)
-        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(TRANSPARENCY))
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(2))
         if np.all(data[corners_rgb] == background):
-            if np.all(data[:, :, 0:TRANSPARENCY] == background):
+            if np.all(data[:, :, 0:2] == background):
                 return True
         return False
 
@@ -382,8 +364,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             self._blank_decoded_frame = frame
         return self._blank_decoded_frame
 
-    def _get_region(self, region: Region) -> Optional[PILImage]:
-        """Return Image read from region in openslide image. If image data for
+    def _get_region(self, region: Region) -> Optional[np.ndarray]:
+        """Return Image read from region in tiffslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
         background color
 
@@ -394,39 +376,24 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        Optional[PILImage]
-            Image of region, or None if region is blank.
+        Optional[np.ndarray]
+            Image data of region, or None if region is blank.
         """
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError("Negative size not allowed")
-        CHANNELS = 4
-        TRANSPARENCY = 3
 
         location_in_base_level = region.start * self.downsample + self._offset
 
-        region_data = np.empty(
-            region.size.to_tuple() + (CHANNELS,), dtype=ctypes.c_uint8
-        )
-
-        _read_region(
-            self._slide._osr,
-            region_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
-            location_in_base_level.x,
-            location_in_base_level.y,
+        region_data = self._slide.read_region(
+            location_in_base_level.to_tuple(),
             self._level_index,
-            region.size.width,
-            region.size.height,
+            region.size.to_tuple(),
+            as_array=True,
         )
-        region_data.shape = (region.size.height, region.size.width, CHANNELS)
         if self._detect_blank_tile(region_data):
             return None
 
-        convert_argb_to_rgba(region_data.view(ctypes.c_uint32))
-
-        image = Image.fromarray(region_data)
-        no_alpha = Image.new("RGB", image.size, self.blank_color)
-        no_alpha.paste(image, mask=image.split()[TRANSPARENCY])
-        return no_alpha
+        return region_data
 
     def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
@@ -453,7 +420,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self._encode(np.asarray(tile))
+        return self._encode(tile)
 
     def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> PILImage:
         """Return Image for tile. Image mode is RGB.
@@ -479,4 +446,4 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
-        return tile
+        return Image.fromarray(tile)

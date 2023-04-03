@@ -1,4 +1,4 @@
-#    Copyright 2021, 2022, 2023 SECTRA AB
+#    Copyright 2023 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,21 +12,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Metadata for openslide file."""
+"""Metadata for tiffslide file."""
 
 from typing import Optional
 
-from opentile import Metadata
+from opentile.metadata import Metadata
 
-from wsidicomizer.extras.openslide.openslide import (
+from tiffslide import (
     PROPERTY_NAME_OBJECTIVE_POWER,
     PROPERTY_NAME_VENDOR,
-    OpenSlide,
+    TiffSlide,
 )
 
 
-class OpenSlideMetadata(Metadata):
-    def __init__(self, slide: OpenSlide):
+class TiffSlideMetadata(Metadata):
+    def __init__(self, slide: TiffSlide):
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
             self._magnification = float(magnification)

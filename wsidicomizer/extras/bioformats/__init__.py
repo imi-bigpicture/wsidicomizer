@@ -12,8 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Module containing implemented sources for reading non-DICOM files."""
+"""Module containing dicomizer source for reading files with bioformats."""
 
-from wsidicomizer.sources.czi import CziSource
-from wsidicomizer.sources.opentile import OpenTileSource
-from wsidicomizer.sources.tiffslide import TiffSlideSource
+from wsidicomizer.extras.bioformats.bioformats_dicomizer import \
+    BioformatsDicomizer

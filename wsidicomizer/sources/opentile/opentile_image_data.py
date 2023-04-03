@@ -14,10 +14,9 @@
 
 """Image data for opentile compatible file."""
 
-from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
-from opentile.common import OpenTilePage
+from opentile.tiff_image import TiffImage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
@@ -31,32 +30,32 @@ from wsidicomizer.image_data import DicomizerImageData
 class OpenTileImageData(DicomizerImageData):
     def __init__(
         self,
-        tiled_page: OpenTilePage,
+        tiff_image: TiffImage,
         encoder: Encoder,
         image_offset: Optional[Tuple[float, float]] = None,
     ):
-        """Wraps a OpenTilePage to ImageData.
+        """Wraps a TiffImage to ImageData.
 
         Parameters
         ----------
-        tiled_page: OpenTilePage
-            OpenTilePage to wrap.
+        tiff_image: TiffImage
+            TiffImage to wrap.
         encoded: Encoder
             Encoder to use.
         """
         super().__init__(encoder)
-        self._tiled_page = tiled_page
+        self._tiff_image = tiff_image
 
         self._needs_transcoding = not self.is_supported_transfer_syntax()
         if self.needs_transcoding:
             self._transfer_syntax = self._encoder.transfer_syntax
         else:
             self._transfer_syntax = self.get_transfer_syntax()
-        self._image_size = Size(*self._tiled_page.image_size.to_tuple())
-        self._tile_size = Size(*self._tiled_page.tile_size.to_tuple())
-        self._tiled_size = Size(*self._tiled_page.tiled_size.to_tuple())
-        if self._tiled_page.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiled_page.pixel_spacing.to_tuple())
+        self._image_size = Size(*self._tiff_image.image_size.to_tuple())
+        self._tile_size = Size(*self._tiff_image.tile_size.to_tuple())
+        self._tiled_size = Size(*self._tiff_image.tiled_size.to_tuple())
+        if self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
         else:
             self._pixel_spacing = None
         if image_offset is not None:
@@ -67,14 +66,10 @@ class OpenTileImageData(DicomizerImageData):
             self._image_origin = ImageOrigin()
 
     def __str__(self) -> str:
-        return f"{type(self).__name__} for page {self._tiled_page}"
+        return f"{type(self).__name__} for page {self._tiff_image}"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._tiled_page})"
-
-    @property
-    def files(self) -> List[Path]:
-        return [Path(self._tiled_page.filepath)]
+        return f"{type(self).__name__}({self._tiff_image})"
 
     @property
     def transfer_syntax(self) -> UID:
@@ -90,7 +85,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def native_compression(self) -> COMPRESSION:
         """Return compression method used in image data."""
-        return self._tiled_page.compression
+        return self._tiff_image.compression
 
     @property
     def image_size(self) -> Size:
@@ -110,23 +105,23 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def focal_planes(self) -> List[float]:
         """Focal planes avaiable in the image defined in um."""
-        return [self._tiled_page.focal_plane]
+        return [self._tiff_image.focal_plane]
 
     @property
     def optical_paths(self) -> List[str]:
         """Optical paths avaiable in the image."""
-        return [self._tiled_page.optical_path]
+        return [self._tiff_image.optical_path]
 
     @property
     def suggested_minimum_chunk_size(self) -> int:
         """Return suggested minumum chunk size for optimal performance with
         get_encoeded_tiles()."""
-        return self._tiled_page.suggested_minimum_chunk_size
+        return self._tiff_image.suggested_minimum_chunk_size
 
     @property
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
-        return self._tiled_page.pyramid_index
+        return self._tiff_image.pyramid_index
 
     @property
     def image_origin(self) -> ImageOrigin:
@@ -136,25 +131,25 @@ class OpenTileImageData(DicomizerImageData):
     def photometric_interpretation(self) -> str:
         if self.needs_transcoding:
             return self._encoder.photometric_interpretation(self.samples_per_pixel)
-        if self._tiled_page.photometric_interpretation == PHOTOMETRIC.YCBCR:
+        if self._tiff_image.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
                 return "YBR_FULL_422"
             elif self.transfer_syntax == JPEG2000:
                 return "YBR_ICT"
             elif self.transfer_syntax == JPEG2000Lossless:
                 return "YBR_RCT"
-        elif self._tiled_page.photometric_interpretation == PHOTOMETRIC.RGB:
+        elif self._tiff_image.photometric_interpretation == PHOTOMETRIC.RGB:
             return "RGB"
-        elif self._tiled_page.photometric_interpretation == (PHOTOMETRIC.MINISBLACK):
+        elif self._tiff_image.photometric_interpretation == (PHOTOMETRIC.MINISBLACK):
             return "MONOCHROME2"
         raise NotImplementedError(
             "Non-implemented photometric interpretation. ",
-            self._tiled_page.photometric_interpretation,
+            self._tiff_image.photometric_interpretation,
         )
 
     @property
     def samples_per_pixel(self) -> int:
-        return self._tiled_page.samples_per_pixel
+        return self._tiff_image.samples_per_pixel
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
@@ -177,9 +172,9 @@ class OpenTileImageData(DicomizerImageData):
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError()
         if self.needs_transcoding:
-            decoded_tile = self._tiled_page.get_decoded_tile(tile.to_tuple())
+            decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
             return self._encode(decoded_tile)
-        return self._tiled_page.get_tile(tile.to_tuple())
+        return self._tiff_image.get_tile(tile.to_tuple())
 
     def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
         """Return Image for tile.
@@ -200,7 +195,7 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Image.fromarray(self._tiled_page.get_decoded_tile(tile.to_tuple()))
+        return Image.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
 
     def get_encoded_tiles(
         self, tiles: Sequence[Point], z: float, path: str
@@ -226,12 +221,12 @@ class OpenTileImageData(DicomizerImageData):
             raise ValueError
         tiles_tuples = [tile.to_tuple() for tile in tiles]
         if not self.needs_transcoding:
-            return self._tiled_page.get_tiles(tiles_tuples)
-        decoded_tiles = self._tiled_page.get_decoded_tiles(tiles_tuples)
+            return self._tiff_image.get_tiles(tiles_tuples)
+        decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
         return [self._encode(tile) for tile in decoded_tiles]
 
     def close(self) -> None:
-        self._tiled_page.close()
+        self._tiff_image.close()
 
     def is_supported_transfer_syntax(self) -> bool:
         """Return true if image data is encoded with Dicom-supported transfer
