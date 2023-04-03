@@ -18,7 +18,6 @@ import ctypes
 import math
 import re
 from enum import Enum
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -210,8 +209,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._image_size = Size.from_tuple(
             self._slide.level_dimensions[self._level_index]
         )
-        self._downsample = int(self._slide.level_downsamples[self._level_index])
-        self._pyramid_index = int(math.log2(self.downsample))
+        self._downsample = self._slide.level_downsamples[self._level_index]
+        self._pyramid_index = int(round(math.log2(self.downsample)))
 
         try:
             base_mpp_x = float(self._slide.properties[PROPERTY_NAME_MPP_X])
@@ -233,7 +232,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
         self._offset = Point(int(bounds_x), int(bounds_y))
         if bounds_w is not None and bounds_h is not None:
-            self._image_size = Size(int(bounds_w), int(bounds_h)) // self.downsample
+            self._image_size = Size(int(bounds_w), int(bounds_h)) // int(
+                round(self.downsample)
+            )
         else:
             self._image_size = Size.from_tuple(
                 self._slide.level_dimensions[self._level_index]
@@ -265,7 +266,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         return self._pixel_spacing
 
     @property
-    def downsample(self) -> int:
+    def downsample(self) -> float:
         """Downsample facator for level."""
         return self._downsample
 
