@@ -492,6 +492,62 @@ files = [
 ]
 
 [[package]]
+name = "jgo"
+version = "1.0.5"
+description = "Launch Java code from Python and the CLI, installation-free."
+category = "main"
+optional = true
+python-versions = ">=3.7"
+files = [
+    {file = "jgo-1.0.5-py3-none-any.whl", hash = "sha256:ad31c3f34a95e93b480d216c8347d1ba29029eeab55ca46c5361a3b9fbccba01"},
+    {file = "jgo-1.0.5.tar.gz", hash = "sha256:48cfab8ec880692d93b22c42e0239f4792c009461c121c15549c456c6a6a4eb6"},
+]
+
+[package.dependencies]
+psutil = "*"
+
+[package.extras]
+dev = ["autopep8", "black", "build", "flake8", "isort", "pre-commit", "pyflakes", "pytest", "pytest-cov", "validate-pyproject[all]"]
+
+[[package]]
+name = "jpype1"
+version = "1.4.1"
+description = "A Python to Java bridge."
+category = "main"
+optional = true
+python-versions = ">=3.7"
+files = [
+    {file = "JPype1-1.4.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:233a6a1a9c7f3633e7d74c14039f7ea35df81e138241f1acc8f94f65a8bd086e"},
+    {file = "JPype1-1.4.1-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:0099e77c6e99af13089b1c89cd99681b485fbf74daa492ee38e35d90d6349ffc"},
+    {file = "JPype1-1.4.1-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:213f7154a7cc859dead7143cfee255bd3ce57938e0a5f2250b6768af0cef62c8"},
+    {file = "JPype1-1.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:8d94013dfed3d1c7ee193e86393b2aea756a9910d222b7167ed493f9a0b1b3d5"},
+    {file = "JPype1-1.4.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:34373696c3457f1d686639d928ef53b6a121203d9c0e651ed44dd3adf78bedb3"},
+    {file = "JPype1-1.4.1-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7622d07408e6d9a89e9eb70d4a9a675e51d5411657ac434ccec23cc94b828d9c"},
+    {file = "JPype1-1.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d960ce12c3913242f9e4a11e55afa9c38e1a5410d0a38cc5a21086415c38a02"},
+    {file = "JPype1-1.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:5473a89d2cab327e38382fd69d1209517bad44158fb3ee9e699ebfeb5bc1cd51"},
+    {file = "JPype1-1.4.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:d85489a27c58b1b21feb8601406319b6a51d233ae9fa27de9b24c4dfea560b22"},
+    {file = "JPype1-1.4.1-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9ce364d26ccbf7a21e35737f62663ce8d3aeb4e4b0f05d7e71f6126a6eb81059"},
+    {file = "JPype1-1.4.1-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:b9e29a0ea763c16d0fb05528785d4ed0fa56a421d600eca87e43398b569d2dea"},
+    {file = "JPype1-1.4.1-cp37-cp37m-win_amd64.whl", hash = "sha256:8c2fef2d0c298c8e69b2880ff866fa5db5f477ddd78ef310a357d697362c9f89"},
+    {file = "JPype1-1.4.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6089cd28067d77e5b4a09e272525ecd70f838b92a7c08d91d4fa7d192ec3f3bb"},
+    {file = "JPype1-1.4.1-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:24e601a31fb3b44decd5389ea87cbc39aaa0c61980c39b060561f9dc604f4cc5"},
+    {file = "JPype1-1.4.1-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:000556d5839ffbe61c12f1fa41cbfd4e9a0abe103e0100febacc069d75defa8f"},
+    {file = "JPype1-1.4.1-cp38-cp38-win_amd64.whl", hash = "sha256:7039db1a522af55cf89f6a4a72120f8b074abcde2535543da34616640ecbb3c1"},
+    {file = "JPype1-1.4.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:bd8bd76bf8741fa20d44ded776e6a3ea7fe103bcab7156f53ba7a72c50b7dd2f"},
+    {file = "JPype1-1.4.1-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:d483a6c3e6cb19065e71d322c4742efcfafc44bf1a67ef8ef75f78626158c3d9"},
+    {file = "JPype1-1.4.1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:04ea4be3e9471bf62ccdeccc2417ad6b9a300effcc0e5f6af9534eafa14e3978"},
+    {file = "JPype1-1.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:8692a7b14e807b224673010a648ab12415d3bc32323e351f03e6c64814ee319b"},
+    {file = "JPype1-1.4.1.tar.gz", hash = "sha256:dc8ee854073474ad79ae168d90c2f6893854f58936cfa18f3587cadae0d3696d"},
+]
+
+[package.dependencies]
+packaging = "*"
+
+[package.extras]
+docs = ["readthedocs-sphinx-ext", "sphinx", "sphinx-rtd-theme"]
+tests = ["pytest"]
+
+[[package]]
 name = "lxml"
 version = "4.9.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
@@ -728,7 +784,6 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.8.0"
 version = "0.8.1"
 description = "Read tiles from wsi-TIFF files"
 category = "main"
@@ -1369,10 +1424,6 @@ files = [
 ]
 
 [package.dependencies]
-dicomweb-client = "^0.59.1"
-numpy = "^1.22.0"
-Pillow = "^9.1.1"
-pydicom = "^2.1.0"
 dicomweb-client = ">=0.59.1,<0.60.0"
 numpy = ">=1.22.0,<2.0.0"
 Pillow = ">=9.1.1,<10.0.0"
@@ -1420,32 +1471,10 @@ numpy = ">=1.20"
 jupyter = ["ipytree (>=0.2.2)", "ipywidgets (>=8.0.0)", "notebook"]
 
 [extras]
-openslide = ["openslide-python"]
-
-[[package]]
-name = "xmlschema"
-version = "2.2.2"
-description = "An XML Schema validator and decoder"
-category = "main"
-optional = true
-python-versions = ">=3.7"
-files = [
-    {file = "xmlschema-2.2.2-py3-none-any.whl", hash = "sha256:557f3632b54b6ff10576736bba62e43db84eb60f6465a83818576cd9ffcc1799"},
-    {file = "xmlschema-2.2.2.tar.gz", hash = "sha256:0caa96668807b4b51c42a0fe2b6610752bc59f069615df3e34dcfffb962973fd"},
-]
-
-[package.dependencies]
-elementpath = ">=4.0.0,<5.0.0"
-
-[package.extras]
-codegen = ["elementpath (>=4.0.0,<5.0.0)", "jinja2"]
-dev = ["Sphinx", "coverage", "elementpath (>=4.0.0,<5.0.0)", "flake8", "jinja2", "lxml", "lxml-stubs", "memory-profiler", "mypy", "sphinx-rtd-theme", "tox"]
-docs = ["Sphinx", "elementpath (>=4.0.0,<5.0.0)", "jinja2", "sphinx-rtd-theme"]
-
-[extras]
 bioformats = ["ome-types", "scyjava"]
+openslide = ["openslide-python"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "bf086a4406ef187876137344b4479779c19ce800436d67199dd2920311b12c48"
+content-hash = "7cdbb4ef6ae047fc4674c20ecc351bc360d49c91d1b13400a90f4d7ccc678d76"

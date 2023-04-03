@@ -7,15 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.9.0] - 2023-04-03
+
 ### Added
 
+- Added Bioformats as a optional source.
 - Added TiffSlide as a source.
-
-## [0.9.0] - 2023-03-31
-
-### Added
-
-- Support for using Bioformats reader (optional dependency).
 
 ### Changed
 
