@@ -37,7 +37,7 @@ from wsidicom.conceptcode import (
     SpecimenStainsCode,
 )
 
-from opentile.common import Metadata
+from opentile import Metadata
 
 
 def create_base_dataset(
@@ -111,9 +111,7 @@ def populate_base_dataset(
     return base_dataset
 
 
-def create_wsi_dataset(
-    uid_generator: Callable[..., Uid] = generate_uid
-) -> Dataset:
+def create_wsi_dataset(uid_generator: Callable[..., Uid] = generate_uid) -> Dataset:
     """Return dataset containing (parts of) SOP common, general series, whole
     slide microscopy series, frame of reference, acquisition context,
     multi-frame dimension, and whole slide microscopy image modules.
@@ -182,9 +180,9 @@ def create_wsi_dataset(
     )
 
     # Whole slide micropscopy image module (most filled when importing file)
-    dataset.BurnedInAnnotation = 'NO'
-    dataset.SpecimenLabelInImage = 'NO'
-    dataset.VolumetricProperties = 'VOLUME'
+    dataset.BurnedInAnnotation = "NO"
+    dataset.SpecimenLabelInImage = "NO"
+    dataset.VolumetricProperties = "VOLUME"
     # AcquisitionDateTime is required
     dt = datetime.datetime.now()
     dataset.AcquisitionDateTime = dt.strftime("%Y%m%d%H%M%S.%f")
