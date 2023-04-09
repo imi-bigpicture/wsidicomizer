@@ -15,15 +15,15 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
+from opentile.metadata import Metadata as ImageMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
+from wsidicomizer.model.wsi import WsiMetadata
 
 
 class CziSource(DicomizerSource):
@@ -32,19 +32,19 @@ class CziSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._imaga_data = CziImageData(filepath, tile_size, encoder)
-        self._metadata = self._imaga_data.metadata
+        self._image_metadata = self._imaga_data.metadata
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
@@ -67,8 +67,8 @@ class CziSource(DicomizerSource):
         return [0]
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def image_metadata(self) -> ImageMetadata:
+        return self._image_metadata
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:

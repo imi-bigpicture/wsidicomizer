@@ -29,6 +29,7 @@ from wsidicom import WsiDicom
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
+from wsidicomizer.model.wsi import WsiMetadata
 
 # List of supported Dicomizers in prioritization order.
 loaded_sources: List[Type[DicomizerSource]] = [
@@ -52,7 +53,7 @@ class WsiDicomizer(WsiDicom):
     def open(
         cls,
         filepath: Union[str, Path],
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -127,7 +128,7 @@ class WsiDicomizer(WsiDicom):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
@@ -141,7 +142,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Union[str, Path],
         output_path: Optional[Union[str, Path]] = None,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
@@ -214,7 +215,7 @@ class WsiDicomizer(WsiDicom):
         """
         with cls.open(
             filepath,
-            modules,
+            metadata,
             tile_size,
             include_levels,
             include_label,

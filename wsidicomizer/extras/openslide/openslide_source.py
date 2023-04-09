@@ -16,10 +16,9 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
+from opentile.metadata import Metadata as ImageMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
@@ -31,6 +30,7 @@ from wsidicomizer.extras.openslide.openslide_image_data import (
 )
 from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.model.wsi import WsiMetadata
 
 
 class OpenSlideSource(DicomizerSource):
@@ -39,7 +39,7 @@ class OpenSlideSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -47,12 +47,12 @@ class OpenSlideSource(DicomizerSource):
     ) -> None:
         self._slide = OpenSlide(filepath)
         self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._metadata = OpenSlideMetadata(self._slide)
+        self._image_metadata = OpenSlideMetadata(self._slide)
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
@@ -71,8 +71,8 @@ class OpenSlideSource(DicomizerSource):
         return OpenSlideAssociatedImageType.MACRO.value in self._slide.associated_images
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def image_metadata(self) -> ImageMetadata:
+        return self._image_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:

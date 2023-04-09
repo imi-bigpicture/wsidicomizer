@@ -18,12 +18,12 @@ from pathlib import Path
 from typing import Optional, Sequence, Union
 
 from PIL.Image import Image as PILImage
-from pydicom import Dataset
 from wsidicom import WsiDicom
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 from wsidicomizer.wsidicomizer import WsiDicomizer
+from wsidicomizer.model.wsi import WsiMetadata
 
 
 class BioformatsDicomizer(WsiDicomizer):
@@ -31,16 +31,16 @@ class BioformatsDicomizer(WsiDicomizer):
     def open(
         cls,
         filepath: Union[str, Path],
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
+        encoding_format: str = "jpeg",
         encoding_quality: float = 90,
-        jpeg_subsampling: str = '420',
-        label: Optional[Union[PILImage, str, Path]] = None
+        jpeg_subsampling: str = "420",
+        label: Optional[Union[PILImage, str, Path]] = None,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
@@ -86,19 +86,17 @@ class BioformatsDicomizer(WsiDicomizer):
         if not BioformatsSource.is_supported(filepath):
             raise NotImplementedError(f"{filepath} is not supported")
         encoder = Encoder.create_encoder(
-            encoding_format,
-            encoding_quality,
-            subsampling=jpeg_subsampling
+            encoding_format, encoding_quality, subsampling=jpeg_subsampling
         )
 
         dicomizer = BioformatsSource(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
-            include_confidential
+            include_confidential,
         )
         return cls(dicomizer, label)

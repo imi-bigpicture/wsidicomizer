@@ -12,14 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from wsidicomizer.dataset import (
-    create_brightfield_optical_path_module,
-    create_device_module,
-    create_patient_module,
-    create_sample,
-    create_specimen_module,
-    create_study_module,
-)
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 __version__ = "0.10.0"

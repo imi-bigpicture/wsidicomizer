@@ -17,15 +17,15 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
+from opentile.metadata import Metadata as ImageMetadata
 from tiffslide import TiffSlide
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.model.wsi import WsiMetadata
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
     TiffSlideAssociatedImageData,
     TiffSlideAssociatedImageType,
@@ -40,7 +40,7 @@ class TiffSlideSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -48,7 +48,7 @@ class TiffSlideSource(DicomizerSource):
         **source_args,
     ) -> None:
         self._tiffslide = TiffSlide(filepath, **source_args)
-        self._metadata = TiffSlideMetadata(self._tiffslide)
+        self._image_metadata = TiffSlideMetadata(self._tiffslide)
         self._pyramid_levels = [
             int(round(math.log2(downsample)))
             for downsample in self._tiffslide.level_downsamples
@@ -57,7 +57,7 @@ class TiffSlideSource(DicomizerSource):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
@@ -76,8 +76,8 @@ class TiffSlideSource(DicomizerSource):
         return "macro" in self._tiffslide.associated_images
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def image_metadata(self) -> ImageMetadata:
+        return self._image_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:

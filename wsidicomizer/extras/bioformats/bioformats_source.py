@@ -15,18 +15,16 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Sequence, Tuple
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
+from opentile.metadata import Metadata as ImageMetadata
 
-from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
-from wsidicomizer.extras.bioformats.bioformats_image_data import \
-    BioformatsImageData
+from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.model.wsi import WsiMetadata
 
 
 class BioformatsSource(DicomizerSource):
@@ -35,36 +33,31 @@ class BioformatsSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: Optional[int] = None,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
         readers: Optional[int] = None,
-        cache_path: Optional[str] = None
+        cache_path: Optional[str] = None,
     ) -> None:
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
-        self._base_dataset = create_base_dataset(modules)
-        self._reader = BioformatsReader(
-            Path(filepath),
-            readers,
-            cache_path
-        )
+        self._reader = BioformatsReader(Path(filepath), readers, cache_path)
         (
             self._pyramid_image_index,
             self._label_image_index,
-            self._overview_image_index
+            self._overview_image_index,
         ) = self._get_image_indices(self._reader)
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
-            include_confidential
+            include_confidential,
         )
 
     @property
@@ -86,12 +79,12 @@ class BioformatsSource(DicomizerSource):
         return list(range(self._reader.resolution_count(self._pyramid_image_index)))
 
     @property
-    def metadata(self) -> Metadata:
-        return Metadata()
+    def image_metadata(self) -> ImageMetadata:
+        return ImageMetadata()
 
     @staticmethod
     def _get_image_indices(
-        reader: BioformatsReader
+        reader: BioformatsReader,
     ) -> Tuple[int, Optional[int], Optional[int]]:
         image_indices = list(range(reader.images_count))
         overview_image_index = None
@@ -101,13 +94,10 @@ class BioformatsSource(DicomizerSource):
             image_name = reader.image_name(image_index)
             if image_name is None:
                 continue
-            if (
-                'macro' in image_name.lower()
-                or 'overview' in image_name.lower()
-            ):
+            if "macro" in image_name.lower() or "overview" in image_name.lower():
                 overview_image_index = image_index
                 image_indices.remove(image_index)
-            elif 'label' in image_name.lower():
+            elif "label" in image_name.lower():
                 label_image_index = image_index
                 image_indices.remove(image_index)
 
@@ -115,10 +105,7 @@ class BioformatsSource(DicomizerSource):
         largest_image_width = None
         for image_index in image_indices:
             image_width = reader.size(image_index).width
-            if (
-                largest_image_width is None
-                or largest_image_width < image_width
-            ):
+            if largest_image_width is None or largest_image_width < image_width:
                 pyramid_image_index = image_index
                 largest_image_width = image_width
         return pyramid_image_index, label_image_index, overview_image_index
@@ -129,27 +116,19 @@ class BioformatsSource(DicomizerSource):
             self._tile_size,
             self._encoder,
             self._pyramid_image_index,
-            level_index
+            level_index,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         assert self._label_image_index is not None
         return BioformatsImageData(
-            self._reader,
-            self._tile_size,
-            self._encoder,
-            self._label_image_index,
-            0
+            self._reader, self._tile_size, self._encoder, self._label_image_index, 0
         )
 
     def _create_overview_image_data(self) -> DicomizerImageData:
         assert self._overview_image_index is not None
         return BioformatsImageData(
-            self._reader,
-            self._tile_size,
-            self._encoder,
-            self._overview_image_index,
-            0
+            self._reader, self._tile_size, self._encoder, self._overview_image_index, 0
         )
 
     def close(self) -> None:

@@ -16,19 +16,19 @@
 files."""
 
 from abc import ABCMeta, abstractmethod
+from functools import cached_property
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata
-from pydicom import Dataset, config
-from pydicom.dataset import Dataset
+from opentile.metadata import Metadata as ImageMetadata
+from pydicom import config
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
 
-from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.model.wsi import WsiMetadata
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -47,7 +47,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -56,14 +56,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
-        self._modules = modules
+        self._metadata = metadata
         self._include_levels = include_levels
         self._include_label = include_label
         self._include_overview = include_overview
         self._include_confidential = include_confidential
-        self._base_dataset = populate_base_dataset(
-            self.metadata, create_base_dataset(modules), include_confidential
-        )
 
     @staticmethod
     @abstractmethod
@@ -73,7 +70,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def metadata(self) -> Metadata:
+    def image_metadata(self) -> ImageMetadata:
         """Return metadata for file."""
         raise NotImplementedError()
 
@@ -114,14 +111,18 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     def base_dataset(self) -> WsiDataset:
-        return WsiDataset(self._base_dataset)
+        return self.level_instances[0].dataset
 
-    @property
+    @cached_property
     def level_instances(self) -> List[WsiInstance]:
         return [
             WsiInstance.create_instance(
                 self._create_level_image_data(level_index),
-                self._base_dataset,
+                self._metadata.to_dataset(
+                    ImageType.VOLUME,
+                    self.image_metadata,
+                    self._include_confidential,
+                ),
                 ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
@@ -132,23 +133,35 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             )
         ]
 
-    @property
+    @cached_property
     def label_instances(self) -> List[WsiInstance]:
         if not self.has_label or not self._include_label:
             return []
 
         label = WsiInstance.create_instance(
-            self._create_label_image_data(), self._base_dataset, ImageType.LABEL
+            self._create_label_image_data(),
+            self._metadata.to_dataset(
+                ImageType.LABEL,
+                self.image_metadata,
+                self._include_confidential,
+            ),
+            ImageType.LABEL,
         )
         return [label]
 
-    @property
+    @cached_property
     def overview_instances(self) -> List[WsiInstance]:
         if not self.has_overview or not self._include_overview:
             return []
 
         overview = WsiInstance.create_instance(
-            self._create_overview_image_data(), self._base_dataset, ImageType.OVERVIEW
+            self._create_overview_image_data(),
+            self._metadata.to_dataset(
+                ImageType.OVERVIEW,
+                self.image_metadata,
+                self._include_confidential,
+            ),
+            ImageType.OVERVIEW,
         )
         return [overview]
 

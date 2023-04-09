@@ -18,12 +18,13 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
 from opentile import OpenTile
-from opentile.metadata import Metadata
+from opentile.metadata import Metadata as ImageMetadata
 from pydicom import Dataset
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.model.wsi import WsiMetadata
 from wsidicomizer.sources.opentile.opentile_image_data import OpenTileImageData
 
 
@@ -33,19 +34,19 @@ class OpenTileSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: WsiMetadata = WsiMetadata(),
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
-        self._metadata = self._tiler.metadata
+        self._image_metadata = self._tiler.metadata
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
             include_levels,
             include_label,
             include_overview,
@@ -64,8 +65,8 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def image_metadata(self) -> ImageMetadata:
+        return self._image_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -78,7 +79,7 @@ class OpenTileSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder, self.metadata.image_offset)
+        return OpenTileImageData(level, self._encoder, self.image_metadata.image_offset)
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]
