@@ -1,11 +1,12 @@
 import datetime
-from dataclasses import field, dataclass
+from dataclasses import dataclass, field
 from typing import List
 
 from opentile import Metadata as ImageMetadata
 from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID, generate_uid
+from wsidicom.instance import ImageType
 from wsidicom.optical import OpticalPath
 
 from wsidicomizer.model.base import DicomModelBase
@@ -15,7 +16,39 @@ from wsidicomizer.model.patient import Patient
 from wsidicomizer.model.series import Series
 from wsidicomizer.model.slide import Slide
 from wsidicomizer.model.study import Study
-from wsidicom.instance import ImageType
+
+# TODO figure out how metadata defined here can override or be overriden by
+# *ImageMeta*. Suggestion is to have a bool flag on each module, indicating if the
+# properties defined in that module should override metadata from fil.
+# Could additionally add a *override* dict that specifies individual attributes that
+# should override metadata from file. All attributes not set to override will be
+# overridden by attributes from file.
+
+# Use case 1: User wants to set the attributes in Equipment so that no attributes from
+# file is used (User does not want to make it to easy to figure out what scanner was
+# used). User would then set the override-property of the Equpment object to True.
+
+# Use case 2: User wants to set the device serial number attribute in Equipment, but
+# allow the other attributes to be filled in from file. User would then set the
+# value for key 'device_serial_number' in the override_property-dictionary to True.
+
+# The same override-dictionary could be used in all modules, e.g. one could create a
+# override-dictionary:
+# overrides = {
+#   'device_serial_number': True,
+#   'label_text': True
+# }
+# And feed this to all modules.
+
+# The modules primarily contain type 1 and 2 attributes, but also some 3 and some
+# conditional attributes. They way they are currenly converted to dataset, there is no
+# check that type 1 attributes are not empty, or that type 3 attributes are not included
+# if empty, or if conditional attributes are set. The straight forward way is likely to
+# change to model-specific to_dataset()-methods.
+
+# Names in DICOM has a specific format, which is not super intuitive to make from
+# scratch. Maybe use the pydicom dicom name class, as one can then use its helper
+# function to format the name correctly.
 
 
 @dataclass
@@ -44,11 +77,9 @@ class WsiMetadata:
         # SOP common module
         dataset.SOPClassUID = "1.2.840.10008.5.1.4.1.1.77.1.6"
 
-        # dataset.StudyInstanceUID = uid_generator()
         # General series and Whole slide Microscopy modules
         dataset.SeriesNumber = ""
         dataset.Modality = "SM"
-        # dataset.LossyImageCompression = "00"
 
         # Frame of reference module
         dataset.FrameOfReferenceUID = self.frame_of_reference_uid

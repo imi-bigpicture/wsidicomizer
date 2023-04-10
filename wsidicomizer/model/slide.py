@@ -1,34 +1,91 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
+from highdicom import (
+    SpecimenDescription,
+    SpecimenPreparationStep,
+    SpecimenSampling,
+    SpecimenStaining,
+)
 from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from pydicom.sr.coding import Code
-from wsidicomizer.model.sample import Sample
-from wsidicomizer.model.util import code_to_dataset
-
-
-SLIDE_CONTAINER = code_to_dataset(Code("433466003", "SCT", "Microscope slide"))
-
-COVERSLIP_COMPONENT = Dataset()
-COVERSLIP_COMPONENT.ContainerComponentMaterial = "GLASS"
-COVERSLIP_COMPONENT.ContainerComponentTypeCodeSequence = DicomSequence(
-    [code_to_dataset(Code("433472003", "SCT", "Microscope slide coverslip"))]
+from wsidicom.conceptcode import (
+    ContainerComponentTypeCode,
+    ContainerTypeCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
 )
+
+from wsidicomizer.model.sample import Sample
 
 
 @dataclass
 class Slide:
     slide_id: str = "Unknown"
-    samples: List[Sample] = field(default_factory=lambda: [Sample.create_he_sample()])
+    stainings: Sequence[SpecimenStainsCode] = field(default_factory=list)
+    samples: Dict[Sample, Optional[Union[str, Tuple[float, float, float]]]] = field(
+        default_factory=dict
+    )
 
     def to_dataset(self) -> Dataset:
         dataset = Dataset()
         dataset.ContainerIdentifier = self.slide_id
+        slide_container = ContainerTypeCode.from_code_meaning(
+            "Microscope slide"
+        ).to_ds()
         dataset.IssuerOfTheContainerIdentifierSequence = DicomSequence()
-        dataset.ContainerTypeCodeSequence = DicomSequence([SLIDE_CONTAINER])
-        dataset.ContainerComponentSequence = DicomSequence([COVERSLIP_COMPONENT])
+        dataset.ContainerTypeCodeSequence = DicomSequence([slide_container])
+        slide_container_components = Dataset()
+        slide_container_components.ContainerComponentMaterial = "GLASS"
+        cover_slip = ContainerComponentTypeCode.from_code_meaning(
+            "Microscope slide coverslip"
+        ).to_ds()
+        slide_container_components.ContainerComponentTypeCodeSequence = DicomSequence(
+            [cover_slip]
+        )
+        dataset.ContainerComponentSequence = DicomSequence([slide_container_components])
         dataset.SpecimenDescriptionSequence = DicomSequence(
-            [sample.to_dataset() for sample in self.samples]
+            [
+                self.sample_to_description(block, location)
+                for block, location in self.samples.items()
+            ]
         )
         return dataset
+
+    def sample_to_description(
+        self, sample: Sample, location: Optional[Union[str, Tuple[float, float, float]]]
+    ) -> SpecimenDescription:
+        return SpecimenDescription(
+            specimen_id=sample.sample_id,
+            specimen_uid=sample.sample_uid,
+            specimen_preparation_steps=self.sample_to_preparation_steps(sample),
+            specimen_location=location,
+            primary_anatomic_structures=[
+                anatomical_site for anatomical_site in sample.anatomical_sites
+            ],
+        )
+
+    def sample_to_preparation_steps(
+        self, sample: Sample
+    ) -> List[SpecimenPreparationStep]:
+        sample_preparation_steps: List[SpecimenPreparationStep] = []
+        sample_preparation_steps.extend(sample.to_preparation_steps())
+        slide_sample_step = SpecimenPreparationStep(
+            self.slide_id,
+            processing_procedure=SpecimenSampling(
+                method=SpecimenSamplingProcedureCode.from_code_meaning(
+                    "Block sectioning"
+                ).code,
+                parent_specimen_id=sample.sample_id,
+                parent_specimen_type=sample.sample_type.code,
+            ),
+        )
+        sample_preparation_steps.append(slide_sample_step)
+        slide_staining_step = SpecimenPreparationStep(
+            self.slide_id,
+            processing_procedure=SpecimenStaining(
+                [staining.code for staining in self.stainings]
+            ),
+        )
+        sample_preparation_steps.append(slide_staining_step)
+        return sample_preparation_steps
