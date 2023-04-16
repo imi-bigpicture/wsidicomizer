@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from pydicom.uid import UID, generate_uid
 
-from wsidicomizer.model.base import DicomModelBase
+from wsidicomizer.metadata.base import DicomModelBase
 
 
 @dataclass

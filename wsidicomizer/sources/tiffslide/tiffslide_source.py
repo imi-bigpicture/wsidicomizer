@@ -19,13 +19,13 @@ import math
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata as ImageMetadata
 from tiffslide import TiffSlide
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
     TiffSlideAssociatedImageData,
     TiffSlideAssociatedImageType,

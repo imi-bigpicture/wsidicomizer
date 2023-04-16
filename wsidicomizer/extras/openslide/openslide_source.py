@@ -30,7 +30,7 @@ from wsidicomizer.extras.openslide.openslide_image_data import (
 )
 from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 
 class OpenSlideSource(DicomizerSource):

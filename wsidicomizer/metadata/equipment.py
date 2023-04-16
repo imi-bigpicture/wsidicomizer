@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from wsidicomizer.model.base import DicomModelBase
+from wsidicomizer.metadata.base import DicomModelBase
 
 
 @dataclass

@@ -4,7 +4,7 @@ from typing import List, Literal, Optional, Union
 
 from pydicom.sr.coding import Code
 
-from wsidicomizer.model.base import DicomModelBase
+from wsidicomizer.metadata.base import DicomModelBase
 
 
 @dataclass

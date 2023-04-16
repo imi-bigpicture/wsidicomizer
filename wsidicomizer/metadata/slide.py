@@ -16,7 +16,7 @@ from wsidicom.conceptcode import (
     SpecimenStainsCode,
 )
 
-from wsidicomizer.model.sample import Sample
+from wsidicomizer.metadata.sample import Sample
 
 
 @dataclass

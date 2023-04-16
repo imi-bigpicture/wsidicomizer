@@ -1,25 +1,25 @@
 import datetime
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Sequence
 
-from opentile import Metadata as ImageMetadata
 from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID, generate_uid
-from wsidicom.instance import ImageType
+from wsidicom.instance import ImageType, WsiDataset
 from wsidicom.optical import OpticalPath
 
-from wsidicomizer.model.base import DicomModelBase
-from wsidicomizer.model.equipment import Equipment
-from wsidicomizer.model.label import Label
-from wsidicomizer.model.patient import Patient
-from wsidicomizer.model.series import Series
-from wsidicomizer.model.slide import Slide
-from wsidicomizer.model.study import Study
+from wsidicomizer.metadata.base import DicomModelBase
+from wsidicomizer.metadata.equipment import Equipment
+from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata.label import Label
+from wsidicomizer.metadata.patient import Patient
+from wsidicomizer.metadata.series import Series
+from wsidicomizer.metadata.slide import Slide
+from wsidicomizer.metadata.study import Study
 
 # TODO figure out how metadata defined here can override or be overriden by
 # *ImageMeta*. Suggestion is to have a bool flag on each module, indicating if the
-# properties defined in that module should override metadata from fil.
+# properties defined in that module should override metadata from file.
 # Could additionally add a *override* dict that specifies individual attributes that
 # should override metadata from file. All attributes not set to override will be
 # overridden by attributes from file.
@@ -66,13 +66,13 @@ class WsiMetadata:
     label_in_volume_image: bool = False
     label_in_overview_image: bool = False
     label_is_phi: bool = True
+    override: Sequence[str] = field(default_factory=list)
 
     def to_dataset(
         self,
         image_type: ImageType,
         image_metadata: ImageMetadata,
-        include_confidential_from_image_metadata: bool = True,
-    ) -> Dataset:
+    ) -> WsiDataset:
         dataset = Dataset()
         # SOP common module
         dataset.SOPClassUID = "1.2.840.10008.5.1.4.1.1.77.1.6"
@@ -127,25 +127,9 @@ class WsiMetadata:
         )
         dataset.update(self.slide.to_dataset())
 
-        # TODO clean up
-        properties = {
-            "Manufacturer": image_metadata.scanner_manufacturer,
-            "ManufacturerModelName": image_metadata.scanner_model,
-            "SoftwareVersions": image_metadata.scanner_software_versions,
-        }
-        confidential_properties = {
-            "AcquisitionDateTime": image_metadata.aquisition_datetime,
-            "DeviceSerialNumber": image_metadata.scanner_serial_number,
-        }
-        if include_confidential_from_image_metadata:
-            properties.update(confidential_properties)
         for property_name, property_value in image_metadata.properties.items():
-            if property_name == "lossy_image_compression_method":
-                properties["LossyImageCompressionMethod"] = property_value
-            elif property_name == "lossy_image_compression_ratio":
-                properties["LossyImageCompressionRatio"] = property_value
+            if property_name in self.override:
+                continue
+            setattr(dataset, property_name, property_value)
 
-        for property_name, property_value in properties.items():
-            if not hasattr(dataset, property_name) and property_value is not None:
-                setattr(dataset, property_name, property_value)
-        return dataset
+        return WsiDataset(dataset)

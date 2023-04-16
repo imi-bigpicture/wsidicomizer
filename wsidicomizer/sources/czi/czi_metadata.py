@@ -16,24 +16,33 @@
 
 from datetime import datetime
 from functools import cached_property
-from typing import List, Optional, Sequence, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TypeVar
 from xml.etree import ElementTree
 
 import numpy as np
 from czifile import CziFile
 from dateutil import parser as dateparser
-from opentile.metadata import Metadata
 from wsidicom.geometry import SizeMm
+
+from wsidicomizer.metadata.image_metadata import ImageMetadata
 
 ElementType = TypeVar("ElementType", str, int, float)
 
 
-class CziMetadata(Metadata):
+class CziMetadata(ImageMetadata):
     def __init__(self, czi: CziFile):
         metadata_xml = czi.metadata()
         if metadata_xml is None or not isinstance(metadata_xml, str):
             raise ValueError("No metadata string in file.")
         self._metadata = ElementTree.fromstring(metadata_xml)
+
+    @property
+    def properties(self) -> Dict[str, Any]:
+        return {
+            "AcquisitionDateTime": self.aquisition_datetime,
+            "ManufacturerModelName": self.scanner_model,
+            "SoftwareVersions": self.scanner_software_versions,
+        }
 
     @property
     def aquisition_datetime(self) -> Optional[datetime]:

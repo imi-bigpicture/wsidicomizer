@@ -29,7 +29,7 @@ from wsidicom import WsiDicom
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 # List of supported Dicomizers in prioritization order.
 loaded_sources: List[Type[DicomizerSource]] = [

@@ -7,7 +7,7 @@ from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID
 
-from wsidicomizer.model.util import code_to_dataset
+from wsidicomizer.metadata.util import code_to_dataset
 
 
 @dataclass

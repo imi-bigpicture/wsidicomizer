@@ -20,8 +20,10 @@ from opentile.metadata import Metadata
 from tiffslide import TiffSlide
 from tiffslide.tiffslide import PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR
 
+from wsidicomizer.metadata.image_metadata import ImageMetadata
 
-class TiffSlideMetadata(Metadata):
+
+class TiffSlideMetadata(ImageMetadata):
     def __init__(self, slide: TiffSlide):
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
@@ -29,6 +31,12 @@ class TiffSlideMetadata(Metadata):
         else:
             self._magnification = None
         self._scanner_manufacturer = slide.properties.get(PROPERTY_NAME_VENDOR)
+
+    @property
+    def properties(self) -> Dict[str, Any]:
+        return {
+            "Manufacturer": self._scanner_manufacturer,
+        }
 
     @property
     def magnification(self) -> Optional[float]:

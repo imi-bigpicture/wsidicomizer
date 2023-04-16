@@ -15,17 +15,16 @@
 """Source for reading opentile compatible file."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
 from opentile import OpenTile
-from opentile.metadata import Metadata as ImageMetadata
-from pydicom import Dataset
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.opentile.opentile_image_data import OpenTileImageData
+from wsidicomizer.sources.opentile.opentile_metadata import OpentileMetadata
 
 
 class OpenTileSource(DicomizerSource):
@@ -41,7 +40,7 @@ class OpenTileSource(DicomizerSource):
         include_confidential: bool = True,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
-        self._image_metadata = self._tiler.metadata
+        self._image_metadata = OpentileMetadata(self._tiler.metadata)
         super().__init__(
             filepath,
             encoder,
@@ -65,7 +64,7 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @property
-    def image_metadata(self) -> ImageMetadata:
+    def image_metadata(self) -> OpentileMetadata:
         return self._image_metadata
 
     @property

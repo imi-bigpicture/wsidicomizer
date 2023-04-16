@@ -20,15 +20,15 @@ from functools import cached_property
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata as ImageMetadata
 from pydicom import config
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
 
+from wsidicomizer.metadata.image_metadata import ImageMetadata
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -118,11 +118,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return [
             WsiInstance.create_instance(
                 self._create_level_image_data(level_index),
-                self._metadata.to_dataset(
-                    ImageType.VOLUME,
-                    self.image_metadata,
-                    self._include_confidential,
-                ),
+                self._create_base_dataset(ImageType.VOLUME),
                 ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
@@ -140,11 +136,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
         label = WsiInstance.create_instance(
             self._create_label_image_data(),
-            self._metadata.to_dataset(
-                ImageType.LABEL,
-                self.image_metadata,
-                self._include_confidential,
-            ),
+            self._create_base_dataset(ImageType.LABEL),
             ImageType.LABEL,
         )
         return [label]
@@ -156,11 +148,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
         overview = WsiInstance.create_instance(
             self._create_overview_image_data(),
-            self._metadata.to_dataset(
-                ImageType.OVERVIEW,
-                self.image_metadata,
-                self._include_confidential,
-            ),
+            self._create_base_dataset(ImageType.OVERVIEW),
             ImageType.OVERVIEW,
         )
         return [overview]
@@ -168,6 +156,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     @property
     def annotation_instances(self) -> List[AnnotationInstance]:
         return []
+
+    def _create_base_dataset(self, image_type: ImageType) -> WsiDataset:
+        return self._metadata.to_dataset(image_type, self.image_metadata)
 
     @staticmethod
     def _is_included_level(

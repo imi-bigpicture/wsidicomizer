@@ -17,14 +17,13 @@
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
-from opentile.metadata import Metadata as ImageMetadata
-
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.model.wsi import WsiMetadata
+from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 
 class BioformatsSource(DicomizerSource):
