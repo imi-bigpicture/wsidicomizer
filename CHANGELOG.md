@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.9.1] - 2023-04-16
+
+### Fixed
+
+- Fixed entrypoints for cli.
+
 ## [0.9.0] - 2023-04-03
 
 ### Added
@@ -24,9 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Set image offset from opentile and openslide properties.
-
-### Added
-
 - Parameter to change label to given image.
 
 ## [0.7.0] - 2023-02-13
