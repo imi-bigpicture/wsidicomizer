@@ -144,7 +144,7 @@ wsi.close()
 Support for reading images using Openslide c library can optionally be enabled by installing *wsidicomizer* with the `openslide` extra:
 
 ```console
-pip install wsidicomizer --extras openslide
+pip install wsidicomizer[openslide]
 ```
 
 The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
@@ -157,7 +157,7 @@ For Windows, you need also need add OpenSlide's bin-folder to the environment va
 Support for reading images using Bioformats java library can optionally be enabled by installing *wsidicomizer* with the `bioformats` extra:
 
 ```console
-pip install wsidicomizer --extras bioformats
+pip install wsidicomizer[bioformats]
 ```
 
 The `bioformats` extra enables usage of the `bioformats` module and the `bioformats_wsidicomizer`-cli command. The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
@@ -199,4 +199,4 @@ Our aim is to provide constructive and positive code reviews for all submissions
 
 *wsidicomizer*: Copyright 2021 Sectra AB, licensed under Apache 2.0.
 
-This project is part of a project that has received funding from the Innovative Medicines Initiative 2 Joint Undertaking under grant agreement No 945358. This Joint Undertaking receives support from the European Union’s Horizon 2020 research and innovation programme and EFPIA. IMI website: www.imi.europa.eu
+This project is part of a project that has received funding from the Innovative Medicines Initiative 2 Joint Undertaking under grant agreement No 945358. This Joint Undertaking receives support from the European Union’s Horizon 2020 research and innovation programme and EFPIA. IMI website: <www.imi.europa.eu>
