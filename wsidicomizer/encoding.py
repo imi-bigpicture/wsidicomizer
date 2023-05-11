@@ -84,7 +84,7 @@ class JpegEncoder(Encoder):
         Parameters
         ----------
         quality: int = 90
-            The encoding quality. To not use higher than 95.
+            The encoding quality. Recommended to not use higher than 95.
         subsampling: Optional[str] = '420'
             Subsampling option. Use '444' for no subsampling, '422' for 2x1
             subsampling, and '420' for 2x2 subsampling.
@@ -143,12 +143,12 @@ class Jpeg2000Encoder(Encoder):
         Parameters
         ----------
         quality: float = 20.0.
-            The encoding quality as peak signal to noise (PSNR). Use < 1 for
+            The encoding quality as peak signal to noise (PSNR). Use < 1 or > 1000 for
             lossless quality. Up to 60 gives acceptable results.
 
         """
         self._quality = quality
-        if self.quality < 1:
+        if self.quality < 1 or self.quality > 1000:
             self._transfer_syntax = JPEG2000Lossless
         else:
             self._transfer_syntax = JPEG2000
