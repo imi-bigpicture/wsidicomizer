@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.9.2] - 2023-05-11
+
+### Fixed
+
+- Fixed error in readme regarding installation of extras.
+- Fixed documentation of encoding quality for jpeg 2000 and handling of > 1000 quality settings as lossless.
+
 ## [0.9.1] - 2023-04-16
 
 ### Fixed
@@ -143,7 +150,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.2..HEAD
+[0.9.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.1..0.9.2
+[0.9.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.0..0.9.1
 [0.9.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.8.0..0.9.0
 [0.8.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.7.0..0.8.0
 [0.7.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.6.0..0.7.0
