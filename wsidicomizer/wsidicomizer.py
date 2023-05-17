@@ -155,7 +155,7 @@ class WsiDicomizer(WsiDicom):
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
         encoding_format: str = "jpeg",
-        encoding_quality: int = 90,
+        encoding_quality: float = 90,
         jpeg_subsampling: str = "420",
         offset_table: Optional[str] = "bot",
         label: Optional[Union[PILImage, str, Path]] = None,
@@ -194,9 +194,9 @@ class WsiDicomizer(WsiDicom):
             size also depends on minimun_chunk_size from image_data.
         encoding_format: str = 'jpeg'
             Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: int = 90
-            Quality to use if re-encoding. Do not use > 95 for jpeg. Use 100
-            for lossless jpeg2000.
+        encoding_quality: float = 90
+            Quality to use if re-encoding. It is recommended to not use > 95 for jpeg.
+            Use < 1 or > 1000 for lossless jpeg2000.
         jpeg_subsampling: str = '420'
             Subsampling option if using jpeg for re-encoding. Use '444' for
             no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
