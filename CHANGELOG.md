@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.9.3] - 2023-05-17
+
+### Fixed
+
+- Fixed missing label argument in cli.
+- Fixed documentation of encoding quality for jpeg 2000 and handling of > 1000 quality settings as lossless in cli.
+- Removed duplicate cli code.
+
 ## [0.9.2] - 2023-05-11
 
 ### Fixed
@@ -150,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.2..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.3..HEAD
+[0.9.3]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.2..0.9.3
 [0.9.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.1..0.9.2
 [0.9.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.0..0.9.1
 [0.9.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.8.0..0.9.0
