@@ -18,8 +18,6 @@ import math
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata as ImageMetadata
-
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import OpenSlide
@@ -39,7 +37,7 @@ class OpenSlideSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -71,7 +69,7 @@ class OpenSlideSource(DicomizerSource):
         return OpenSlideAssociatedImageType.MACRO.value in self._slide.associated_images
 
     @property
-    def image_metadata(self) -> ImageMetadata:
+    def image_metadata(self) -> WsiMetadata:
         return self._image_metadata
 
     @property

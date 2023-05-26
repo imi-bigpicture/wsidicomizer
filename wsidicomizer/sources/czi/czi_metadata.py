@@ -24,25 +24,24 @@ from czifile import CziFile
 from dateutil import parser as dateparser
 from wsidicom.geometry import SizeMm
 
-from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata import WsiMetadata, Image, Equipment
+from wsidicomizer.metadata.optical_path import OpticalPath
 
 ElementType = TypeVar("ElementType", str, int, float)
 
 
-class CziMetadata(ImageMetadata):
+class CziMetadata(WsiMetadata):
     def __init__(self, czi: CziFile):
         metadata_xml = czi.metadata()
         if metadata_xml is None or not isinstance(metadata_xml, str):
             raise ValueError("No metadata string in file.")
         self._metadata = ElementTree.fromstring(metadata_xml)
-
-    @property
-    def properties(self) -> Dict[str, Any]:
-        return {
-            "AcquisitionDateTime": self.aquisition_datetime,
-            "ManufacturerModelName": self.scanner_model,
-            "SoftwareVersions": self.scanner_software_versions,
-        }
+        self.image = Image(acquisition_datetime=self.aquisition_datetime)
+        self.equipment = Equipment(
+            model_name=self.scanner_model,
+            software_versions=self.scanner_software_versions,
+        )
+        self.optical_paths = [OpticalPath("0", objective_lens_power=self.magnification)]
 
     @property
     def aquisition_datetime(self) -> Optional[datetime]:

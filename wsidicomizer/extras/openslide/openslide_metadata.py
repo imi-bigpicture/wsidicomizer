@@ -14,9 +14,7 @@
 
 """Metadata for openslide file."""
 
-from typing import Optional
-
-from opentile import Metadata
+from wsidicomizer.metadata import WsiMetadata, Equipment, OpticalPath
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_OBJECTIVE_POWER,
@@ -25,19 +23,17 @@ from wsidicomizer.extras.openslide.openslide import (
 )
 
 
-class OpenSlideMetadata(Metadata):
+class OpenSlideMetadata(WsiMetadata):
     def __init__(self, slide: OpenSlide):
+        magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
+        if magnification is not None:
+            OpticalPath("0", objective_lens_power=float(magnification))
+        self.equipment = Equipment(
+            manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR)
+        )
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
             self._magnification = float(magnification)
         else:
             self._magnification = None
         self._scanner_manufacturer = slide.properties.get(PROPERTY_NAME_VENDOR)
-
-    @property
-    def magnification(self) -> Optional[float]:
-        return self._magnification
-
-    @property
-    def scanner_manufacturer(self) -> Optional[str]:
-        return self._scanner_manufacturer

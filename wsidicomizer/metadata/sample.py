@@ -1,64 +1,43 @@
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence
 
 from highdicom import (
     SpecimenCollection,
-    SpecimenDescription,
     SpecimenPreparationStep,
     SpecimenProcessing,
     SpecimenSampling,
-    SpecimenStaining,
 )
-from pydicom import Dataset
-from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from pydicom.uid import UID, generate_uid
 from wsidicom.conceptcode import (
     AnatomicPathologySpecimenTypesCode,
-    ContainerComponentTypeCode,
-    ContainerTypeCode,
     SpecimenCollectionProcedureCode,
     SpecimenEmbeddingMediaCode,
     SpecimenFixativesCode,
     SpecimenPreparationProcedureCode,
     SpecimenSamplingProcedureCode,
-    SpecimenStainsCode,
 )
 
 
-@dataclass
-class Specimen:
-    specimen_id: str
-    specimen_type: AnatomicPathologySpecimenTypesCode
-    specimen_extraction_method: SpecimenCollectionProcedureCode
-    specimen_fixation_type: SpecimenFixativesCode
-    specimen_anatomical_sites: Sequence[Code]
-
-    def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
-        specimen_sampling_step = SpecimenPreparationStep(
-            self.specimen_id,
-            processing_procedure=SpecimenCollection(
-                procedure=self.specimen_extraction_method.code,
-            ),
-        )
-        specimen_preparation_step = SpecimenPreparationStep(
-            specimen_id=self.specimen_id,
-            processing_procedure=SpecimenProcessing(
-                SpecimenPreparationProcedureCode.from_code_meaning(
-                    "Specimen processing"
-                ).code
-            ),
-            fixative=self.specimen_fixation_type.code,
-        )
-        return [specimen_sampling_step, specimen_preparation_step]
-
-
-@dataclass
 class Sample(metaclass=ABCMeta):
-    sample_id: str
-    sample_type: AnatomicPathologySpecimenTypesCode
-    sample_uid: UID
+    def __init__(
+        self, identifier: str, type: AnatomicPathologySpecimenTypesCode, uid: UID
+    ):
+        self._identifier = identifier
+        self._type = type
+        self._uid = uid
+
+    @property
+    def identifier(self) -> str:
+        return self._identifier
+
+    @property
+    def type(self) -> AnatomicPathologySpecimenTypesCode:
+        return self._type
+
+    @property
+    def uid(self) -> UID:
+        return self._uid
 
     @abstractmethod
     def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
@@ -67,44 +46,90 @@ class Sample(metaclass=ABCMeta):
     @property
     @abstractmethod
     def anatomical_sites(self) -> Sequence[Code]:
+        """Should return all the anatomical sites present in the sample hierarchy."""
         raise NotImplementedError()
 
 
-@dataclass
+class Specimen(Sample):
+    """A specimen that has been extracted from a patient."""
+
+    def __init__(
+        self,
+        identifier: str,
+        type: AnatomicPathologySpecimenTypesCode,
+        extraction_method: SpecimenCollectionProcedureCode,
+        fixation_type: SpecimenFixativesCode,
+        anatomical_sites: Sequence[Code],
+        uid: UID = generate_uid(),
+    ):
+        super().__init__(identifier, type, uid)
+        self._extraction_method = extraction_method
+        self._fixation_type = fixation_type
+        self._anatomical_sites = anatomical_sites
+
+    def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
+        specimen_sampling_step = SpecimenPreparationStep(
+            self.identifier,
+            processing_procedure=SpecimenCollection(
+                procedure=self._extraction_method.code,
+            ),
+        )
+        specimen_preparation_step = SpecimenPreparationStep(
+            specimen_id=self.identifier,
+            processing_procedure=SpecimenProcessing(
+                SpecimenPreparationProcedureCode.from_code_meaning(
+                    "Specimen processing"
+                ).code
+            ),
+            fixative=self._fixation_type.code,
+        )
+        return [specimen_sampling_step, specimen_preparation_step]
+
+    @property
+    def anatomical_sites(self) -> Sequence[Code]:
+        return self._anatomical_sites
+
+
 class Block(Sample):
-    sample_id: str
-    block_preparation: SpecimenEmbeddingMediaCode
-    specimens: Dict[Specimen, Optional[SpecimenSamplingProcedureCode]]
-    sample_uid: UID = generate_uid()
-    sample_type: AnatomicPathologySpecimenTypesCode = (
-        AnatomicPathologySpecimenTypesCode.from_code_meaning("Gross specimen")
-    )
+    """A block that has been sampled from one or more specimens."""
+
+    def __init__(
+        self,
+        identifier: str,
+        type: AnatomicPathologySpecimenTypesCode,
+        embedding_medium: SpecimenEmbeddingMediaCode,
+        specimens: Dict[Specimen, Optional[SpecimenSamplingProcedureCode]],
+        uid: UID = generate_uid(),
+    ):
+        super().__init__(identifier, type, uid)
+        self._specimens = specimens
+        self._embedding_medium = embedding_medium
 
     def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
         sample_preparation_steps: List[SpecimenPreparationStep] = []
-        for specimen, sampling_method in self.specimens.items():
+        for specimen, sampling_method in self._specimens.items():
             if sampling_method is None:
                 sampling_method = SpecimenSamplingProcedureCode.from_code_meaning(
                     "Dissection"
                 )
             sample_preparation_steps.extend(specimen.to_preparation_steps())
             block_sampling_step = SpecimenPreparationStep(
-                self.sample_id,
+                self._identifier,
                 processing_procedure=SpecimenSampling(
                     method=sampling_method.code,
-                    parent_specimen_id=specimen.specimen_id,
-                    parent_specimen_type=specimen.specimen_type.code,
+                    parent_specimen_id=specimen.identifier,
+                    parent_specimen_type=specimen.type.code,
                 ),
             )
             sample_preparation_steps.append(block_sampling_step)
         block_preparation_step = SpecimenPreparationStep(
-            specimen_id=self.sample_id,
+            specimen_id=self._identifier,
             processing_procedure=SpecimenProcessing(
                 SpecimenPreparationProcedureCode.from_code_meaning(
                     "Specimen processing"
                 ).code
             ),
-            embedding_medium=self.block_preparation.code,
+            embedding_medium=self._embedding_medium.code,
         )
         sample_preparation_steps.append(block_preparation_step)
         return sample_preparation_steps
@@ -113,51 +138,64 @@ class Block(Sample):
     def anatomical_sites(self) -> Sequence[Code]:
         return [
             anatomical_site
-            for specimen in self.specimens
-            for anatomical_site in specimen.specimen_anatomical_sites
+            for specimen in self._specimens
+            for anatomical_site in specimen.anatomical_sites
         ]
 
 
-@dataclass
 class SimpleSample(Sample):
-    sample_id: str
-    sample_type: AnatomicPathologySpecimenTypesCode
-    sample_uid: UID = generate_uid()
-    embedding_medium: Optional[SpecimenEmbeddingMediaCode] = None
-    fixative: Optional[SpecimenFixativesCode] = None
-    specimen_id: Optional[str] = None
-    specimen_type: Optional[AnatomicPathologySpecimenTypesCode] = None
-    specimen_sampling_method: Optional[SpecimenSamplingProcedureCode] = None
-    anatomical_sites: Optional[Sequence[Code]] = None
+    """Simple sample without sampling hierarchy."""
+
+    def __init__(
+        self,
+        identifier: str,
+        type: AnatomicPathologySpecimenTypesCode,
+        embedding_medium: Optional[SpecimenEmbeddingMediaCode] = None,
+        fixative: Optional[SpecimenFixativesCode] = None,
+        specimen_id: Optional[str] = None,
+        specimen_type: Optional[AnatomicPathologySpecimenTypesCode] = None,
+        specimen_sampling_method: Optional[SpecimenSamplingProcedureCode] = None,
+        anatomical_sites: Optional[Sequence[Code]] = None,
+        uid: UID = generate_uid(),
+    ):
+        super().__init__(identifier, type, uid)
+        self._embedding_medium = embedding_medium
+        self._fixative = fixative
+        self._specimen_id = specimen_id
+        self._specimen_type = specimen_type
+        self._specimen_sampling_method = specimen_sampling_method
+        if anatomical_sites is None:
+            anatomical_sites = []
+        self._anatomical_sites = anatomical_sites
 
     def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
         sample_preparation_steps: List[SpecimenPreparationStep] = []
 
         if (
-            self.specimen_id is not None
-            and self.specimen_sampling_method is not None
-            and self.specimen_type is not None
+            self._specimen_id is not None
+            and self._specimen_sampling_method is not None
+            and self._specimen_type is not None
         ):
             sample_sampling_step = SpecimenPreparationStep(
-                specimen_id=self.sample_id,
+                specimen_id=self._identifier,
                 processing_procedure=SpecimenSampling(
-                    method=self.specimen_sampling_method.code,
-                    parent_specimen_id=self.specimen_id,
-                    parent_specimen_type=self.specimen_type.code,
+                    method=self._specimen_sampling_method.code,
+                    parent_specimen_id=self._specimen_id,
+                    parent_specimen_type=self._specimen_type.code,
                 ),
             )
             sample_preparation_steps.append(sample_sampling_step)
-        if self.embedding_medium is not None:
-            embedding_medium = self.embedding_medium.code
+        if self._embedding_medium is not None:
+            embedding_medium = self._embedding_medium.code
         else:
             embedding_medium = None
-        if self.fixative is not None:
-            fixative = self.fixative.code
+        if self._fixative is not None:
+            fixative = self._fixative.code
         else:
             fixative = None
         if embedding_medium is not None or fixative is not None:
             preparation_step = SpecimenPreparationStep(
-                specimen_id=self.sample_id,
+                specimen_id=self._identifier,
                 processing_procedure=SpecimenProcessing(
                     SpecimenPreparationProcedureCode.from_code_meaning(
                         "Specimen processing"
@@ -169,3 +207,7 @@ class SimpleSample(Sample):
             sample_preparation_steps.append(preparation_step)
 
         return sample_preparation_steps
+
+    @property
+    def anatomical_sites(self) -> Sequence[Code]:
+        return self._anatomical_sites

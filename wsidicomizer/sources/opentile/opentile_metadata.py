@@ -14,27 +14,29 @@
 
 """Metadata for opentile file."""
 
-from typing import Any, Dict, Optional, Tuple
+from opentile import Metadata as OpenTileMetadata
+from wsidicom.geometry import PointMm
 
-from opentile import Metadata
+from wsidicomizer.metadata import WsiMetadata
+from wsidicomizer.metadata.equipment import Equipment
+from wsidicomizer.metadata.image import Image, ImageCoordinateSystem
 
-from wsidicomizer.metadata.image_metadata import ImageMetadata
 
-
-class OpentileMetadata(ImageMetadata):
-    def __init__(self, metadata: Metadata):
-        self._metadata = metadata
-
-    @property
-    def properties(self) -> Dict[str, Any]:
-        return {
-            "Manufacturer": self._metadata.scanner_manufacturer,
-            "ManufacturerModelName": self._metadata.scanner_model,
-            "SoftwareVersions": self._metadata.scanner_software_versions,
-            "DeviceSerialNumber": self._metadata.scanner_serial_number,
-            "AcquisitionDateTime": self._metadata.aquisition_datetime,
-        }
-
-    @property
-    def image_offset(self) -> Optional[Tuple[float, float]]:
-        return self._metadata.image_offset
+class OpentileMetadata(WsiMetadata):
+    def __init__(self, metadata: OpenTileMetadata):
+        self.equipment = Equipment(
+            metadata.scanner_manufacturer,
+            metadata.scanner_model,
+            metadata.scanner_serial_number,
+            metadata.scanner_software_versions,
+        )
+        image_coordinate_system = None
+        if metadata.image_offset is not None:
+            image_coordinate_system = ImageCoordinateSystem(
+                origin=PointMm(metadata.image_offset[0], metadata.image_offset[1]),
+                rotation=0,
+            )
+        self.image = Image(
+            metadata.aquisition_datetime,
+            image_coordinate_system=image_coordinate_system,
+        )

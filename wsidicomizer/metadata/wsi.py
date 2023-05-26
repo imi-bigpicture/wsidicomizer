@@ -1,4 +1,3 @@
-import datetime
 from dataclasses import dataclass, field
 from typing import List, Sequence
 
@@ -6,11 +5,10 @@ from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from pydicom.uid import UID, generate_uid
 from wsidicom.instance import ImageType, WsiDataset
-from wsidicom.optical import OpticalPath
+from wsidicomizer.metadata.optical_path import OpticalPath
 
 from wsidicomizer.metadata.base import DicomModelBase
 from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.image_metadata import ImageMetadata
 from wsidicomizer.metadata.label import Label
 from wsidicomizer.metadata.patient import Patient
 from wsidicomizer.metadata.series import Series
@@ -62,23 +60,18 @@ class WsiMetadata:
     label: Label = field(default_factory=lambda: Label())
     frame_of_reference_uid: UID = generate_uid()
     dimension_organization_uid: UID = generate_uid()
-    acquisition_datetime: datetime.datetime = datetime.datetime.now()
-    label_in_volume_image: bool = False
-    label_in_overview_image: bool = False
-    label_is_phi: bool = True
     override: Sequence[str] = field(default_factory=list)
 
     def to_dataset(
         self,
         image_type: ImageType,
-        image_metadata: ImageMetadata,
+        image_metadata: "WsiMetadata",
     ) -> WsiDataset:
         dataset = Dataset()
         # SOP common module
         dataset.SOPClassUID = "1.2.840.10008.5.1.4.1.1.77.1.6"
 
         # General series and Whole slide Microscopy modules
-        dataset.SeriesNumber = ""
         dataset.Modality = "SM"
 
         # Frame of reference module
@@ -98,38 +91,27 @@ class WsiMetadata:
         )
 
         # Whole slide micropscopy image module (most filled when importing file)
-        label_in_image = "NO"
-        contains_phi = "NO"
-        if (
-            (image_type == ImageType.VOLUME and self.label_in_volume_image)
-            or (image_type == ImageType.OVERVIEW and self.label_in_overview_image)
-            or image_type == ImageType.LABEL
-        ):
-            label_in_image = "YES"
-            contains_phi = "YES" if self.label_is_phi else "NO"
-        dataset.BurnedInAnnotation = contains_phi
-        dataset.SpecimenLabelInImage = label_in_image
-
         dataset.VolumetricProperties = "VOLUME"
-        dataset.AcquisitionDateTime = self.acquisition_datetime.strftime(
-            "%Y%m%d%H%M%S.%f"
-        )
+
+        # User defined modules
         modules: List[DicomModelBase] = [
             self.study,
             self.series,
             self.patient,
             self.equipment,
+            self.slide,
+            self.label,
         ]
         for module in modules:
-            dataset.update(module.to_dataset())
-        dataset.OpticalPathSequence = DicomSequence(
-            [optical_path.to_ds() for optical_path in self.optical_paths]
-        )
-        dataset.update(self.slide.to_dataset())
+            module.insert_into_dataset(dataset, image_type)
 
-        for property_name, property_value in image_metadata.properties.items():
-            if property_name in self.override:
-                continue
-            setattr(dataset, property_name, property_value)
+        # Optical paths
+        for optical_path in self.optical_paths:
+            optical_path.insert_into_dataset(dataset, image_type)
+
+        # for property_name, property_value in image_metadata.properties.items():
+        #     if property_name in self.override:
+        #         continue
+        #     setattr(dataset, property_name, property_value)
 
         return WsiDataset(dataset)

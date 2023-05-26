@@ -20,7 +20,7 @@ from typing import List, Optional, Sequence
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata import WsiMetadata
 from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
 
@@ -31,7 +31,7 @@ class CziSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -66,7 +66,7 @@ class CziSource(DicomizerSource):
         return [0]
 
     @property
-    def image_metadata(self) -> ImageMetadata:
+    def image_metadata(self) -> WsiMetadata:
         return self._image_metadata
 
     @staticmethod

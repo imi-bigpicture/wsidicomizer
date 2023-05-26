@@ -33,7 +33,7 @@ class OpenTileSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -78,7 +78,9 @@ class OpenTileSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder, self.image_metadata.image_offset)
+        return OpenTileImageData(
+            level, self._encoder, self.image_metadata.image.image_coordinate_system
+        )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]

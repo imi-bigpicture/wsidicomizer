@@ -25,7 +25,7 @@ from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
 
-from wsidicomizer.metadata.image_metadata import ImageMetadata
+from wsidicomizer.metadata import WsiMetadata
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata.wsi import WsiMetadata
@@ -47,12 +47,14 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
+        if metadata is None:
+            metadata = WsiMetadata()
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
@@ -70,7 +72,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def image_metadata(self) -> ImageMetadata:
+    def image_metadata(self) -> WsiMetadata:
         """Return metadata for file."""
         raise NotImplementedError()
 

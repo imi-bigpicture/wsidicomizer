@@ -20,9 +20,11 @@ from opentile.tiff_image import TiffImage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.geometry import Orientation, Point, PointMm, Size, SizeMm
+from wsidicom.geometry import Point, Size, SizeMm, Orientation
 from wsidicom.instance import ImageCoordinateSystem
-
+from wsidicomizer.metadata.image import (
+    ImageCoordinateSystem as ImageCoordinateSystemMetadata,
+)
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -32,7 +34,7 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiff_image: TiffImage,
         encoder: Encoder,
-        image_offset: Optional[Tuple[float, float]] = None,
+        image_coordinate_system: Optional[ImageCoordinateSystemMetadata] = None,
     ):
         """Wraps a TiffImage to ImageData.
 
@@ -42,6 +44,8 @@ class OpenTileImageData(DicomizerImageData):
             TiffImage to wrap.
         encoded: Encoder
             Encoder to use.
+        image_coordinate_system: Optional[ImageCoordinateSystemMetadata] = None
+            Metadata for image coordiante system.
         """
         super().__init__(encoder)
         self._tiff_image = tiff_image

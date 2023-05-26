@@ -1,84 +1,146 @@
+from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
 import datetime
-from dataclasses import dataclass, fields
-from typing import Any, Dict, List, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Union,
+    TypeVar,
+    Generic,
+)
 
 from pydicom import Dataset
-from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
-from pydicom.uid import UID
+from wsidicom.instance import ImageType
+from pydicom.uid import UID, generate_uid
 
-from wsidicomizer.metadata.util import code_to_dataset
+DicomAttributeValueType = TypeVar("DicomAttributeValueType")
 
 
 @dataclass
-class DicomModelBase:
+class DicomAttribute(Generic[DicomAttributeValueType]):
+    """Represents a DICOM attribute.
+
+    Parameters
+    ----------
+    key: str
+        DICOM key name
+    required: bool:
+        If attribute is required to be present in dataset, i.e. is of type 1 or 2.
+    value: Optional[DicomAttributeValueType]:
+        Value for attribute.
+    default_factory: Optional[Callable[[], DicomAttributeValueType]] = None
+        Method to call to generate a default value for required attributes that cant
+        have an emtpy value, i.e. is of type 1.
+    formater: Optional[
+        Callable[[DicomAttributeValueType], DicomAttributeValueType]
+    ] = None
+        Method to call to format the attribute value before writing to dataset.
+
+    """
+
+    key: str
+    required: bool
+    value: Optional[DicomAttributeValueType]
+    default_factory: Optional[Callable[[], DicomAttributeValueType]] = None
+    formater: Optional[Callable[[DicomAttributeValueType], Any]] = None
+
+
+class DicomStringAttribute(DicomAttribute[str]):
     pass
 
-    def to_dataset(self) -> Dataset:
-        dataset = Dataset()
-        for field in fields(self):
-            value = getattr(self, field.name)
-            if value is None:
-                setattr(
-                    dataset, self._field_name_to_dicom_attribute_name(field.name), None
-                )
-            elif isinstance(value, (str, datetime.date)):
-                (dicom_name, value) = self._simple_attribute(field.name, value)
-                setattr(dataset, dicom_name, value)
-            elif isinstance(value, list):
-                values = self._list_attribute(field.name, value)
-                for (dicom_name, dicom_value) in values.items():
-                    setattr(dataset, dicom_name, dicom_value)
-            else:
-                raise NotImplementedError(
-                    f"Not implemented handling of field {field.name}"
-                    f"with value {type(value)}"
-                )
 
-        return dataset
+class DicomListStringAttribute(DicomAttribute[Iterable[str]]):
+    pass
 
-    @classmethod
-    def _simple_attribute(
-        cls, field_name: str, value: Union[str, UID, datetime.date, Code]
-    ) -> Tuple[str, Any]:
-        if isinstance(value, Code):
-            return (
-                cls._field_name_to_dicom_attribute_name(field_name, True),
-                DicomSequence([code_to_dataset(value)]),
-            )
+
+class DicomDateTimeAttribute(
+    DicomAttribute[Union[datetime.datetime, datetime.date, datetime.time]]
+):
+    pass
+
+
+class DicomCodeAttribute(DicomAttribute[Code]):
+    pass
+
+
+class DicomUidAttribute(DicomAttribute[UID]):
+    pass
+
+
+class DicomNumberAttribute(DicomAttribute[Union[int, float]]):
+    pass
+
+
+class DicomByteAttribute(DicomAttribute[bytes]):
+    pass
+
+
+class DicomModelBase(metaclass=ABCMeta):
+    """Base model.
+
+    By default metadata from the file is prioritized before values provided in the
+    model. To override this behavior for a specific attribute (e.g. do not take the
+    value from file) add the attribute name to the to the `overrides` attribute.
+
+    Additional attributes not defined in the model can be added in the
+    `additional_attributes` dictionary with the DICOM keyword as key.
+    """
+
+    additional_attributes: Optional[Dict[str, Any]] = None
+    overrides: Optional[Sequence[str]] = None
+    _dicom_attributes: Iterable[Optional[DicomAttribute]]
+
+    @abstractmethod
+    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
+        raise NotImplementedError()
+
+    @property
+    def dicom_attributes(self) -> Iterable[DicomAttribute]:
         return (
-            cls._field_name_to_dicom_attribute_name(field_name),
-            value,
+            attribute for attribute in self._dicom_attributes if attribute is not None
         )
 
-    @classmethod
-    def _list_attribute(
-        cls, field_name: str, values: Sequence[Any]
-    ) -> Dict[str, Union[List[str], DicomSequence]]:
-        items = {}
-        string_values = [value for value in values if isinstance(value, str)]
-        if len(string_values) > 0:
-            items[cls._field_name_to_dicom_attribute_name(field_name)] = string_values
-        code_values = [
-            code_to_dataset(value) for value in values if isinstance(value, Code)
-        ]
-        if len(code_values) > 0:
-            items[
-                cls._field_name_to_dicom_attribute_name(field_name, True)
-            ] = code_values
-        return items
+    def _insert_dicom_attributes_into_dataset(self, dataset: Dataset) -> None:
+        for attribute in self.dicom_attributes:
+            if (
+                attribute.value is None
+                and attribute.required
+                and attribute.default_factory is not None
+            ):
+                attribute = attribute.default_factory()
+            if attribute.formater is not None and attribute.value is not None:
+                attribute = attribute.formater(attribute)
+            setattr(dataset, attribute.key, attribute)
 
     @staticmethod
-    def _field_name_to_dicom_attribute_name(
-        field_name: str, is_code_sequence: bool = False
+    def _bool_to_literal(value: bool) -> Union[Literal["YES"], Literal["NO"]]:
+        if value:
+            return "YES"
+        return "NO"
+
+    @staticmethod
+    def _code_to_code_sequence_item(value: Code) -> Dataset:
+        dataset = Dataset()
+        dataset.CodeValue = value.value
+        dataset.CodingSchemeDesignator = value.scheme_designator
+        dataset.CodingSchemeVersion = value.scheme_version
+        dataset.CodeMeaning = value.meaning
+        return dataset
+
+    def _default_string_value(self) -> str:
+        return "Unknown"
+
+    def _default_datetime_value(self) -> datetime.datetime:
+        return datetime.datetime(1, 1, 1)
+
+    def _format_datetime_value(
+        self, value: Union[datetime.date, datetime.time, datetime.datetime]
     ) -> str:
-        field_name = field_name.title().replace("_", "")
-        if field_name.endswith("Uid"):
-            field_name, _ = field_name.rsplit("Uid", 1)
-            field_name += "UID"
-        elif field_name.endswith("Id"):
-            field_name, _ = field_name.rsplit("Id", 1)
-            field_name += "ID"
-        elif is_code_sequence:
-            field_name += "CodeSequence"
-        return field_name
+        return value.strftime("%Y%m%d%H%M%S.%f")

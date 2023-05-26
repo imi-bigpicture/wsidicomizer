@@ -31,7 +31,7 @@ class BioformatsDicomizer(WsiDicomizer):
     def open(
         cls,
         filepath: Union[str, Path],
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,

@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image as PILImage
-from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
 
@@ -53,7 +52,7 @@ class WsiDicomizer(WsiDicom):
     def open(
         cls,
         filepath: Union[str, Path],
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -142,7 +141,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Union[str, Path],
         output_path: Optional[Union[str, Path]] = None,
-        metadata: WsiMetadata = WsiMetadata(),
+        metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
