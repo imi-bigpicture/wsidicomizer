@@ -1,45 +1,58 @@
+"""Patient model."""
 import datetime
-from typing import List, Literal, Optional, Union
+from dataclasses import dataclass
+from typing import Dict, List, Literal, Optional, Union
 
 from pydicom import Dataset
-from pydicom.sequence import Sequence as DicomSequence
 from pydicom.sr.coding import Code
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import (
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
+    DicomBoolAttribute,
     DicomCodeAttribute,
     DicomDateTimeAttribute,
-    DicomModelBase,
+    DicomListStringAttribute,
     DicomStringAttribute,
 )
+from wsidicomizer.metadata.fields import FieldFactory
+from wsidicomizer.metadata.model_base import ModelBase
 
 
-class PatientDeIdentification(DicomModelBase):
-    def __init__(
-        self, identity_removed: bool, methods: Optional[List[Union[str, Code]]] = None
-    ):
-        self._identity_removed = identity_removed
-        self._methods = methods
+@dataclass
+class PatientDeIdentification(ModelBase):
+    identity_removed: bool
+    methods: Optional[
+        List[Union[str, Code]]
+    ] = None  # FieldFactory.list_string_or_code_field()
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dataset.PatientIdentityRemoved = self._bool_to_literal(self._identity_removed)
-        if self._methods is not None:
-            for method in self._methods:
+        dicom_attributes: List[DicomAttribute] = [
+            DicomBoolAttribute("PatientIdentityRemoved", True, self.identity_removed)
+        ]
+        if self.methods is not None:
+            for method in self.methods:
                 if isinstance(method, str):
-                    if "DeidentificationMethod" not in dataset:
-                        dataset.DeidentificationMethod = []
-                    dataset.DeidentificationMethod.append(method)
-                else:
-                    if "DeidentificationMethodCodeSequence" not in dataset:
-                        dataset.DeidentificationMethodCodeSequence = DicomSequence()
-                    dataset.DeidentificationMethodCodeSequence.append(
-                        self._code_to_code_sequence_item(method)
+                    method_attribute = DicomListStringAttribute(
+                        "DeidentificationMethod", False, method
                     )
-        elif self._identity_removed:
-            raise ValueError("")
+                else:
+                    method_attribute = DicomCodeAttribute(
+                        "DeidentificationMethodCodeSequence", False, method
+                    )
+                dicom_attributes.append(method_attribute)
+
+        elif self.identity_removed:
+            raise ValueError(
+                "If patient identity is removed at least on de-identification method "
+                "must be given."
+            )
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 
 
-class Patient(DicomModelBase):
+@dataclass
+class Patient(ModelBase):
     """
     Patient metadata.
 
@@ -48,42 +61,37 @@ class Patient(DicomModelBase):
     https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.html
     """
 
-    def __init__(
-        self,
-        name: Optional[str] = None,
-        identifier: Optional[str] = None,
-        birth_date: Optional[datetime.date] = None,
-        sex: Optional[Literal["F", "M", "O"]] = None,
-        species_description: Optional[Union[str, Code]] = None,
-        de_identification: Optional[PatientDeIdentification] = None,
-    ):
-        self._name = DicomStringAttribute("PatientName", False, name)
-        self._identifier = DicomStringAttribute("PatientID", False, identifier)
-        self._birth_date = DicomDateTimeAttribute("PatientBirthDate", False, birth_date)
-        self._sex = DicomStringAttribute("PatientSex", False, sex)
-        if isinstance(species_description, str):
-            self._species_description = DicomStringAttribute(
-                "PatientSpeciesDescription", False, species_description
-            )
-        elif isinstance(species_description, Code):
-            self._species_description = DicomCodeAttribute(
-                "PatientSpeciesCodeSequence",
-                False,
-                species_description,
-                formater=lambda x: DicomSequence([self._code_to_code_sequence_item(x)]),
-            )
-        else:
-            self._species_description = None
-        self._de_identification = de_identification
-        self._dicom_attributes = [
-            self._name,
-            self._identifier,
-            self._birth_date,
-            self._sex,
-            self._species_description,
-        ]
+    name: Optional[str] = None
+    identifier: Optional[str] = None
+    birth_date: Optional[datetime.date] = FieldFactory.date_field()
+    sex: Optional[Literal["F", "M", "O"]] = None
+    species_description: Optional[
+        Union[str, Code]
+    ] = FieldFactory.string_or_code_field()
+    de_identification: Optional[PatientDeIdentification] = None
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        self._insert_dicom_attributes_into_dataset(dataset)
-        if self._de_identification is not None:
-            self._de_identification.insert_into_dataset(dataset, image_type)
+        dicom_attributes: List[DicomAttribute] = [
+            DicomStringAttribute("PatientName", True, self.name),
+            DicomStringAttribute("PatientID", True, self.identifier),
+            DicomDateTimeAttribute("PatientBirthDate", True, self.birth_date),
+            DicomStringAttribute("PatientSex", True, self.sex),
+        ]
+        if isinstance(self.species_description, str):
+            dicom_attributes.append(
+                DicomStringAttribute(
+                    "PatientSpeciesDescription", False, self.species_description
+                )
+            )
+        elif isinstance(self.species_description, Code):
+            dicom_attributes.append(
+                DicomCodeAttribute(
+                    "PatientSpeciesCodeSequence",
+                    False,
+                    self.species_description,
+                )
+            )
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+        if self.de_identification is not None:
+            self.de_identification.insert_into_dataset(dataset, image_type)

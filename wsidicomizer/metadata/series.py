@@ -1,17 +1,22 @@
-from typing import Optional
+"""Series model."""
+from dataclasses import dataclass
+from typing import Dict, List, Optional
 
 from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import (
-    DicomModelBase,
-    DicomStringAttribute,
+from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
+    DicomNumberAttribute,
     DicomUidAttribute,
 )
+from wsidicomizer.metadata.fields import FieldFactory
 
 
-class Series(DicomModelBase):
+@dataclass
+class Series(ModelBase):
     """
     Series metadata.
 
@@ -22,11 +27,13 @@ class Series(DicomModelBase):
     The `Modality` attribute is fixed to `SM`.
     """
 
-    def __init__(self, uid: Optional[UID] = None, number: Optional[int] = None):
-        self._uid = DicomUidAttribute("SeriesInstanceUID", True, uid, generate_uid)
-        self._number = DicomStringAttribute("SeriesNumber", True, uid)
-
-        self._dicom_attributes = [self._uid, self._number]
+    uid: Optional[UID] = FieldFactory.uid_field()
+    number: Optional[int] = None
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        self._insert_dicom_attributes_into_dataset(dataset)
+        dicom_attributes: List[DicomAttribute] = [
+            DicomUidAttribute("SeriesInstanceUID", True, self.uid, generate_uid),
+            DicomNumberAttribute("SeriesNumber", True, self.number),
+        ]
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)

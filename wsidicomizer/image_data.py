@@ -21,6 +21,7 @@ import numpy as np
 from wsidicom import ImageData
 from wsidicom.geometry import Orientation, PointMm
 from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.geometry import PointMm, Orientation
 
 from wsidicomizer.encoding import Encoder
 

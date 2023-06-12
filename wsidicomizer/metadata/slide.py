@@ -1,5 +1,7 @@
+"""Slide model."""
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple, Union
+from dataclasses_json import dataclass_json
 
 from highdicom import (
     SpecimenDescription,
@@ -8,6 +10,7 @@ from highdicom import (
     SpecimenStaining,
 )
 from pydicom import Dataset
+from pydicom.uid import generate_uid
 from pydicom.sequence import Sequence as DicomSequence
 from wsidicom.conceptcode import (
     ContainerComponentTypeCode,
@@ -17,17 +20,20 @@ from wsidicom.conceptcode import (
 )
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import DicomModelBase
-from wsidicomizer.metadata.sample import Sample
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
+    DicomCodeAttribute,
+    DicomSequenceAttribute,
+    DicomStringAttribute,
+)
+from wsidicomizer.metadata.fields import FieldFactory
+from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.sample import SlideSample
+
 
 
 @dataclass
-class SampleLocation:
-    description: Optional[str] = None
-    position: Optional[Tuple[float, float, float]] = None
-
-
-class Slide(DicomModelBase):
+class Slide(ModelBase):
     """
     Metadata for a slide.
 
@@ -36,78 +42,94 @@ class Slide(DicomModelBase):
     been stained with the samle list of stainings.
     """
 
-    def __init__(
-        self,
-        identifier: str = "Unknown",
-        stainings: Sequence[SpecimenStainsCode] = field(default_factory=list),
-        samples: Dict[Sample, SampleLocation] = field(default_factory=dict),
-    ):
-        self._identifier = identifier
-        self._stainings = stainings
-        self._samples = samples
+    identifier: Optional[str] = None
+    stains: Optional[
+        Iterable[SpecimenStainsCode]
+    ] = FieldFactory.list_concept_code_field(SpecimenStainsCode)
+    samples: Iterable[SlideSample] = field(default_factory=list)
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dataset.ContainerIdentifier = self._identifier
-        slide_container = ContainerTypeCode.from_code_meaning(
-            "Microscope slide"
-        ).to_ds()
-        dataset.IssuerOfTheContainerIdentifierSequence = DicomSequence()
-        dataset.ContainerTypeCodeSequence = DicomSequence([slide_container])
-        slide_container_components = Dataset()
-        slide_container_components.ContainerComponentMaterial = "GLASS"
-        ContainerComponentTypeCode.from_code_meaning(
-            "Microscope slide coverslip"
-        ).insert_into_ds(slide_container_components)
-        dataset.ContainerComponentSequence = DicomSequence([slide_container_components])
-        dataset.SpecimenDescriptionSequence = DicomSequence(
-            [
-                self._sample_to_description(block, location)
-                for block, location in self._samples.items()
-            ]
-        )
+        dicom_attributes: List[DicomAttribute] = [
+            DicomStringAttribute(
+                "ContainerIdentifier", True, self.identifier, "Unknown"
+            ),
+            DicomCodeAttribute(
+                "ContainerTypeCodeSequence",
+                True,
+                ContainerTypeCode("Microscope slide").code,
+            ),
+            DicomSequenceAttribute("IssuerOfTheContainerIdentifierSequence", True, []),
+            DicomSequenceAttribute(
+                "ContainerComponentSequence",
+                False,
+                [
+                    DicomCodeAttribute(
+                        "ContainerComponentTypeCodeSequence",
+                        False,
+                        ContainerComponentTypeCode("Microscope slide cover slip").code,
+                    ),
+                    DicomStringAttribute("ContainerComponentMaterial", False, "GLASS"),
+                ],
+            ),
+        ]
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+        if self.samples is not None:
+            dataset.SpecimenDescriptionSequence = DicomSequence(
+                [
+                    self._sample_to_description(
+                        dataset.ContainerIdentifier,
+                        slide_sample.sample,
+                        slide_sample.sampling_method,
+                        slide_sample.position,
+                    )
+                    for slide_sample in self.samples
+                ]
+            )
 
     def _sample_to_description(
-        self, sample: Sample, location: SampleLocation
+        self,
+        slide_identifier: str,
+        sample: Sample,
+        sampling_method: Optional[SpecimenSamplingProcedureCode],
+        position: Optional[Union[str, Tuple[float, float, float]]],
     ) -> SpecimenDescription:
         """Create a SpecimenDescription item for a sample."""
-        if location.position is not None:
-            specimen_location = location.position
-        elif location.description is not None:
-            specimen_location = location.description
-        else:
-            specimen_location = None
+        if sampling_method is None:
+            sampling_method = SpecimenSamplingProcedureCode("Block sectioning")
+        sample_uid = generate_uid() if sample.uid is None else sample.uid
         return SpecimenDescription(
             specimen_id=sample.identifier,
-            specimen_uid=sample.uid,
-            specimen_preparation_steps=self._sample_to_preparation_steps(sample),
-            specimen_location=specimen_location,
+            specimen_uid=sample_uid,
+            specimen_preparation_steps=self._sample_to_preparation_steps(
+                slide_identifier, sample, sampling_method
+            ),
+            specimen_location=position,
             primary_anatomic_structures=[
                 anatomical_site for anatomical_site in sample.anatomical_sites
             ],
         )
 
     def _sample_to_preparation_steps(
-        self, sample: Sample
+        self,
+        slide_identifier: str,
+        sample: Sample,
+        sampling_method: SpecimenSamplingProcedureCode,
     ) -> List[SpecimenPreparationStep]:
         """Create SpecimenPreparationStep items for a sample."""
         sample_preparation_steps: List[SpecimenPreparationStep] = []
         sample_preparation_steps.extend(sample.to_preparation_steps())
         slide_sample_step = SpecimenPreparationStep(
-            self._identifier,
-            processing_procedure=SpecimenSampling(
-                method=SpecimenSamplingProcedureCode.from_code_meaning(
-                    "Block sectioning"
-                ).code,
-                parent_specimen_id=sample.identifier,
-                parent_specimen_type=sample.type.code,
-            ),
+            slide_identifier,
+            processing_procedure=sample.to_sampling_step(sampling_method),
         )
         sample_preparation_steps.append(slide_sample_step)
-        slide_staining_step = SpecimenPreparationStep(
-            self._identifier,
-            processing_procedure=SpecimenStaining(
-                [staining.code for staining in self._stainings]
-            ),
-        )
-        sample_preparation_steps.append(slide_staining_step)
+        if self.stains is not None:
+            slide_staining_step = SpecimenPreparationStep(
+                slide_identifier,
+                processing_procedure=SpecimenStaining(
+                    [stain.code for stain in self.stains]
+                ),
+            )
+            sample_preparation_steps.append(slide_staining_step)
         return sample_preparation_steps

@@ -1,14 +1,20 @@
+"""Label model."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, List, Optional
 
 from pydicom import Dataset
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import DicomModelBase, DicomStringAttribute
+from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
+    DicomBoolAttribute,
+    DicomStringAttribute,
+)
 
 
 @dataclass
-class Label(DicomModelBase):
+class Label(ModelBase):
     """
     Label metadata.
 
@@ -17,33 +23,32 @@ class Label(DicomModelBase):
     https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.12.8.html
     """
 
-    def __init__(
-        self,
-        label_text: Optional[str] = None,
-        barcode_value: Optional[str] = None,
-        label_in_volume_image: bool = False,
-        label_in_overview_image: bool = False,
-        label_is_phi: bool = True,
-    ):
-        self._label_text = DicomStringAttribute("LabelText", True, label_text)
-        self._barcode_value = DicomStringAttribute("BarCodeValue", True, barcode_value)
-        self._dicom_attributes = [self._label_text, self._barcode_value]
-        self._label_in_volume_image = label_in_volume_image
-        self._label_in_overview_image = label_in_overview_image
-        self._label_is_phi = label_is_phi
+    label_text: Optional[str] = None
+    barcode_value: Optional[str] = None
+    label_in_volume_image: bool = False
+    label_in_overview_image: bool = False
+    label_is_phi: bool = True
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        if image_type == ImageType.LABEL:
-            self._insert_dicom_attributes_into_dataset(dataset)
-
         label_in_image = False
         contains_phi = False
         if (
-            (image_type == ImageType.VOLUME and self._label_in_volume_image)
-            or (image_type == ImageType.OVERVIEW and self._label_in_overview_image)
+            (image_type == ImageType.VOLUME and self.label_in_volume_image)
+            or (image_type == ImageType.OVERVIEW and self.label_in_overview_image)
             or image_type == ImageType.LABEL
         ):
             label_in_image = True
-            contains_phi = self._label_is_phi
-        dataset.BurnedInAnnotation = self._bool_to_literal(contains_phi)
-        dataset.SpecimenLabelInImage = self._bool_to_literal(label_in_image)
+            contains_phi = self.label_is_phi
+        dicom_attributes: List[DicomAttribute] = [
+            DicomBoolAttribute("BurnedInAnnotation", True, contains_phi),
+            DicomBoolAttribute("SpecimenLabelInImage", True, label_in_image),
+        ]
+        if image_type == ImageType.LABEL:
+            dicom_attributes.extend(
+                [
+                    DicomStringAttribute("LabelText", True, self.label_text),
+                    DicomStringAttribute("BarCodeValue", True, self.barcode_value),
+                ]
+            )
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)

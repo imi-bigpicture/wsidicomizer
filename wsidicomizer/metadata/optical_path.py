@@ -1,20 +1,25 @@
-from typing import Optional, Union
+"""Optical path model."""
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Union
 
 from pydicom import Dataset
 from pydicom import Sequence as DicomSequence
 from wsidicom.conceptcode import IlluminationCode, IlluminationColorCode
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import (
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
     DicomByteAttribute,
     DicomCodeAttribute,
-    DicomModelBase,
     DicomNumberAttribute,
     DicomStringAttribute,
 )
+from wsidicomizer.metadata.fields import FieldFactory
+from wsidicomizer.metadata.model_base import ModelBase
 
 
-class OpticalPath(DicomModelBase):
+@dataclass
+class OpticalPath(ModelBase):
     """
     Optical path metadata.
 
@@ -23,60 +28,69 @@ class OpticalPath(DicomModelBase):
     https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.html
     """
 
-    def __init__(
-        self,
-        identifier: str,
-        illumination_type: Optional[IlluminationCode] = None,
-        description: Optional[str] = None,
-        illumination: Optional[Union[float, IlluminationColorCode]] = None,
-        icc_profile: Optional[bytes] = None,
-        objective_lens_power: Optional[float] = None,
-    ):
-        self._identifier = DicomStringAttribute(
-            "OpticalPathIdentifier", True, identifier
-        )
-        self._illumination_type = DicomCodeAttribute(
-            "IlluminationTypeCodeSequence",
-            True,
-            illumination_type.code if illumination_type is not None else None,
-            lambda: IlluminationCode.from_code_meaning("Brightfield illumination").code,
-            self._code_to_code_sequence_item,
-        )
-        self._description = DicomStringAttribute(
-            "OpticalPathDescription", False, description
-        )
-        if isinstance(illumination, float):
-            self._illumination = DicomNumberAttribute(
-                "IlluminationWaveLength", True, illumination
-            )
-        else:
-            self._illumination = DicomCodeAttribute(
-                "IlluminationColorCodeSequence",
-                True,
-                illumination.code if illumination is not None else None,
-                lambda: IlluminationColorCode.from_code_meaning("Full Spectrum").code,
-                self._code_to_code_sequence_item,
-            )
-        self._icc_profile = DicomByteAttribute(
-            "ICCProfile",
-            True,
-            icc_profile,
-        )
-        self._objective_lens_power = DicomNumberAttribute(
-            "ObjectiveLensPower", False, objective_lens_power
-        )
-        self._dicom_attributes = [
-            self._identifier,
-            self._illumination_type,
-            self._description,
-            self._illumination,
-            self._icc_profile,
-            self._objective_lens_power,
-        ]
+    identifier: Optional[str] = None
+    description: Optional[str] = None
+    illumination_type: Optional[IlluminationCode] = FieldFactory.concept_code_field(
+        IlluminationCode
+    )
+    illumination: Optional[
+        Union[float, IlluminationColorCode]
+    ] = FieldFactory.float_or_concent_code_field(IlluminationColorCode)
+    icc_profile: Optional[bytes] = None
+    objective_lens_power: Optional[float] = None
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         if "OpticalPathSequence" not in dataset:
             dataset.OpticalPathSequence = DicomSequence()
         optical_path = Dataset()
-        self._insert_dicom_attributes_into_dataset(optical_path)
+        dicom_attributes: List[DicomAttribute] = [
+            DicomStringAttribute(
+                "OpticalPathIdentifier",
+                True,
+                self.identifier,
+                lambda: self._generate_unique_identifier(dataset.OpticalPathSequence),
+            ),
+            DicomCodeAttribute(
+                "IlluminationTypeCodeSequence",
+                True,
+                self.illumination_type.code
+                if self.illumination_type is not None
+                else None,
+                IlluminationCode("Brightfield illumination").code,
+            ),
+            DicomStringAttribute("OpticalPathDescription", False, self.description),
+            DicomByteAttribute(
+                "ICCProfile",
+                True,
+                self.icc_profile,
+            ),
+            DicomNumberAttribute(
+                "ObjectiveLensPower", False, self.objective_lens_power
+            ),
+        ]
+        if isinstance(self.illumination, float):
+            dicom_attributes.append(
+                DicomNumberAttribute("IlluminationWaveLength", True, self.illumination)
+            )
+        else:
+            dicom_attributes.append(
+                DicomCodeAttribute(
+                    "IlluminationColorCodeSequence",
+                    True,
+                    self.illumination.code if self.illumination is not None else None,
+                    IlluminationColorCode("Full Spectrum").code,
+                )
+            )
+        self._insert_dicom_attributes_into_dataset(optical_path, dicom_attributes)
         dataset.OpticalPathSequence.append(optical_path)
+
+    @staticmethod
+    def _generate_unique_identifier(optical_paths: DicomSequence) -> str:
+        identifiers = [
+            optical_path.OpticalPathIdentifier for optical_path in optical_paths
+        ]
+        identifier = 0
+        while identifier in identifiers:
+            identifier += 1
+        return str(identifier)

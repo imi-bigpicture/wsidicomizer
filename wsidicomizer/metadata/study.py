@@ -1,19 +1,27 @@
+"""Study model."""
+from dataclasses import dataclass
 import datetime
-from typing import Optional
+from typing import Dict, List, Optional
 
 from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base import (
-    DicomDateTimeAttribute,
-    DicomModelBase,
-    DicomStringAttribute,
-    DicomUidAttribute,
+from wsidicomizer.metadata.model_base import (
+    ModelBase,
 )
 
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomAttribute,
+    DicomUidAttribute,
+    DicomDateTimeAttribute,
+    DicomStringAttribute,
+)
+from wsidicomizer.metadata.fields import FieldFactory
 
-class Study(DicomModelBase):
+
+@dataclass
+class Study(ModelBase):
     """
     Study metadata.
 
@@ -22,25 +30,27 @@ class Study(DicomModelBase):
     https://dicom.nema.org/medical/Dicom/current/output/chtml/part03/sect_C.7.2.html
     """
 
-    def __init__(
-        self,
-        uid: Optional[UID] = None,
-        identifier: Optional[str] = None,
-        date: Optional[datetime.date] = None,
-        time: Optional[datetime.time] = None,
-        accession_number: Optional[str] = None,
-        referring_physician_name: Optional[str] = None,
-    ):
-        self._uid = DicomUidAttribute("StudyInstanceUID", True, uid, generate_uid)
-        self._identifier = DicomStringAttribute("StudyId", True, identifier)
-        self._date = DicomDateTimeAttribute("StudyDate", True, date)
-        self._time = DicomDateTimeAttribute("StudyTime", True, time)
-        self._accession_number = DicomStringAttribute(
-            "AccessionNumber", True, accession_number
-        )
-        self._referring_physician_name = DicomStringAttribute(
-            "ReferringPhysicianName", True, referring_physician_name
-        )
+    uid: Optional[UID] = FieldFactory.uid_field()
+    identifier: Optional[str] = None
+    date: Optional[datetime.date] = FieldFactory.date_field()
+    time: Optional[datetime.time] = FieldFactory.time_field()
+    accession_number: Optional[str] = None
+    referring_physician_name: Optional[str] = None
+    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        self._insert_dicom_attributes_into_dataset(dataset)
+        dicom_attributes: List[DicomAttribute] = [
+            DicomUidAttribute("StudyInstanceUID", True, self.uid, generate_uid),
+            DicomStringAttribute("StudyID", True, self.identifier),
+            DicomDateTimeAttribute("StudyDate", True, self.date),
+            DicomDateTimeAttribute("StudyTime", True, self.time),
+            DicomStringAttribute(
+                "AccessionNumber",
+                True,
+                self.accession_number,
+            ),
+            DicomStringAttribute(
+                "ReferringPhysicianName", True, self.referring_physician_name
+            ),
+        ]
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)

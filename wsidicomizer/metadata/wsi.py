@@ -1,19 +1,27 @@
+"""Complete WSI model."""
 from dataclasses import dataclass, field
-from typing import List, Sequence
+from typing import Callable, Dict, List, Optional, Tuple
+from dataclasses_json import dataclass_json
 
 from pydicom import Dataset
-from pydicom.sequence import Sequence as DicomSequence
-from pydicom.uid import UID, generate_uid
-from wsidicom.instance import ImageType, WsiDataset
-from wsidicomizer.metadata.optical_path import OpticalPath
+from pydicom.uid import UID, generate_uid, VLWholeSlideMicroscopyImageStorage
+from wsidicom.instance import ImageType
+from wsidicomizer.metadata.image import Image
 
-from wsidicomizer.metadata.base import DicomModelBase
+from wsidicomizer.metadata.model_base import ModelBase
 from wsidicomizer.metadata.equipment import Equipment
+from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.label import Label
+from wsidicomizer.metadata.optical_path import OpticalPath
 from wsidicomizer.metadata.patient import Patient
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.slide import Slide
 from wsidicomizer.metadata.study import Study
+from wsidicomizer.metadata.dicom_attribute import (
+    DicomSequenceAttribute,
+    DicomStringAttribute,
+    DicomUidAttribute,
+)
 
 # TODO figure out how metadata defined here can override or be overriden by
 # *ImageMeta*. Suggestion is to have a bool flag on each module, indicating if the
@@ -50,68 +58,66 @@ from wsidicomizer.metadata.study import Study
 
 
 @dataclass
-class WsiMetadata:
-    study: Study = field(default_factory=lambda: Study())
-    series: Series = field(default_factory=lambda: Series())
-    patient: Patient = field(default_factory=lambda: Patient())
-    equipment: Equipment = field(default_factory=lambda: Equipment())
+class WsiMetadata(ModelBase):
+    study: Optional[Study] = None
+    series: Optional[Series] = None
+    patient: Optional[Patient] = None
+    equipment: Optional[Equipment] = None
     optical_paths: List[OpticalPath] = field(default_factory=lambda: list())
-    slide: Slide = field(default_factory=lambda: Slide())
-    label: Label = field(default_factory=lambda: Label())
-    frame_of_reference_uid: UID = generate_uid()
-    dimension_organization_uid: UID = generate_uid()
-    override: Sequence[str] = field(default_factory=list)
+    slide: Optional[Slide] = None
+    label: Optional[Label] = None
+    image: Optional[Image] = None
+    frame_of_reference_uid: Optional[UID] = None  # FieldFactory.uid_field()
+    dimension_organization_uid: Optional[UID] = None  # FieldFactory.uid_field()
+    overrides: Optional[Dict[str, bool]] = None
 
     def to_dataset(
         self,
         image_type: ImageType,
-        image_metadata: "WsiMetadata",
-    ) -> WsiDataset:
+    ) -> Dataset:
         dataset = Dataset()
-        # SOP common module
-        dataset.SOPClassUID = "1.2.840.10008.5.1.4.1.1.77.1.6"
+        self.insert_into_dataset(dataset, image_type)
+        return dataset
 
-        # General series and Whole slide Microscopy modules
-        dataset.Modality = "SM"
-
-        # Frame of reference module
-        dataset.FrameOfReferenceUID = self.frame_of_reference_uid
-        dataset.PositionReferenceIndicator = "SLIDE_CORNER"
-
-        # Acquisition context module (empty)
-        dataset.AcquisitionContextSequence = DicomSequence()
-
-        # Multi-frame Dimension module
-        dimension_organization_sequence = Dataset()
-        dimension_organization_sequence.DimensionOrganizationUID = (
-            self.dimension_organization_uid
-        )
-        dataset.DimensionOrganizationSequence = DicomSequence(
-            [dimension_organization_sequence]
-        )
-
-        # Whole slide micropscopy image module (most filled when importing file)
-        dataset.VolumetricProperties = "VOLUME"
-
-        # User defined modules
-        modules: List[DicomModelBase] = [
-            self.study,
-            self.series,
-            self.patient,
-            self.equipment,
-            self.slide,
-            self.label,
+    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
+        dicom_attributes = [
+            DicomUidAttribute("SOPClassUID", True, VLWholeSlideMicroscopyImageStorage),
+            DicomStringAttribute("Modality", True, "SM"),
+            DicomUidAttribute(
+                "FrameOfReferenceUID", True, self.frame_of_reference_uid, generate_uid
+            ),
+            DicomStringAttribute("PositionReferenceIndicator", True, "SLIDE_CORNER"),
+            DicomStringAttribute("VolumetricProperties", True, "VOLUME"),
+            DicomSequenceAttribute("AcquisitionContextSequence", True, []),
+            DicomSequenceAttribute(
+                "DimensionOrganizationSequence",
+                True,
+                [
+                    DicomUidAttribute(
+                        "DimensionOrganizationUID",
+                        True,
+                        self.dimension_organization_uid,
+                        generate_uid,
+                    ),
+                ],
+            ),
         ]
-        for module in modules:
-            module.insert_into_dataset(dataset, image_type)
+        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 
-        # Optical paths
-        for optical_path in self.optical_paths:
-            optical_path.insert_into_dataset(dataset, image_type)
-
-        # for property_name, property_value in image_metadata.properties.items():
-        #     if property_name in self.override:
-        #         continue
-        #     setattr(dataset, property_name, property_value)
-
-        return WsiDataset(dataset)
+        models: List[Tuple[Optional[ModelBase], Optional[Callable[[], ModelBase]]]] = [
+            (self.study, Study),
+            (self.series, Series),
+            (self.patient, Patient),
+            (self.equipment, Equipment),
+            (self.slide, Slide),
+            (self.label, Label),
+        ]
+        if len(self.optical_paths) > 0:
+            models.extend([(optical_path, None) for optical_path in self.optical_paths])
+        else:
+            models.append((None, OpticalPath))
+        for model, model_default_factory in models:
+            if model is None and model_default_factory is not None:
+                model = model_default_factory()
+            if model is not None:
+                model.insert_into_dataset(dataset, image_type)

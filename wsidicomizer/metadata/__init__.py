@@ -16,11 +16,15 @@
 
 from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.image import Image, ImageCoordinateSystem
+from wsidicomizer.metadata.image import (
+    Image,
+    ImageCoordinateSystem,
+    ExtendedDepthOfField,
+)
 from wsidicomizer.metadata.label import Label
 from wsidicomizer.metadata.optical_path import OpticalPath
 from wsidicomizer.metadata.patient import Patient, PatientDeIdentification
 from wsidicomizer.metadata.sample import Block, Specimen, SimpleSample
 from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.slide import Slide, SampleLocation
+from wsidicomizer.metadata.slide import Slide, SlideSample
 from wsidicomizer.metadata.study import Study
