@@ -1,21 +1,11 @@
 """Slide model."""
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple, Union
-from dataclasses_json import dataclass_json
-
-from highdicom import (
-    SpecimenDescription,
-    SpecimenPreparationStep,
-    SpecimenSampling,
-    SpecimenStaining,
-)
+from typing import Dict, Iterable, List, Optional
 from pydicom import Dataset
-from pydicom.uid import generate_uid
 from pydicom.sequence import Sequence as DicomSequence
 from wsidicom.conceptcode import (
     ContainerComponentTypeCode,
     ContainerTypeCode,
-    SpecimenSamplingProcedureCode,
     SpecimenStainsCode,
 )
 from wsidicom.instance import ImageType
@@ -28,8 +18,8 @@ from wsidicomizer.metadata.dicom_attribute import (
 )
 from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.model_base import ModelBase
-from wsidicomizer.metadata.sample import SlideSample
 
+from wsidicomizer.metadata.sample import SlideSample
 
 
 @dataclass
@@ -77,59 +67,17 @@ class Slide(ModelBase):
         if self.samples is not None:
             dataset.SpecimenDescriptionSequence = DicomSequence(
                 [
-                    self._sample_to_description(
-                        dataset.ContainerIdentifier,
-                        slide_sample.sample,
-                        slide_sample.sampling_method,
-                        slide_sample.position,
-                    )
+                    slide_sample.to_description(self.stains)
                     for slide_sample in self.samples
                 ]
             )
 
-    def _sample_to_description(
-        self,
-        slide_identifier: str,
-        sample: Sample,
-        sampling_method: Optional[SpecimenSamplingProcedureCode],
-        position: Optional[Union[str, Tuple[float, float, float]]],
-    ) -> SpecimenDescription:
-        """Create a SpecimenDescription item for a sample."""
-        if sampling_method is None:
-            sampling_method = SpecimenSamplingProcedureCode("Block sectioning")
-        sample_uid = generate_uid() if sample.uid is None else sample.uid
-        return SpecimenDescription(
-            specimen_id=sample.identifier,
-            specimen_uid=sample_uid,
-            specimen_preparation_steps=self._sample_to_preparation_steps(
-                slide_identifier, sample, sampling_method
-            ),
-            specimen_location=position,
-            primary_anatomic_structures=[
-                anatomical_site for anatomical_site in sample.anatomical_sites
-            ],
-        )
+    @classmethod
+    def from_dataset(cls, dataset: Dataset):
+        identifier = dataset.ContainerIdentifier
+        samples = [
+            SlideSample.from_dataset(specimen)
+            for specimen in dataset.SpecimenDescriptionSequence
+        ]
 
-    def _sample_to_preparation_steps(
-        self,
-        slide_identifier: str,
-        sample: Sample,
-        sampling_method: SpecimenSamplingProcedureCode,
-    ) -> List[SpecimenPreparationStep]:
-        """Create SpecimenPreparationStep items for a sample."""
-        sample_preparation_steps: List[SpecimenPreparationStep] = []
-        sample_preparation_steps.extend(sample.to_preparation_steps())
-        slide_sample_step = SpecimenPreparationStep(
-            slide_identifier,
-            processing_procedure=sample.to_sampling_step(sampling_method),
-        )
-        sample_preparation_steps.append(slide_sample_step)
-        if self.stains is not None:
-            slide_staining_step = SpecimenPreparationStep(
-                slide_identifier,
-                processing_procedure=SpecimenStaining(
-                    [stain.code for stain in self.stains]
-                ),
-            )
-            sample_preparation_steps.append(slide_staining_step)
-        return sample_preparation_steps
+        return cls(identifier=identifier, samples=samples)

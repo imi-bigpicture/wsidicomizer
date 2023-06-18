@@ -54,3 +54,14 @@ class Study(ModelBase):
             ),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "Study":
+        return cls(
+            dataset.StudyInstanceUID,
+            dataset.StudyID,
+            dataset.StudyDate,
+            dataset.StudyTime,
+            dataset.AccessionNumber,
+            dataset.ReferringPhysicianName,
+        )

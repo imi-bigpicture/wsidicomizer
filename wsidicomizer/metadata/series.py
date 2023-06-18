@@ -37,3 +37,7 @@ class Series(ModelBase):
             DicomNumberAttribute("SeriesNumber", True, self.number),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "Series":
+        return cls(dataset.SeriesInstanceUID, dataset.SeriesNumber)

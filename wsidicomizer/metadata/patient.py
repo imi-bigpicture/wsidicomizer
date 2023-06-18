@@ -1,7 +1,7 @@
 """Patient model."""
 import datetime
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, Iterable, List, Literal, Optional, Union
 
 from pydicom import Dataset
 from pydicom.sr.coding import Code
@@ -23,8 +23,8 @@ from wsidicomizer.metadata.model_base import ModelBase
 class PatientDeIdentification(ModelBase):
     identity_removed: bool
     methods: Optional[
-        List[Union[str, Code]]
-    ] = None  # FieldFactory.list_string_or_code_field()
+        Iterable[Union[str, Code]]
+    ] = FieldFactory.list_string_or_code_field()
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -49,6 +49,28 @@ class PatientDeIdentification(ModelBase):
                 "must be given."
             )
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "PatientDeIdentification":
+        identity_removed = dataset.PatientIdentityRemoved
+        methods: List[Union[str, Code]] = [
+            method for method in dataset.DeidentificationMethod
+        ]
+        methods.extend(
+            [
+                Code(
+                    method.CodeValue,
+                    method.CodingSchemeDesignator,
+                    method.CodeMeaning,
+                    getattr(method, "CodeSchemeVersion", None),
+                )
+                for method in dataset.DeidentificationMethodCodeSequence
+            ]
+        )
+        if identity_removed and len(methods) == 0:
+            # TODO raise or warning?
+            pass
+        return cls(identity_removed, methods)
 
 
 @dataclass
@@ -95,3 +117,27 @@ class Patient(ModelBase):
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
         if self.de_identification is not None:
             self.de_identification.insert_into_dataset(dataset, image_type)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "Patient":
+        if hasattr(dataset, "PatientSpeciesDescription"):
+            species = dataset.PatientSpeciesDescription
+        elif hasattr(dataset, "PatientSpeciesCodeSequence"):
+            species = Code(
+                dataset.PatientSpeciesCodeSequence[0].CodeValue,
+                dataset.PatientSpeciesCodeSequence[0].CodingSchemeDesignator,
+                dataset.PatientSpeciesCodeSequence[0].CodeMeaning,
+                getattr(
+                    dataset.PatientSpeciesCodeSequence[0], "CodeSchemeVersion", None
+                ),
+            )
+        else:
+            species = None
+        return cls(
+            dataset.PatientName,
+            dataset.PatientID,
+            dataset.PatientBirthDate,
+            dataset.PatientSex,
+            species,
+            PatientDeIdentification.from_dataset(dataset),
+        )

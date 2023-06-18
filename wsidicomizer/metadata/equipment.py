@@ -57,3 +57,12 @@ class Equipment(ModelBase):
             ),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "Equipment":
+        return cls(
+            dataset.Manufacturer,
+            dataset.ManufacturerModelName,
+            dataset.DeviceSerialNumber,
+            dataset.SoftwareVersions,
+        )

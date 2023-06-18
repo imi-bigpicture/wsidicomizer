@@ -52,3 +52,7 @@ class Label(ModelBase):
                 ]
             )
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
+
+    @classmethod
+    def from_dataset(cls, dataset: Dataset) -> "Label":
+        raise NotImplementedError()
