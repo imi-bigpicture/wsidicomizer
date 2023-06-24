@@ -17,7 +17,6 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomDateTimeAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
 
 
 @dataclass
@@ -30,10 +29,10 @@ class Study(ModelBase):
     https://dicom.nema.org/medical/Dicom/current/output/chtml/part03/sect_C.7.2.html
     """
 
-    uid: Optional[UID] = FieldFactory.uid_field()
+    uid: Optional[UID] = None
     identifier: Optional[str] = None
-    date: Optional[datetime.date] = FieldFactory.date_field()
-    time: Optional[datetime.time] = FieldFactory.time_field()
+    date: Optional[datetime.date] = None
+    time: Optional[datetime.time] = None
     accession_number: Optional[str] = None
     referring_physician_name: Optional[str] = None
     overrides: Optional[Dict[str, bool]] = None

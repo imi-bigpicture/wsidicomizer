@@ -1,7 +1,7 @@
 import datetime
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 from highdicom import (
     IssuerOfIdentifier,
@@ -60,23 +60,25 @@ consider making a PR.
 """
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class SpecimenIdentifier:
-    identifier: str
-    issuer: Optional[str]
-    issuer_type: Optional[Union[str, UniversalEntityIDTypeValues]]
+    """A specimen identifier including an optional issuer."""
+
+    value: str
+    issuer: Optional[str] = None
+    issuer_type: Optional[Union[str, UniversalEntityIDTypeValues]] = None
 
     def __eq__(self, other: Any):
         if isinstance(other, str):
-            return self.identifier == other and self.issuer is None
+            return self.value == other and self.issuer is None
         if isinstance(other, SpecimenIdentifier):
-            return self.identifier == other.identifier and self.issuer == other.issuer
+            return self.value == other.value and self.issuer == other.issuer
         return False
 
     def to_identifier_and_issuer(self) -> Tuple[str, Optional[IssuerOfIdentifier]]:
         if self.issuer is None:
-            return self.identifier, None
-        return self.identifier, IssuerOfIdentifier(self.issuer, self.issuer_type)
+            return self.value, None
+        return self.value, IssuerOfIdentifier(self.issuer, self.issuer_type)
 
     @classmethod
     def get_identifier_and_issuer(
@@ -101,10 +103,10 @@ class Sampling(PreparationStep):
     """The sampling of a specimen into a new specimen."""
 
     sample_identifier: Union[str, SpecimenIdentifier]
-    sampling_method: SpecimenSamplingProcedureCode
-    parent_subspecimens: Optional[Iterable[Union[str, SpecimenIdentifier]]] = None
-    sampling_datetime: Optional[datetime.datetime] = None
-    sampling_description: Optional[str] = None
+    method: SpecimenSamplingProcedureCode
+    sub_sampling: Optional[Iterable[Union[str, SpecimenIdentifier]]] = None
+    date_time: Optional[datetime.datetime] = None
+    description: Optional[str] = None
 
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
         identifier, issuer = SpecimenIdentifier.get_identifier_and_issuer(
@@ -116,14 +118,14 @@ class Sampling(PreparationStep):
         return SpecimenPreparationStep(
             specimen_id=identifier,
             processing_procedure=SpecimenSampling(
-                method=self.sampling_method.code,
+                method=self.method.code,
                 parent_specimen_id=parent_identifier,
                 parent_specimen_type=specimen.type.code,
                 issuer_of_parent_specimen_id=parent_issuer,
             ),
-            # processing_datetime=self.sampling_datetime,
+            # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
-            processing_description=self.sampling_description,
+            processing_description=self.description,
         )
 
 
@@ -131,8 +133,8 @@ class Sampling(PreparationStep):
 class Collection(PreparationStep):
     """The collection of a specimen."""
 
-    extraction_method: SpecimenCollectionProcedureCode
-    extraction_datetime: Optional[datetime.datetime] = None
+    method: SpecimenCollectionProcedureCode
+    date_time: Optional[datetime.datetime] = None
     description: Optional[str] = None
 
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
@@ -141,10 +143,8 @@ class Collection(PreparationStep):
         )
         return SpecimenPreparationStep(
             specimen_id=identifier,
-            processing_procedure=SpecimenCollection(
-                procedure=self.extraction_method.code
-            ),
-            # processing_datetime=self.extraction_datetime,
+            processing_procedure=SpecimenCollection(procedure=self.method.code),
+            # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
             processing_description=self.description,
         )
@@ -154,8 +154,8 @@ class Collection(PreparationStep):
 class Processing(PreparationStep):
     """Other processing steps made on a specimen."""
 
-    processing_method: SpecimenPreparationStepsCode
-    processing_datetime: Optional[datetime.datetime] = None
+    method: SpecimenPreparationStepsCode
+    date_time: Optional[datetime.datetime] = None
 
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
         identifier, issuer = SpecimenIdentifier.get_identifier_and_issuer(
@@ -163,10 +163,8 @@ class Processing(PreparationStep):
         )
         return SpecimenPreparationStep(
             specimen_id=identifier,
-            processing_procedure=SpecimenProcessing(
-                description=self.processing_method.code
-            ),
-            # processing_datetime=self.processing_datetime,
+            processing_procedure=SpecimenProcessing(description=self.method.code),
+            # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
         )
 
@@ -174,7 +172,7 @@ class Processing(PreparationStep):
 @dataclass
 class Embedding(PreparationStep):
     medium: SpecimenEmbeddingMediaCode
-    embedding_datetime: Optional[datetime.datetime] = None
+    date_time: Optional[datetime.datetime] = None
 
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
         identifier, issuer = SpecimenIdentifier.get_identifier_and_issuer(
@@ -184,7 +182,7 @@ class Embedding(PreparationStep):
             specimen_id=identifier,
             processing_procedure=SpecimenProcessing(description="Embedding"),
             embedding_medium=self.medium.code,
-            # processing_datetime=self.embedding_datetime,
+            # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
         )
 
@@ -192,7 +190,7 @@ class Embedding(PreparationStep):
 @dataclass
 class Fixation(PreparationStep):
     fixative: SpecimenFixativesCode
-    fixation_datetime: Optional[datetime.datetime] = None
+    date_time: Optional[datetime.datetime] = None
 
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
         identifier, issuer = SpecimenIdentifier.get_identifier_and_issuer(
@@ -202,9 +200,15 @@ class Fixation(PreparationStep):
             specimen_id=identifier,
             processing_procedure=SpecimenProcessing(description="Fixation"),
             embedding_medium=self.fixative.code,
-            # processing_datetime=self.fixation_datetime,
+            # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
         )
+
+
+@dataclass
+class SampledFrom:
+    specimen: "Specimen"
+    sub_sampling: Optional[Iterable[Union[str, SpecimenIdentifier]]] = None
 
 
 class Specimen(metaclass=ABCMeta):
@@ -280,7 +284,7 @@ class SampledSpecimen(Specimen):
         identifier: Union[str, SpecimenIdentifier],
         type: AnatomicPathologySpecimenTypesCode,
         sampling_method: SpecimenSamplingProcedureCode,
-        sampled_from: Iterable[Tuple["Specimen", Optional[Iterable[str]]]],
+        sampled_from: Iterable[SampledFrom],
         steps: Iterable[PreparationStep],
         sampling_datetime: Optional[datetime.datetime] = None,
         sampling_description: Optional[str] = None,
@@ -288,30 +292,78 @@ class SampledSpecimen(Specimen):
         super().__init__(identifier, type, steps)
         self.sampled_from = sampled_from
         self.sampling_method = sampling_method
-        for (
-            parent_specimen,
-            parent_specimen_subspecimen_identifiers,
-        ) in self.sampled_from:
-            if parent_specimen_subspecimen_identifiers is not None:
-                if not isinstance(parent_specimen, SampledSpecimen):
-                    raise ValueError()
-                # Should throw if parent specimen does not have all the sampled from subspecimens
+        for sampling in self.sampled_from:
+            if sampling.sub_sampling is not None:
+                if not isinstance(sampling.specimen, SampledSpecimen):
+                    raise ValueError(
+                        "Can only define sub-sampling for sampled specimens"
+                    )
+                missing_sub_sampling = sampling.specimen.get_missing_sub_sampling(
+                    sampling.sub_sampling
+                )
+                if missing_sub_sampling is not None:
+                    raise ValueError(
+                        f"Specimen {sampling.specimen.identifier} was not sampled from "
+                        f"given sub-sampling {missing_sub_sampling}"
+                    )
+
             sampling_step = Sampling(
                 sample_identifier=self.identifier,
-                sampling_method=self.sampling_method,
-                parent_subspecimens=parent_specimen_subspecimen_identifiers,
-                sampling_datetime=sampling_datetime,
-                sampling_description=sampling_description,
+                method=self.sampling_method,
+                sub_sampling=sampling.sub_sampling,
+                date_time=sampling_datetime,
+                description=sampling_description,
             )
-            parent_specimen.add(sampling_step)
+            sampling.specimen.add(sampling_step)
 
     def get_steps_for_parent(self) -> List[SpecimenPreparationStep]:
         """Return formatted steps for the specimen the sample was sampled from."""
         return [
             step
-            for parent, _ in self.sampled_from
-            for step in parent.to_preparation_steps_for_sample(self.identifier)
+            for sample in self.sampled_from
+            for step in sample.specimen.to_preparation_steps_for_sample(self.identifier)
         ]
+
+    def get_samplings(self) -> Dict[Union[str, SpecimenIdentifier], Specimen]:
+        """Return a dictionary containing this specimen and all recursive sampled specimens."""
+        samplings: Dict[Union[str, SpecimenIdentifier], Specimen] = {
+            self.identifier: self
+        }
+        for sampling in self.sampled_from:
+            if not isinstance(sampling.specimen, SampledSpecimen):
+                samplings.update({sampling.specimen.identifier: sampling.specimen})
+            else:
+                samplings.update(sampling.specimen.get_samplings())
+        return samplings
+
+    def sample(
+        self,
+        sub_samplings: Optional[Iterable[Union[str, SpecimenIdentifier]]] = None,
+    ) -> SampledFrom:
+        missing_sub_sampling = self.get_missing_sub_sampling(sub_samplings)
+        if missing_sub_sampling is not None:
+            raise ValueError(
+                "Could not create sampling as specimen was not sampled "
+                f"from {missing_sub_sampling}"
+            )
+        return SampledFrom(self, sub_samplings)
+
+    def get_missing_sub_sampling(
+        self, sub_samplings: Optional[Iterable[Union[str, SpecimenIdentifier]]]
+    ) -> Optional[Union[str, SpecimenIdentifier]]:
+        if sub_samplings is None:
+            return None
+        sub_sampling_identifiers = [
+            sample.specimen.identifier for sample in self.sampled_from
+        ]
+        try:
+            return next(
+                sub_sampling
+                for sub_sampling in sub_samplings
+                if sub_sampling not in sub_sampling_identifiers
+            )
+        except StopIteration:
+            return None
 
 
 @dataclass
@@ -340,6 +392,9 @@ class ExtractedSpecimen(Specimen):
             )
         super().__init__(identifier=self.identifier, type=self.type, steps=self.steps)
 
+    def sample(self) -> SampledFrom:
+        return SampledFrom(self)
+
 
 @dataclass
 class Sample(SampledSpecimen):
@@ -348,7 +403,7 @@ class Sample(SampledSpecimen):
     identifier: Union[str, SpecimenIdentifier]
     type: AnatomicPathologySpecimenTypesCode
     sampling_method: SpecimenSamplingProcedureCode
-    sampled_from: Iterable[Tuple["Specimen", Optional[Iterable[str]]]]
+    sampled_from: Iterable[SampledFrom]
     sampling_datetime: Optional[datetime.datetime] = None
     sampling_description: Optional[str] = None
     steps: Iterable[PreparationStep] = field(default_factory=list)
@@ -366,15 +421,29 @@ class Sample(SampledSpecimen):
 
 
 @dataclass
+class SlideSamplePosition:
+    """The position of a sample on a slide. `x` and `y` in mm and `z` in um."""
+
+    x: float
+    y: float
+    z: float
+
+    def to_tuple(self) -> Tuple[float, float, float]:
+        return (self.x, self.y, self.z)
+
+
+@dataclass
 class SlideSample(SampledSpecimen):
+    """A sample that has been placed on a slide."""
+
     identifier: Union[str, SpecimenIdentifier]
     sampling_method: SpecimenSamplingProcedureCode
-    sampled_from: Iterable[Tuple["Specimen", Optional[Iterable[str]]]]
+    sampled_from: Iterable[SampledFrom]
     anatomical_sites: Iterable[Code]
     sampling_datetime: Optional[datetime.datetime] = None
     sampling_description: Optional[str] = None
     uid: Optional[UID] = None
-    position: Optional[Union[str, Tuple[float, float, float]]] = None
+    position: Optional[Union[str, SlideSamplePosition]] = None
     steps: List[PreparationStep] = field(init=False, default_factory=list)
 
     def __post_init__(self):
@@ -406,11 +475,18 @@ class SlideSample(SampledSpecimen):
                 issuer_of_specimen_id=issuer,
             )
             sample_preparation_steps.append(slide_staining_step)
+        position = None
+        if isinstance(self.position, str):
+            position = self.position
+        elif isinstance(self.position, SlideSamplePosition):
+            position = self.position.to_tuple()
+        else:
+            position = None
         return SpecimenDescription(
             specimen_id=identifier,
             specimen_uid=sample_uid,
             specimen_preparation_steps=sample_preparation_steps,
-            specimen_location=self.position,
+            specimen_location=position,
             primary_anatomic_structures=[
                 anatomical_site for anatomical_site in self.anatomical_sites
             ],

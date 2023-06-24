@@ -12,7 +12,6 @@ from typing import (
     TypeVar,
 )
 
-from dataclasses_json import dataclass_json
 from pydicom import Dataset
 from wsidicom.instance import ImageType
 
@@ -21,7 +20,6 @@ from wsidicomizer.metadata.dicom_attribute import DicomAttribute
 ModelBaseType = TypeVar("ModelBaseType", bound="ModelBase")
 
 
-@dataclass_json
 @dataclass
 class ModelBase(metaclass=ABCMeta):
     """Base model.

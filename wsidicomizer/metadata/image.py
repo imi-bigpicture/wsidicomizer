@@ -1,8 +1,9 @@
 """Image model."""
 import datetime
+from enum import Enum
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from pydicom import Dataset
 from pydicom import Sequence as DicomSequence
@@ -18,7 +19,11 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomNumberAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
+
+
+class FocusMethod(Enum):
+    AUTO = "auto"
+    MANUAL = "manual"
 
 
 @dataclass
@@ -77,8 +82,8 @@ class Image(ModelBase):
     https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.8.12.8.html
     """
 
-    acquisition_datetime: Optional[datetime.datetime] = FieldFactory.datetime_field()
-    focus_method: Optional[Literal["AUTO", "MANUAL"]] = None
+    acquisition_datetime: Optional[datetime.datetime] = None
+    focus_method: Optional[FocusMethod] = None
     extended_depth_of_field: Optional[ExtendedDepthOfField] = None
     image_coordinate_system: Optional[ImageCoordinateSystem] = None
     overrides: Optional[Dict[str, bool]] = None

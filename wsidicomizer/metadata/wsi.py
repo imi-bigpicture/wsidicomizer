@@ -1,7 +1,6 @@
 """Complete WSI model."""
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
-from dataclasses_json import dataclass_json
 
 from pydicom import Dataset
 from pydicom.uid import UID, generate_uid, VLWholeSlideMicroscopyImageStorage
@@ -10,7 +9,6 @@ from wsidicomizer.metadata.image import Image
 
 from wsidicomizer.metadata.model_base import ModelBase
 from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.label import Label
 from wsidicomizer.metadata.optical_path import OpticalPath
 from wsidicomizer.metadata.patient import Patient
@@ -67,8 +65,8 @@ class WsiMetadata(ModelBase):
     slide: Optional[Slide] = None
     label: Optional[Label] = None
     image: Optional[Image] = None
-    frame_of_reference_uid: Optional[UID] = None  # FieldFactory.uid_field()
-    dimension_organization_uid: Optional[UID] = None  # FieldFactory.uid_field()
+    frame_of_reference_uid: Optional[UID] = None
+    dimension_organization_uid: Optional[UID] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def to_dataset(

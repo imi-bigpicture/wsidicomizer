@@ -1,7 +1,7 @@
 """Optical path model."""
 import struct
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Generic, Iterable, List, Optional, Type, TypeVar, Union
 
 import numpy as np
@@ -23,7 +23,6 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomNumberAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.model_base import ModelBase
 
 
@@ -205,7 +204,9 @@ class Lut:
 
 
 OpticalFilterCodeType = TypeVar(
-    "OpticalFilterCodeType", LightPathFilterCode, ImagePathFilterCode
+    "OpticalFilterCodeType",
+    LightPathFilterCode,
+    ImagePathFilterCode,
 )
 OpticalFilterType = TypeVar("OpticalFilterType", bound="OpticalFilter")
 
@@ -248,7 +249,7 @@ class OpticalFilter(Generic[OpticalFilterCodeType], metaclass=ABCMeta):
         return ds
 
 
-class LightPathFilter(OpticalFilter):
+class LightPathFilter(OpticalFilter[LightPathFilterCode]):
     """Set of light path filter conditions for optical path"""
 
     @classmethod
@@ -277,7 +278,7 @@ class LightPathFilter(OpticalFilter):
 
 
 @dataclass
-class ImagePathFilter(OpticalFilter):
+class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
     """Set of image path filter conditions for optical path"""
 
     @classmethod
@@ -375,12 +376,8 @@ class OpticalPath(ModelBase):
 
     identifier: Optional[str] = None
     description: Optional[str] = None
-    illumination_type: Optional[IlluminationCode] = FieldFactory.concept_code_field(
-        IlluminationCode
-    )
-    illumination: Optional[
-        Union[float, IlluminationColorCode]
-    ] = FieldFactory.float_or_concent_code_field(IlluminationColorCode)
+    illumination_type: Optional[IlluminationCode] = None
+    illumination: Optional[Union[float, IlluminationColorCode]] = None
     icc_profile: Optional[bytes] = None
     lut: Optional[Lut] = None
     light_path_filter: Optional[LightPathFilter] = None
@@ -413,10 +410,22 @@ class OpticalPath(ModelBase):
                 True,
                 self.icc_profile,
             ),
-            DicomNumberAttribute(
-                "ObjectiveLensPower", False, self.objective_lens_power
-            ),
         ]
+        if self.lenses is not None:
+            dicom_attributes.extend(
+                # TODO check dicom tags for these, add lenses.
+                (
+                    DicomNumberAttribute(
+                        "ObjectiveLensPower", False, self.lenses.objective_power
+                    ),
+                    DicomNumberAttribute(
+                        "CondenserLensPower", False, self.lenses.condenser_power
+                    ),
+                    DicomNumberAttribute(
+                        "ObjectiveNa", False, self.lenses.objective_na
+                    ),
+                )
+            )
         if isinstance(self.illumination, float):
             dicom_attributes.append(
                 DicomNumberAttribute("IlluminationWaveLength", True, self.illumination)

@@ -1,6 +1,7 @@
 """Patient model."""
 import datetime
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, Iterable, List, Literal, Optional, Union
 
 from pydicom import Dataset
@@ -15,16 +16,19 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomListStringAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.model_base import ModelBase
+
+
+class PatientSex(Enum):
+    F = "female"
+    M = "male"
+    O = "other"
 
 
 @dataclass
 class PatientDeIdentification(ModelBase):
     identity_removed: bool
-    methods: Optional[
-        Iterable[Union[str, Code]]
-    ] = FieldFactory.list_string_or_code_field()
+    methods: Optional[Iterable[Union[str, Code]]] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -85,11 +89,9 @@ class Patient(ModelBase):
 
     name: Optional[str] = None
     identifier: Optional[str] = None
-    birth_date: Optional[datetime.date] = FieldFactory.date_field()
-    sex: Optional[Literal["F", "M", "O"]] = None
-    species_description: Optional[
-        Union[str, Code]
-    ] = FieldFactory.string_or_code_field()
+    birth_date: Optional[datetime.date] = None
+    sex: Optional[PatientSex] = None
+    species_description: Optional[Union[str, Code]] = None
     de_identification: Optional[PatientDeIdentification] = None
     overrides: Optional[Dict[str, bool]] = None
 

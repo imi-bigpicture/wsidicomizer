@@ -2,6 +2,7 @@
 import datetime
 from abc import abstractmethod
 from dataclasses import MISSING, dataclass
+from enum import Enum
 from typing import Any, Callable, Generic, Iterable, Literal, Optional, TypeVar, Union
 
 from pydicom import Dataset
@@ -90,8 +91,10 @@ class DicomAttribute(Generic[ValueType, FormatedType]):
         setattr(dataset, self.tag, value)
 
 
-class DicomStringAttribute(DicomAttribute[str, str]):
-    def _formater(self, value: str) -> str:
+class DicomStringAttribute(DicomAttribute[Union[str, Enum], str]):
+    def _formater(self, value: Union[str, Enum]) -> str:
+        if isinstance(value, Enum):
+            return value.name
         return value
 
 

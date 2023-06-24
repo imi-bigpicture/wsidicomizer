@@ -12,7 +12,6 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomNumberAttribute,
     DicomUidAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
 
 
 @dataclass
@@ -27,7 +26,7 @@ class Series(ModelBase):
     The `Modality` attribute is fixed to `SM`.
     """
 
-    uid: Optional[UID] = FieldFactory.uid_field()
+    uid: Optional[UID] = None
     number: Optional[int] = None
     overrides: Optional[Dict[str, bool]] = None
 

@@ -16,7 +16,6 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomSequenceAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.fields import FieldFactory
 from wsidicomizer.metadata.model_base import ModelBase
 
 from wsidicomizer.metadata.sample import SlideSample
@@ -33,10 +32,8 @@ class Slide(ModelBase):
     """
 
     identifier: Optional[str] = None
-    stains: Optional[
-        Iterable[SpecimenStainsCode]
-    ] = FieldFactory.list_concept_code_field(SpecimenStainsCode)
-    samples: Iterable[SlideSample] = field(default_factory=list)
+    stains: Optional[Iterable[SpecimenStainsCode]] = None
+    samples: Optional[Iterable[SlideSample]] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
