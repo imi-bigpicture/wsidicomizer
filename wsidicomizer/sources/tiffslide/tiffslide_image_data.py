@@ -23,7 +23,8 @@ import numpy as np
 from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
-from tiffslide import (
+from tiffslide import TiffSlide
+from tiffslide.tiffslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
     PROPERTY_NAME_BOUNDS_HEIGHT,
     PROPERTY_NAME_BOUNDS_WIDTH,
@@ -31,7 +32,6 @@ from tiffslide import (
     PROPERTY_NAME_BOUNDS_Y,
     PROPERTY_NAME_MPP_X,
     PROPERTY_NAME_MPP_Y,
-    TiffSlide,
 )
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
