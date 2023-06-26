@@ -317,9 +317,9 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
         CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
         background = np.array(self.blank_color)
-        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(2))
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
         if np.all(data[corners_rgb] == background):
-            if np.all(data[:, :, 0:2] == background):
+            if np.all(data == background):
                 return True
         return False
 
