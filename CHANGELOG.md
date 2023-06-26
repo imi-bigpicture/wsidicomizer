@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+### Changed
+
+- Relaxed python requirement to >= 3.8.
+- Bumped wsidicom and opentil versions.
+
 ## [0.9.3] - 2023-05-17
 
 ### Fixed
