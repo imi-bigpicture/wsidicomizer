@@ -394,21 +394,26 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "highdicom"
-version = "0.20.0"
+version = "0.21.1"
 description = "High-level DICOM abstractions."
 category = "main"
 optional = false
 python-versions = ">=3.6"
-files = [
-    {file = "highdicom-0.20.0-py3-none-any.whl", hash = "sha256:fcbe899962a24eb84f0ff4abc496e52f47348089517f2803f45a922ca0222d18"},
-    {file = "highdicom-0.20.0.tar.gz", hash = "sha256:bd5e6ba975ffe953e1105557e46f9429a387f9707d11895954552a56dd8adedb"},
-]
+files = []
+develop = true
 
 [package.dependencies]
 numpy = ">=1.19"
 pillow = ">=8.3"
 pillow-jpls = ">=1.0"
-pydicom = ">=2.3.0"
+pydicom = ">=2.3.0,<2.4.0 || >2.4.0"
+
+[package.extras]
+libjpeg = ["pylibjpeg (>=1.4)", "pylibjpeg-libjpeg (>=1.3)", "pylibjpeg-openjpeg (>=1.2)"]
+
+[package.source]
+type = "directory"
+url = "../highdicom"
 
 [[package]]
 name = "idna"

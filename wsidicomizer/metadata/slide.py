@@ -72,9 +72,6 @@ class Slide(ModelBase):
     @classmethod
     def from_dataset(cls, dataset: Dataset):
         identifier = dataset.ContainerIdentifier
-        samples = [
-            SlideSample.from_dataset(specimen)
-            for specimen in dataset.SpecimenDescriptionSequence
-        ]
+        samples, stains = SlideSample.from_dataset(dataset)
 
-        return cls(identifier=identifier, samples=samples)
+        return cls(identifier=identifier, stains=stains, samples=samples)
