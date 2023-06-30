@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Relaxed python requirement to >= 3.8.
 - Bumped wsidicom and opentil versions.
+- Restricted pydicom version to < 2.4.
+- Openslide library detection now also detects `libopenslide-1.dll`.
+
+### Fixed
+
+- Incorrect detection off blank tiles in the tiffslide source.
 
 ## [0.9.3] - 2023-05-17
 
