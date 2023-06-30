@@ -17,12 +17,8 @@
 from typing import Optional
 
 from opentile.metadata import Metadata
-
-from tiffslide import (
-    PROPERTY_NAME_OBJECTIVE_POWER,
-    PROPERTY_NAME_VENDOR,
-    TiffSlide,
-)
+from tiffslide import TiffSlide
+from tiffslide.tiffslide import PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR
 
 
 class TiffSlideMetadata(Metadata):
