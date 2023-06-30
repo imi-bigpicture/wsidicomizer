@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.10.0] - 2023-06-30
+
 ### Changed
 
 - Relaxed python requirement to >= 3.8.
@@ -163,7 +165,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.3..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.0..HEAD
+[0.10.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.3..0.10.0
 [0.9.3]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.2..0.9.3
 [0.9.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.1..0.9.2
 [0.9.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.0..0.9.1
