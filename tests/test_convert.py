@@ -238,7 +238,6 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         region: Dict[str, Any],
         lowest_included_level: int,
     ):
-
         with self.open_wsi(file_format, file) as wsi:
             level = region["level"] - lowest_included_level
             converted = wsi.read_region(
@@ -332,24 +331,25 @@ class WsiDicomizerConvertTests(unittest.TestCase):
 
     @parameterized.expand(
         [
-            (file_format, file, file_parameters['image_origin'])
+            (file_format, file, file_parameters["image_coordinate_system"])
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ]
     )
-    def test_image_origin(
+    def test_image_coordinate_system(
         self,
         file_format: str,
         file: str,
-        expected_image_origin: Dict[str, float]
+        expected_image_coordinate_system: Dict[str, float],
     ):
         with self.open_wsi(file_format, file) as wsi:
-            image_origin = wsi.levels[0].default_instance.image_origin
+            image_coordinate_system = wsi.levels[
+                0
+            ].default_instance.image_data.image_coordinate_system
+            assert image_coordinate_system is not None
             self.assertEqual(
-                image_origin.origin.x,
-                expected_image_origin['x']
+                image_coordinate_system.origin.x, expected_image_coordinate_system["x"]
             )
             self.assertEqual(
-                image_origin.origin.y,
-                expected_image_origin['y']
+                image_coordinate_system.origin.y, expected_image_coordinate_system["y"]
             )

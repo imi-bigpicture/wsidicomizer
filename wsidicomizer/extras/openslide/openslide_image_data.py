@@ -25,8 +25,8 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
-from wsidicom.instance import ImageOrigin
+from wsidicom.geometry import Orientation, Point, PointMm, Region, Size, SizeMm
+from wsidicom.instance import ImageCoordinateSystem
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import (
@@ -244,10 +244,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
-        self._image_origin = ImageOrigin(
+        self._image_coordinate_system = ImageCoordinateSystem(
             PointMm(
                 self._offset.x * base_mpp_x / 1000, self._offset.y * base_mpp_y / 1000
-            )
+            ),
+            Orientation((0, 1, 0, 1, 0, 0)),
         )
 
     @property
@@ -276,8 +277,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         return self._pyramid_index
 
     @property
-    def image_origin(self) -> ImageOrigin:
-        return self._image_origin
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        return self._image_coordinate_system
 
     def stitch_tiles(
         self, region: Region, path: str, z: float, threads: int

@@ -19,7 +19,8 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from wsidicom import ImageData
-from wsidicom.instance import ImageOrigin
+from wsidicom.geometry import Orientation, PointMm
+from wsidicom.instance import ImageCoordinateSystem
 
 from wsidicomizer.encoding import Encoder
 
@@ -49,9 +50,9 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @property
-    def image_origin(self) -> ImageOrigin:
-        """Return a default ImageOrigin."""
-        return ImageOrigin()
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        """Return a default ImageCoordinateSystem."""
+        return ImageCoordinateSystem(PointMm(0, 0), Orientation((0, 1, 0, 1, 0, 0)))
 
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample

@@ -20,8 +20,8 @@ from opentile.tiff_image import TiffImage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.geometry import Point, Size, SizeMm, PointMm
-from wsidicom.instance import ImageOrigin
+from wsidicom.geometry import Orientation, Point, PointMm, Size, SizeMm
+from wsidicom.instance import ImageCoordinateSystem
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
@@ -59,11 +59,12 @@ class OpenTileImageData(DicomizerImageData):
         else:
             self._pixel_spacing = None
         if image_offset is not None:
-            self._image_origin = ImageOrigin(
-                origin=PointMm(image_offset[0], image_offset[1])
+            self._image_coordinate_system = ImageCoordinateSystem(
+                origin=PointMm(image_offset[0], image_offset[1]),
+                orientation=Orientation((0, 1, 0, 1, 0, 0)),
             )
         else:
-            self._image_origin = ImageOrigin()
+            self._image_coordinate_system = None
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiff_image}"
@@ -124,8 +125,10 @@ class OpenTileImageData(DicomizerImageData):
         return self._tiff_image.pyramid_index
 
     @property
-    def image_origin(self) -> ImageOrigin:
-        return self._image_origin
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
 
     @property
     def photometric_interpretation(self) -> str:
