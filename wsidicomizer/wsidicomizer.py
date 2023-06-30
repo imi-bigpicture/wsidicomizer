@@ -112,11 +112,7 @@ class WsiDicomizer(WsiDicom):
         selected_source = None
         if preferred_source is None:
             selected_source = next(
-                (
-                    source
-                    for source in loaded_sources
-                    if source.is_supported(filepath)
-                ),
+                (source for source in loaded_sources if source.is_supported(filepath)),
                 None,
             )
         elif preferred_source.is_supported(filepath):
