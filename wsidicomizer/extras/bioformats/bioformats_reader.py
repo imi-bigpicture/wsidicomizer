@@ -35,8 +35,8 @@ Set version of bioformats jar to use with the environmental variable
 "BIOFORMATS_VERSION". Note the bioformats jar either has a BSD or GPL-2
 license.
 """
-bioformats_version = os.getenv('BIOFORMATS_VERSION', 'bsd:6.12.0')
-scyjava.config.endpoints.append(f'ome:formats-{bioformats_version}')
+bioformats_version = os.getenv("BIOFORMATS_VERSION", "bsd:6.12.0")
+scyjava.config.endpoints.append(f"ome:formats-{bioformats_version}")
 
 if not scyjava.jvm_started():
     scyjava.start_jvm()
@@ -54,7 +54,7 @@ class ReaderPool:
         self,
         filepath: Path,
         max_readers: Optional[int] = None,
-        cache_path: Optional[Union[Path, str]] = None
+        cache_path: Optional[Union[Path, str]] = None,
     ):
         self._filepath = filepath
         if max_readers is None:
@@ -71,7 +71,7 @@ class ReaderPool:
         else:
             self._tempdir = None
             self._cache_path = Path(cache_path)
-        self._queue = SimpleQueue()
+        self._queue: SimpleQueue[Memoizer] = SimpleQueue()
         self._lock = Lock()
 
     @property
@@ -127,11 +127,7 @@ class ReaderPool:
         """Return a new reader."""
         # Create a reader using Memoizer to load file faster
         # See https://docs.openmicroscopy.org/bio-formats/6.11.0/developers/matlab-dev.html#reader-performance  # NOQA
-        reader = Memoizer(
-            ImageReader(),
-            0,
-            self._cache_path
-        )
+        reader = Memoizer(ImageReader(), 0, self._cache_path)
         reader.setFlattenedResolutions(False)
         reader.setId(str(self._filepath))
         return reader
@@ -141,9 +137,7 @@ class ReaderPool:
         self._queue.put(reader)
 
     def close(self) -> None:
-        """Close all readers and clean up cache directory if a temporary
-        directory.
-        """
+        """Close all readers and clean up cache directory if a temporary directory."""
         with self._lock:
             while not self._is_empty:
                 reader = self._queue.get()
@@ -158,7 +152,7 @@ class BioformatsReader:
         self,
         filepath: Path,
         max_readers: Optional[int] = None,
-        cache_path: Optional[Union[Path, str]] = None
+        cache_path: Optional[Union[Path, str]] = None,
     ):
         """Reader for image data and metadata from file using Bio-Formats api.
 
@@ -176,37 +170,55 @@ class BioformatsReader:
         self._reader_pool = ReaderPool(filepath, max_readers, cache_path)
 
         with self._reader_pool.get_reader() as reader:
-            for image in range(reader.getSeriesCount()):
-                reader.setSeries(image)
-                order = reader.getDimensionOrder()
-                rgb_channel_count = reader.getRGBChannelCount()
-                interleaved = reader.isInterleaved()
-                indexed = reader.isIndexed()
-                width = reader.getSizeX()
-                rgb = reader.isRGB()
-                height = reader.getSizeY()
-                level = reader.getResolution()
-                pixels = self.metadata.images[image].pixels
-                name = self.metadata.images[image].name
-                resolutions = reader.getResolutionCount()
-                # print(
-                #     image, name, order, rgb_channel_count, indexed,
-                #     interleaved, rgb, (width, height), pixels.physical_size_x,
-                #     level, resolutions
-                # )
-
+            # self.print_debug(reader)
             self._resolution_counts = [
                 self._get_resolution_count(reader, image_index)
                 for image_index in range(self.images_count)
             ]
 
             self._resolution_scales = {
-                image_index: self._get_resolution_scales(
-                    reader,
-                    image_index
-                )
+                image_index: self._get_resolution_scales(reader, image_index)
                 for image_index in range(self.images_count)
             }
+
+    def print_debug(self, reader: Memoizer):
+        for image in range(reader.getSeriesCount()):
+            reader.setSeries(image)
+            order = reader.getDimensionOrder()
+            rgb_channel_count = reader.getRGBChannelCount()
+            interleaved = reader.isInterleaved()
+            indexed = reader.isIndexed()
+            width = reader.getSizeX()
+            rgb = reader.isRGB()
+            height = reader.getSizeY()
+            level = reader.getResolution()
+            pixels = self.metadata.images[image].pixels
+            name = self.metadata.images[image].name
+            resolutions = reader.getResolutionCount()
+            print(
+                "image:",
+                image,
+                "name:",
+                name,
+                "order:",
+                order,
+                "rgb_channel_count:",
+                rgb_channel_count,
+                "indexed:",
+                indexed,
+                "interleaved:",
+                interleaved,
+                "rgb:",
+                rgb,
+                "(width, height):",
+                (width, height),
+                "pixels.physical_size_x:",
+                pixels.physical_size_x,
+                "level:",
+                level,
+                "resolutions:",
+                resolutions,
+            )
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:
@@ -224,21 +236,13 @@ class BioformatsReader:
         return reader.getResolutionCount()
 
     @staticmethod
-    def _get_resolution_scale(
-        reader: Memoizer,
-        resolution_index: int,
-        base_width: int
-    ):
+    def _get_resolution_scale(reader: Memoizer, resolution_index: int, base_width: int):
         reader.setResolution(resolution_index)
         width = reader.getSizeX()
-        return int(round(base_width/width))
+        return int(round(base_width / width))
 
     @classmethod
-    def _get_resolution_scales(
-        cls,
-        reader: Memoizer,
-        image_index: int
-    ) -> List[int]:
+    def _get_resolution_scales(cls, reader: Memoizer, image_index: int) -> List[int]:
         reader.setSeries(image_index)
         reader.setResolution(0)
         base_width = reader.getSizeX()
@@ -256,7 +260,7 @@ class BioformatsReader:
     def metadata(self) -> ome_types.OME:
         """Return parsed metadata."""
         metadata = self._read_metadata()
-        return ome_types.from_xml(str(metadata), parser='lxml')
+        return ome_types.from_xml(str(metadata), parser="lxml")
 
     @property
     def images_count(self) -> int:
@@ -272,27 +276,27 @@ class BioformatsReader:
     def dtype(self, image_index: int) -> np.dtype:
         """Return the numpy datatype for image in file."""
         NUMPY_DATA_TYPES: Dict[str, Type] = {
-            'bit': np.bool_,
-            'double-complex': np.cdouble,
-            'complex': np.csingle,
-            'double': np.float64,
-            'float':  np.float32,
-            'int16': np.int16,
-            'int32': np.int32,
-            'int8': np.int8,
-            'uint16': np.uint16,
-            'uint32': np.uint32,
-            'uint8': np.uint8
+            "bit": np.bool_,
+            "double-complex": np.cdouble,
+            "complex": np.csingle,
+            "double": np.float64,
+            "float": np.float32,
+            "int16": np.int16,
+            "int32": np.int32,
+            "int8": np.int8,
+            "uint16": np.uint16,
+            "uint32": np.uint32,
+            "uint8": np.uint8,
         }
         if self.metadata.images[image_index].pixels.big_endian:
-            byte_order = '>'
+            byte_order = ">"
         else:
-            byte_order = '<'
+            byte_order = "<"
         data_type = self.metadata.images[image_index].pixels.type.value
         try:
             numpy_data_type = np.dtype(NUMPY_DATA_TYPES[data_type])
         except KeyError:
-            raise ValueError(f'Unkown data type {data_type}')
+            raise ValueError(f"Unkown data type {data_type}")
         return numpy_data_type.newbyteorder(byte_order)
 
     @lru_cache
@@ -312,22 +316,18 @@ class BioformatsReader:
 
     @lru_cache
     def pixel_spacing(
-        self,
-        image_index: int,
-        resolution_index: int = 0
+        self, image_index: int, resolution_index: int = 0
     ) -> Optional[SizeMm]:
         """Return the size of the pixels in mm/pixel for image in file."""
         pixels = self.metadata.images[image_index].pixels
-        if (
-            pixels.physical_size_x is None
-            or pixels.physical_size_y is None
-        ):
+        if pixels.physical_size_x is None or pixels.physical_size_y is None:
             return None
         scale = self._resolution_scales[image_index][resolution_index]
-        return SizeMm(
-            float(pixels.physical_size_x),
-            float(pixels.physical_size_y)
-        ) * scale / 1000
+        return (
+            SizeMm(float(pixels.physical_size_x), float(pixels.physical_size_y))
+            * scale
+            / 1000
+        )
 
     @lru_cache
     def is_interleaved(self, image_index: int) -> bool:
@@ -341,6 +341,7 @@ class BioformatsReader:
         image_index: int,
         resolution_index: int,
         region: Region,
+        output_size: Optional[Size] = None,
         index: int = 0,
     ) -> Generator[np.ndarray, None, None]:
         """Read image data from file. Preferably used as a context manager.
@@ -352,6 +353,9 @@ class BioformatsReader:
             The image to read data from.
         region: Region
             The region to read data from.
+        output_size: Optional[Size] = None
+            Optional size to resize image data to. Must be equal to or larger than
+            region size.
         index: int
             The index in image to read data from.
 
@@ -368,32 +372,39 @@ class BioformatsReader:
                 region.start.x,
                 region.start.y,
                 region.size.width,
-                region.size.height
+                region.size.height,
             )
         )
         try:
-            data = np.frombuffer(raw_data, self.dtype(image_index))
+            data: np.ndarray = np.frombuffer(raw_data, self.dtype(image_index))
             if self.is_interleaved(image_index):
-                yield data.reshape(
+                data = data.reshape(
                     region.size.height,
                     region.size.width,
-                    self.samples_per_pixel(image_index)
+                    self.samples_per_pixel(image_index),
                 )
             else:
                 data = data.reshape(
                     self.samples_per_pixel(image_index),
                     region.size.height,
-                    region.size.width
+                    region.size.width,
                 )
-                data = np.moveaxis(data, 0, 2)
-                yield data.copy()
+                data = np.moveaxis(data, 0, 2).copy()
+            if output_size is not None and data.shape[0:2] != output_size.to_tuple():
+                # Pad with zeros to get requsted output size.
+                if not output_size.all_greater_than_or_equal(region.size):
+                    raise ValueError(
+                        "Output size should be equal to or larger than region size."
+                    )
+                padding_width = output_size.width - data.shape[0]
+                padding_height = output_size.height - data.shape[1]
+                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))
+            yield data
         finally:
             raw_data.release()
 
     def close(self) -> None:
-        """Close all readers and clean up cache directory if a temporary
-        directory.
-        """
+        """Close reader pool."""
         self._reader_pool.close()
 
     def _read(
@@ -404,20 +415,13 @@ class BioformatsReader:
         start_x: int,
         start_y: int,
         end_x: int,
-        end_y: int
+        end_y: int,
     ) -> JArray:
-        """Read image data from file.
-        """
+        """Read image data from file."""
         with self._reader_pool.get_reader() as reader:
             reader.setSeries(image_index)
             reader.setResolution(resolution_index)
-            return reader.openBytes(
-                index,
-                start_x,
-                start_y,
-                end_x,
-                end_y
-            )
+            return reader.openBytes(index, start_x, start_y, end_x, end_y)
 
     def _read_metadata(self) -> str:
         """Read metadata from file."""

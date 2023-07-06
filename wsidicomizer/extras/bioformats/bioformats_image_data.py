@@ -34,7 +34,7 @@ class BioformatsImageData(DicomizerImageData):
         tile_size: int,
         encoder: Encoder,
         image_index: int,
-        resolution_index: int
+        resolution_index: int,
     ) -> None:
         super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
@@ -64,10 +64,7 @@ class BioformatsImageData(DicomizerImageData):
     @property
     def image_size(self) -> Size:
         """Return the pixel size of the image."""
-        return self._image_reader.size(
-            self._image_index,
-            self._resolution_index
-        )
+        return self._image_reader.size(self._image_index, self._resolution_index)
 
     @property
     def tile_size(self) -> Size:
@@ -79,8 +76,7 @@ class BioformatsImageData(DicomizerImageData):
     def pixel_spacing(self) -> Optional[SizeMm]:
         """Return the size of the pixels in mm/pixel."""
         return self._image_reader.pixel_spacing(
-            self._image_index,
-            self._resolution_index
+            self._image_index, self._resolution_index
         )
 
     @property
@@ -95,37 +91,21 @@ class BioformatsImageData(DicomizerImageData):
         return self._encoder.photometric_interpretation(self.samples_per_pixel)
 
     def _get_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str
+        self, tile_point: Point, z: float, path: str
     ) -> ContextManager[np.ndarray]:
-        # TODO if cropping region the returned image should still be same size
-        region = Region(tile_point*self.tile_size, self.tile_size)
+        region = Region(tile_point * self.tile_size, self.tile_size)
         cropped_region = self.image_region.crop(region)
         return self._image_reader.read_image(
-            self._image_index,
-            self._resolution_index,
-            cropped_region
+            self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def _get_decoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:
             return Image.fromarray(data)
 
-    def _get_encoded_tile(
-        self,
-        tile: Point,
-        z: float,
-        path: str
-    ) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:
