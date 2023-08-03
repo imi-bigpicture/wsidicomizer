@@ -1,5 +1,6 @@
 """Complete WSI model."""
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Callable, Dict, List, Optional, Tuple
 
 from pydicom import Dataset
@@ -69,6 +70,18 @@ class WsiMetadata(ModelBase):
     dimension_organization_uid: Optional[UID] = None
     overrides: Optional[Dict[str, bool]] = None
 
+    @cached_property
+    def _frame_of_reference_uid(self) -> UID:
+        if self.frame_of_reference_uid is not None:
+            return self.frame_of_reference_uid
+        return generate_uid()
+
+    @cached_property
+    def _dimension_organization_uid(self) -> UID:
+        if self.dimension_organization_uid is not None:
+            return self.dimension_organization_uid
+        return generate_uid()
+
     def to_dataset(
         self,
         image_type: ImageType,
@@ -82,7 +95,7 @@ class WsiMetadata(ModelBase):
             DicomUidAttribute("SOPClassUID", True, VLWholeSlideMicroscopyImageStorage),
             DicomStringAttribute("Modality", True, "SM"),
             DicomUidAttribute(
-                "FrameOfReferenceUID", True, self.frame_of_reference_uid, generate_uid
+                "FrameOfReferenceUID", True, self._frame_of_reference_uid
             ),
             DicomStringAttribute("PositionReferenceIndicator", True, "SLIDE_CORNER"),
             DicomStringAttribute("VolumetricProperties", True, "VOLUME"),
@@ -94,8 +107,7 @@ class WsiMetadata(ModelBase):
                     DicomUidAttribute(
                         "DimensionOrganizationUID",
                         True,
-                        self.dimension_organization_uid,
-                        generate_uid,
+                        self._dimension_organization_uid,
                     ),
                 ],
             ),
@@ -109,6 +121,7 @@ class WsiMetadata(ModelBase):
             (self.equipment, Equipment),
             (self.slide, Slide),
             (self.label, Label),
+            (self.image, Image),
         ]
         if len(self.optical_paths) > 0:
             models.extend([(optical_path, None) for optical_path in self.optical_paths])

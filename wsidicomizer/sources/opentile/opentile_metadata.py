@@ -15,14 +15,22 @@
 """Metadata for opentile file."""
 
 from opentile import Metadata as OpenTileMetadata
+from pydicom.uid import generate_uid
 from wsidicom.geometry import PointMm
 
 from wsidicomizer.metadata import WsiMetadata
 from wsidicomizer.metadata.equipment import Equipment
 from wsidicomizer.metadata.image import Image, ImageCoordinateSystem
+from wsidicomizer.metadata.series import Series
+from wsidicomizer.metadata.study import Study
 
 
 class OpentileMetadata(WsiMetadata):
+    study = Study()
+    series = Series()
+    frame_of_reference_uid = generate_uid()
+    dimension_organization_uid = generate_uid()
+
     def __init__(self, metadata: OpenTileMetadata):
         self.equipment = Equipment(
             metadata.scanner_manufacturer,

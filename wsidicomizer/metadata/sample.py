@@ -27,7 +27,6 @@ from wsidicom.conceptcode import (
     SpecimenStainsCode,
 )
 
-from wsidicomizer.metadata.sample import PreparationStep
 
 """
 A root specimen is created by giving it an identifier, a type, and optionally the

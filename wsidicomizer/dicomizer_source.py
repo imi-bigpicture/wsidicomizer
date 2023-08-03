@@ -63,6 +63,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._include_label = include_label
         self._include_overview = include_overview
         self._include_confidential = include_confidential
+        self._merged_metadata: Optional[WsiMetadata] = None
 
     @staticmethod
     @abstractmethod
@@ -110,6 +111,15 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def _create_overview_image_data(self) -> DicomizerImageData:
         """Return image data instance for overview."""
         raise NotImplementedError()
+
+    @property
+    def metadata(self) -> WsiMetadata:
+        if self._merged_metadata is None:
+            self._merged_metadata = WsiMetadata.merge(
+                self.image_metadata, self._metadata
+            )
+        assert self._merged_metadata is not None
+        return self._merged_metadata
 
     @property
     def base_dataset(self) -> WsiDataset:
@@ -160,7 +170,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return []
 
     def _create_base_dataset(self, image_type: ImageType) -> WsiDataset:
-        return self._metadata.to_dataset(image_type, self.image_metadata)
+        return WsiDataset(self.metadata.to_dataset(image_type))
 
     @staticmethod
     def _is_included_level(

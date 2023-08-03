@@ -1,6 +1,7 @@
 """Study model."""
 from dataclasses import dataclass
 import datetime
+from functools import cached_property
 from typing import Dict, List, Optional
 
 from pydicom import Dataset
@@ -37,9 +38,15 @@ class Study(ModelBase):
     referring_physician_name: Optional[str] = None
     overrides: Optional[Dict[str, bool]] = None
 
+    @cached_property
+    def _uid(self) -> UID:
+        if self.uid is not None:
+            return self.uid
+        return generate_uid()
+
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [
-            DicomUidAttribute("StudyInstanceUID", True, self.uid, generate_uid),
+            DicomUidAttribute("StudyInstanceUID", True, self._uid),
             DicomStringAttribute("StudyID", True, self.identifier),
             DicomDateTimeAttribute("StudyDate", True, self.date),
             DicomDateTimeAttribute("StudyTime", True, self.time),

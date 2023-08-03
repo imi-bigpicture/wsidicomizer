@@ -1,7 +1,7 @@
 """Optical path model."""
 import struct
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Generic, Iterable, List, Optional, Type, TypeVar, Union
 
 import numpy as np
@@ -310,7 +310,7 @@ class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
 class Lenses:
     """Set of lens conditions for optical path"""
 
-    lenses: Iterable[LenseCode]
+    lenses: Iterable[LenseCode] = field(default_factory=list)
     condenser_power: Optional[float] = None
     objective_power: Optional[float] = None
     objective_na: Optional[float] = None

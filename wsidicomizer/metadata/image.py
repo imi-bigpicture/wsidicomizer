@@ -3,12 +3,12 @@ import datetime
 from enum import Enum
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from pydicom import Dataset
 from pydicom import Sequence as DicomSequence
 from pydicom.valuerep import DSfloat
-from wsidicom.geometry import PointMm
+from wsidicom.geometry import PointMm, Orientation
 from wsidicom.instance import ImageType
 
 from wsidicomizer.metadata.model_base import ModelBase
@@ -59,17 +59,19 @@ class ImageCoordinateSystem(ModelBase):
     overrides: Optional[Dict[str, bool]] = None
 
     @property
-    def orientation(self) -> Tuple[float, float, float, float, float, float]:
+    def orientation(self) -> Orientation:
         x = round(math.sin(self.rotation * math.pi / 180), 8)
         y = round(math.cos(self.rotation * math.pi / 180), 8)
-        return tuple(DSfloat(value, True) for value in [-x, y, 0, y, x, 0])
+        return Orientation([-x, y, 0, y, x, 0])
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         origin_element = Dataset()
         origin_element.XOffsetInSlideCoordinateSystem = DSfloat(self.origin.x, True)
         origin_element.YOffsetInSlideCoordinateSystem = DSfloat(self.origin.y, True)
         dataset.TotalPixelMatrixOriginSequence = DicomSequence([origin_element])
-        dataset.ImageOrientationSlide = list(self.orientation)
+        dataset.ImageOrientationSlide = list(
+            DSfloat(value, True) for value in self.orientation.values
+        )
 
 
 @dataclass

@@ -16,7 +16,7 @@
 
 from datetime import datetime
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TypeVar
+from typing import List, Optional, Sequence, Tuple, Type, TypeVar
 from xml.etree import ElementTree
 
 import numpy as np
@@ -24,13 +24,21 @@ from czifile import CziFile
 from dateutil import parser as dateparser
 from wsidicom.geometry import SizeMm
 
+from pydicom.uid import generate_uid
 from wsidicomizer.metadata import WsiMetadata, Image, Equipment
-from wsidicomizer.metadata.optical_path import OpticalPath
+from wsidicomizer.metadata.optical_path import Lenses, OpticalPath
+from wsidicomizer.metadata.series import Series
+from wsidicomizer.metadata.study import Study
 
 ElementType = TypeVar("ElementType", str, int, float)
 
 
 class CziMetadata(WsiMetadata):
+    study = Study()
+    series = Series()
+    frame_of_reference_uid = generate_uid()
+    dimension_organization_uid = generate_uid()
+
     def __init__(self, czi: CziFile):
         metadata_xml = czi.metadata()
         if metadata_xml is None or not isinstance(metadata_xml, str):
@@ -41,7 +49,9 @@ class CziMetadata(WsiMetadata):
             model_name=self.scanner_model,
             software_versions=self.scanner_software_versions,
         )
-        self.optical_paths = [OpticalPath("0", objective_lens_power=self.magnification)]
+        self.optical_paths = [
+            OpticalPath("0", lenses=Lenses(objective_power=self.magnification))
+        ]
 
     @property
     def aquisition_datetime(self) -> Optional[datetime]:

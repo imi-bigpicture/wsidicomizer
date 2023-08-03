@@ -48,7 +48,7 @@ class Label(ModelBase):
             dicom_attributes.extend(
                 [
                     DicomStringAttribute("LabelText", True, self.label_text),
-                    DicomStringAttribute("BarCodeValue", True, self.barcode_value),
+                    DicomStringAttribute("BarcodeValue", True, self.barcode_value),
                 ]
             )
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)

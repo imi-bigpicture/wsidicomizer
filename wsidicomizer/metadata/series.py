@@ -1,5 +1,6 @@
 """Series model."""
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Dict, List, Optional
 
 from pydicom import Dataset
@@ -30,9 +31,15 @@ class Series(ModelBase):
     number: Optional[int] = None
     overrides: Optional[Dict[str, bool]] = None
 
+    @cached_property
+    def _uid(self) -> UID:
+        if self.uid is not None:
+            return self.uid
+        return generate_uid()
+
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [
-            DicomUidAttribute("SeriesInstanceUID", True, self.uid, generate_uid),
+            DicomUidAttribute("SeriesInstanceUID", True, self._uid),
             DicomNumberAttribute("SeriesNumber", True, self.number),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)

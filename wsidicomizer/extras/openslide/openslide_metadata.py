@@ -14,20 +14,31 @@
 
 """Metadata for openslide file."""
 
-from wsidicomizer.metadata import WsiMetadata, Equipment, OpticalPath
+from pydicom.uid import generate_uid
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_OBJECTIVE_POWER,
     PROPERTY_NAME_VENDOR,
     OpenSlide,
 )
+from wsidicomizer.metadata import Equipment, OpticalPath, WsiMetadata
+from wsidicomizer.metadata.image import Image
+from wsidicomizer.metadata.optical_path import Lenses
+from wsidicomizer.metadata.series import Series
+from wsidicomizer.metadata.study import Study
 
 
 class OpenSlideMetadata(WsiMetadata):
+    image = Image()
+    study = Study()
+    series = Series()
+    frame_of_reference_uid = generate_uid()
+    dimension_organization_uid = generate_uid()
+
     def __init__(self, slide: OpenSlide):
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
-            OpticalPath("0", objective_lens_power=float(magnification))
+            OpticalPath("0", lenses=Lenses(objective_power=float(magnification)))
         self.equipment = Equipment(
             manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR)
         )

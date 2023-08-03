@@ -62,10 +62,10 @@ class OpenTileImageData(DicomizerImageData):
             self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
         else:
             self._pixel_spacing = None
-        if image_offset is not None:
+        if image_coordinate_system is not None:
             self._image_coordinate_system = ImageCoordinateSystem(
-                origin=PointMm(image_offset[0], image_offset[1]),
-                orientation=Orientation((0, 1, 0, 1, 0, 0)),
+                origin=image_coordinate_system.origin,
+                orientation=image_coordinate_system.orientation,
             )
         else:
             self._image_coordinate_system = None
