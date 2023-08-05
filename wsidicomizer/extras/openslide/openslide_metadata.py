@@ -23,7 +23,7 @@ from wsidicomizer.extras.openslide.openslide import (
 )
 from wsidicomizer.metadata import Equipment, OpticalPath, WsiMetadata
 from wsidicomizer.metadata.image import Image
-from wsidicomizer.metadata.optical_path import Lenses
+from wsidicomizer.metadata.optical_path import Objectives
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.study import Study
 
@@ -38,7 +38,7 @@ class OpenSlideMetadata(WsiMetadata):
     def __init__(self, slide: OpenSlide):
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
-            OpticalPath("0", lenses=Lenses(objective_power=float(magnification)))
+            OpticalPath("0", objective=Objectives(objective_power=float(magnification)))
         self.equipment = Equipment(
             manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR)
         )

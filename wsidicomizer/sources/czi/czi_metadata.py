@@ -26,7 +26,7 @@ from wsidicom.geometry import SizeMm
 
 from pydicom.uid import generate_uid
 from wsidicomizer.metadata import WsiMetadata, Image, Equipment
-from wsidicomizer.metadata.optical_path import Lenses, OpticalPath
+from wsidicomizer.metadata.optical_path import Objectives, OpticalPath
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.study import Study
 
@@ -50,7 +50,7 @@ class CziMetadata(WsiMetadata):
             software_versions=self.scanner_software_versions,
         )
         self.optical_paths = [
-            OpticalPath("0", lenses=Lenses(objective_power=self.magnification))
+            OpticalPath("0", objective=Objectives(objective_power=self.magnification))
         ]
 
     @property

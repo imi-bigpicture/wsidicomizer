@@ -179,15 +179,11 @@ class DicomByteAttribute(DicomAttribute[bytes, bytes]):
         return value
 
 
-class DicomSequenceAttribute(DicomAttribute[Iterable[DicomAttribute], Dataset]):
-    def _formater(self, value: Iterable[DicomAttribute]) -> Dataset:
-        dataset = Dataset()
+class DicomSequenceAttribute(DicomAttribute[Iterable[DicomAttribute], DicomSequence]):
+    def _formater(self, value: Iterable[DicomAttribute]) -> DicomSequence:
+        sequence = DicomSequence()
         for attribute in value:
+            dataset = Dataset()
             attribute.insert_into_dataset(dataset)
-        return dataset
-
-    def _set_in_dataset(self, dataset: Dataset, value: Optional[Dataset]):
-        if value is not None:
-            attribute = getattr(dataset, self.tag, DicomSequence())
-            attribute.append(value)
-            setattr(dataset, self.tag, attribute)
+            sequence.append(dataset)
+        return sequence

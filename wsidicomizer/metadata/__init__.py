@@ -14,17 +14,23 @@
 
 """"""
 
-from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.metadata.equipment import Equipment
 from wsidicomizer.metadata.image import (
+    ExtendedDepthOfField,
+    FocusMethod,
     Image,
     ImageCoordinateSystem,
-    ExtendedDepthOfField,
 )
 from wsidicomizer.metadata.label import Label
-from wsidicomizer.metadata.optical_path import OpticalPath
-from wsidicomizer.metadata.patient import Patient, PatientDeIdentification
-
+from wsidicomizer.metadata.optical_path import (
+    ImagePathFilter,
+    LightPathFilter,
+    Objectives,
+    OpticalPath,
+)
+from wsidicomizer.metadata.patient import Patient, PatientDeIdentification, PatientSex
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.slide import Slide
 from wsidicomizer.metadata.study import Study
+from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicomizer.metadata.sample import ExtractedSpecimen, SampledSpecimen, SlideSample

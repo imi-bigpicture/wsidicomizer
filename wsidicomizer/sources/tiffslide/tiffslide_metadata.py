@@ -19,7 +19,7 @@ from tiffslide.tiffslide import PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VEN
 
 from wsidicomizer.metadata import WsiMetadata, Equipment, OpticalPath
 from wsidicomizer.metadata.image import Image
-from wsidicomizer.metadata.optical_path import Lenses
+from wsidicomizer.metadata.optical_path import Objectives
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.study import Study
 from pydicom.uid import generate_uid
@@ -35,7 +35,7 @@ class TiffSlideMetadata(WsiMetadata):
     def __init__(self, slide: TiffSlide):
         magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
         if magnification is not None:
-            OpticalPath("0", lenses=Lenses(objective_power=float(magnification)))
+            OpticalPath("0", objective=Objectives(objective_power=float(magnification)))
         self.equipment = Equipment(
             manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR)
         )

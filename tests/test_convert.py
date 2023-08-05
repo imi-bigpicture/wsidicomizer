@@ -13,16 +13,14 @@
 #    limitations under the License.
 
 import os
-import unittest
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict
 
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
-from parameterized import parameterized
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
 from wsidicom.errors import WsiDicomNotFoundError
@@ -34,78 +32,29 @@ from wsidicomizer.extras.openslide.openslide import (
 )
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-from .testdata.test_parameters import test_parameters
-
-testdata_dir = Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+from .conftest import test_parameters
 
 
 @pytest.mark.integrationtest
-class WsiDicomizerConvertTests(unittest.TestCase):
-    DEFAULT_TILE_SIZE = 512
-
-    @classmethod
-    def setUpClass(cls):
-        cls.test_folders = {
-            (file_format, file): cls.create_test_folder(
-                file_format, file, file_parameters
-            )
+class TestWsiDicomizerConvert:
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
-        }
-
-    @classmethod
-    def tearDownClass(cls):
-        for paths in cls.test_folders.values():
-            if paths is not None and paths[1] is not None:
-                paths[1].cleanup()
-
-    @classmethod
-    def create_test_folder(
-        cls, file_format: str, file: str, file_parameters: Dict[str, Any]
-    ) -> Optional[Tuple[Path, Optional[TemporaryDirectory]]]:
-        file_path = testdata_dir.joinpath("slides", file_format, file)
-        if not file_path.exists():
-            return None
-        if not file_parameters["convert"]:
-            return file_path, None
-        include_levels = file_parameters["include_levels"]
-        tile_size = file_parameters.get("tile_size", cls.DEFAULT_TILE_SIZE)
-        converted_path = cls.convert(file_path, include_levels, tile_size)
-        return file_path, converted_path
-
-    @staticmethod
-    def convert(
-        path: Path, include_levels: Sequence[int], tile_size: int
-    ) -> TemporaryDirectory:
-        tempdir = TemporaryDirectory()
-        WsiDicomizer.convert(
-            str(path),
-            output_path=str(tempdir.name),
-            tile_size=tile_size,
-            include_levels=include_levels,
-            encoding_format="jpeg2000",
-            encoding_quality=0,
-        )
-        return tempdir
-
-    @classmethod
-    def open_wsi(cls, file_format: str, file: str) -> WsiDicom:
-        (original_path, converted_path) = cls.get_paths(file_format, file)
-        if converted_path is not None:
-            return WsiDicom.open(converted_path.name)
-        return WsiDicomizer.open(original_path)
-
-    @classmethod
-    def get_paths(
-        cls, file_format: str, file: str
-    ) -> Tuple[Path, Optional[TemporaryDirectory]]:
-        paths = cls.test_folders[file_format, file]
-        if paths is None:
-            raise unittest.SkipTest(f"File {file} for format {file_format} not found.")
-        return paths
-
-    @classmethod
-    def validate(cls, path: Path) -> List[Tuple[str, str]]:
+            if file_parameters["convert"]
+        ],
+    )
+    def test_validate(
+        self,
+        file_format: str,
+        file: str,
+        testdata_dir: Path,
+        converted: Dict[str, Dict[str, TemporaryDirectory]],
+    ):
+        # Arrange
+        converted_path = converted[file_format][file]
         standard_path = os.path.join(testdata_dir, "dicom-validator")
         edition_reader = EditionReader(standard_path)
         revision_path = edition_reader.get_revision("current")
@@ -116,52 +65,56 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             EditionReader.load_module_info(json_path),
             EditionReader.load_dict_info(json_path),
         )
-        result: Dict[str, Dict[str, str]] = validator.validate_dir(path)
-        return [
+
+        # Act
+        result: Dict[str, Dict[str, str]] = validator.validate_dir(converted_path.name)
+
+        # Assert
+        errors = [
             (error, tag)
             for tag_error in result.values()
             for tag, error in tag_error.items()
         ]
+        assert len(errors) == 0
 
-    @parameterized.expand(
-        [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            if file_parameters["convert"]
-        ]
-    )
-    def test_validate(self, file_format: str, file: str):
-        (_, converted_path) = self.get_paths(file_format, file)
-        assert converted_path is not None
-        errors = self.validate(converted_path.name)
-        self.assertEqual(errors, [])
-
-    @parameterized.expand(
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
-        ]
+        ],
     )
-    def test_optical_path_not_found(self, file_format: str, file: str):
-        with self.open_wsi(file_format, file) as wsi:
-            with pytest.raises(WsiDicomNotFoundError):
-                wsi.read_tile(0, (0, 0), path="1")
+    def test_optical_path_not_found(
+        self, file_format: str, file: str, wsis: Dict[str, Dict[str, WsiDicom]]
+    ):
+        # Arrange
+        wsi = wsis[file_format][file]
 
-    @parameterized.expand(
+        # Act & Assert
+        with pytest.raises(WsiDicomNotFoundError):
+            wsi.read_tile(0, (0, 0), path="1")
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
-        ]
+        ],
     )
-    def test_focal_plane_not_found(self, file_format: str, file: str):
-        with self.open_wsi(file_format, file) as wsi:
-            with pytest.raises(WsiDicomNotFoundError):
-                wsi.read_tile(0, (0, 0), z=1.0)
+    def test_focal_plane_not_found(
+        self, file_format: str, file: str, wsis: Dict[str, Dict[str, WsiDicom]]
+    ):
+        # Arrange
+        wsi = wsis[file_format][file]
 
-    @parameterized.expand(
+        # Act & Assert
+        with pytest.raises(WsiDicomNotFoundError):
+            wsi.read_tile(0, (0, 0), z=1.0)
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "region", "lowest_included_level"],
         [
             (
                 file_format,
@@ -172,7 +125,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region"]
-        ]
+        ],
     )
     def test_read_region_from_converted_file_should_match_hash(
         self,
@@ -180,45 +133,55 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            level = region["level"] - lowest_included_level
-            im = wsi.read_region(
-                (region["location"]["x"], region["location"]["y"]),
-                level,
-                (region["size"]["width"], region["size"]["height"]),
-            )
-            self.assertEqual(
-                md5(im.tobytes()).hexdigest(),
-                region["md5"],
-                msg=(
-                    f"{file_format}: {file} lowest level {lowest_included_level} "
-                    f"{region}"
-                ),
-            )
+        # Arrange
+        wsi = wsis[file_format][file]
+        level = region["level"] - lowest_included_level
 
-    @parameterized.expand(
+        # Act
+        im = wsi.read_region(
+            (region["location"]["x"], region["location"]["y"]),
+            level,
+            (region["size"]["width"], region["size"]["height"]),
+        )
+
+        # Assert
+        assert (
+            md5(im.tobytes()).hexdigest() == region["md5"]
+        ), f"{file_format}: {file} lowest level {lowest_included_level} {region}"
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "thumbnail"],
         [
             (file_format, file, thumbnail)
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
-        ]
+        ],
     )
     def test_read_thumbnail_from_converted_file_should_match_hash(
-        self, file_format: str, file: str, thumbnail: Dict[str, Any]
+        self,
+        file_format: str,
+        file: str,
+        thumbnail: Dict[str, Any],
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            im = wsi.read_thumbnail(
-                (thumbnail["size"]["width"], thumbnail["size"]["height"])
-            )
-            self.assertEqual(
-                md5(im.tobytes()).hexdigest(),
-                thumbnail["md5"],
-                msg=f"{file_format}: {file} {thumbnail}",
-            )
+        # Arrange
+        wsi = wsis[file_format][file]
 
-    @parameterized.expand(
+        # Act
+        im = wsi.read_thumbnail(
+            (thumbnail["size"]["width"], thumbnail["size"]["height"])
+        )
+
+        # Assert
+        assert (
+            md5(im.tobytes()).hexdigest() == thumbnail["md5"]
+        ), f"{file_format}: {file} {thumbnail}"
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "region", "lowest_included_level"],
         [
             (
                 file_format,
@@ -229,7 +192,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region_openslide"]
-        ]
+        ],
     )
     def test_read_region_from_converted_file_should_match_openslide(
         self,
@@ -237,119 +200,157 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
+        wsi_files: Dict[str, Dict[str, Path]],
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            level = region["level"] - lowest_included_level
-            converted = wsi.read_region(
-                (region["location"]["x"], region["location"]["y"]),
-                level,
-                (region["size"]["width"], region["size"]["height"]),
-            )
-
-        (original_path, _) = self.get_paths(file_format, file)
-        with OpenSlide(original_path) as wsi:
-            scale: float = wsi.level_downsamples[region["level"]]
+        # Arrange
+        wsi = wsis[file_format][file]
+        level = region["level"] - lowest_included_level
+        original_path = wsi_files[file_format][file]
+        with OpenSlide(original_path) as openslide_wsi:
+            scale: float = openslide_wsi.level_downsamples[region["level"]]
             # If scale is not integer image can be blurry
             assert scale.is_integer
             scale = int(scale)
-            offset_x = int(wsi.properties.get(PROPERTY_NAME_BOUNDS_X, 0))
-            offset_y = int(wsi.properties.get(PROPERTY_NAME_BOUNDS_Y, 0))
+            offset_x = int(openslide_wsi.properties.get(PROPERTY_NAME_BOUNDS_X, 0))
+            offset_y = int(openslide_wsi.properties.get(PROPERTY_NAME_BOUNDS_Y, 0))
             scaled_location = (
                 (region["location"]["x"] * scale) + offset_x,
                 (region["location"]["y"] * scale) + offset_y,
             )
-            reference = wsi.read_region(
+            reference = openslide_wsi.read_region(
                 scaled_location,
                 region["level"],
                 (region["size"]["width"], region["size"]["height"]),
             )
 
-        reference_no_alpha = Image.new("RGB", reference.size, (255, 255, 255))
-        reference_no_alpha.paste(reference, mask=reference.split()[3])
-        self.assertEqual(
-            md5(converted.tobytes()).hexdigest(),
-            md5(reference_no_alpha.tobytes()).hexdigest(),
-            msg=(
-                f"{file_format}: {file} {region} " "does not match openslide at ",
-                scaled_location,
-                region["level"],
-                region["size"]["height"],
-            ),
+            reference_no_alpha = Image.new("RGB", reference.size, (255, 255, 255))
+            reference_no_alpha.paste(reference, mask=reference.split()[3])
+
+        # Act
+        converted = wsi.read_region(
+            (region["location"]["x"], region["location"]["y"]),
+            level,
+            (region["size"]["width"], region["size"]["height"]),
         )
 
-    @parameterized.expand(
+        # Assert
+        assert (
+            md5(converted.tobytes()).hexdigest()
+            == md5(reference_no_alpha.tobytes()).hexdigest()
+        ), (
+            f"{file_format}: {file} {region} does not match openslide at ",
+            scaled_location,
+            region["level"],
+            region["size"]["height"],
+        )
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "thumbnail"],
         [
             (file_format, file, thumbnail)
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
-        ]
+        ],
     )
     def test_read_thumbnail_from_converted_file_should_almost_match_thumbnail(
         self,
         file_format: str,
         file: str,
         thumbnail: Dict[str, Any],
+        wsi_files: Dict[str, Dict[str, Path]],
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            im = wsi.read_thumbnail(
-                (thumbnail["size"]["width"], thumbnail["size"]["height"])
-            )
-
-        (original_path, _) = self.get_paths(file_format, file)
-        with OpenSlide(original_path) as wsi:
-            open_im = wsi.get_thumbnail(
+        # Arrange
+        wsi = wsis[file_format][file]
+        original_path = wsi_files[file_format][file]
+        with OpenSlide(original_path) as openslide_wsi:
+            open_im = openslide_wsi.get_thumbnail(
                 (thumbnail["size"]["width"], thumbnail["size"]["height"])
             ).convert("RGB")
+
+        # Act
+        im = wsi.read_thumbnail(
+            (thumbnail["size"]["width"], thumbnail["size"]["height"])
+        )
+
+        # Assert
         diff = ImageChops.difference(im, open_im)
         for band_rms in ImageStat.Stat(diff).rms:
-            self.assertLess(band_rms, 4, msg=f"{file_format}: {file} {thumbnail}")
+            assert band_rms < 4, f"{file_format}: {file} {thumbnail}"
 
-    @parameterized.expand(
+    @pytest.mark.parametrize(
+        ["file_format", "file", "photometric_interpretation"],
         [
             (file_format, file, file_parameters["photometric_interpretation"])
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
-        ]
+        ],
     )
     def test_photometric_interpretation(
-        self, file_format: str, file: str, photometric_interpretation: str
+        self,
+        file_format: str,
+        file: str,
+        photometric_interpretation: str,
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            image_data = wsi.levels[0].default_instance.image_data
-            self.assertEqual(
-                image_data.photometric_interpretation, photometric_interpretation
-            )
+        # Arrange
+        wsi = wsis[file_format][file]
 
-    def test_replace_label_should_equal_new_label(self):
-        path = next(
-            paths[0] for paths in self.test_folders.values() if paths is not None
-        )
-        new_label = Image.new("RGB", (256, 256), (128, 128, 128))
-        with WsiDicomizer.open(path, label=new_label) as wsi:
-            self.assertEqual(new_label, wsi.read_label())
+        # Act
+        image_data = wsi.levels[0].default_instance.image_data
 
-    @parameterized.expand(
+        # Assert
+        assert image_data.photometric_interpretation == photometric_interpretation
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file in format_files.keys()
+        ],
+    )
+    def test_replace_label_should_equal_new_label(
+        self, file_format: str, file: str, wsi_files: Dict[str, Dict[str, Path]]
+    ):
+        # Arrange
+        wsi_file = wsi_files[file_format][file]
+
+        label = Image.new("RGB", (256, 256), (128, 128, 128))
+
+        # Act
+        with WsiDicomizer.open(wsi_file, label=label) as wsi:
+            new_label = wsi.read_label()
+
+        # Assert
+        assert label == new_label
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_image_coordinate_system"],
         [
             (file_format, file, file_parameters["image_coordinate_system"])
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
-        ]
+        ],
     )
     def test_image_coordinate_system(
         self,
         file_format: str,
         file: str,
         expected_image_coordinate_system: Dict[str, float],
+        wsis: Dict[str, Dict[str, WsiDicom]],
     ):
-        with self.open_wsi(file_format, file) as wsi:
-            image_coordinate_system = wsi.levels[
-                0
-            ].default_instance.image_data.image_coordinate_system
-            assert image_coordinate_system is not None
-            self.assertEqual(
-                image_coordinate_system.origin.x, expected_image_coordinate_system["x"]
-            )
-            self.assertEqual(
-                image_coordinate_system.origin.y, expected_image_coordinate_system["y"]
-            )
+        # Arrange
+        wsi = wsis[file_format][file]
+
+        # Act
+        image_coordinate_system = wsi.levels[
+            0
+        ].default_instance.image_data.image_coordinate_system
+
+        # Arrange
+        assert image_coordinate_system is not None
+        assert image_coordinate_system.origin.x == expected_image_coordinate_system["x"]
+        assert image_coordinate_system.origin.y == expected_image_coordinate_system["y"]

@@ -2,7 +2,7 @@
 import struct
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Generic, Iterable, List, Optional, Type, TypeVar, Union
+from typing import Dict, Generic, List, Optional, Sequence, Type, TypeVar, Union
 
 import numpy as np
 from pydicom import Dataset
@@ -215,10 +215,10 @@ OpticalFilterType = TypeVar("OpticalFilterType", bound="OpticalFilter")
 class OpticalFilter(Generic[OpticalFilterCodeType], metaclass=ABCMeta):
     """Metaclass for filter conditions for optical path"""
 
-    filters: Iterable[OpticalFilterCodeType]
-    nominal: Optional[float]
-    low_pass: Optional[float]
-    high_pass: Optional[float]
+    filters: Sequence[OpticalFilterCodeType] = field(default_factory=list)
+    nominal: Optional[float] = None
+    low_pass: Optional[float] = None
+    high_pass: Optional[float] = None
 
     @classmethod
     @abstractmethod
@@ -307,16 +307,16 @@ class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
 
 
 @dataclass
-class Lenses:
+class Objectives:
     """Set of lens conditions for optical path"""
 
-    lenses: Iterable[LenseCode] = field(default_factory=list)
+    lenses: Sequence[LenseCode] = field(default_factory=list)
     condenser_power: Optional[float] = None
     objective_power: Optional[float] = None
     objective_na: Optional[float] = None
 
     @classmethod
-    def from_ds(cls, ds: Dataset) -> "Lenses":
+    def from_ds(cls, ds: Dataset) -> "Objectives":
         """Returns Lenses object read from dataset (optical path sequence
         item).
 
@@ -382,7 +382,7 @@ class OpticalPath(ModelBase):
     lut: Optional[Lut] = None
     light_path_filter: Optional[LightPathFilter] = None
     image_path_filter: Optional[ImagePathFilter] = None
-    lenses: Optional[Lenses] = None
+    objective: Optional[Objectives] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -411,18 +411,18 @@ class OpticalPath(ModelBase):
                 self.icc_profile,
             ),
         ]
-        if self.lenses is not None:
+        if self.objective is not None:
             dicom_attributes.extend(
                 # TODO check dicom tags for these, add lenses.
                 (
                     DicomNumberAttribute(
-                        "ObjectiveLensPower", False, self.lenses.objective_power
+                        "ObjectiveLensPower", False, self.objective.objective_power
                     ),
                     DicomNumberAttribute(
-                        "CondenserLensPower", False, self.lenses.condenser_power
+                        "CondenserLensPower", False, self.objective.condenser_power
                     ),
                     DicomNumberAttribute(
-                        "ObjectiveNa", False, self.lenses.objective_na
+                        "ObjectiveNa", False, self.objective.objective_na
                     ),
                 )
             )

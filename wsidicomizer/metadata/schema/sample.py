@@ -18,6 +18,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Sequence,
     Type,
     Union,
 )
@@ -75,7 +76,7 @@ class SamplingChainConstraintSimplified:
     with the identifier of the sampled specimen and the index of the sampling step
     withing the step sequence of the specimen."""
 
-    specimen: Union[str, SpecimenIdentifier]
+    identifier: Union[str, SpecimenIdentifier]
     sampling_step_index: int
 
     @classmethod
@@ -93,7 +94,7 @@ class SamplingSimplified(Sampling):
     specimen: Union[str, SpecimenIdentifier]
     method: SpecimenSamplingProcedureCode
     sampling_chain_constraints: Optional[
-        Iterable[SamplingChainConstraintSimplified]
+        Sequence[SamplingChainConstraintSimplified]
     ] = None
     date_time: Optional[datetime.datetime] = None
     description: Optional[str] = None
@@ -117,10 +118,10 @@ class SamplingSimplified(Sampling):
         )
 
 
-class SamplingSchemaConstraintSchema(Schema):
+class SamplingConstraintSchema(Schema):
     """Schema for serializing and deserializing a `SamplingChainConstraintSimplified`."""
 
-    specimen = SpecimenIdentifierField()
+    identifier = SpecimenIdentifierField()
     sampling_step_index = fields.Integer()
 
     @post_load
@@ -151,7 +152,7 @@ class SamplingSchema(BasePreparationStepSchema):
     specimen = SpecimenIdentifierField()
     method = FieldFactory.concept_code(SpecimenSamplingProcedureCode)()
     sampling_chain_constraints = fields.List(
-        fields.Nested(SamplingSchemaConstraintSchema), allow_none=True
+        fields.Nested(SamplingConstraintSchema), allow_none=True
     )
     date_time = fields.DateTime(allow_none=True)
     description = fields.String(allow_none=True)

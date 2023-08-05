@@ -2,7 +2,7 @@
 import datetime
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Iterable, List, Literal, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 
 from pydicom import Dataset
 from pydicom.sr.coding import Code
@@ -28,7 +28,7 @@ class PatientSex(Enum):
 @dataclass
 class PatientDeIdentification(ModelBase):
     identity_removed: bool
-    methods: Optional[Iterable[Union[str, Code]]] = None
+    methods: Optional[Sequence[Union[str, Code]]] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:

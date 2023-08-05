@@ -130,11 +130,14 @@ class StringOrCodeField(fields.Field):
             return None
         if isinstance(value, str):
             return value
-        return {
-            field.name: getattr(value, field.name)
-            for field in dataclasses.fields(value)
-            if getattr(value, field.name) is not None
+        code = {
+            "value": value.value,
+            "scheme_designator": value.scheme_designator,
+            "meaning": value.meaning,
         }
+        if value.scheme_version is not None:
+            code["scheme_version"] = value.scheme_version
+        return code
 
     def _deserialize(
         self, value: Union[str, Dict], attr, data, **kwargs

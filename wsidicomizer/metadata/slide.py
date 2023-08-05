@@ -1,6 +1,6 @@
 """Slide model."""
-from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional
+from dataclasses import dataclass
+from typing import Dict, Sequence, List, Optional, Sequence
 from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
 from wsidicom.conceptcode import (
@@ -32,8 +32,8 @@ class Slide(ModelBase):
     """
 
     identifier: Optional[str] = None
-    stains: Optional[Iterable[SpecimenStainsCode]] = None
-    samples: Optional[Iterable[SlideSample]] = None
+    stains: Optional[Sequence[SpecimenStainsCode]] = None
+    samples: Optional[Sequence[SlideSample]] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -53,7 +53,7 @@ class Slide(ModelBase):
                 [
                     DicomCodeAttribute(
                         "ContainerComponentTypeCodeSequence",
-                        False,
+                        True,
                         ContainerComponentTypeCode("Microscope slide cover slip").code,
                     ),
                     DicomStringAttribute("ContainerComponentMaterial", False, "GLASS"),
@@ -68,6 +68,8 @@ class Slide(ModelBase):
                     for slide_sample in self.samples
                 ]
             )
+        else:
+            dataset.SpecimenDescriptionSequence = DicomSequence()
 
     @classmethod
     def from_dataset(cls, dataset: Dataset):

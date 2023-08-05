@@ -8,7 +8,7 @@ from wsidicom.conceptcode import (
 )
 from wsidicomizer.metadata.optical_path import (
     ImagePathFilter,
-    Lenses,
+    Objectives,
     LightPathFilter,
     OpticalPath,
 )
@@ -38,7 +38,7 @@ class ImagePathFilterSchema(Schema):
         return ImagePathFilter(**data)
 
 
-class LensesSchema(Schema):
+class ObjectivesSchema(Schema):
     """Set of lens conditions for optical path"""
 
     lenses = fields.List(FieldFactory.concept_code(LenseCode))
@@ -48,7 +48,7 @@ class LensesSchema(Schema):
 
     @post_load
     def load_to_object(self, data, **kwargs):
-        return Lenses(**data)
+        return Objectives(**data)
 
 
 class OpticalPathSchema(Schema):
@@ -62,7 +62,7 @@ class OpticalPathSchema(Schema):
     # lut: Optional[Lut] = None
     light_path_filter = fields.Nested(LightPathFilterSchema(), allow_none=True)
     image_path_filter = fields.Nested(ImagePathFilterSchema(), allow_none=True)
-    lenses = fields.Nested(LensesSchema(), allow_none=True)
+    objective = fields.Nested(ObjectivesSchema(), allow_none=True)
 
     @post_load
     def load_to_object(self, data, **kwargs):

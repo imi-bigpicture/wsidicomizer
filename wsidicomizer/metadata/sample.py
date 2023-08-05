@@ -2,7 +2,7 @@ import datetime
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 from highdicom import (
     IssuerOfIdentifier,
@@ -125,7 +125,7 @@ class Sampling(PreparationStep):
 
     specimen: "Specimen"
     method: SpecimenSamplingProcedureCode
-    sampling_chain_constraints: Optional[Iterable["Sampling"]] = None
+    sampling_chain_constraints: Optional[Sequence["Sampling"]] = None
     date_time: Optional[datetime.datetime] = None
     description: Optional[str] = None
 
@@ -295,7 +295,7 @@ class Specimen(metaclass=ABCMeta):
         self,
         identifier: Union[str, SpecimenIdentifier],
         type: AnatomicPathologySpecimenTypesCode,
-        steps: Iterable[PreparationStep],
+        steps: Sequence[PreparationStep],
     ):
         self.identifier = identifier
         self.type = type
@@ -353,8 +353,8 @@ class SampledSpecimen(Specimen):
         self,
         identifier: Union[str, SpecimenIdentifier],
         type: AnatomicPathologySpecimenTypesCode,
-        sampled_from: Iterable[Sampling],
-        steps: Iterable[PreparationStep],
+        sampled_from: Sequence[Sampling],
+        steps: Sequence[PreparationStep],
     ):
         super().__init__(identifier, type, steps)
         self.sampled_from = sampled_from
@@ -405,7 +405,7 @@ class SampledSpecimen(Specimen):
         method: SpecimenSamplingProcedureCode,
         date_time: Optional[datetime.datetime] = None,
         description: Optional[str] = None,
-        sampling_chain_constraints: Optional[Iterable[Sampling]] = None,
+        sampling_chain_constraints: Optional[Sequence[Sampling]] = None,
     ) -> Sampling:
         """Create a sampling from the specimen that can be used to create a new sample."""
         # TODO?
@@ -455,7 +455,7 @@ class SampledSpecimen(Specimen):
     #     return None
 
     def sampling_chain_is_ambiguous(
-        self, sampling_chain_constraints: Optional[Iterable[Sampling]] = None
+        self, sampling_chain_constraints: Optional[Sequence[Sampling]] = None
     ) -> bool:
         """
         Return true if there is multiple sampling chains possible for this specimen.
@@ -575,8 +575,8 @@ class Sample(SampledSpecimen):
 
     identifier: Union[str, SpecimenIdentifier]
     type: AnatomicPathologySpecimenTypesCode
-    sampled_from: Iterable[Sampling]
-    steps: Iterable[PreparationStep] = field(default_factory=list)
+    sampled_from: Sequence[Sampling]
+    steps: Sequence[PreparationStep] = field(default_factory=list)
 
     def __post_init__(self):
         super().__init__(
@@ -604,7 +604,7 @@ class SlideSample(SampledSpecimen):
     """A sample that has been placed on a slide."""
 
     identifier: Union[str, SpecimenIdentifier]
-    anatomical_sites: Iterable[Code]
+    anatomical_sites: Sequence[Code]
     sampled_from: Optional[Sampling] = None
     uid: Optional[UID] = None
     position: Optional[Union[str, SlideSamplePosition]] = None
@@ -625,7 +625,7 @@ class SlideSample(SampledSpecimen):
 
     def to_description(
         self,
-        stains: Optional[Iterable[SpecimenStainsCode]] = None,
+        stains: Optional[Sequence[SpecimenStainsCode]] = None,
     ) -> SpecimenDescription:
         """Create a formatted specimen description for the specimen."""
         sample_uid = generate_uid() if self.uid is None else self.uid

@@ -1,3 +1,17 @@
+import os
+from collections import defaultdict
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any, Dict
+
+import pytest
+from wsidicom import WsiDicom
+
+from wsidicomizer.wsidicomizer import WsiDicomizer
+
+
+DEFAULT_TILE_SIZE = 512
+
 test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
@@ -367,3 +381,68 @@ test_parameters = {
         }
     },
 }
+
+
+@pytest.fixture(scope="module")
+def testdata_dir():
+    yield Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+
+
+@pytest.fixture(scope="module")
+def wsi_files(testdata_dir: Path):
+    files: Dict[str, Dict[str, Path]] = defaultdict(dict)
+    for file_format, file_format_parameters in test_parameters.items():
+        for file in file_format_parameters:
+            files[file_format][file] = testdata_dir.joinpath(
+                "slides", file_format, file
+            )
+    return files
+
+
+@pytest.fixture(scope="module")
+def converted(
+    wsi_files: Dict[str, Dict[str, Path]],
+):
+    converted_folders: Dict[str, Dict[str, TemporaryDirectory]] = defaultdict(dict)
+    for file_format, file_format_parameters in test_parameters.items():
+        for file, file_parameters in file_format_parameters.items():
+            file_path = wsi_files[file_format][file]
+            if not file_path.exists() or not file_parameters["convert"]:
+                continue
+            include_levels = file_parameters["include_levels"]
+            tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
+            tempdir = TemporaryDirectory()
+            WsiDicomizer.convert(
+                file_path,
+                output_path=str(tempdir.name),
+                tile_size=tile_size,
+                include_levels=include_levels,
+                encoding_format="jpeg2000",
+                encoding_quality=0,
+            )
+            converted_folders[file_format][file] = tempdir
+    yield converted_folders
+    for file_format in converted_folders.values():
+        for converted_folder in file_format.values():
+            converted_folder.cleanup()
+
+
+@pytest.fixture(scope="module")
+def wsis(
+    wsi_files: Dict[str, Dict[str, Path]],
+    converted: Dict[str, Dict[str, TemporaryDirectory]],
+):
+    wsis: Dict[str, Dict[str, WsiDicom]] = defaultdict(dict)
+    for file_format, file_format_parameters in wsi_files.items():
+        for file, file_path in file_format_parameters.items():
+            if not file_path.exists():
+                continue
+            if not file_format in converted or file not in converted[file_format]:
+                wsi = WsiDicomizer.open(file_path)
+            else:
+                wsi = WsiDicom.open(converted[file_format][file].name)
+            wsis[file_format][file] = wsi
+    yield wsis
+    for file_format in wsis.values():
+        for wsi in file_format.values():
+            wsi.close()

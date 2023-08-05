@@ -29,7 +29,7 @@ class ImageCoordinateSystemSchema(Schema):
 
 class ImageSchema(Schema):
     acquisition_datetime = fields.DateTime(allow_none=True)
-    focus_method = fields.Enum(FocusMethod, by_value=False, allow_none=True)
+    focus_method = fields.Enum(FocusMethod, by_value=True, allow_none=True)
     extended_depth_of_field = fields.Nested(
         ExtendedDepthOfFieldSchema(), allow_none=True
     )

@@ -15,9 +15,9 @@ class PatientDeIdentificationSchema(Schema):
 class PatientSchema(Schema):
     name = fields.String(allow_none=True)
     identifier = fields.String(allow_none=True)
-    birth_date = fields.DateTime(allow_none=True)
-    sex = fields.Enum(PatientSex, by_value=False, allow_none=True)
-    species_description = fields.List(StringOrCodeField(), allow_none=True)
+    birth_date = fields.Date(allow_none=True)
+    sex = fields.Enum(PatientSex, by_value=True, allow_none=True)
+    species_description = StringOrCodeField(allow_none=True)
     de_identification = fields.Nested(PatientDeIdentificationSchema(), allow_none=True)
 
     @post_load
