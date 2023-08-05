@@ -98,12 +98,12 @@ class CziImageData(DicomizerImageData):
 
     @cached_property
     def focal_planes(self) -> List[float]:
-        """Focal planes avaiable in the image defined in um."""
+        """Focal planes available in the image defined in um."""
         return sorted(self._metadata.focal_plane_mapping)
 
     @property
     def optical_paths(self) -> List[str]:
-        """Optical paths avaiable in the image."""
+        """Optical paths available in the image."""
         return self._metadata.channel_mapping
 
     @cached_property
@@ -334,7 +334,7 @@ class CziImageData(DicomizerImageData):
         Returns
         ----------
         Tuple[Point, Size]
-            Start point corrdinate, size, focal plane and optical path for
+            Start point coordinate, size, focal plane and optical path for
             block.
         """
         x_start: Optional[int] = None

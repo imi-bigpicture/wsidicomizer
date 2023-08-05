@@ -45,7 +45,7 @@ class OpenTileImageData(DicomizerImageData):
         encoded: Encoder
             Encoder to use.
         image_coordinate_system: Optional[ImageCoordinateSystemMetadata] = None
-            Metadata for image coordiante system.
+            Metadata for image coordinate system.
         """
         super().__init__(encoder)
         self._tiff_image = tiff_image
@@ -84,7 +84,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def needs_transcoding(self) -> bool:
         """Return true if image data requires transcoding for Dicom
-        compatibilty."""
+        compatibility."""
         return self._needs_transcoding
 
     @property
@@ -109,17 +109,17 @@ class OpenTileImageData(DicomizerImageData):
 
     @property
     def focal_planes(self) -> List[float]:
-        """Focal planes avaiable in the image defined in um."""
+        """Focal planes available in the image defined in um."""
         return [self._tiff_image.focal_plane]
 
     @property
     def optical_paths(self) -> List[str]:
-        """Optical paths avaiable in the image."""
+        """Optical paths available in the image."""
         return [self._tiff_image.optical_path]
 
     @property
     def suggested_minimum_chunk_size(self) -> int:
-        """Return suggested minumum chunk size for optimal performance with
+        """Return suggested minimum chunk size for optimal performance with
         get_encoeded_tiles()."""
         return self._tiff_image.suggested_minimum_chunk_size
 

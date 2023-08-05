@@ -74,7 +74,7 @@ already be created.
 class SamplingChainConstraintSimplified:
     """Simplified representation of a sampling chain constraint, replacing the sampling
     with the identifier of the sampled specimen and the index of the sampling step
-    withing the step sequence of the specimen."""
+    within the step sequence of the specimen."""
 
     identifier: Union[str, SpecimenIdentifier]
     sampling_step_index: int

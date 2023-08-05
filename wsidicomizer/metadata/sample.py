@@ -52,7 +52,7 @@ corresponding to the sampling, and parse all the steps prior to that step (again
 order). Finally we end up at the TakenSpecimen which does not have a parent specimen.
 
 When we parse the parent specimen steps for a sample, we only consider steps (processing
-and sampling) the for sub-specimens in the parent the sample was sampeld from, if specified.
+and sampling) the for sub-specimens in the parent the sample was sampled from, if specified.
 E.g. there might be steps specific to one of the parent specimens samples, that is or is not
 included. We only follow the sampled_from linkage of the given specimen.
 
@@ -86,19 +86,19 @@ class SpecimenIdentifier:
     def get_identifier_and_issuer(
         cls, identifier: Union[str, "SpecimenIdentifier"]
     ) -> Tuple[str, Optional[IssuerOfIdentifier]]:
-        """Return string identifier and optional issuer of identifer object."""
+        """Return string identifier and optional issuer of identifier object."""
         if isinstance(identifier, str):
             return identifier, None
         return identifier.to_identifier_and_issuer()
 
 
 class PreparationStep(metaclass=ABCMeta):
-    """A generic preparation step that represents a preparation action that was peformed
+    """A generic preparation step that represents a preparation action that was performed
     on a specimen."""
 
     @abstractmethod
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
-        """Return a formated `SpecimenPreparationStep` for the step."""
+        """Return a formatted `SpecimenPreparationStep` for the step."""
         raise NotImplementedError()
 
     @classmethod
@@ -336,7 +336,7 @@ class Specimen(metaclass=ABCMeta):
     def _get_steps_before_sampling(
         self, sampling: Sampling
     ) -> Iterator[PreparationStep]:
-        """Return the steps in this specimen that occured before the given sampling."""
+        """Return the steps in this specimen that occurred before the given sampling."""
         for step in self.steps:
             if isinstance(step, Sampling):
                 # Break if sampling step for this sample, otherwise skip
@@ -465,7 +465,7 @@ class SampledSpecimen(Specimen):
         chain can branch. The sampling chain is ambiguous if it is not possible to
         determine a single chain to an extracted specimen.
 
-        Optinally the sampling chain can be constrained by specifying sampling steps
+        Optionally the sampling chain can be constrained by specifying sampling steps
         that should be in the chain.
 
         A chain is ambiguous if:

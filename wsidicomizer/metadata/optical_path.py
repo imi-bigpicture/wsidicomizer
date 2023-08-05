@@ -48,7 +48,7 @@ class Lut:
             self._type = np.dtype(np.uint8)
         else:
             self._type = np.dtype(np.uint16)
-        self._byte_format = "<HHH"  # Do we need to set endianess?
+        self._byte_format = "<HHH"  # Do we need to set endianness?
         self.table = self._parse_lut(self._lut_item)
 
     def array(self, mode: str) -> np.ndarray:
@@ -120,7 +120,7 @@ class Lut:
             elif lut_type == 1:
                 parsed_table = self._add_linear(parsed_table, lut_length, lut_value)
             else:
-                raise NotImplementedError("Unkown lut segment type")
+                raise NotImplementedError("Unknown lut segment type")
         return parsed_table
 
     def _parse_lut(self, lut: Dataset) -> np.ndarray:
@@ -144,7 +144,7 @@ class Lut:
 
     @classmethod
     def _insert(cls, table: np.ndarray, segment: np.ndarray):
-        """Insert a segement into the lookup table of channel.
+        """Insert a segment into the lookup table of channel.
 
         Parameters
         ----------
@@ -158,7 +158,7 @@ class Lut:
 
     @classmethod
     def _add_discret(cls, table: np.ndarray, length: int, value: int):
-        """Add a discret segement into the lookup table of channel.
+        """Add a discret segment into the lookup table of channel.
 
         Parameters
         ----------
@@ -175,7 +175,7 @@ class Lut:
 
     @classmethod
     def _add_linear(cls, table: np.ndarray, length: int, value: int):
-        """Add a linear segement into the lookup table of channel.
+        """Add a linear segment into the lookup table of channel.
 
         Parameters
         ----------

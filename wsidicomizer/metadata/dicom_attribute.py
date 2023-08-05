@@ -43,7 +43,7 @@ class DicomAttribute(Generic[ValueType, FormatedType]):
 
     @abstractmethod
     def _formater(self, value: ValueType) -> FormatedType:
-        """Return formated value that is accepted by DataElement() for the DICOM tag."""
+        """Return formatted value that is accepted by DataElement() for the DICOM tag."""
         raise NotImplementedError()
 
     def insert_into_dataset(self, dataset: Dataset) -> None:

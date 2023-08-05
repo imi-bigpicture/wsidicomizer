@@ -77,7 +77,7 @@ class WsiDicomizer(WsiDicom):
             Tile size to use if not defined by file.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
+            includes the two lowest levels. Negative indices can be used,
             e.g. [-1, -2] includes the two highest levels.
         include_label: bool = True
             Include label(s), default true.
@@ -172,10 +172,10 @@ class WsiDicomizer(WsiDicom):
         tile_size: int = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
-             Function that can gernerate unique identifiers.
+             Function that can generate unique identifiers.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
+            includes the two lowest levels. Negative indices can be used,
             e.g. [-1, -2] includes the two highest levels.
         include_label: bool = True
             Include label(s), default true.

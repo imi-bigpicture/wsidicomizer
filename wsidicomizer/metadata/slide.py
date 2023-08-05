@@ -28,7 +28,7 @@ class Slide(ModelBase):
 
     A slide has a an identifier and contains one or more samples. The position of the
     samples can be specified using a SampleLocation. All the samples on the slide has
-    been stained with the samle list of stainings.
+    been stained with the sample list of stainings.
     """
 
     identifier: Optional[str] = None

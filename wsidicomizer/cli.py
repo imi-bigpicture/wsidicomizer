@@ -38,7 +38,7 @@ class WsiDicomizerCli:
             type=Path,
             help=(
                 "Path to output folder. Folder will be created and must not "
-                "excist. If not specified a folder named after the input file "
+                "exist. If not specified a folder named after the input file "
                 "is created in the same path."
             ),
         )

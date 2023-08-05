@@ -22,7 +22,7 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomUidAttribute,
 )
 
-# TODO figure out how metadata defined here can override or be overriden by
+# TODO figure out how metadata defined here can override or be overridden by
 # *ImageMeta*. Suggestion is to have a bool flag on each module, indicating if the
 # properties defined in that module should override metadata from file.
 # Could additionally add a *override* dict that specifies individual attributes that
@@ -46,7 +46,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 # And feed this to all modules.
 
 # The modules primarily contain type 1 and 2 attributes, but also some 3 and some
-# conditional attributes. They way they are currenly converted to dataset, there is no
+# conditional attributes. They way they are currently converted to dataset, there is no
 # check that type 1 attributes are not empty, or that type 3 attributes are not included
 # if empty, or if conditional attributes are set. The straight forward way is likely to
 # change to model-specific to_dataset()-methods.

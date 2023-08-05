@@ -81,7 +81,7 @@ class ReaderPool:
     @contextmanager
     def get_reader(self) -> Generator[Memoizer, None, None]:
         """Return a reader. Should be used as a context manager. Will block
-        if no reader is avaiable."""
+        if no reader is available."""
         reader = self._get_reader()
         try:
             yield reader
@@ -109,9 +109,9 @@ class ReaderPool:
         raise ValueError()
 
     def _get_reader(self) -> Memoizer:
-        """Return a reader with no wait if one is avaiable. Else if current
+        """Return a reader with no wait if one is available. Else if current
         reader count is less than maximum reader count return a new reader.
-        Otherwise wait for an avaiable readern."""
+        Otherwise wait for an available readern."""
         try:
             return self._queue.get_nowait()
         except Empty:
