@@ -147,7 +147,7 @@ Support for reading images using Openslide c library can optionally be enabled b
 pip install wsidicomizer[openslide]
 ```
 
-The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
+The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is available on <https://openslide.org/download/>
 For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
 
 ## Bioformats support
@@ -164,7 +164,7 @@ The `bioformats` extra enables usage of the `bioformats` module and the `bioform
 
 ### Using
 
-As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therfore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
+As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therefore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
 
 ```python
 import scyjava
@@ -175,7 +175,7 @@ Due to the need to start a JVM, the `bioformats` module is not imported when usi
 
 ### Bioformats version
 
-The Bioformats java library is avaiable in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only avaible in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
+The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
 
 ## Limitations
 

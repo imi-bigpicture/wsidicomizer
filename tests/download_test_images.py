@@ -115,7 +115,7 @@ def main():
                 data = saved_file_io.read()
                 if not hash == md5(data).hexdigest():
                     raise ValueError(
-                        f"Checksum faild for {saved_file_path}. Try removing "
+                        f"Checksum failed for {saved_file_path}. Try removing "
                         "the parent folder and try again."
                     )
                 else:

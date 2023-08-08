@@ -323,7 +323,7 @@ class CziImageData(DicomizerImageData):
     def _get_block_dimensions(
         self, block: DirectoryEntryDV
     ) -> Tuple[Point, Size, float, str]:
-        """Return start coordinate and size for block realtive to image
+        """Return start coordinate and size for block relative to image
         origin and block focal plane and optical path.
 
         Parameters
