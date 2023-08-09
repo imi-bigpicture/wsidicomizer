@@ -190,7 +190,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             Optional list indices (in present levels) to include, e.g. [0, 1]
             includes the two lowest levels. Negative indices can be used,
             e.g. [-1, -2] includes the two highest levels. Default of None
-            will not limit the selection. An empty sequence will exluded all
+            will not limit the selection. An empty sequence will excluded all
             levels.
 
         Returns

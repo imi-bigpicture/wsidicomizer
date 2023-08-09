@@ -7,7 +7,7 @@ from pydicom.uid import UID
 from wsidicom.conceptcode import CidConceptCode, CidConceptCodeType
 from wsidicom.geometry import PointMm
 
-from wsidicomizer.metadata.sample import SlideSamplePosition, SpecimenIdentifier
+from wsidicomizer.metadata.sample import SlideSamplePosition, Specimen, SpecimenIdentifier
 
 
 class SlideSamplePositionField(fields.Field):
@@ -43,10 +43,12 @@ class SlideSamplePositionField(fields.Field):
 
 class SpecimenIdentifierField(fields.Field):
     def _serialize(
-        self, value: Optional[Union[str, SpecimenIdentifier]], attr, obj, **kwargs
+        self, value: Optional[Union[Specimen, str, SpecimenIdentifier]], attr, obj, **kwargs
     ) -> Optional[Union[str, Dict]]:
         if value is None:
             return None
+        if isinstance(value, Specimen):
+            return self._serialize(value.identifier, attr, obj, **kwargs)
         if isinstance(value, str):
             return value
         return {

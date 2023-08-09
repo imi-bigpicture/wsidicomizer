@@ -2,6 +2,7 @@
 import datetime
 from abc import abstractmethod
 from dataclasses import MISSING, dataclass
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Callable, Generic, Iterable, Literal, Optional, TypeVar, Union
 
@@ -47,10 +48,7 @@ class DicomAttribute(Generic[ValueType, FormatedType]):
         raise NotImplementedError()
 
     def insert_into_dataset(self, dataset: Dataset) -> None:
-        """
-        Insert attribute into dataset.
-
-        """
+        """Insert attribute into dataset."""
         value = None
         try:
             value = self._get_value()
@@ -107,9 +105,10 @@ class DicomListStringAttribute(
         return value
 
     def _set_in_dataset(self, dataset: Dataset, value: Optional[Iterable[str]]):
-        if value is not None:
+        if value is not None or self.required:
             attribute = getattr(dataset, self.tag, list())
-            attribute.extend(value)
+            if value is not None:
+                attribute.extend(value)
             setattr(dataset, self.tag, attribute)
 
 
@@ -147,9 +146,10 @@ class DicomCodeAttribute(DicomAttribute[Code, Dataset]):
         return item
 
     def _set_in_dataset(self, dataset: Dataset, value: Optional[Dataset]):
-        if value is not None:
+        if value is not None or self.required:
             attribute = getattr(dataset, self.tag, DicomSequence())
-            attribute.append(value)
+            if value is not None:
+                attribute.append(value)
             setattr(dataset, self.tag, attribute)
 
 
@@ -158,18 +158,23 @@ class DicomUidAttribute(DicomAttribute[UID, UID]):
         return value
 
 
+class DicomNumericAttributeType(Enum):
+    FLOAT_STRING = "float string"
+    DECIMAL_STRING = "decimal string"
+    INTEGER_STRING = "integer string"
+    NOT_STRING = "not string"
+
+
 @dataclass
-class DicomNumberAttribute(DicomAttribute[Union[int, float], Union[int, float, str]]):
-    is_float_string: bool = False
-    is_decimal_string: bool = False
-    is_integer_string: bool = False
+class DicomNumericAttribute(DicomAttribute[Union[int, float], Union[int, float, str]]):
+    number_type: DicomNumericAttributeType = DicomNumericAttributeType.NOT_STRING
 
     def _formater(self, value: Union[int, float]) -> Any:
-        if self.is_float_string:
+        if self.number_type == DicomNumericAttributeType.FLOAT_STRING:
             return DSfloat(value, True)
-        if self.is_decimal_string:
-            return DSdecimal(value, True)
-        if self.is_integer_string:
+        if self.number_type == DicomNumericAttributeType.DECIMAL_STRING:
+            return DSdecimal(str(value), True)
+        if self.number_type == DicomNumericAttributeType.INTEGER_STRING:
             return IS(value)
         return value
 

@@ -149,6 +149,10 @@ class Sampling(PreparationStep):
             processing_description=self.description,
         )
 
+    @property
+    def index(self) -> int:
+        return [step for step in self.specimen.samplings].index(self)
+
     def to_preparation_steps(
         self, specimen: "Specimen"
     ) -> List[SpecimenPreparationStep]:
@@ -353,11 +357,15 @@ class SampledSpecimen(Specimen):
         self,
         identifier: Union[str, SpecimenIdentifier],
         type: AnatomicPathologySpecimenTypesCode,
-        sampled_from: Sequence[Sampling],
+        sampled_from: Optional[Union[Sampling, Sequence[Sampling]]],
         steps: Sequence[PreparationStep],
     ):
         super().__init__(identifier, type, steps)
-        self.sampled_from = sampled_from
+        if sampled_from is None:
+            sampled_from = []
+        elif isinstance(sampled_from, Sampling):
+            sampled_from = [sampled_from]
+        self._sampled_from = sampled_from
         # for sampling in self.sampled_from:
         #     if sampling.sub_sampling is not None:
         #         if not isinstance(sampling.sampled_specimen, SampledSpecimen):
@@ -384,7 +392,7 @@ class SampledSpecimen(Specimen):
         """Return formatted steps for the specimen the sample was sampled from."""
         return [
             step
-            for sampling in self.sampled_from
+            for sampling in self._sampled_from
             for step in sampling.to_preparation_steps(self)
         ]
 
@@ -393,7 +401,7 @@ class SampledSpecimen(Specimen):
         samplings: Dict[Union[str, SpecimenIdentifier], Specimen] = {
             self.identifier: self
         }
-        for sampling in self.sampled_from:
+        for sampling in self._sampled_from:
             if not isinstance(sampling.specimen, SampledSpecimen):
                 samplings.update({sampling.specimen.identifier: sampling.specimen})
             else:
@@ -475,7 +483,7 @@ class SampledSpecimen(Specimen):
         if sampling_chain_constraints is not None:
             matching_constraints = [
                 sampling
-                for sampling in self.sampled_from
+                for sampling in self._sampled_from
                 if sampling in sampling_chain_constraints
             ]
             if len(matching_constraints) > 1:
@@ -505,10 +513,10 @@ class SampledSpecimen(Specimen):
                     sampling.specimen.sampling_chain_is_ambiguous(
                         sampling_chain_constraints
                     )
-                    for sampling in self.sampled_from
+                    for sampling in self._sampled_from
                     if isinstance(sampling.specimen, SampledSpecimen)
                 )
-        samplings = list(self.sampled_from)
+        samplings = list(self._sampled_from)
         if len(samplings) > 1:
             print("No constraints and more than one sample, True")
             return True
@@ -611,15 +619,10 @@ class SlideSample(SampledSpecimen):
     steps: List[PreparationStep] = field(init=False, default_factory=list)
 
     def __post_init__(self):
-        # TODO
-        if self.sampled_from is None:
-            sampled_from = []
-        else:
-            sampled_from = [self.sampled_from]
         super().__init__(
             identifier=self.identifier,
             type=AnatomicPathologySpecimenTypesCode("Slide"),
-            sampled_from=sampled_from,
+            sampled_from=self.sampled_from,
             steps=self.steps,
         )
 

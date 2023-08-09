@@ -12,6 +12,7 @@ from wsidicom.conceptcode import (
     LightPathFilterCode,
 )
 from wsidicom.geometry import PointMm
+from tests.metadata.helpers import assert_dict_equals_code
 
 from wsidicomizer.metadata import (
     Equipment,
@@ -40,14 +41,8 @@ from wsidicomizer.metadata.schema.study import StudySchema
 
 
 class TestSchema:
-    def test_equipment_serialize(self):
+    def test_equipment_serialize(self, equipment: Equipment):
         # Arrange
-        equipment = Equipment(
-            "manufacturer",
-            "model name",
-            "device serial number",
-            ["software versions 1", "software versions 2"],
-        )
 
         # Act
         dumped = EquipmentSchema().dump(equipment)
@@ -78,16 +73,8 @@ class TestSchema:
         assert loaded.device_serial_number == dumped["device_serial_number"]
         assert loaded.software_versions == dumped["software_versions"]
 
-    def test_image_serialize(self):
+    def test_image_serialize(self, image: Image):
         # Arrange
-        extended_depth_of_field = ExtendedDepthOfField(5, 0.5)
-        image_coordinate_system = ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
-        image = Image(
-            datetime.datetime(2023, 8, 5),
-            FocusMethod.AUTO,
-            extended_depth_of_field,
-            image_coordinate_system,
-        )
 
         # Act
         dumped = ImageSchema().dump(image)
@@ -95,28 +82,30 @@ class TestSchema:
         # Assert
         assert image.acquisition_datetime is not None
         assert image.focus_method is not None
+        assert image.image_coordinate_system is not None
+        assert image.extended_depth_of_field is not None
         assert isinstance(dumped, dict)
         assert dumped["acquisition_datetime"] == image.acquisition_datetime.isoformat()
         assert dumped["focus_method"] == image.focus_method.value
         assert (
             dumped["extended_depth_of_field"]["number_of_focal_planes"]
-            == extended_depth_of_field.number_of_focal_planes
+            == image.extended_depth_of_field.number_of_focal_planes
         )
         assert (
             dumped["extended_depth_of_field"]["distance_between_focal_planes"]
-            == extended_depth_of_field.distance_between_focal_planes
+            == image.extended_depth_of_field.distance_between_focal_planes
         )
         assert (
             dumped["image_coordinate_system"]["origin"]["x"]
-            == image_coordinate_system.origin.x
+            == image.image_coordinate_system.origin.x
         )
         assert (
             dumped["image_coordinate_system"]["origin"]["y"]
-            == image_coordinate_system.origin.y
+            == image.image_coordinate_system.origin.y
         )
         assert (
             dumped["image_coordinate_system"]["rotation"]
-            == image_coordinate_system.rotation
+            == image.image_coordinate_system.rotation
         )
 
     def test_image_deserialize(self):
@@ -166,9 +155,8 @@ class TestSchema:
             == dumped["image_coordinate_system"]["rotation"]
         )
 
-    def test_label_serialize(self):
+    def test_label_serialize(self, label: Label):
         # Arrange
-        label = Label("label_text", "barcode_value", True, True, False)
 
         # Act
         dumped = LabelSchema().dump(label)
@@ -202,45 +190,8 @@ class TestSchema:
         assert loaded.label_in_overview_image == dumped["label_in_overview_image"]
         assert loaded.label_is_phi == dumped["label_is_phi"]
 
-    @pytest.mark.parametrize(
-        "illumination", [IlluminationColorCode("Full Spectrum"), 400.0]
-    )
-    def test_optical_path_serialize(
-        self, illumination: Union[IlluminationColorCode, float]
-    ):
+    def test_optical_path_serialize(self, optical_path: OpticalPath):
         # Arrange
-        light_path_filter = LightPathFilter(
-            [
-                LightPathFilterCode("Green optical filter"),
-            ],
-            500,
-            400,
-            600,
-        )
-
-        image_path_filter = ImagePathFilter(
-            [
-                ImagePathFilterCode("Red optical filter"),
-            ],
-            500,
-            400,
-            600,
-        )
-
-        objective = Objectives(
-            [LenseCode("High power non-immersion lens")], 10.0, 20.0, 0.5
-        )
-        optical_path = OpticalPath(
-            "identifier",
-            "description",
-            IlluminationCode("Brightfield illumination"),
-            illumination,
-            None,
-            None,
-            light_path_filter,
-            image_path_filter,
-            objective,
-        )
 
         # Act
         dumped = OpticalPathSchema().dump(optical_path)
@@ -253,39 +204,17 @@ class TestSchema:
         assert optical_path.objective is not None
         assert dumped["identifier"] == optical_path.identifier
         assert dumped["description"] == optical_path.description
-        assert (
-            dumped["illumination_type"]["value"] == optical_path.illumination_type.value
+        assert_dict_equals_code(
+            dumped["illumination_type"], optical_path.illumination_type
         )
-        assert (
-            dumped["illumination_type"]["scheme_designator"]
-            == optical_path.illumination_type.scheme_designator
-        )
-        assert (
-            dumped["illumination_type"]["meaning"]
-            == optical_path.illumination_type.meaning
-        )
+
         if isinstance(optical_path.illumination, IlluminationColorCode):
-            assert dumped["illumination"]["value"] == optical_path.illumination.value
-            assert (
-                dumped["illumination"]["scheme_designator"]
-                == optical_path.illumination.scheme_designator
-            )
-            assert (
-                dumped["illumination"]["meaning"] == optical_path.illumination.meaning
-            )
+            assert_dict_equals_code(dumped["illumination"], optical_path.illumination)
         else:
             assert dumped["illumination"] == optical_path.illumination
-        assert (
-            dumped["light_path_filter"]["filters"][0]["value"]
-            == optical_path.light_path_filter.filters[0].value
-        )
-        assert (
-            dumped["light_path_filter"]["filters"][0]["meaning"]
-            == optical_path.light_path_filter.filters[0].meaning
-        )
-        assert (
-            dumped["light_path_filter"]["filters"][0]["scheme_designator"]
-            == optical_path.light_path_filter.filters[0].scheme_designator
+        assert_dict_equals_code(
+            dumped["light_path_filter"]["filters"][0],
+            optical_path.light_path_filter.filters[0],
         )
         assert (
             dumped["light_path_filter"]["nominal"]
@@ -299,17 +228,9 @@ class TestSchema:
             dumped["light_path_filter"]["high_pass"]
             == optical_path.light_path_filter.high_pass
         )
-        assert (
-            dumped["image_path_filter"]["filters"][0]["value"]
-            == optical_path.image_path_filter.filters[0].value
-        )
-        assert (
-            dumped["image_path_filter"]["filters"][0]["meaning"]
-            == optical_path.image_path_filter.filters[0].meaning
-        )
-        assert (
-            dumped["image_path_filter"]["filters"][0]["scheme_designator"]
-            == optical_path.image_path_filter.filters[0].scheme_designator
+        assert_dict_equals_code(
+            dumped["image_path_filter"]["filters"][0],
+            optical_path.image_path_filter.filters[0],
         )
         assert (
             dumped["image_path_filter"]["nominal"]
@@ -323,17 +244,9 @@ class TestSchema:
             dumped["image_path_filter"]["high_pass"]
             == optical_path.image_path_filter.high_pass
         )
-        assert (
-            dumped["objective"]["lenses"][0]["value"]
-            == optical_path.objective.lenses[0].value
-        )
-        assert (
-            dumped["objective"]["lenses"][0]["meaning"]
-            == optical_path.objective.lenses[0].meaning
-        )
-        assert (
-            dumped["objective"]["lenses"][0]["scheme_designator"]
-            == optical_path.objective.lenses[0].scheme_designator
+        assert_dict_equals_code(
+            dumped["objective"]["lenses"][0],
+            optical_path.objective.lenses[0],
         )
         assert (
             dumped["objective"]["condenser_power"]
@@ -344,7 +257,8 @@ class TestSchema:
             == optical_path.objective.objective_power
         )
         assert (
-            dumped["objective"]["objective_na"] == optical_path.objective.objective_na
+            dumped["objective"]["objective_numerical_aperature"]
+            == optical_path.objective.objective_numerical_aperature
         )
 
     @pytest.mark.parametrize(
@@ -401,7 +315,7 @@ class TestSchema:
                 ],
                 "condenser_power": 10.0,
                 "objective_power": 20.0,
-                "objective_na": 0.5,
+                "objective_numerical_aperature": 0.5,
             },
         }
         dumped["illumination"] = illumination
@@ -417,35 +331,21 @@ class TestSchema:
         assert loaded.objective is not None
         assert loaded.identifier == dumped["identifier"]
         assert loaded.description == dumped["description"]
-        assert loaded.illumination_type.value == dumped["illumination_type"]["value"]
-        assert (
-            loaded.illumination_type.scheme_designator
-            == dumped["illumination_type"]["scheme_designator"]
-        )
-        assert (
-            loaded.illumination_type.meaning == dumped["illumination_type"]["meaning"]
+        assert_dict_equals_code(
+            dumped["illumination_type"],
+            loaded.illumination_type,
         )
         if isinstance(dumped["illumination"], dict):
             assert isinstance(loaded.illumination, IlluminationColorCode)
-            assert loaded.illumination.value == dumped["illumination"]["value"]
-            assert (
-                loaded.illumination.scheme_designator
-                == dumped["illumination"]["scheme_designator"]
+            assert_dict_equals_code(
+                dumped["illumination"],
+                loaded.illumination,
             )
-            assert loaded.illumination.meaning == dumped["illumination"]["meaning"]
         else:
             assert loaded.illumination == dumped["illumination"]
-        assert (
-            loaded.light_path_filter.filters[0].value
-            == dumped["light_path_filter"]["filters"][0]["value"]
-        )
-        assert (
-            loaded.light_path_filter.filters[0].scheme_designator
-            == dumped["light_path_filter"]["filters"][0]["scheme_designator"]
-        )
-        assert (
-            loaded.light_path_filter.filters[0].meaning
-            == dumped["light_path_filter"]["filters"][0]["meaning"]
+        assert_dict_equals_code(
+            dumped["light_path_filter"]["filters"][0],
+            loaded.light_path_filter.filters[0],
         )
         assert (
             loaded.light_path_filter.nominal == dumped["light_path_filter"]["nominal"]
@@ -457,17 +357,9 @@ class TestSchema:
             loaded.light_path_filter.high_pass
             == dumped["light_path_filter"]["high_pass"]
         )
-        assert (
-            loaded.image_path_filter.filters[0].value
-            == dumped["image_path_filter"]["filters"][0]["value"]
-        )
-        assert (
-            loaded.image_path_filter.filters[0].scheme_designator
-            == dumped["image_path_filter"]["filters"][0]["scheme_designator"]
-        )
-        assert (
-            loaded.image_path_filter.filters[0].meaning
-            == dumped["image_path_filter"]["filters"][0]["meaning"]
+        assert_dict_equals_code(
+            dumped["image_path_filter"]["filters"][0],
+            loaded.image_path_filter.filters[0],
         )
         assert (
             loaded.image_path_filter.nominal == dumped["image_path_filter"]["nominal"]
@@ -479,18 +371,9 @@ class TestSchema:
             loaded.image_path_filter.high_pass
             == dumped["image_path_filter"]["high_pass"]
         )
-
-        assert (
-            loaded.objective.lenses[0].value
-            == dumped["objective"]["lenses"][0]["value"]
-        )
-        assert (
-            loaded.objective.lenses[0].scheme_designator
-            == dumped["objective"]["lenses"][0]["scheme_designator"]
-        )
-        assert (
-            loaded.objective.lenses[0].meaning
-            == dumped["objective"]["lenses"][0]["meaning"]
+        assert_dict_equals_code(
+            dumped["objective"]["lenses"][0],
+            loaded.objective.lenses[0],
         )
         assert (
             loaded.objective.condenser_power == dumped["objective"]["condenser_power"]
@@ -498,31 +381,13 @@ class TestSchema:
         assert (
             loaded.objective.objective_power == dumped["objective"]["objective_power"]
         )
-        assert loaded.objective.objective_na == dumped["objective"]["objective_na"]
-
-    @pytest.mark.parametrize(
-        "species_description",
-        ["specimen description", Code("value", "scheme", "meaning")],
-    )
-    @pytest.mark.parametrize(
-        "method",
-        ["identity removed", Code("value", "scheme", "meaning")],
-    )
-    def test_patient_serialize(
-        self,
-        species_description: Union[str, Code],
-        method: Union[str, Code],
-    ):
-        # Arrange
-        patient_deidentification = PatientDeIdentification(True, [method])
-        patient = Patient(
-            "name",
-            "identifier",
-            datetime.datetime(2023, 8, 5),
-            PatientSex.O,
-            species_description,
-            patient_deidentification,
+        assert (
+            loaded.objective.objective_numerical_aperature
+            == dumped["objective"]["objective_numerical_aperature"]
         )
+
+    def test_patient_serialize(self, patient: Patient):
+        # Arrange
 
         # Act
         dumped = PatientSchema().dump(patient)
@@ -531,6 +396,7 @@ class TestSchema:
         assert patient.birth_date is not None
         assert patient.sex is not None
         assert patient.de_identification is not None
+        assert patient.de_identification.methods is not None
         assert isinstance(dumped, dict)
         assert dumped["name"] == patient.name
         assert dumped["identifier"] == patient.identifier
@@ -538,17 +404,9 @@ class TestSchema:
         assert dumped["sex"] == patient.sex.value
         if isinstance(patient.species_description, Code):
             assert isinstance(patient.species_description, Code)
-            assert (
-                dumped["species_description"]["value"]
-                == patient.species_description.value
-            )
-            assert (
-                dumped["species_description"]["scheme_designator"]
-                == patient.species_description.scheme_designator
-            )
-            assert (
-                dumped["species_description"]["meaning"]
-                == patient.species_description.meaning
+            assert_dict_equals_code(
+                dumped["species_description"],
+                patient.species_description,
             )
         else:
             assert dumped["species_description"] == patient.species_description
@@ -557,15 +415,11 @@ class TestSchema:
             dumped["de_identification"]["identity_removed"]
             == patient.de_identification.identity_removed
         )
+        method = patient.de_identification.methods[0]
         if isinstance(method, Code):
-            assert patient_deidentification.methods is not None
-            assert dumped["de_identification"]["methods"][0]["value"] == method.value
-            assert (
-                dumped["de_identification"]["methods"][0]["scheme_designator"]
-                == method.scheme_designator
-            )
-            assert (
-                dumped["de_identification"]["methods"][0]["meaning"] == method.meaning
+            assert_dict_equals_code(
+                dumped["de_identification"]["methods"][0],
+                method,
             )
         else:
             assert dumped["de_identification"]["methods"][0] == method
@@ -622,12 +476,10 @@ class TestSchema:
         assert loaded.species_description is not None
         if isinstance(species_description, dict):
             assert isinstance(loaded.species_description, Code)
-            assert loaded.species_description.value == species_description["value"]
-            assert (
-                loaded.species_description.scheme_designator
-                == species_description["scheme_designator"]
+            assert_dict_equals_code(
+                species_description,
+                loaded.species_description,
             )
-            assert loaded.species_description.meaning == species_description["meaning"]
         else:
             assert loaded.species_description == species_description
         assert loaded.de_identification is not None
@@ -638,22 +490,16 @@ class TestSchema:
         assert isinstance(loaded.de_identification.methods, list)
         if isinstance(method, dict):
             assert isinstance(loaded.de_identification.methods[0], Code)
-
-            assert loaded.de_identification.methods[0].value == method["value"]
-            assert (
-                loaded.de_identification.methods[0].scheme_designator
-                == method["scheme_designator"]
+            assert_dict_equals_code(
+                method,
+                loaded.de_identification.methods[0],
             )
-            assert loaded.de_identification.methods[0].meaning == method["meaning"]
         else:
             assert loaded.de_identification.methods[0] == method
         assert loaded.de_identification is not None
 
-    def test_series_serialize(self):
+    def test_series_serialize(self, series: Series):
         # Arrange
-        series = Series(
-            UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"), 1
-        )
 
         # Act
         dumped = SeriesSchema().dump(series)
@@ -677,16 +523,8 @@ class TestSchema:
         assert loaded.uid == UID(dumped["uid"])
         assert loaded.number == dumped["number"]
 
-    def test_study_serialize(self):
+    def test_study_serialize(self, study: Study):
         # Arrange
-        study = Study(
-            UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
-            "identifier",
-            datetime.date(2023, 8, 5),
-            datetime.time(12, 3),
-            "accession number",
-            "referring physician name",
-        )
 
         # Act
         dumped = StudySchema().dump(study)

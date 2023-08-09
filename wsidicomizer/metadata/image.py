@@ -16,7 +16,7 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
     DicomBoolAttribute,
     DicomDateTimeAttribute,
-    DicomNumberAttribute,
+    DicomNumericAttribute,
     DicomStringAttribute,
 )
 
@@ -38,12 +38,12 @@ class ExtendedDepthOfField(ModelBase):
         image_type: ImageType,
     ) -> None:
         dicom_attributes: List[DicomAttribute] = [
-            DicomNumberAttribute(
+            DicomNumericAttribute(
                 "NumberOfFocalPlanes",
                 True,
                 self.number_of_focal_planes,
             ),
-            DicomNumberAttribute(
+            DicomNumericAttribute(
                 "DistanceBetweenFocalPlanes",
                 True,
                 self.distance_between_focal_planes,

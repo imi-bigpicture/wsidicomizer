@@ -1,5 +1,6 @@
 from typing import Dict, Tuple, Union
 import pytest
+from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition, SpecimenIdentifier
 from wsidicomizer.metadata.schema.fields import (
     CodeField,
@@ -159,9 +160,7 @@ class TestFields:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert dumped["value"] == code.value
-        assert dumped["scheme_designator"] == code.scheme_designator
-        assert dumped["meaning"] == code.meaning
+        assert_dict_equals_code(dumped, code)
 
     def test_code_deserialize(self):
         # Arrange
@@ -172,9 +171,7 @@ class TestFields:
 
         # Assert
         assert isinstance(loaded, Code)
-        assert loaded.value == dumped["value"]
-        assert loaded.scheme_designator == dumped["scheme_designator"]
-        assert loaded.meaning == dumped["meaning"]
+        assert_dict_equals_code(dumped, loaded)
 
     @pytest.mark.parametrize("value", ["value", Code("value", "scheme", "meaning")])
     def test_string_or_code_serialize(self, value: Union[str, Code]):
@@ -188,9 +185,7 @@ class TestFields:
             assert dumped == value
         else:
             assert isinstance(dumped, dict)
-            assert dumped["value"] == value.value
-            assert dumped["scheme_designator"] == value.scheme_designator
-            assert dumped["meaning"] == value.meaning
+            assert_dict_equals_code(dumped, value)
 
     @pytest.mark.parametrize(
         "dumped",
@@ -210,9 +205,7 @@ class TestFields:
             assert loaded == dumped
         else:
             assert isinstance(loaded, Code)
-            assert loaded.value == dumped["value"]
-            assert loaded.scheme_designator == dumped["scheme_designator"]
-            assert loaded.meaning == dumped["meaning"]
+            assert_dict_equals_code(dumped, loaded)
 
     @pytest.mark.parametrize(
         "value",
@@ -231,9 +224,7 @@ class TestFields:
         if isinstance(value, float):
             assert dumped == value
         else:
-            assert dumped["value"] == value.value
-            assert dumped["scheme_designator"] == value.scheme_designator
-            assert dumped["meaning"] == value.meaning
+            assert_dict_equals_code(dumped, value)
 
     @pytest.mark.parametrize(
         "dumped",
@@ -260,9 +251,7 @@ class TestFields:
             assert loaded == dumped
         else:
             assert isinstance(loaded, IlluminationColorCode)
-            assert loaded.value == dumped["value"]
-            assert loaded.scheme_designator == dumped["scheme_designator"]
-            assert loaded.meaning == dumped["meaning"]
+            assert_dict_equals_code(dumped, loaded)
 
     @pytest.mark.parametrize(
         "value",
@@ -281,9 +270,7 @@ class TestFields:
         if isinstance(value, str):
             assert dumped == value
         else:
-            assert dumped["value"] == value.value
-            assert dumped["scheme_designator"] == value.scheme_designator
-            assert dumped["meaning"] == value.meaning
+            assert_dict_equals_code(dumped, value)
 
     @pytest.mark.parametrize(
         "dumped",
@@ -308,9 +295,7 @@ class TestFields:
             assert loaded == dumped
         else:
             assert isinstance(loaded, IlluminationColorCode)
-            assert loaded.value == dumped["value"]
-            assert loaded.scheme_designator == dumped["scheme_designator"]
-            assert loaded.meaning == dumped["meaning"]
+            assert_dict_equals_code(dumped, loaded)
 
     def test_concept_code_serialize(self):
         # Arrange
@@ -321,9 +306,7 @@ class TestFields:
         dumped = field()._serialize(value, None, None)
 
         # Assert
-        assert dumped["value"] == value.value
-        assert dumped["scheme_designator"] == value.scheme_designator
-        assert dumped["meaning"] == value.meaning
+        assert_dict_equals_code(dumped, value)
 
     def test_concept_code_deserialize(self):
         # Arrange
@@ -339,6 +322,4 @@ class TestFields:
 
         # Assert
         assert isinstance(loaded, IlluminationColorCode)
-        assert loaded.value == dumped["value"]
-        assert loaded.scheme_designator == dumped["scheme_designator"]
-        assert loaded.meaning == dumped["meaning"]
+        assert_dict_equals_code(dumped, loaded)

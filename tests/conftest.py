@@ -1,14 +1,70 @@
+import datetime
 import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict
-
+from typing import Any, Dict, Union
+from pydicom.uid import UID
 import pytest
 from wsidicom import WsiDicom
+from wsidicom.conceptcode import (
+    Code,
+    IlluminationCode,
+    IlluminationColorCode,
+    ImagePathFilterCode,
+    LenseCode,
+    LightPathFilterCode,
+    SpecimenPreparationStepsCode,
+)
+from wsidicom.geometry import PointMm
 
+from wsidicomizer.metadata import (
+    Equipment,
+    ExtendedDepthOfField,
+    FocusMethod,
+    Image,
+    ImageCoordinateSystem,
+    ImagePathFilter,
+    Label,
+    LightPathFilter,
+    Objectives,
+    OpticalPath,
+    Patient,
+    PatientDeIdentification,
+    PatientSex,
+    Series,
+    Study,
+)
+from wsidicomizer.metadata.equipment import Equipment
+from wsidicomizer.metadata.image import (
+    ExtendedDepthOfField,
+    FocusMethod,
+    Image,
+    ImageCoordinateSystem,
+)
+from wsidicomizer.metadata.label import Label
+from wsidicomizer.metadata.slide import Slide
 from wsidicomizer.wsidicomizer import WsiDicomizer
+from wsidicom.conceptcode import (
+    AnatomicPathologySpecimenTypesCode,
+    SpecimenCollectionProcedureCode,
+    SpecimenFixativesCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenEmbeddingMediaCode,
+    SpecimenStainsCode,
+)
 
+from wsidicomizer.metadata.sample import (
+    Collection,
+    Embedding,
+    Fixation,
+    Processing,
+    Sample,
+    SampledSpecimen,
+    SlideSample,
+    ExtractedSpecimen,
+    SlideSamplePosition,
+)
 
 DEFAULT_TILE_SIZE = 512
 
@@ -446,3 +502,247 @@ def wsis(
     for file_format in wsis.values():
         for wsi in file_format.values():
             wsi.close()
+
+
+@pytest.fixture()
+def equipment():
+    yield Equipment(
+        "manufacturer",
+        "model name",
+        "device serial number",
+        ["software versions 1", "software versions 2"],
+    )
+
+
+@pytest.fixture()
+def image():
+    image_coordinate_system = ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
+    extended_depth_of_field = ExtendedDepthOfField(5, 0.5)
+    yield Image(
+        datetime.datetime(2023, 8, 5),
+        FocusMethod.AUTO,
+        extended_depth_of_field,
+        image_coordinate_system,
+    )
+
+
+@pytest.fixture()
+def label():
+    yield Label("label_text", "barcode_value", True, True, False)
+
+
+@pytest.fixture(params=[IlluminationColorCode("Full Spectrum"), 400.0])
+def optical_path(request):
+    illumination = request.param
+    assert isinstance(illumination, (IlluminationColorCode, float))
+    light_path_filter = LightPathFilter(
+        [
+            LightPathFilterCode("Green optical filter"),
+        ],
+        500,
+        400,
+        600,
+    )
+
+    image_path_filter = ImagePathFilter(
+        [
+            ImagePathFilterCode("Red optical filter"),
+        ],
+        500,
+        400,
+        600,
+    )
+
+    objective = Objectives(
+        [LenseCode("High power non-immersion lens")], 10.0, 20.0, 0.5
+    )
+    yield OpticalPath(
+        "identifier",
+        "description",
+        IlluminationCode("Brightfield illumination"),
+        illumination,
+        None,
+        None,
+        light_path_filter,
+        image_path_filter,
+        objective,
+    )
+
+
+@pytest.fixture(
+    params=[
+        ["specimen description", "method"],
+        [Code("value", "scheme", "meaning"), Code("value", "scheme", "meaning")],
+    ]
+)
+def patient(request):
+    species_description = request.param[0]
+    assert isinstance(species_description, (str, Code))
+    method = request.param[1]
+    assert isinstance(method, (str, Code))
+    patient_deidentification = PatientDeIdentification(True, [method])
+    yield Patient(
+        "name",
+        "identifier",
+        datetime.datetime(2023, 8, 5),
+        PatientSex.O,
+        species_description,
+        patient_deidentification,
+    )
+
+
+@pytest.fixture()
+def extracted_specimen():
+    collection = Collection(
+        SpecimenCollectionProcedureCode("Excision"),
+        datetime.datetime(2023, 8, 5),
+        "description",
+    )
+    yield ExtractedSpecimen(
+        "specimen", AnatomicPathologySpecimenTypesCode("Gross specimen"), collection
+    )
+
+
+@pytest.fixture()
+def sample(extracted_specimen: ExtractedSpecimen):
+    processing = Processing(
+        SpecimenPreparationStepsCode("Specimen clearing"),
+        datetime.datetime(2023, 8, 5),
+    )
+    yield Sample(
+        "sample",
+        AnatomicPathologySpecimenTypesCode("Tissue section"),
+        [
+            extracted_specimen.sample(
+                SpecimenSamplingProcedureCode("Dissection"),
+                datetime.datetime(2023, 8, 5),
+                "Sampling to block",
+            ),
+        ],
+        [processing],
+    )
+
+
+@pytest.fixture()
+def slide_sample(sample: SampledSpecimen):
+    yield SlideSample(
+        "slide sample",
+        [Code("value", "scheme", "meaning")],
+        sample.sample(
+            SpecimenSamplingProcedureCode("Block sectioning"),
+            datetime.datetime(2023, 8, 5),
+            "Sectioning to slide",
+        ),
+        uid=UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
+        position="left",
+    )
+
+
+@pytest.fixture()
+def slide():
+    part_1 = ExtractedSpecimen(
+        "part 1",
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
+        Collection(
+            SpecimenCollectionProcedureCode("Specimen collection"),
+            datetime.datetime(2023, 8, 5),
+            "Extracted",
+        ),
+        [
+            Fixation(
+                SpecimenFixativesCode("Neutral Buffered Formalin"),
+                datetime.datetime(2023, 8, 5),
+            )
+        ],
+    )
+
+    part_2 = ExtractedSpecimen(
+        "part 2",
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
+        Collection(
+            SpecimenCollectionProcedureCode("Specimen collection"),
+            datetime.datetime(2023, 8, 5),
+            "Extracted",
+        ),
+        [
+            Fixation(
+                SpecimenFixativesCode("Neutral Buffered Formalin"),
+                datetime.datetime(2023, 8, 5),
+            )
+        ],
+    )
+
+    block = Sample(
+        "block 1",
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
+        [
+            part_1.sample(
+                SpecimenSamplingProcedureCode("Dissection"),
+                datetime.datetime(2023, 8, 5),
+                "Sampling to block",
+            ),
+            part_2.sample(
+                SpecimenSamplingProcedureCode("Dissection"),
+                datetime.datetime(2023, 8, 5),
+                "Sampling to block",
+            ),
+        ],
+        [
+            Embedding(
+                SpecimenEmbeddingMediaCode("Paraffin wax"),
+                datetime.datetime(2023, 8, 5),
+            )
+        ],
+    )
+
+    sample_1 = SlideSample(
+        "Sample 1",
+        [Code("value", "schema", "meaning")],
+        block.sample(
+            SpecimenSamplingProcedureCode("Block sectioning"),
+            datetime.datetime(2023, 8, 5),
+            "Sampling to slide",
+            [part_1.samplings[0]],
+        ),
+        UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
+        SlideSamplePosition(0, 0, 0),
+    )
+
+    sample_2 = SlideSample(
+        "Sample 2",
+        [Code("value", "schema", "meaning")],
+        block.sample(
+            SpecimenSamplingProcedureCode("Block sectioning"),
+            datetime.datetime(2023, 8, 5),
+            "Sampling to slide",
+            [part_2.samplings[0]],
+        ),
+        UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445424"),
+        position=SlideSamplePosition(10, 0, 0),
+    )
+
+    stains = [
+        SpecimenStainsCode("hematoxylin stain"),
+        SpecimenStainsCode("water soluble eosin stain"),
+    ]
+
+    yield Slide(identifier="Slide 1", stains=stains, samples=[sample_1, sample_2])
+
+
+@pytest.fixture()
+def series():
+    yield Series(
+        UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"), 1
+    )
+
+
+@pytest.fixture()
+def study():
+    yield Study(
+        UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
+        "identifier",
+        datetime.date(2023, 8, 5),
+        datetime.time(12, 3),
+        "accession number",
+        "referring physician name",
+    )

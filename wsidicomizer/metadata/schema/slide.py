@@ -10,7 +10,7 @@ class SlideSchema(Schema):
     stains = fields.List(
         FieldFactory.concept_code(SpecimenStainsCode)(), allow_none=True
     )
-    samples = fields.List(fields.Nested(SpecimenSchema()), allow_none=True)
+    samples = fields.Nested(SpecimenSchema, allow_none=True, many=True)
 
     @post_load
     def load_to_object(self, data, **kwargs):

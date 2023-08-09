@@ -10,7 +10,7 @@ from wsidicom.instance import ImageType
 from wsidicomizer.metadata.model_base import ModelBase
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
-    DicomNumberAttribute,
+    DicomNumericAttribute,
     DicomUidAttribute,
 )
 
@@ -40,7 +40,7 @@ class Series(ModelBase):
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [
             DicomUidAttribute("SeriesInstanceUID", True, self._uid),
-            DicomNumberAttribute("SeriesNumber", True, self.number),
+            DicomNumericAttribute("SeriesNumber", True, self.number),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 

@@ -40,17 +40,15 @@ class Label(ModelBase):
         ):
             label_in_image = True
             contains_phi = self.label_is_phi
+        label_module_required = image_type == ImageType.LABEL
         dicom_attributes: List[DicomAttribute] = [
             DicomBoolAttribute("BurnedInAnnotation", True, contains_phi),
             DicomBoolAttribute("SpecimenLabelInImage", True, label_in_image),
+            DicomStringAttribute("LabelText", label_module_required, self.label_text),
+            DicomStringAttribute(
+                "BarcodeValue", label_module_required, self.barcode_value
+            ),
         ]
-        if image_type == ImageType.LABEL:
-            dicom_attributes.extend(
-                [
-                    DicomStringAttribute("LabelText", True, self.label_text),
-                    DicomStringAttribute("BarcodeValue", True, self.barcode_value),
-                ]
-            )
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 
     @classmethod

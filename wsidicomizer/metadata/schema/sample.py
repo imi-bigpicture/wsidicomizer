@@ -71,7 +71,7 @@ already be created.
 
 
 @dataclasses.dataclass
-class SamplingChainConstraintSimplified:
+class SerializedSamplingChainConstraint:
     """Simplified representation of a sampling chain constraint, replacing the sampling
     with the identifier of the sampled specimen and the index of the sampling step
     within the step sequence of the specimen."""
@@ -79,65 +79,48 @@ class SamplingChainConstraintSimplified:
     identifier: Union[str, SpecimenIdentifier]
     sampling_step_index: int
 
-    @classmethod
-    def simplify(cls, sampling: Sampling) -> "SamplingChainConstraintSimplified":
-        """Simplify a sampling constraint."""
-        index = [step for step in sampling.specimen.steps].index(sampling)
-        return SamplingChainConstraintSimplified(sampling.specimen.identifier, index)
-
 
 @dataclasses.dataclass
-class SamplingSimplified(Sampling):
+class SerializedSampling:
     """Simplified representation of a `Sampling`, replacing the sampled specimen with
     the idententifier and sampling constratins with simplified sampling constraints."""
 
-    specimen: Union[str, SpecimenIdentifier]
     method: SpecimenSamplingProcedureCode
     sampling_chain_constraints: Optional[
-        Sequence[SamplingChainConstraintSimplified]
+        Sequence[SerializedSamplingChainConstraint]
     ] = None
     date_time: Optional[datetime.datetime] = None
     description: Optional[str] = None
 
-    @classmethod
-    def simplify(cls, sampling: Sampling) -> "SamplingSimplified":
-        """Simplify a sampling."""
-        if sampling.sampling_chain_constraints is None:
-            sampling_chain_constraints = None
-        else:
-            sampling_chain_constraints = [
-                SamplingChainConstraintSimplified.simplify(constraint)
-                for constraint in sampling.sampling_chain_constraints
-            ]
-        return SamplingSimplified(
-            specimen=sampling.specimen.identifier,
-            method=sampling.method,
-            sampling_chain_constraints=sampling_chain_constraints,
-            date_time=sampling.date_time,
-            description=sampling.description,
-        )
-
 
 class SamplingConstraintSchema(Schema):
-    """Schema for serializing and deserializing a `SamplingChainConstraintSimplified`."""
+    """Schema for serializing and deserializing a `SerializedSamplingChainConstraint`."""
 
     identifier = SpecimenIdentifierField()
     sampling_step_index = fields.Integer()
 
+    @pre_dump
+    def dump_simple(self, sampling: Sampling, **kwargs):
+        return SerializedSamplingChainConstraint(
+            sampling.specimen.identifier, sampling.index
+        )
+
     @post_load
-    def load_simple(self, data: Dict, **kwargs) -> SamplingChainConstraintSimplified:
-        return SamplingChainConstraintSimplified(**data)
+    def load_simple(self, data: Dict, **kwargs) -> SerializedSamplingChainConstraint:
+        return SerializedSamplingChainConstraint(**data)
 
 
 class BasePreparationStepSchema(Schema):
     """Base schema for serializing and deserializing a `PreparationStep`."""
 
     _load_class: Type[
-        Union[SamplingSimplified, Collection, Processing, Embedding, Fixation]
+        Union[SerializedSampling, Collection, Processing, Embedding, Fixation]
     ]
 
     @post_load
-    def post_load(self, data: Dict[str, Any], **kwargs) -> PreparationStep:
+    def post_load(
+        self, data: Dict[str, Any], **kwargs
+    ) -> Union[PreparationStep, SerializedSampling]:
         """Return a object of given load class using the defined dataclass fields."""
         return self._load_class(
             **{
@@ -149,26 +132,14 @@ class BasePreparationStepSchema(Schema):
 
 
 class SamplingSchema(BasePreparationStepSchema):
-    specimen = SpecimenIdentifierField()
     method = FieldFactory.concept_code(SpecimenSamplingProcedureCode)()
     sampling_chain_constraints = fields.List(
-        fields.Nested(SamplingConstraintSchema), allow_none=True
+        fields.Nested(SamplingConstraintSchema, allow_none=True), allow_none=True
     )
     date_time = fields.DateTime(allow_none=True)
     description = fields.String(allow_none=True)
     preparation_type = fields.Constant("sampling")
-    _load_class = SamplingSimplified
-
-    @pre_dump
-    def dump_simple(self, sampling: Sampling, **kwargs) -> SamplingSimplified:
-        """
-        Convert to a simplified object without nesting.
-
-        Specimen object is replaced by an identifier, and constraints are replaced
-        by a simplified constratin (replacing Specimen object with identifier and
-        identifiying the sampling step by index.)
-        """
-        return SamplingSimplified.simplify(sampling)
+    _load_class = SerializedSampling
 
 
 class CollectionSchema(BasePreparationStepSchema):
@@ -239,12 +210,14 @@ class PreparationStepSchema(Schema):
             return self._subschema_load(data)
         return [self._subschema_load(step) for step in data]
 
-    def _subschema_load(self, step: Mapping) -> PreparationStep:
+    def _subschema_load(
+        self, step: Mapping
+    ) -> Union[PreparationStep, SerializedSampling]:
         """Select a schema and load and return step using the schema."""
         preparation_type = step["preparation_type"]
         schema = self._string_to_schema_mapping[preparation_type]
         loaded = schema().load(step, many=False)
-        assert isinstance(loaded, PreparationStep)
+        assert isinstance(loaded, (PreparationStep, SerializedSampling))
         return loaded
 
     def _subschema_dump(self, step: PreparationStep):
@@ -270,6 +243,7 @@ class ExtractedSpecimenSchema(BaseSpecimenSchema):
 class SampleSchema(BaseSpecimenSchema):
     """Schema for sampled specimen."""
 
+    sampled_from = fields.List(fields.Nested(SamplingConstraintSchema))
     type = FieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
     specimen_type = fields.Constant("sample")
 
@@ -278,6 +252,7 @@ class SlideSampleSchema(BaseSpecimenSchema):
     """Schema for sampled specimen on a slide."""
 
     anatomical_sites = fields.List(CodeField())
+    sampled_from = fields.Nested(SamplingConstraintSchema)
     uid = UidField(allow_none=True)
     position = SlideSamplePositionField(allow_none=True)
     specimen_type = fields.Constant("slide")
@@ -307,53 +282,60 @@ class SpecimenSchema(Schema):
     ):
         if isinstance(specimens, Specimen):
             specimens = [specimens]
-        all_specimens: Dict[Union[str, SpecimenIdentifier], Specimen] = {}
 
+        all_specimens: Dict[Union[str, SpecimenIdentifier], Specimen] = {}
         for specimen in specimens:
             if isinstance(specimen, SampledSpecimen):
                 all_specimens.update(specimen.get_samplings())
+
         return [self._subschema_dump(specimen) for specimen in all_specimens.values()]
 
     def load(
         self,
         data: Union[Mapping[str, Any], Iterable[Mapping[str, Any]]],
         **kwargs,
-    ):
+    ) -> List[Specimen]:
+        """Load serialized specimen or list of specimen as `Specimen`."""
         if isinstance(data, Mapping):
             loaded = [self._subschema_load(data)]
         else:
             loaded = [self._subschema_load(item) for item in data]
         return self._post_load(loaded)
 
-    def _subschema_load(self, specimen: Mapping) -> Any:
+    def _subschema_load(self, specimen: Mapping) -> Dict[str, Any]:
         """Select a schema and load and return specimen using the schema."""
         specimen_type = specimen["specimen_type"]
         schema = self._string_to_schema_mapping[specimen_type]
-        return schema().load(specimen, many=False)
+        loaded = schema().load(specimen, many=False)
+        assert isinstance(loaded, dict)
+        return loaded
 
-    def _subschema_dump(self, specimen: Specimen):
+    def _subschema_dump(self, specimen: Specimen) -> Dict[str, Any]:
         """Select a schema and dump the specimen using the schema."""
         schema = self._type_to_schema_mapping[type(specimen)]
-        return schema().dump(specimen)
+        dumped = schema().dump(specimen)
+        assert isinstance(dumped, dict)
+        return dumped
 
-    def _post_load(self, data: Iterable[Mapping[str, Any]]):
-        """Post-processing of deserialized data to linked `Specimen` objects."""
+    def _post_load(self, data: Iterable[Dict[str, Any]]) -> List[Specimen]:
+        """Post-processing of deserialized dictionary data to linked `Specimen` objects."""
         created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen] = {}
         specimen_data_by_identifier: Dict[
             Union[str, SpecimenIdentifier], Mapping[str, Any]
         ] = {specimen["identifier"]: specimen for specimen in data}
-        for specimen in data:
-            specimen_identifier = specimen["identifier"]
+        for specimen_identifier in specimen_data_by_identifier:
             if specimen_identifier in created_specimens:
                 continue
             created_specimens[specimen_identifier] = self._make_specimen(
                 specimen_identifier, specimen_data_by_identifier, created_specimens
             )
+
+        # Only return non-sampled specimens (sampled specimens are nested)
         sampled_specimens = [
             sampled_from.specimen.identifier
             for specimen in created_specimens.values()
             if isinstance(specimen, SampledSpecimen)
-            for sampled_from in specimen.sampled_from
+            for sampled_from in specimen._sampled_from
         ]
         return [
             specimen
@@ -362,89 +344,25 @@ class SpecimenSchema(Schema):
         ]
 
     @classmethod
-    def _create_sampling(
-        cls,
-        step: SamplingSimplified,
-        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
-        specimen: Optional[Specimen] = None,
-    ) -> Sampling:
-        """Creata a `Sampling` from a `SamplingSimplified`."""
-        if specimen is None:
-            specimen = cls._get_or_create_specimen(
-                step.specimen, specimen_data, created_specimens
-            )
-        if step.sampling_chain_constraints is not None:
-            constraints: Optional[List[Sampling]] = []
-            for constraint in step.sampling_chain_constraints:
-                constraint_specimen = cls._get_or_create_specimen(
-                    constraint.specimen, specimen_data, created_specimens
-                )
-
-                constraint_step = constraint_specimen.steps[
-                    constraint.sampling_step_index
-                ]
-                assert isinstance(constraint_step, Sampling)
-                constraints.append(constraint_step)
-        else:
-            constraints = None
-        return Sampling(
-            specimen=specimen,
-            method=step.method,
-            sampling_chain_constraints=constraints,
-            date_time=step.date_time,
-            description=step.description,
-        )
-
-    @classmethod
-    def _create_sampled_from(
-        cls,
-        identifier: Union[str, SpecimenIdentifier],
-        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
-    ) -> List[Sampling]:
-        """Create a list of `Sampling` for the given specimen."""
-        data = specimen_data[identifier]
-        sampled_from: Optional[Iterable[SamplingSimplified]] = data.get("sampled_from")
-        if sampled_from is None:
-            return []
-        return [
-            cls._create_sampling(sampling, specimen_data, created_specimens)
-            for sampling in sampled_from
-        ]
-
-    @classmethod
-    def _get_or_create_specimen(
-        cls,
-        identifier: Union[str, SpecimenIdentifier],
-        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
-    ) -> Specimen:
-        """Return `Specimen` by identifier either from already created specimens or by creating it."""
-        if identifier not in created_specimens:
-            created_specimens[identifier] = cls._make_specimen(
-                identifier,
-                specimen_data,
-                created_specimens,
-            )
-        return created_specimens[identifier]
-
-    @classmethod
     def _make_specimen(
         cls,
         identifier: Union[str, SpecimenIdentifier],
         specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
         created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
     ) -> Specimen:
+        """Create specimen by identifier. Create nested specimens that the specimen
+        is sampled from if needed."""
         data = specimen_data[identifier]
         specimen_type = data["specimen_type"]
+        print("Making specimen", identifier, specimen_type)
+
         if specimen_type == "extracted":
             specimen = ExtractedSpecimen(
                 identifier=identifier,
                 type=data["type"],
             )
         elif specimen_type == "sample":
-            sampled_from = cls._create_sampled_from(
+            sampled_from = cls._get_sampled_from(
                 identifier, specimen_data, created_specimens
             )
             specimen = Sample(
@@ -453,7 +371,7 @@ class SpecimenSchema(Schema):
                 sampled_from=sampled_from,
             )
         elif specimen_type == "slide":
-            sampled_from = cls._create_sampled_from(
+            sampled_from = cls._get_sampled_from(
                 identifier, specimen_data, created_specimens
             )
             if len(sampled_from) == 0:
@@ -472,11 +390,111 @@ class SpecimenSchema(Schema):
             )
         else:
             raise TypeError(f"Could not make specimen for unknown type {specimen_type}")
-        for step in data.get("steps", []):
-            if isinstance(step, SamplingSimplified):
-                step = cls._create_sampling(
-                    step, specimen_data, created_specimens, specimen
+
+        # Add the steps to the created specimen
+        for index, step in enumerate(data.get("steps", [])):
+            if isinstance(step, SerializedSampling):
+                # Create Sampling step from SerializedSampling step
+                constraints = cls._get_sampling_constraints(
+                    step, specimen_data, created_specimens
                 )
+                step = Sampling(
+                    specimen, step.method, constraints, step.date_time, step.description
+                )
+            elif isinstance(step, Collection):
+                # Special handling of collection step
+                if not isinstance(specimen, ExtractedSpecimen) or index != 0:
+                    raise ValueError(
+                        (
+                            "Collection step can only be added as first step to "
+                            " an ExtractedSpecimen"
+                        )
+                    )
+                specimen.extraction_step = step
             assert isinstance(step, PreparationStep)
             specimen.add(step)
         return specimen
+
+    @classmethod
+    def _get_sampled_from(
+        cls,
+        identifier: Union[str, SpecimenIdentifier],
+        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
+        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
+    ) -> List[Sampling]:
+        """
+        Get list of `Sampling` used for creating the given specimen.
+
+        Creates sampled specimens if needed.
+        """
+        data = specimen_data[identifier]
+        sampled_from: Optional[
+            Union[
+                SerializedSamplingChainConstraint,
+                Iterable[SerializedSamplingChainConstraint],
+            ]
+        ] = data.get("sampled_from")
+        if sampled_from is None:
+            return []
+        elif isinstance(sampled_from, SerializedSamplingChainConstraint):
+            sampled_from = [sampled_from]
+        for sample in sampled_from:
+            assert isinstance(sample, SerializedSamplingChainConstraint)
+        return [
+            cls._get_sampling(sample, specimen_data, created_specimens)
+            for sample in sampled_from
+        ]
+
+    @classmethod
+    def _get_sampling(
+        cls,
+        sampled_from: SerializedSamplingChainConstraint,
+        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
+        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
+    ) -> Sampling:
+        """
+        Get the `Sampling` for a `SerializedSamplingChainConstraint`
+
+        Creates sampled specimens if needed.
+        """
+        specimen = cls._get_or_create_specimen(
+            sampled_from.identifier, specimen_data, created_specimens
+        )
+        return specimen.samplings[sampled_from.sampling_step_index]
+
+    @classmethod
+    def _get_sampling_constraints(
+        cls,
+        sampling: SerializedSampling,
+        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
+        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
+    ) -> Optional[List[Sampling]]:
+        """
+        Get list of constraint `Sampling` for a sampling.
+        """
+        if sampling.sampling_chain_constraints is None:
+            return None
+        return [
+            cls._get_sampling(constraint, specimen_data, created_specimens)
+            for constraint in sampling.sampling_chain_constraints
+        ]
+
+    @classmethod
+    def _get_or_create_specimen(
+        cls,
+        identifier: Union[str, SpecimenIdentifier],
+        specimen_data: Dict[Union[str, SpecimenIdentifier], Mapping[str, Any]],
+        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
+    ) -> Specimen:
+        """
+        Return `Specimen` by identifier.
+
+        The specimen is either from already created specimens or created.
+        """
+        if identifier not in created_specimens:
+            created_specimens[identifier] = cls._make_specimen(
+                identifier,
+                specimen_data,
+                created_specimens,
+            )
+        return created_specimens[identifier]

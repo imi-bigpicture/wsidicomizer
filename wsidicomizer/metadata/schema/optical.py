@@ -44,7 +44,7 @@ class ObjectivesSchema(Schema):
     lenses = fields.List(FieldFactory.concept_code(LenseCode))
     condenser_power = fields.Float(allow_none=True)
     objective_power = fields.Float(allow_none=True)
-    objective_na = fields.Float(allow_none=True)
+    objective_numerical_aperature = fields.Float(allow_none=True)
 
     @post_load
     def load_to_object(self, data, **kwargs):

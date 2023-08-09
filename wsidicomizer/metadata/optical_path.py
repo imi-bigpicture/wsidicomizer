@@ -20,7 +20,7 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
     DicomByteAttribute,
     DicomCodeAttribute,
-    DicomNumberAttribute,
+    DicomNumericAttribute,
     DicomStringAttribute,
 )
 from wsidicomizer.metadata.model_base import ModelBase
@@ -313,7 +313,7 @@ class Objectives:
     lenses: Sequence[LenseCode] = field(default_factory=list)
     condenser_power: Optional[float] = None
     objective_power: Optional[float] = None
-    objective_na: Optional[float] = None
+    objective_numerical_aperature: Optional[float] = None
 
     @classmethod
     def from_ds(cls, ds: Dataset) -> "Objectives":
@@ -335,7 +335,9 @@ class Objectives:
             lenses=LenseCode.from_ds(ds),
             condenser_power=getattr(ds, "CondenserLensPower", None),
             objective_power=getattr(ds, "ObjectiveLensPower", None),
-            objective_na=getattr(ds, "ObjectiveLensNumericalAperture", None),
+            objective_numerical_aperature=getattr(
+                ds, "ObjectiveLensNumericalAperture", None
+            ),
         )
 
     def insert_into_ds(self, ds: Dataset) -> Dataset:
@@ -356,8 +358,8 @@ class Objectives:
             ds.CondenserLensPower = self.condenser_power
         if self.objective_power is not None:
             ds.ObjectiveLensPower = self.objective_power
-        if self.objective_na is not None:
-            ds.ObjectiveLensNumericalAperture = self.objective_na
+        if self.objective_numerical_aperature is not None:
+            ds.ObjectiveLensNumericalAperture = self.objective_numerical_aperature
         if self.lenses is not None:
             for lense in self.lenses:
                 ds = lense.insert_into_ds(ds)
@@ -415,20 +417,22 @@ class OpticalPath(ModelBase):
             dicom_attributes.extend(
                 # TODO check dicom tags for these, add lenses.
                 (
-                    DicomNumberAttribute(
+                    DicomNumericAttribute(
                         "ObjectiveLensPower", False, self.objective.objective_power
                     ),
-                    DicomNumberAttribute(
+                    DicomNumericAttribute(
                         "CondenserLensPower", False, self.objective.condenser_power
                     ),
-                    DicomNumberAttribute(
-                        "ObjectiveNa", False, self.objective.objective_na
+                    DicomNumericAttribute(
+                        "ObjectiveLensNumericalAperture",
+                        False,
+                        self.objective.objective_numerical_aperature,
                     ),
                 )
             )
         if isinstance(self.illumination, float):
             dicom_attributes.append(
-                DicomNumberAttribute("IlluminationWaveLength", True, self.illumination)
+                DicomNumericAttribute("IlluminationWaveLength", True, self.illumination)
             )
         else:
             dicom_attributes.append(
