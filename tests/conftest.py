@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Sequence, Union
 from pydicom.uid import UID
 import pytest
 from wsidicom import WsiDicom
@@ -505,24 +505,38 @@ def wsis(
 
 
 @pytest.fixture()
-def equipment():
+def equipment(
+    manufacturer: Optional[str],
+    model_name: Optional[str],
+    serial_number: Optional[str],
+    versions: Optional[Sequence[str]],
+):
     yield Equipment(
-        "manufacturer",
-        "model name",
-        "device serial number",
-        ["software versions 1", "software versions 2"],
+        manufacturer,
+        model_name,
+        serial_number,
+        versions,
     )
 
 
 @pytest.fixture()
-def image():
-    image_coordinate_system = ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
-    extended_depth_of_field = ExtendedDepthOfField(5, 0.5)
+def image(
+    acquisition_datetime: Optional[datetime.datetime],
+    focus_method: Optional[FocusMethod],
+    extended_depth_of_field: Optional[ExtendedDepthOfField],
+    image_coordinate_system: Optional[ImageCoordinateSystem],
+):
+    # image_coordinate_system = ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
+    # extended_depth_of_field = ExtendedDepthOfField(5, 0.5)
     yield Image(
-        datetime.datetime(2023, 8, 5),
-        FocusMethod.AUTO,
+        acquisition_datetime,
+        focus_method,
         extended_depth_of_field,
-        image_coordinate_system,
+        image_coordinate_system
+        # datetime.datetime(2023, 8, 5),
+        # FocusMethod.AUTO,
+        # extended_depth_of_field,
+        # image_coordinate_system,
     )
 
 

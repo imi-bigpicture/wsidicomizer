@@ -715,7 +715,7 @@ class SlideSample(SampledSpecimen):
             step
             for step in steps[specimen_identifier]
             if isinstance(step, Sampling)
-            and step.sample_identifier == specimen_identifier
+            and step.specimen.identifier == specimen_identifier
         ]
         sampled_from_identifiers = []
 

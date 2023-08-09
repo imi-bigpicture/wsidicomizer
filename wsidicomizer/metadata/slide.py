@@ -9,6 +9,7 @@ from wsidicom.conceptcode import (
     SpecimenStainsCode,
 )
 from wsidicom.instance import ImageType
+from wsidicomizer.metadata.defaults import defaults
 
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
@@ -39,12 +40,12 @@ class Slide(ModelBase):
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [
             DicomStringAttribute(
-                "ContainerIdentifier", True, self.identifier, "Unknown"
+                "ContainerIdentifier", True, self.identifier, defaults.string
             ),
             DicomCodeAttribute(
                 "ContainerTypeCodeSequence",
                 True,
-                ContainerTypeCode("Microscope slide").code,
+                defaults.slide_container_type,
             ),
             DicomSequenceAttribute("IssuerOfTheContainerIdentifierSequence", True, []),
             DicomSequenceAttribute(
@@ -54,9 +55,11 @@ class Slide(ModelBase):
                     DicomCodeAttribute(
                         "ContainerComponentTypeCodeSequence",
                         True,
-                        ContainerComponentTypeCode("Microscope slide cover slip").code,
+                        defaults.slide_component_type,
                     ),
-                    DicomStringAttribute("ContainerComponentMaterial", False, "GLASS"),
+                    DicomStringAttribute(
+                        "ContainerComponentMaterial", False, defaults.slide_material
+                    ),
                 ],
             ),
         ]

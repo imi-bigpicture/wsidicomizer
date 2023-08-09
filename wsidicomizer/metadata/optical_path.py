@@ -15,6 +15,7 @@ from wsidicom.conceptcode import (
     LightPathFilterCode,
 )
 from wsidicom.instance import ImageType
+from wsidicomizer.metadata.defaults import defaults
 
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
@@ -242,7 +243,7 @@ class OpticalFilter(Generic[OpticalFilterCodeType], metaclass=ABCMeta):
         if self.nominal is not None:
             ds.LightPathFilterPassBand = self.nominal
         if self.low_pass is not None and self.high_pass is not None:
-            ds.LightPathFilterPassThroughwavelength = [self.low_pass, self.high_pass]
+            ds.LightPathFilterPassThroughWavelength = [self.low_pass, self.high_pass]
         if self.filters is not None:
             for filter in self.filters:
                 ds = filter.insert_into_ds(ds)
@@ -271,7 +272,7 @@ class LightPathFilter(OpticalFilter[LightPathFilterCode]):
         filter_band = getattr(ds, "LightPathFilterPassBand", [None, None])
         return cls(
             filters=LightPathFilterCode.from_ds(ds),
-            nominal=getattr(ds, "LightPathFilterPassThroughwavelengthh", None),
+            nominal=getattr(ds, "LightPathFilterPassThroughWavelength", None),
             low_pass=filter_band[0],
             high_pass=filter_band[1],
         )
@@ -300,7 +301,7 @@ class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
         filter_band = getattr(ds, "ImagePathFilterPassBand", [None, None])
         return cls(
             filters=ImagePathFilterCode.from_ds(ds),
-            nominal=getattr(ds, "ImagePathFilterPassThroughwavelengthh", None),
+            nominal=getattr(ds, "ImagePathFilterPassThroughWavelengthh", None),
             low_pass=filter_band[0],
             high_pass=filter_band[1],
         )
@@ -404,7 +405,7 @@ class OpticalPath(ModelBase):
                 self.illumination_type.code
                 if self.illumination_type is not None
                 else None,
-                IlluminationCode("Brightfield illumination").code,
+                defaults.illumination_type,
             ),
             DicomStringAttribute("OpticalPathDescription", False, self.description),
             DicomByteAttribute(
@@ -440,7 +441,7 @@ class OpticalPath(ModelBase):
                     "IlluminationColorCodeSequence",
                     True,
                     self.illumination.code if self.illumination is not None else None,
-                    IlluminationColorCode("Full Spectrum").code,
+                    defaults.illumination,
                 )
             )
         self._insert_dicom_attributes_into_dataset(optical_path, dicom_attributes)

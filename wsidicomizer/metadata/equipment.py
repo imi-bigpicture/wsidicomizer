@@ -1,7 +1,10 @@
+"""Equipment model."""
+
 from dataclasses import dataclass
 
-"""Equipment model."""
-from typing import Dict, Iterable, List, Optional
+from wsidicomizer.metadata.defaults import defaults
+
+from typing import Dict, Iterable, List, Optional, Sequence
 
 from pydicom import Dataset
 from wsidicom.instance import ImageType
@@ -26,7 +29,7 @@ class Equipment(ModelBase):
     manufacturer: Optional[str] = None
     model_name: Optional[str] = None
     device_serial_number: Optional[str] = None
-    software_versions: Optional[Iterable[str]] = None
+    software_versions: Optional[Sequence[str]] = None
     overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -35,34 +38,37 @@ class Equipment(ModelBase):
                 "Manufacturer",
                 True,
                 self.manufacturer,
-                "Unknown",
+                defaults.string,
             ),
             DicomStringAttribute(
                 "ManufacturerModelName",
                 True,
                 self.model_name,
-                "Unknown",
+                defaults.string,
             ),
             DicomStringAttribute(
                 "DeviceSerialNumber",
                 True,
                 self.device_serial_number,
-                "Unknown",
+                defaults.string,
             ),
             DicomListStringAttribute(
                 "SoftwareVersions",
                 True,
                 self.software_versions,
-                ["Unknown"],
+                [defaults.string],
             ),
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "Equipment":
+        software_versions = dataset.get("SoftwareVersions", None)
+        if isinstance(software_versions, str):
+            software_versions = [software_versions]
         return cls(
             dataset.Manufacturer,
             dataset.ManufacturerModelName,
             dataset.DeviceSerialNumber,
-            dataset.SoftwareVersions,
+            software_versions,
         )

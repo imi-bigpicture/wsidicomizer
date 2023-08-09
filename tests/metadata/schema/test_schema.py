@@ -1,5 +1,5 @@
-import datetime
-from typing import Dict, Optional, Union
+from datetime import datetime, date, time
+from typing import Dict, Optional, Sequence, Union
 
 import pytest
 from pydicom.uid import UID
@@ -41,6 +41,14 @@ from wsidicomizer.metadata.schema.study import StudySchema
 
 
 class TestSchema:
+    @pytest.mark.parametrize(
+        ["manufacturer", "model_name", "serial_number", "versions"],
+        [
+            ["manufacturer", "model_name", "serial_number", ["version"]],
+            ["manufacturer", "model_name", "serial_number", ["version 1", "version 2"]],
+            [None, None, None, None],
+        ],
+    )
     def test_equipment_serialize(self, equipment: Equipment):
         # Arrange
 
@@ -54,13 +62,27 @@ class TestSchema:
         assert dumped["device_serial_number"] == equipment.device_serial_number
         assert dumped["software_versions"] == equipment.software_versions
 
-    def test_equipment_deserialize(self):
+    @pytest.mark.parametrize(
+        ["manufacturer", "model_name", "serial_number", "versions"],
+        [
+            ["manufacturer", "model_name", "serial_number", ["version"]],
+            ["manufacturer", "model_name", "serial_number", ["version 1", "version 2"]],
+            [None, None, None, None],
+        ],
+    )
+    def test_equipment_deserialize(
+        self,
+        manufacturer: Optional[str],
+        model_name: Optional[str],
+        serial_number: Optional[str],
+        versions: Optional[Sequence[str]],
+    ):
         # Arrange
         dumped = {
-            "manufacturer": "manufacturer",
-            "model_name": "model name",
-            "device_serial_number": "device serial number",
-            "software_versions": ["software versions 1", "software versions 2"],
+            "manufacturer": manufacturer,
+            "model_name": model_name,
+            "device_serial_number": serial_number,
+            "software_versions": versions,
         }
 
         # Act
@@ -73,6 +95,29 @@ class TestSchema:
         assert loaded.device_serial_number == dumped["device_serial_number"]
         assert loaded.software_versions == dumped["software_versions"]
 
+    @pytest.mark.parametrize(
+        [
+            "acquisition_datetime",
+            "focus_method",
+            "extended_depth_of_field",
+            "image_coordinate_system",
+        ],
+        [
+            [
+                datetime(2023, 8, 5),
+                FocusMethod.AUTO,
+                ExtendedDepthOfField(5, 0.5),
+                ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0),
+            ],
+            [
+                datetime(2023, 8, 5, 12, 13, 14, 150),
+                FocusMethod.MANUAL,
+                ExtendedDepthOfField(15, 0.5),
+                ImageCoordinateSystem(PointMm(50.0, 20.0), 180.0),
+            ],
+            [None, None, None, None],
+        ],
+    )
     def test_image_serialize(self, image: Image):
         # Arrange
 
@@ -80,33 +125,44 @@ class TestSchema:
         dumped = ImageSchema().dump(image)
 
         # Assert
-        assert image.acquisition_datetime is not None
-        assert image.focus_method is not None
-        assert image.image_coordinate_system is not None
-        assert image.extended_depth_of_field is not None
+
         assert isinstance(dumped, dict)
-        assert dumped["acquisition_datetime"] == image.acquisition_datetime.isoformat()
-        assert dumped["focus_method"] == image.focus_method.value
-        assert (
-            dumped["extended_depth_of_field"]["number_of_focal_planes"]
-            == image.extended_depth_of_field.number_of_focal_planes
-        )
-        assert (
-            dumped["extended_depth_of_field"]["distance_between_focal_planes"]
-            == image.extended_depth_of_field.distance_between_focal_planes
-        )
-        assert (
-            dumped["image_coordinate_system"]["origin"]["x"]
-            == image.image_coordinate_system.origin.x
-        )
-        assert (
-            dumped["image_coordinate_system"]["origin"]["y"]
-            == image.image_coordinate_system.origin.y
-        )
-        assert (
-            dumped["image_coordinate_system"]["rotation"]
-            == image.image_coordinate_system.rotation
-        )
+        if image.acquisition_datetime is None:
+            assert dumped["acquisition_datetime"] == None
+        else:
+            assert (
+                dumped["acquisition_datetime"] == image.acquisition_datetime.isoformat()
+            )
+        if image.focus_method is None:
+            assert dumped["focus_method"] == None
+        else:
+            assert dumped["focus_method"] == image.focus_method.value
+        if image.extended_depth_of_field is None:
+            assert dumped["extended_depth_of_field"] == None
+        else:
+            assert (
+                dumped["extended_depth_of_field"]["number_of_focal_planes"]
+                == image.extended_depth_of_field.number_of_focal_planes
+            )
+            assert (
+                dumped["extended_depth_of_field"]["distance_between_focal_planes"]
+                == image.extended_depth_of_field.distance_between_focal_planes
+            )
+        if image.image_coordinate_system is None:
+            assert dumped["image_coordinate_system"] == None
+        else:
+            assert (
+                dumped["image_coordinate_system"]["origin"]["x"]
+                == image.image_coordinate_system.origin.x
+            )
+            assert (
+                dumped["image_coordinate_system"]["origin"]["y"]
+                == image.image_coordinate_system.origin.y
+            )
+            assert (
+                dumped["image_coordinate_system"]["rotation"]
+                == image.image_coordinate_system.rotation
+            )
 
     def test_image_deserialize(self):
         # Arrange
@@ -130,7 +186,7 @@ class TestSchema:
         assert isinstance(loaded, Image)
         assert loaded.extended_depth_of_field is not None
         assert loaded.image_coordinate_system is not None
-        assert loaded.acquisition_datetime == datetime.datetime.fromisoformat(
+        assert loaded.acquisition_datetime == datetime.fromisoformat(
             dumped["acquisition_datetime"]
         )
         assert loaded.focus_method == FocusMethod(dumped["focus_method"])
@@ -400,7 +456,7 @@ class TestSchema:
         assert isinstance(dumped, dict)
         assert dumped["name"] == patient.name
         assert dumped["identifier"] == patient.identifier
-        assert dumped["birth_date"] == datetime.date.isoformat(patient.birth_date)
+        assert dumped["birth_date"] == date.isoformat(patient.birth_date)
         assert dumped["sex"] == patient.sex.value
         if isinstance(patient.species_description, Code):
             assert isinstance(patient.species_description, Code)
@@ -471,7 +527,7 @@ class TestSchema:
         assert isinstance(loaded, Patient)
         assert loaded.name == dumped["name"]
         assert loaded.identifier == dumped["identifier"]
-        assert loaded.birth_date == datetime.date.fromisoformat(dumped["birth_date"])
+        assert loaded.birth_date == date.fromisoformat(dumped["birth_date"])
         assert loaded.sex == PatientSex(dumped["sex"])
         assert loaded.species_description is not None
         if isinstance(species_description, dict):
@@ -558,7 +614,7 @@ class TestSchema:
         assert isinstance(loaded, Study)
         assert loaded.uid == UID(dumped["uid"])
         assert loaded.identifier == dumped["identifier"]
-        assert loaded.date == datetime.date.fromisoformat(dumped["date"])
-        assert loaded.time == datetime.time.fromisoformat(dumped["time"])
+        assert loaded.date == date.fromisoformat(dumped["date"])
+        assert loaded.time == time.fromisoformat(dumped["time"])
         assert loaded.accession_number == dumped["accession_number"]
         assert loaded.referring_physician_name == dumped["referring_physician_name"]

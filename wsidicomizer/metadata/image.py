@@ -10,6 +10,7 @@ from pydicom import Sequence as DicomSequence
 from pydicom.valuerep import DSfloat
 from wsidicom.geometry import PointMm, Orientation
 from wsidicom.instance import ImageType
+from wsidicomizer.metadata.defaults import defaults
 
 from wsidicomizer.metadata.model_base import ModelBase
 from wsidicomizer.metadata.dicom_attribute import (
@@ -96,13 +97,13 @@ class Image(ModelBase):
                 "AcquisitionDateTime",
                 True,
                 self.acquisition_datetime,
-                datetime.datetime(1, 1, 1),
+                defaults.date_time,
             ),
             DicomStringAttribute(
                 "FocusMethod",
                 True,
                 self.focus_method,
-                "AUTO",
+                defaults.focus_method,
             ),
             DicomBoolAttribute(
                 "ExtendedDepthOfField",
