@@ -606,12 +606,16 @@ def patient(request):
 
 
 @pytest.fixture()
-def extracted_specimen():
-    collection = Collection(
+def collection():
+    yield Collection(
         SpecimenCollectionProcedureCode("Excision"),
         datetime.datetime(2023, 8, 5),
         "description",
     )
+
+
+@pytest.fixture()
+def extracted_specimen(collection: Collection):
     yield ExtractedSpecimen(
         "specimen", AnatomicPathologySpecimenTypesCode("Gross specimen"), collection
     )

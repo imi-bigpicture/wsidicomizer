@@ -14,6 +14,7 @@ from highdicom import (
     SpecimenStaining,
     UniversalEntityIDTypeValues,
 )
+from highdicom.sr import CodeContentItem, TextContentItem
 from pydicom import Dataset
 from pydicom.sr.coding import Code
 from pydicom.uid import UID, generate_uid
@@ -91,6 +92,20 @@ class SpecimenIdentifier:
             return identifier, None
         return identifier.to_identifier_and_issuer()
 
+    @classmethod
+    def get_from_sampling(
+        cls, sampling: SpecimenSampling
+    ) -> Union[str, "SpecimenIdentifier"]:
+        # TODO update this for id issuer
+        return sampling.parent_specimen_id
+
+    @classmethod
+    def get_from_step(
+        cls, step: SpecimenPreparationStep
+    ) -> Union[str, "SpecimenIdentifier"]:
+        # TODO update this for id issuer
+        return step.specimen_id
+
 
 class PreparationStep(metaclass=ABCMeta):
     """A generic preparation step that represents a preparation action that was performed
@@ -106,6 +121,13 @@ class PreparationStep(metaclass=ABCMeta):
     def from_dataset(cls, dataset: SpecimenPreparationStep) -> "PreparationStep":
         """Create a step from parsing of a `SpecimenPreparationStep`."""
         raise NotImplementedError()
+
+    @staticmethod
+    def _get_sampled_identifier(
+        dataset: SpecimenSampling,
+    ) -> Union[str, SpecimenIdentifier]:
+        """Return identifier for step."""
+        return dataset.parent_specimen_id
 
     @staticmethod
     def _get_identifier(
@@ -162,18 +184,25 @@ class Sampling(PreparationStep):
         return steps
 
     @classmethod
-    def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Sampling":
+    def from_dataset(
+        cls,
+        dataset: SpecimenPreparationStep,
+        created_specimens: Dict[Union[str, SpecimenIdentifier], "Specimen"],
+    ) -> "Sampling":
         assert isinstance(dataset.processing_procedure, SpecimenSampling)
-        identifier = cls._get_identifier(dataset)
-        # TODO how to figure out sub-sampling?
-        raise NotImplementedError()
-        # return Sampling(
-        #     sample_identifier=identifier,
-        #     method=SpecimenSamplingProcedureCode(
-        #         dataset.processing_procedure.method.meaning
-        #     ),
-        #     date_time=dataset.processing_datetime,
-        # )
+        content = SpecimenPreparationStep.from_dataset(dataset)
+        sampling_content = content.processing_procedure
+        assert isinstance(sampling_content, SpecimenSampling)
+        sampled_specimen_identifier = cls._get_sampled_identifier(sampling_content)
+        sampled_specimen = created_specimens[sampled_specimen_identifier]
+        # identifier = cls._get_identifier(dataset)
+        return cls(
+            specimen=sampled_specimen,
+            method=SpecimenSamplingProcedureCode(
+                dataset.processing_procedure.method.meaning
+            ),
+            # date_time=dataset.processing_datetime,
+        )
 
 
 @dataclass
@@ -199,11 +228,11 @@ class Collection(PreparationStep):
     @classmethod
     def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Collection":
         assert isinstance(dataset.processing_procedure, SpecimenCollection)
-        return Collection(
+        return cls(
             SpecimenCollectionProcedureCode(
                 dataset.processing_procedure.procedure.meaning
             ),
-            date_time=dataset.processing_datetime,
+            # date_time=dataset.processing_datetime,
         )
 
 
@@ -228,11 +257,11 @@ class Processing(PreparationStep):
     @classmethod
     def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Processing":
         assert isinstance(dataset.processing_procedure, SpecimenProcessing)
-        return Processing(
+        return cls(
             SpecimenPreparationStepsCode(
                 dataset.processing_procedure.description.meaning
             ),
-            date_time=dataset.processing_datetime,
+            # date_time=dataset.processing_datetime,
         )
 
 
@@ -258,9 +287,9 @@ class Embedding(PreparationStep):
     @classmethod
     def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Embedding":
         assert dataset.embedding_medium is not None
-        return Embedding(
+        return cls(
             SpecimenEmbeddingMediaCode(dataset.embedding_medium.meaning),
-            date_time=dataset.processing_datetime,
+            # date_time=dataset.processing_datetime,
         )
 
 
@@ -278,7 +307,7 @@ class Fixation(PreparationStep):
         return SpecimenPreparationStep(
             specimen_id=identifier,
             processing_procedure=SpecimenProcessing(description="Fixation"),
-            embedding_medium=self.fixative.code,
+            fixative=self.fixative.code,
             # processing_datetime=self.date_time,
             issuer_of_specimen_id=issuer,
         )
@@ -286,9 +315,32 @@ class Fixation(PreparationStep):
     @classmethod
     def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Fixation":
         assert dataset.fixative is not None
-        return Fixation(
+        return cls(
             SpecimenFixativesCode(dataset.fixative.meaning),
-            date_time=dataset.processing_datetime,
+            # date_time=dataset.processing_datetime,
+        )
+
+
+@dataclass
+class Staining(PreparationStep):
+    substances: List[Union[str, SpecimenStainsCode]]
+    date_time: Optional[datetime.datetime] = None
+
+    def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
+        return super().to_preparation_step(specimen)
+
+    @classmethod
+    def from_dataset(cls, dataset: SpecimenPreparationStep) -> "Staining":
+        assert isinstance(dataset.processing_procedure, SpecimenStaining)
+        substances: List[Union[str, SpecimenStainsCode]] = []
+        for substance in dataset.processing_procedure.substances:
+            if isinstance(substance, CodeContentItem):
+                substances.append(SpecimenStainsCode(substance.meaning))
+            elif isinstance(substance, TextContentItem):
+                substances.append(substance.value)
+        return cls(
+            substances,
+            # date_time=dataset.processing_datetime,
         )
 
 
@@ -330,7 +382,9 @@ class Specimen(metaclass=ABCMeta):
         """Return formatted steps in this specimen used for the given sampling."""
         steps: List[SpecimenPreparationStep] = []
         if isinstance(self, SampledSpecimen):
-            steps.extend(self._get_steps_for_sampling())
+            steps.extend(
+                self._get_steps_for_sampling(sampling.sampling_chain_constraints)
+            )
         steps.extend(
             step.to_preparation_step(self)
             for step in self._get_steps_before_sampling(sampling)
@@ -388,11 +442,16 @@ class SampledSpecimen(Specimen):
             )
         self.steps.append(step)
 
-    def _get_steps_for_sampling(self) -> List[SpecimenPreparationStep]:
+    def _get_steps_for_sampling(
+        self, sampling_chain_constraints: Optional[Sequence[Sampling]] = None
+    ) -> List[SpecimenPreparationStep]:
         """Return formatted steps for the specimen the sample was sampled from."""
+
         return [
             step
             for sampling in self._sampled_from
+            if sampling_chain_constraints is None
+            or sampling in sampling_chain_constraints
             for step in sampling.to_preparation_steps(self)
         ]
 
@@ -616,7 +675,7 @@ class SlideSample(SampledSpecimen):
     sampled_from: Optional[Sampling] = None
     uid: Optional[UID] = None
     position: Optional[Union[str, SlideSamplePosition]] = None
-    steps: List[PreparationStep] = field(init=False, default_factory=list)
+    steps: List[PreparationStep] = field(default_factory=list)
 
     def __post_init__(self):
         super().__init__(
@@ -665,92 +724,214 @@ class SlideSample(SampledSpecimen):
     @classmethod
     def from_dataset(
         cls, dataset: Dataset
-    ) -> Tuple[List["SlideSample"], List[SpecimenStainsCode]]:
+    ) -> Tuple[List["SlideSample"], List[Staining]]:
         specimen_descriptions = [
             SpecimenDescription.from_dataset(specimen_description_dataset)
             for specimen_description_dataset in dataset.SpecimenDescriptionSequence
         ]
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen] = {}
-
+        created_specimens: Dict[
+            Union[str, SpecimenIdentifier], Union[ExtractedSpecimen, Sample]
+        ] = {}
+        slide_samples: List[SlideSample] = []
+        staining_steps: List[SpecimenPreparationStep] = []
         for specimen_description in specimen_descriptions:
-            steps: Dict[
-                Union[str, SpecimenIdentifier], List[PreparationStep]
+            steps_by_identifier: Dict[
+                Union[str, SpecimenIdentifier], List[Optional[SpecimenPreparationStep]]
             ] = defaultdict(list)
-            stains: Dict[
-                Union[str, SpecimenIdentifier], List[SpecimenStainsCode]
-            ] = defaultdict(list)
-            for step in specimen_description.specimen_preparation_steps:
-                parsed_steps, parsed_stains = cls._parse_step(step)
-                if step.issuer_of_specimen_id is not None:
-                    identifier = SpecimenIdentifier(
-                        step.specimen_id, step.issuer_of_specimen_id
-                    )
-                else:
-                    identifier = step.specimen_id
-                steps[identifier].extend(parsed_steps)
-                stains[identifier].extend(parsed_stains)
-            for specimen_identifier, specimen_steps in steps.items():
-                if not specimen_identifier in created_specimens:
-                    created_specimens[specimen_identifier] = cls._create_specimen(
-                        specimen_identifier, steps, created_specimens
-                    )
-                else:
-                    pass
-        created_slide_samples = [
-            specimen
-            for specimen in created_specimens.values()
-            if isinstance(specimen, SlideSample)
-        ]
 
-        return created_slide_samples, stains
+            # Bucket the steps into specimen identifier. Sampling steps are duplicated to both
+            # sampled and sample bucket.
+            for step in specimen_description.specimen_preparation_steps:
+                if isinstance(step.processing_procedure, SpecimenStaining):
+                    staining_steps.append(step)
+                elif isinstance(step.processing_procedure, SpecimenSampling):
+                    steps_by_identifier[
+                        step.processing_procedure.parent_specimen_id
+                    ].append(step)
+                identifier = SpecimenIdentifier.get_from_step(step)
+                steps_by_identifier[identifier].append(step)
+
+            slide_sample_identifier = SpecimenIdentifier.get_from_step(
+                specimen_description.specimen_preparation_steps[-1]
+            )
+            print("slide sample identifier", slide_sample_identifier)
+
+            slide_sample = cls._create_slide_sample(
+                slide_sample_identifier,
+                steps_by_identifier,
+                created_specimens,
+                description=specimen_description,
+            )
+            slide_samples.append(slide_sample)
+
+        stains = [Staining.from_dataset(step) for step in staining_steps]
+        return slide_samples, stains
+
+    @classmethod
+    def _handle_preparation_steps(
+        cls,
+        identifier: Union[str, SpecimenIdentifier],
+        steps_by_identifier: Dict[
+            Union[str, SpecimenIdentifier], List[Optional[SpecimenPreparationStep]]
+        ],
+        created_specimens: Dict[
+            Union[str, SpecimenIdentifier], Union[ExtractedSpecimen, Sample]
+        ],
+        stop_at_step: Optional[SpecimenPreparationStep] = None,
+    ) -> Tuple[List[PreparationStep], List[Sampling]]:
+        samplings: List[Sampling] = []
+        preparation_steps: List[PreparationStep] = []
+
+        any_sampling_steps = any(
+            step
+            for step in steps_by_identifier[identifier]
+            if step is not None
+            and isinstance(step.processing_procedure, SpecimenSampling)
+            and step.specimen_id == identifier
+        )
+        for index, step in enumerate(steps_by_identifier[identifier]):
+            if step == stop_at_step:
+                # We should not parse the rest of the list
+                break
+            if step is None:
+                # This step has already been parsed
+                continue
+            if step.specimen_id != identifier:
+                # This step does not belong to this specimen
+                continue
+
+            if isinstance(step.processing_procedure, SpecimenStaining):
+                # Stainings are handled elsewhere
+                pass
+            elif isinstance(step.processing_procedure, SpecimenCollection):
+                if index != 0 or any_sampling_steps:
+                    raise ValueError(
+                        (
+                            "Collection step should be first step and there should not "
+                            "be any sampling steps."
+                        )
+                    )
+                preparation_steps.append(Collection.from_dataset(step))
+            elif isinstance(step.processing_procedure, SpecimenProcessing):
+                if not isinstance(step.processing_procedure.description, str):
+                    # TODO?
+                    preparation_steps.append(Processing.from_dataset(step))
+            elif isinstance(step.processing_procedure, SpecimenSampling):
+                parent_identifier = SpecimenIdentifier.get_from_sampling(
+                    step.processing_procedure
+                )
+                if parent_identifier in created_specimens:
+                    # Parent already exists. Make sure to parse any non-parsed steps
+                    parent = created_specimens[parent_identifier]
+                    (
+                        parent_steps,
+                        sampling_constraints,
+                    ) = cls._handle_preparation_steps(
+                        parent_identifier, steps_by_identifier, created_specimens, step
+                    )
+                    for parent_step in parent_steps:
+                        parent.add(parent_step)
+                else:
+                    # Need to create parent
+                    parent_type = AnatomicPathologySpecimenTypesCode(
+                        step.processing_procedure.parent_specimen_type.meaning
+                    )
+                    parent = cls._create_specimen(
+                        parent_identifier,
+                        parent_type,
+                        steps_by_identifier,
+                        created_specimens,
+                        step,
+                    )
+                    if isinstance(parent, Sample):
+                        sampling_constraints = parent._sampled_from
+                    else:
+                        sampling_constraints = None
+                    created_specimens[parent_identifier] = parent
+
+                if isinstance(parent, Sample):
+                    # If Sample create sampling with constraint
+                    sampling = parent.sample(
+                        SpecimenSamplingProcedureCode(
+                            step.processing_procedure.method.meaning
+                        ),
+                        sampling_chain_constraints=sampling_constraints,
+                    )
+                else:
+                    # Extracted specimen can not have constraint
+                    sampling = parent.sample(
+                        SpecimenSamplingProcedureCode(
+                            step.processing_procedure.method.meaning
+                        ),
+                    )
+
+                samplings.append(sampling)
+            else:
+                raise NotImplementedError(
+                    f"Step of type {type(step.processing_procedure)}"
+                )
+            if step.fixative is not None:
+                preparation_steps.append(Fixation.from_dataset(step))
+            if step.embedding_medium is not None:
+                preparation_steps.append(Embedding.from_dataset(step))
+
+            # Clear this step so that it will not be processed again
+            steps_by_identifier[identifier][index] = None
+        return preparation_steps, samplings
 
     @classmethod
     def _create_specimen(
         cls,
-        specimen_identifier: Union[str, SpecimenIdentifier],
-        steps: Dict[Union[str, SpecimenIdentifier], List[PreparationStep]],
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
-    ) -> Specimen:
-        sampled_from_steps = [
-            step
-            for step in steps[specimen_identifier]
-            if isinstance(step, Sampling)
-            and step.specimen.identifier == specimen_identifier
-        ]
-        sampled_from_identifiers = []
+        identifier: Union[str, SpecimenIdentifier],
+        specimen_type: AnatomicPathologySpecimenTypesCode,
+        steps_by_identifier: Dict[
+            Union[str, SpecimenIdentifier], List[Optional[SpecimenPreparationStep]]
+        ],
+        created_specimens: Dict[
+            Union[str, SpecimenIdentifier], Union[ExtractedSpecimen, Sample]
+        ],
+        stop_at_step: SpecimenPreparationStep,
+    ) -> Union[ExtractedSpecimen, Sample]:
+        preparation_steps, samplings = cls._handle_preparation_steps(
+            identifier, steps_by_identifier, created_specimens, stop_at_step
+        )
 
-    @classmethod
-    def _merge_specimen(
-        cls,
-        first_specimen: Specimen,
-        steps: Dict[Union[str, SpecimenIdentifier], List[PreparationStep]],
-        created_specimens: Dict[Union[str, SpecimenIdentifier], Specimen],
-    ) -> None:
-        pass
-
-    @classmethod
-    def _parse_step(
-        cls, step: SpecimenPreparationStep
-    ) -> Tuple[List[PreparationStep], List[SpecimenStainsCode]]:
-        steps: List[PreparationStep] = []
-        if step.embedding_medium is not None:
-            steps.append(Embedding.from_dataset(step))
-        if step.fixative is not None:
-            steps.append(Fixation.from_dataset(step))
-
-        if isinstance(step.processing_procedure, SpecimenCollection):
-            steps.append(Collection.from_dataset(step))
-        elif isinstance(step.processing_procedure, SpecimenProcessing):
-            steps.append(Processing.from_dataset(step))
-        elif isinstance(step.processing_procedure, SpecimenSampling):
-            steps.append(Sampling.from_dataset(step))
-
-        stains = []
-        if isinstance(step.processing_procedure, SpecimenStaining):
-            # TODO support string stains
-            stains.extend(
-                SpecimenStainsCode(stain.meaning)
-                for stain in step.processing_procedure.substances
-                if not isinstance(stain, str)
+        if len(samplings) == 0:
+            return ExtractedSpecimen(
+                identifier=identifier,
+                type=specimen_type,
+                steps=preparation_steps,
             )
-        return steps, stains
+        return Sample(
+            identifier=identifier,
+            type=specimen_type,
+            sampled_from=samplings,
+            steps=preparation_steps,
+        )
+
+    @classmethod
+    def _create_slide_sample(
+        cls,
+        identifier: Union[str, SpecimenIdentifier],
+        steps_by_identifier: Dict[
+            Union[str, SpecimenIdentifier], List[Optional[SpecimenPreparationStep]]
+        ],
+        created_specimens: Dict[
+            Union[str, SpecimenIdentifier], Union[ExtractedSpecimen, Sample]
+        ],
+        description: SpecimenDescription,
+    ) -> "SlideSample":
+        preparation_steps, samplings = cls._handle_preparation_steps(
+            identifier, steps_by_identifier, created_specimens
+        )
+
+        if len(samplings) != 1:
+            raise ValueError("Should only be one sampling, got.", samplings)
+        return cls(
+            identifier=description.specimen_id,
+            anatomical_sites=[],
+            sampled_from=samplings[0],
+            uid=UID(description.SpecimenUID),
+            # position=
+            steps=preparation_steps,
+        )
