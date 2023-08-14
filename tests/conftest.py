@@ -3,20 +3,27 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Optional, Sequence, Union
-from pydicom.uid import UID
+from typing import Dict, List, Optional, Sequence
+
 import pytest
+from pydicom.sr.coding import Code
+from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.conceptcode import (
+    AnatomicPathologySpecimenTypesCode,
     Code,
     IlluminationCode,
     IlluminationColorCode,
     ImagePathFilterCode,
     LenseCode,
     LightPathFilterCode,
+    SpecimenCollectionProcedureCode,
+    SpecimenEmbeddingMediaCode,
+    SpecimenFixativesCode,
     SpecimenPreparationStepsCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
 )
-from wsidicom.geometry import PointMm
 
 from wsidicomizer.metadata import (
     Equipment,
@@ -43,28 +50,20 @@ from wsidicomizer.metadata.image import (
     ImageCoordinateSystem,
 )
 from wsidicomizer.metadata.label import Label
-from wsidicomizer.metadata.slide import Slide
-from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicom.conceptcode import (
-    AnatomicPathologySpecimenTypesCode,
-    SpecimenCollectionProcedureCode,
-    SpecimenFixativesCode,
-    SpecimenSamplingProcedureCode,
-    SpecimenEmbeddingMediaCode,
-    SpecimenStainsCode,
-)
-
 from wsidicomizer.metadata.sample import (
     Collection,
     Embedding,
+    ExtractedSpecimen,
     Fixation,
     Processing,
     Sample,
     SampledSpecimen,
     SlideSample,
-    ExtractedSpecimen,
     SlideSamplePosition,
+    Staining,
 )
+from wsidicomizer.metadata.slide import Slide
+from wsidicomizer.wsidicomizer import WsiDicomizer
 
 DEFAULT_TILE_SIZE = 512
 
@@ -642,7 +641,7 @@ def sample(extracted_specimen: ExtractedSpecimen):
 
 
 @pytest.fixture()
-def slide_sample(sample: SampledSpecimen):
+def slide_sample(sample: Sample):
     yield SlideSample(
         "slide sample",
         [Code("value", "scheme", "meaning")],

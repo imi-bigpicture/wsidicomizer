@@ -26,7 +26,7 @@ from wsidicom.conceptcode import (
 )
 
 
-class TestSample:
+class TestSampleDicom:
     def test_collection_from_dataset(self):
         # Arrange
         method = SpecimenCollectionProcedureCode("Excision")

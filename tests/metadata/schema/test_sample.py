@@ -17,8 +17,6 @@ from wsidicomizer.metadata.sample import (
     Fixation,
     Processing,
     Sample,
-    SampledSpecimen,
-    Sampling,
     SlideSample,
 )
 from wsidicomizer.metadata.schema.sample import (
@@ -73,7 +71,7 @@ class TestSampleSchema:
             datetime.datetime(2023, 8, 5),
             "description",
         )
-        sample = SampledSpecimen(
+        sample = Sample(
             "sample",
             AnatomicPathologySpecimenTypesCode("Tissue section"),
             [sampling_1],
