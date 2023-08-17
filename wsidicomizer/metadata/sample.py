@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+import logging
 
 from highdicom import (
     IssuerOfIdentifier,
@@ -108,8 +109,11 @@ class SpecimenIdentifier:
 
 
 class PreparationStep(metaclass=ABCMeta):
-    """A generic preparation step that represents a preparation action that was performed
-    on a specimen."""
+    """
+    Metaclass for a preparation step for a specimen.
+
+    A preparation step is an action performed on a specimen.
+    """
 
     @abstractmethod
     def to_preparation_step(self, specimen: "Specimen") -> SpecimenPreparationStep:
@@ -119,7 +123,13 @@ class PreparationStep(metaclass=ABCMeta):
 
 @dataclass
 class Sampling(PreparationStep):
-    """The sampling of a specimen into a new (sample) specimen."""
+    """
+    The sampling of a specimen into samples that can be used to create new specimens.
+
+    See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8110.html
+    for allowed sampling methods.
+    """
 
     specimen: "Specimen"
     method: SpecimenSamplingProcedureCode
@@ -162,7 +172,13 @@ class Sampling(PreparationStep):
 
 @dataclass
 class Collection(PreparationStep):
-    """The collection of a specimen."""
+    """
+    The collection of a specimen from a body.
+
+    See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8109.html
+    for allowed collection methods.
+    """
 
     method: SpecimenCollectionProcedureCode
     date_time: Optional[datetime.datetime] = None
@@ -194,7 +210,13 @@ class Collection(PreparationStep):
 
 @dataclass
 class Processing(PreparationStep):
-    """Other processing steps made on a specimen."""
+    """
+    Other processing steps, such as heating or clearing, made on a specimen.
+
+    See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8113.html
+    for allowed proo´cessing methods.
+    """
 
     method: SpecimenPreparationStepsCode
     date_time: Optional[datetime.datetime] = None
@@ -224,7 +246,13 @@ class Processing(PreparationStep):
 
 @dataclass
 class Embedding(PreparationStep):
-    """Embedding of a specimen."""
+    """
+    Embedding of a specimen in an medium.
+
+    See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8115.html
+    for allowed mediums.
+    """
 
     medium: SpecimenEmbeddingMediaCode
     date_time: Optional[datetime.datetime] = None
@@ -253,7 +281,13 @@ class Embedding(PreparationStep):
 
 @dataclass
 class Fixation(PreparationStep):
-    """Fixation of a specimen."""
+    """
+    Fixation of a specimen using a fixative.
+
+    See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8114.html
+    for allowed fixatives.
+    """
 
     fixative: SpecimenFixativesCode
     date_time: Optional[datetime.datetime] = None
@@ -282,6 +316,14 @@ class Fixation(PreparationStep):
 
 @dataclass
 class Staining(PreparationStep):
+    """
+    Staining of a specimen using staining substances.
+
+    The substances can be given either as string or coded values. See
+    https://dicom.nema.org/medical/Dicom/current/output/chtml/part16/sect_CID_8112.html
+    for allowed stain codes.
+    """
+
     substances: List[Union[str, SpecimenStainsCode]]
     date_time: Optional[datetime.datetime] = None
 
@@ -321,7 +363,7 @@ class Staining(PreparationStep):
 
 
 class Specimen(metaclass=ABCMeta):
-    """A generic specimen."""
+    """Metaclass for a specimen."""
 
     def __init__(
         self,
@@ -380,8 +422,8 @@ class Specimen(metaclass=ABCMeta):
             yield step
 
 
-class SampledSpecimen(Specimen):
-    """A specimen thas has been sampled one or more other specimens."""
+class SampledSpecimen(Specimen, metaclass=ABCMeta):
+    """Metaclass for a specimen thas has been sampled from one or more specimens."""
 
     def __init__(
         self,
@@ -443,31 +485,29 @@ class SampledSpecimen(Specimen):
                 samplings.update(sampling.specimen.get_samplings())
         return samplings
 
-    # def get_missing_sub_sampling(
-    #     self, sub_samplings: Optional[Iterable[Union[str, SpecimenIdentifier]]]
-    # ) -> Optional[Union[str, SpecimenIdentifier]]:
-    #     if sub_samplings is None:
-    #         return None
-    #     sub_sampling_identifiers = [
-    #         sample.specimen.identifier for sample in self.sampled_from
-    #     ]
+    def _check_sampling_constraints(
+        self, constraints: Optional[Sequence[Sampling]]
+    ) -> None:
+        if constraints is None:
+            return
 
-    #     def recursive_search(
-    #         sub_sampling: Union[str, SpecimenIdentifier], specimen: Specimen
-    #     ) -> bool:
-    #         if sub_sampling == specimen.identifier:
-    #             return True
-    #         if isinstance(specimen, SampledSpecimen):
-    #             return any(
-    #                 recursive_search(sub_sampling, sampling.specimen)
-    #                 for sampling in specimen.sampled_from
-    #             )
-    #         return False
+        def recursive_search(sampling: Sampling, specimen: Specimen) -> bool:
+            """Recursively search for sampling in samplings for specimen-"""
+            if sampling in specimen.samplings:
+                return True
+            if isinstance(specimen, SampledSpecimen):
+                return any(
+                    recursive_search(sampling, sampling.specimen)
+                    for sampling in specimen._sampled_from
+                )
+            return False
 
-    #     for sub_sampling in sub_samplings:
-    #         if not recursive_search(sub_sampling, self):
-    #             return sub_sampling
-    #     return None
+        for constraint in constraints:
+            if not recursive_search(constraint, self):
+                raise ValueError(
+                    "Could not create sampling as specimen was not sampled "
+                    f"from {constraint}"
+                )
 
     def sampling_chain_is_ambiguous(
         self, sampling_chain_constraints: Optional[Sequence[Sampling]] = None
@@ -549,16 +589,18 @@ class ExtractedSpecimen(Specimen):
 
     def __post_init__(self):
         if self.extraction_step is not None:
+            # Add self.extraction step as first in list of steps
             self.steps.insert(
                 0,
                 self.extraction_step,
             )
         else:
-            collection_step = next(
+            # If extraction step in steps, set it as self.extraction_step
+            extraction_step = next(
                 (step for step in self.steps if isinstance(step, Collection)), None
             )
-            if collection_step is not None:
-                self.extraction_step = collection_step
+            if extraction_step is not None:
+                self.extraction_step = extraction_step
         super().__init__(identifier=self.identifier, type=self.type, steps=self.steps)
 
     def add(self, step: PreparationStep) -> None:
@@ -609,13 +651,7 @@ class Sample(SampledSpecimen):
         sampling_chain_constraints: Optional[Sequence[Sampling]] = None,
     ) -> Sampling:
         """Create a sampling from the specimen that can be used to create a new sample."""
-        # TODO?
-        # missing_sub_sampling = self.get_missing_sub_sampling(sub_samplings)
-        # if missing_sub_sampling is not None:
-        #     raise ValueError(
-        #         "Could not create sampling as specimen was not sampled "
-        #         f"from {missing_sub_sampling}"
-        #     )
+        self._check_sampling_constraints(sampling_chain_constraints)
         if sampling_chain_constraints is not None:
             for sampling_chain_constraint in sampling_chain_constraints:
                 assert isinstance(sampling_chain_constraint, Sampling)
@@ -750,8 +786,9 @@ class SlideSample(SampledSpecimen):
         stop_at_step: Optional[SpecimenPreparationStep] = None,
     ) -> Tuple[List[PreparationStep], List[Sampling]]:
         """
-        Parse the list of SpecimenPreparationSteps for a specimen into PreparationSteps
-        and Samplings. Creates or updates parent specimens.
+        Parse PreparationSteps and Samplings for a specimen.
+
+        Creates or updates parent specimens.
 
         Parameters
         ----------
@@ -839,12 +876,15 @@ class SlideSample(SampledSpecimen):
                 preparation_steps.append(Collection.from_dataset(step))
             elif isinstance(step.processing_procedure, SpecimenProcessing):
                 if not isinstance(step.processing_procedure.description, str):
-                    # TODO?
+                    # Only coded processing procedure descriptions are supported
+                    # String descriptions could be used for fixation or embedding steps,
+                    # those are parsed separately.
                     preparation_steps.append(Processing.from_dataset(step))
             elif isinstance(step.processing_procedure, SpecimenSampling):
                 parent_identifier = SpecimenIdentifier.get_from_sampling(
                     step.processing_procedure
                 )
+                print("Parsing sampling step for", identifier, "to", parent_identifier)
                 if parent_identifier in existing_specimens:
                     # Parent already exists. Make sure to parse any non-parsed steps
                     parent = existing_specimens[parent_identifier]
@@ -858,6 +898,8 @@ class SlideSample(SampledSpecimen):
                         # Only add step if not an equivalent exists
                         if not any(step == parent_step for step in parent.steps):
                             parent.add(parent_step)
+                    if isinstance(parent, Sample):
+                        parent._sampled_from.extend(sampling_constraints)
                 else:
                     # Need to create parent
                     parent_type = AnatomicPathologySpecimenTypesCode(
@@ -945,6 +987,8 @@ class SlideSample(SampledSpecimen):
             Created ExtracedSpecimen, if the specimen has no parents, or Specimen.
 
         """
+        logging.debug(f"Creating specimen with identifier {identifier}")
+        print(f"Creating specimen with identifier {identifier}")
         preparation_steps, samplings = cls._parse_preparation_steps_for_specimen(
             identifier, steps_by_identifier, existing_specimens, stop_at_step
         )
