@@ -202,14 +202,14 @@ files = [
 
 [[package]]
 name = "dicom-validator"
-version = "0.3.5"
+version = "0.3.4"
 description = "Python DICOM tools using input from DICOM specs in docbook format"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "dicom-validator-0.3.5.tar.gz", hash = "sha256:da97c75fa1431dcc907e6f02fb9e13910e07072a4098ac7c6895004c8c4d7536"},
-    {file = "dicom_validator-0.3.5-py3-none-any.whl", hash = "sha256:8339d21a7a940cc033f27d72efbbde3ccde2706c7f394de3625d23d5766a1f3b"},
+    {file = "dicom-validator-0.3.4.tar.gz", hash = "sha256:2e5446c4beaea24aec45bad0e97b98881c8939b2798512dc70aab2900ac37567"},
+    {file = "dicom_validator-0.3.4-py3-none-any.whl", hash = "sha256:468b9018e719c3ac86038d7b04a9dad05407320ff53ac663153f83380d49f031"},
 ]
 
 [package.dependencies]
@@ -1458,4 +1458,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "640c8aac6a4ccb56bd1deca607afe916c8b9dbebd8aa11e9cfb191b00ad6b5d8"
+content-hash = "fce0327225bc946ba58aed26460d5d25f6c0a5cad887655827ebd44bfcbbf5ca"
