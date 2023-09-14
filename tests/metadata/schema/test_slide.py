@@ -2,6 +2,7 @@ from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition
 from wsidicomizer.metadata.schema.slide import SlideSchema
 from wsidicomizer.metadata.slide import Slide
+from wsidicom.conceptcode import SpecimenStainsCode
 
 
 class TestSlideSchema:
@@ -12,12 +13,17 @@ class TestSlideSchema:
         dumped = SlideSchema().dump(slide)
 
         # Assert
-        assert slide.stains is not None
+        assert slide.stainings is not None
         assert slide.samples is not None
         assert isinstance(dumped, dict)
         assert dumped["identifier"] == slide.identifier
-        for index, stain in enumerate(slide.stains):
-            assert_dict_equals_code(dumped["stains"][index], stain)
+        for index, staining in enumerate(slide.stainings):
+            dumped_staining = dumped["stainings"][index]
+            for stain_index, stain in enumerate(staining.substances):
+                assert isinstance(stain, SpecimenStainsCode)
+                assert_dict_equals_code(
+                    dumped_staining["substances"][stain_index], stain
+                )
 
         sample = slide.samples[0]
         assert isinstance(sample.position, SlideSamplePosition)
@@ -43,17 +49,22 @@ class TestSlideSchema:
         # Arrange
         dumped = {
             "identifier": "Slide 1",
-            "stains": [
+            "stainings": [
                 {
-                    "value": "12710003",
-                    "scheme_designator": "SCT",
-                    "meaning": "hematoxylin stain",
-                },
-                {
-                    "value": "36879007",
-                    "scheme_designator": "SCT",
-                    "meaning": "water soluble eosin stain",
-                },
+                    "substances": [
+                        {
+                            "value": "12710003",
+                            "scheme_designator": "SCT",
+                            "meaning": "hematoxylin stain",
+                        },
+                        {
+                            "value": "36879007",
+                            "scheme_designator": "SCT",
+                            "meaning": "water soluble eosin stain",
+                        },
+                    ],
+                    "date_time": "2023-08-05T00:00:00",
+                }
             ],
             "samples": [
                 {

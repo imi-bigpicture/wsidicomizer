@@ -437,6 +437,8 @@ class SampledSpecimen(Specimen, metaclass=ABCMeta):
             sampled_from = []
         elif isinstance(sampled_from, Sampling):
             sampled_from = [sampled_from]
+        # else:
+        #     sampled_from = list(sampled_from)
         self._sampled_from = sampled_from
         # for sampling in self.sampled_from:
         #     if sampling.sub_sampling is not None:
@@ -699,23 +701,20 @@ class SlideSample(SampledSpecimen):
 
     def to_description(
         self,
-        stains: Optional[Sequence[SpecimenStainsCode]] = None,
+        stains: Optional[Sequence[Staining]] = None,
     ) -> SpecimenDescription:
         """Create a formatted specimen description for the specimen."""
+        if stains is None:
+            stains = []
         sample_uid = generate_uid() if self.uid is None else self.uid
         sample_preparation_steps: List[SpecimenPreparationStep] = []
         sample_preparation_steps.extend(self.to_preparation_steps())
         identifier, issuer = SpecimenIdentifier.get_identifier_and_issuer(
             self.identifier
         )
-        if stains is not None:
-            slide_staining_step = SpecimenPreparationStep(
-                identifier,
-                processing_procedure=SpecimenStaining([stain.code for stain in stains]),
-                issuer_of_specimen_id=issuer,
-            )
-            sample_preparation_steps.append(slide_staining_step)
-        position = None
+        for stain in stains:
+            step = stain.to_preparation_step(self)
+            sample_preparation_steps.append(step)
         if isinstance(self.position, str):
             position = self.position
         elif isinstance(self.position, SlideSamplePosition):
@@ -918,6 +917,8 @@ class SlideSample(SampledSpecimen):
                         sampling_constraints = None
                     existing_specimens[parent_identifier] = parent
 
+                # TODO is this assert needed?
+                assert isinstance(step.processing_procedure, SpecimenSampling)
                 if isinstance(parent, Sample):
                     # If Sample create sampling with constraint
                     sampling = parent.sample(

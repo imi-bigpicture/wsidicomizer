@@ -31,6 +31,7 @@ from wsidicom.conceptcode import (
     SpecimenFixativesCode,
     SpecimenPreparationStepsCode,
     SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
 )
 
 from wsidicomizer.metadata.sample import (
@@ -46,6 +47,7 @@ from wsidicomizer.metadata.sample import (
     SlideSample,
     Specimen,
     SpecimenIdentifier,
+    Staining,
 )
 from wsidicomizer.metadata.schema.fields import (
     CodeField,
@@ -114,7 +116,7 @@ class BasePreparationStepSchema(Schema):
     """Base schema for serializing and deserializing a `PreparationStep`."""
 
     _load_class: Type[
-        Union[SerializedSampling, Collection, Processing, Embedding, Fixation]
+        Union[SerializedSampling, Collection, Processing, Embedding, Fixation, Staining]
     ]
 
     @post_load
@@ -169,6 +171,14 @@ class FixationSchema(BasePreparationStepSchema):
     date_time = fields.DateTime(allow_none=True)
     preparation_type = fields.Constant("fixation")
     _load_class = Fixation
+
+
+class StainingSchema(BasePreparationStepSchema):
+    substances = fields.List(
+        FieldFactory.concept_code(SpecimenStainsCode)(), allow_none=True
+    )
+    date_time = fields.DateTime(allow_none=True)
+    _load_class = Staining
 
 
 class PreparationStepSchema(Schema):

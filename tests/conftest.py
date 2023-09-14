@@ -738,16 +738,17 @@ def slide():
         position=SlideSamplePosition(10, 0, 0),
     )
 
-    stains = [
+    stainings = [
         Staining(
             [
                 SpecimenStainsCode("hematoxylin stain"),
                 SpecimenStainsCode("water soluble eosin stain"),
             ],
+            date_time=datetime.datetime(2023, 8, 5),
         ),
     ]
 
-    yield Slide(identifier="Slide 1", stains=stains, samples=[sample_1, sample_2])
+    yield Slide(identifier="Slide 1", stainings=stainings, samples=[sample_1, sample_2])
 
 
 @pytest.fixture()

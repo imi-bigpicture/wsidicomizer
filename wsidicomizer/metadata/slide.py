@@ -28,7 +28,7 @@ class Slide(BaseModel):
     """
 
     identifier: Optional[str] = None
-    stains: Optional[Sequence[Staining]] = None
+    stainings: Optional[Sequence[Staining]] = None
     samples: Optional[Sequence[SlideSample]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
@@ -61,7 +61,7 @@ class Slide(BaseModel):
         if self.samples is not None:
             dataset.SpecimenDescriptionSequence = DicomSequence(
                 [
-                    slide_sample.to_description(self.stains)
+                    slide_sample.to_description(self.stainings)
                     for slide_sample in self.samples
                 ]
             )
@@ -71,6 +71,6 @@ class Slide(BaseModel):
     @classmethod
     def from_dataset(cls, dataset: Dataset):
         identifier = dataset.ContainerIdentifier
-        samples, stains = SlideSample.from_dataset(dataset)
+        samples, stainings = SlideSample.from_dataset(dataset)
 
-        return cls(identifier=identifier, stains=stains, samples=samples)
+        return cls(identifier=identifier, stainings=stainings, samples=samples)
