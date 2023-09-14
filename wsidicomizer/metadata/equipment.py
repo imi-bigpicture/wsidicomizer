@@ -14,11 +14,11 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomListStringAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 
 
 @dataclass
-class Equipment(ModelBase):
+class Equipment(BaseModel):
     """
     Equipment used to produce the slide.
 
@@ -30,7 +30,6 @@ class Equipment(ModelBase):
     model_name: Optional[str] = None
     device_serial_number: Optional[str] = None
     software_versions: Optional[Sequence[str]] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [

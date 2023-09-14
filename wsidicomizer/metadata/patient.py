@@ -16,7 +16,7 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomListStringAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 
 
 class PatientSex(Enum):
@@ -26,10 +26,9 @@ class PatientSex(Enum):
 
 
 @dataclass
-class PatientDeIdentification(ModelBase):
+class PatientDeIdentification(BaseModel):
     identity_removed: bool
     methods: Optional[Sequence[Union[str, Code]]] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [
@@ -78,7 +77,7 @@ class PatientDeIdentification(ModelBase):
 
 
 @dataclass
-class Patient(ModelBase):
+class Patient(BaseModel):
     """
     Patient metadata.
 
@@ -93,7 +92,6 @@ class Patient(ModelBase):
     sex: Optional[PatientSex] = None
     species_description: Optional[Union[str, Code]] = None
     de_identification: Optional[PatientDeIdentification] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [

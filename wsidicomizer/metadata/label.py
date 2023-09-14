@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 from pydicom import Dataset
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
     DicomBoolAttribute,
@@ -14,7 +14,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 
 
 @dataclass
-class Label(ModelBase):
+class Label(BaseModel):
     """
     Label metadata.
 
@@ -28,7 +28,6 @@ class Label(ModelBase):
     label_in_volume_image: bool = False
     label_in_overview_image: bool = False
     label_is_phi: bool = True
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         label_in_image = False

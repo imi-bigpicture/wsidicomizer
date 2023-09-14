@@ -24,7 +24,7 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomNumericAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 
 
 class Lut:
@@ -368,7 +368,7 @@ class Objectives:
 
 
 @dataclass
-class OpticalPath(ModelBase):
+class OpticalPath(BaseModel):
     """
     Optical path metadata.
 
@@ -386,7 +386,6 @@ class OpticalPath(ModelBase):
     light_path_filter: Optional[LightPathFilter] = None
     image_path_filter: Optional[ImagePathFilter] = None
     objective: Optional[Objectives] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         if "OpticalPathSequence" not in dataset:

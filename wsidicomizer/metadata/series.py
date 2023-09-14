@@ -7,7 +7,7 @@ from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
     DicomNumericAttribute,
@@ -16,7 +16,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 
 
 @dataclass
-class Series(ModelBase):
+class Series(BaseModel):
     """
     Series metadata.
 
@@ -29,7 +29,6 @@ class Series(ModelBase):
 
     uid: Optional[UID] = None
     number: Optional[int] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     @cached_property
     def _uid(self) -> UID:

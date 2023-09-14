@@ -12,7 +12,7 @@ from wsidicom.geometry import PointMm, Orientation
 from wsidicom.instance import ImageType
 from wsidicomizer.metadata.defaults import defaults
 
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.dicom_attribute import (
     DicomAttribute,
     DicomBoolAttribute,
@@ -28,10 +28,9 @@ class FocusMethod(Enum):
 
 
 @dataclass
-class ExtendedDepthOfField(ModelBase):
+class ExtendedDepthOfField(BaseModel):
     number_of_focal_planes: int
     distance_between_focal_planes: float
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(
         self,
@@ -54,10 +53,9 @@ class ExtendedDepthOfField(ModelBase):
 
 
 @dataclass
-class ImageCoordinateSystem(ModelBase):
+class ImageCoordinateSystem(BaseModel):
     origin: PointMm
     rotation: float
-    overrides: Optional[Dict[str, bool]] = None
 
     @property
     def orientation(self) -> Orientation:
@@ -76,7 +74,7 @@ class ImageCoordinateSystem(ModelBase):
 
 
 @dataclass
-class Image(ModelBase):
+class Image(BaseModel):
     """
     Image metadata.
 
@@ -89,7 +87,6 @@ class Image(ModelBase):
     focus_method: Optional[FocusMethod] = None
     extended_depth_of_field: Optional[ExtendedDepthOfField] = None
     image_coordinate_system: Optional[ImageCoordinateSystem] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [

@@ -1,13 +1,8 @@
 """Slide model."""
 from dataclasses import dataclass
-from typing import Dict, Sequence, List, Optional, Sequence
+from typing import Sequence, List, Optional, Sequence
 from pydicom import Dataset
 from pydicom.sequence import Sequence as DicomSequence
-from wsidicom.conceptcode import (
-    ContainerComponentTypeCode,
-    ContainerTypeCode,
-    SpecimenStainsCode,
-)
 from wsidicom.instance import ImageType
 from wsidicomizer.metadata.defaults import defaults
 
@@ -17,13 +12,13 @@ from wsidicomizer.metadata.dicom_attribute import (
     DicomSequenceAttribute,
     DicomStringAttribute,
 )
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 
-from wsidicomizer.metadata.sample import SlideSample
+from wsidicomizer.metadata.sample import SlideSample, Staining
 
 
 @dataclass
-class Slide(ModelBase):
+class Slide(BaseModel):
     """
     Metadata for a slide.
 
@@ -33,9 +28,8 @@ class Slide(ModelBase):
     """
 
     identifier: Optional[str] = None
-    stains: Optional[Sequence[SpecimenStainsCode]] = None
+    stains: Optional[Sequence[Staining]] = None
     samples: Optional[Sequence[SlideSample]] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
         dicom_attributes: List[DicomAttribute] = [

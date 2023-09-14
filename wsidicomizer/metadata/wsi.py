@@ -8,7 +8,7 @@ from pydicom.uid import UID, generate_uid, VLWholeSlideMicroscopyImageStorage
 from wsidicom.instance import ImageType
 from wsidicomizer.metadata.image import Image
 
-from wsidicomizer.metadata.model_base import ModelBase
+from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.equipment import Equipment
 from wsidicomizer.metadata.label import Label
 from wsidicomizer.metadata.optical_path import OpticalPath
@@ -57,7 +57,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 
 
 @dataclass
-class WsiMetadata(ModelBase):
+class WsiMetadata(BaseModel):
     study: Optional[Study] = None
     series: Optional[Series] = None
     patient: Optional[Patient] = None
@@ -68,7 +68,6 @@ class WsiMetadata(ModelBase):
     image: Optional[Image] = None
     frame_of_reference_uid: Optional[UID] = None
     dimension_organization_uid: Optional[UID] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     @cached_property
     def _frame_of_reference_uid(self) -> UID:
@@ -114,7 +113,7 @@ class WsiMetadata(ModelBase):
         ]
         self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
 
-        models: List[Tuple[Optional[ModelBase], Optional[Callable[[], ModelBase]]]] = [
+        models: List[Tuple[Optional[BaseModel], Optional[Callable[[], BaseModel]]]] = [
             (self.study, Study),
             (self.series, Series),
             (self.patient, Patient),

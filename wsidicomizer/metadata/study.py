@@ -8,8 +8,8 @@ from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.model_base import (
-    ModelBase,
+from wsidicomizer.metadata.base_model import (
+    BaseModel,
 )
 
 from wsidicomizer.metadata.dicom_attribute import (
@@ -21,7 +21,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 
 
 @dataclass
-class Study(ModelBase):
+class Study(BaseModel):
     """
     Study metadata.
 
@@ -36,7 +36,6 @@ class Study(ModelBase):
     time: Optional[datetime.time] = None
     accession_number: Optional[str] = None
     referring_physician_name: Optional[str] = None
-    overrides: Optional[Dict[str, bool]] = None
 
     @cached_property
     def _uid(self) -> UID:

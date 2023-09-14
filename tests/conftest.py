@@ -739,8 +739,12 @@ def slide():
     )
 
     stains = [
-        SpecimenStainsCode("hematoxylin stain"),
-        SpecimenStainsCode("water soluble eosin stain"),
+        Staining(
+            [
+                SpecimenStainsCode("hematoxylin stain"),
+                SpecimenStainsCode("water soluble eosin stain"),
+            ],
+        ),
     ]
 
     yield Slide(identifier="Slide 1", stains=stains, samples=[sample_1, sample_2])
