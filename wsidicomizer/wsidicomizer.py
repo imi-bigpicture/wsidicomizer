@@ -53,6 +53,7 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Union[str, Path],
         metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -71,8 +72,10 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: str
             Path to file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Optional[Sequence[int]] = None
@@ -128,6 +131,7 @@ class WsiDicomizer(WsiDicom):
             encoder,
             tile_size,
             metadata,
+            default_metadata,
             include_levels,
             include_label,
             include_overview,
@@ -142,6 +146,7 @@ class WsiDicomizer(WsiDicom):
         filepath: Union[str, Path],
         output_path: Optional[Union[str, Path]] = None,
         metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         include_levels: Optional[Sequence[int]] = None,
@@ -167,8 +172,10 @@ class WsiDicomizer(WsiDicom):
             Path to file
         output_path: str = None
             Folder path to save files to.
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
@@ -215,6 +222,7 @@ class WsiDicomizer(WsiDicom):
         with cls.open(
             filepath,
             metadata,
+            default_metadata,
             tile_size,
             include_levels,
             include_label,

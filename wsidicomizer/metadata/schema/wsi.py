@@ -12,7 +12,7 @@ from wsidicomizer.metadata.schema.study import StudySchema
 from wsidicomizer.metadata.wsi import WsiMetadata
 
 
-class WsiSchema(Schema):
+class WsiMetadataSchema(Schema):
     study = fields.Nested(StudySchema(), allow_none=True)
     series = fields.Nested(SeriesSchema(), allow_none=True)
     patient = fields.Nested(PatientSchema(), allow_none=True)

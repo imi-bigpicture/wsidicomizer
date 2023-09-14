@@ -13,12 +13,12 @@
 #    limitations under the License.
 
 import argparse
-import json
 import os
 from pathlib import Path
 from typing import Optional, Sequence
 
-from pydicom.dataset import Dataset
+from wsidicomizer.metadata.schema.wsi import WsiMetadataSchema
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -53,13 +53,18 @@ class WsiDicomizerCli:
             ),
         )
         self._parser.add_argument(
-            "-d",
-            "--dataset",
+            "-m",
+            "--metadata",
             type=Path,
             help=(
-                "Path to json DICOM dataset. Can be used to define additional "
-                "DICOM modules to include in the files"
+                "Path to json metadata that will override metadata from source image file."
             ),
+        )
+        self._parser.add_argument(
+            "-d",
+            "--default-metadata",
+            type=Path,
+            help=("Path to json metadata that will be used as default values."),
         )
         self._parser.add_argument(
             "-l",
@@ -137,11 +142,14 @@ class WsiDicomizerCli:
 
     def cli(self):
         args = self._parser.parse_args()
-        if not args.dataset:
-            dataset = None
+        if not args.metadata:
+            metadata = None
         else:
-            json_file = open(args.dataset)
-            dataset = Dataset.from_json(json.load(json_file))
+            metadata = self._load_metadata(args.metadata)
+        if not args.default_metadata:
+            default_metadata = None
+        else:
+            default_metadata = self._load_metadata(args.default_metadata)
         if not args.levels:
             levels = None
         else:
@@ -152,7 +160,8 @@ class WsiDicomizerCli:
         self.convert(
             filepath=args.input,
             output_path=args.output,
-            modules=dataset,
+            metadata=metadata,
+            default_metadata=default_metadata,
             tile_size=args.tile_size,
             include_levels=levels,
             include_label=not args.no_label,
@@ -171,7 +180,8 @@ class WsiDicomizerCli:
         self,
         filepath: Path,
         output_path: Path,
-        modules: Optional[Dataset] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -188,7 +198,8 @@ class WsiDicomizerCli:
         WsiDicomizer.convert(
             filepath=filepath,
             output_path=output_path,
-            # modules=modules,
+            metadata=metadata,
+            default_metadata=default_metadata,
             tile_size=tile_size,
             include_levels=include_levels,
             include_label=include_label,
@@ -202,6 +213,13 @@ class WsiDicomizerCli:
             offset_table=offset_table,
             label=label,
         )
+
+    @staticmethod
+    def _load_metadata(filepath: Path) -> WsiMetadata:
+        with open(filepath) as json_file:
+            metadata = WsiMetadataSchema().loads(json_file.read())
+            assert isinstance(metadata, WsiMetadata)
+            return metadata
 
 
 def main():

@@ -17,11 +17,9 @@
 from pathlib import Path
 from typing import Optional, Sequence
 
-from pydicom import Dataset
-
 from wsidicomizer.cli import WsiDicomizerCli
-from wsidicomizer.extras.bioformats.bioformats_dicomizer import \
-    BioformatsDicomizer
+from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
+from wsidicomizer.metadata.wsi import WsiMetadata
 
 
 class BioformatsCli(WsiDicomizerCli):
@@ -29,7 +27,8 @@ class BioformatsCli(WsiDicomizerCli):
         self,
         filepath: str,
         output_path: str,
-        modules: Optional[Dataset] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -37,16 +36,16 @@ class BioformatsCli(WsiDicomizerCli):
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = 'jpeg',
+        encoding_format: str = "jpeg",
         encoding_quality: float = 90,
-        jpeg_subsampling: str = '420',
-        offset_table: Optional[str] = 'bot',
-        label: Optional[Path] = None
-
+        jpeg_subsampling: str = "420",
+        offset_table: Optional[str] = "bot",
+        label: Optional[Path] = None,
     ):
         with BioformatsDicomizer.open(
             filepath=filepath,
-            modules=modules,
+            metadata=metadata,
+            default_metadata=default_metadata,
             tile_size=tile_size,
             include_levels=include_levels,
             include_label=include_label,
@@ -54,13 +53,13 @@ class BioformatsCli(WsiDicomizerCli):
             encoding_format=encoding_format,
             encoding_quality=encoding_quality,
             jpeg_subsampling=jpeg_subsampling,
-            label=label
+            label=label,
         ) as wsi:
             wsi.save(
                 output_path=output_path,
                 offset_table=offset_table,
                 workers=workers,
-                chunk_size=chunk_size
+                chunk_size=chunk_size,
             )
 
 

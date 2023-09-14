@@ -32,6 +32,7 @@ class BioformatsDicomizer(WsiDicomizer):
         cls,
         filepath: Union[str, Path],
         metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -48,8 +49,10 @@ class BioformatsDicomizer(WsiDicomizer):
         ----------
         filepath: str
             Path to file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         include_levels: Optional[Sequence[int]] = None
@@ -94,6 +97,7 @@ class BioformatsDicomizer(WsiDicomizer):
             encoder,
             tile_size,
             metadata,
+            default_metadata,
             include_levels,
             include_label,
             include_overview,

@@ -48,6 +48,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -55,15 +56,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     ) -> None:
         if metadata is None:
             metadata = WsiMetadata()
+        if default_metadata is None:
+            default_metadata = WsiMetadata()
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
-        self._metadata = metadata
+        self._user_metadata = metadata
+        self._default_metadata = metadata
         self._include_levels = include_levels
         self._include_label = include_label
         self._include_overview = include_overview
         self._include_confidential = include_confidential
-        self._merged_metadata: Optional[WsiMetadata] = None
 
     @staticmethod
     @abstractmethod
@@ -114,12 +117,19 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     def metadata(self) -> WsiMetadata:
-        if self._merged_metadata is None:
-            self._merged_metadata = WsiMetadata.merge(
-                self.image_metadata, self._metadata
-            )
-        assert self._merged_metadata is not None
-        return self._merged_metadata
+        merged = WsiMetadata.merge(
+            self.image_metadata, self.user_metadata, self.default_metadata
+        )
+        assert merged is not None
+        return merged
+
+    @property
+    def user_metadata(self) -> WsiMetadata:
+        return self._user_metadata
+
+    @property
+    def default_metadata(self) -> WsiMetadata:
+        return self._default_metadata
 
     @property
     def base_dataset(self) -> WsiDataset:
