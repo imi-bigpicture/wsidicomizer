@@ -29,16 +29,7 @@ BaseModelType = TypeVar("BaseModelType", bound="BaseModel")
 
 @dataclass
 class BaseModel(metaclass=ABCMeta):
-    """Base model.
-
-    Additional attributes not defined in the model can be added in the
-    `additional_attributes` dictionary with the DICOM tag as key.
-    """
-
-    @property
-    def additional_attribute(self) -> Optional[Dict[str, Any]]:
-        """Additional attributes."""
-        return None
+    """Base model."""
 
     @classmethod
     def merge(
