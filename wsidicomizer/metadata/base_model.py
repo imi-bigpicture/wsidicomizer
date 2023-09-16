@@ -38,8 +38,8 @@ class BaseModel(metaclass=ABCMeta):
         user: Optional[BaseModelType],
         default: Optional[BaseModelType],
     ) -> Optional[BaseModelType]:
-        """
-        Merge three models to a new model.
+        """Merge three models to a new model.
+
         - base - model from file.
         - user - user defined model that overrides base.
         - default - user defined model with default values used for fields not defined

@@ -13,18 +13,14 @@
 #    limitations under the License.
 
 """Study model."""
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
 from functools import cached_property
-from typing import List, Optional
+from typing import Optional
 
-from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
-from wsidicom.instance import ImageType
 
-from wsidicomizer.metadata.base_model import (
-    BaseModel,
-)
+from wsidicomizer.metadata.base_model import BaseModel
 
 
 @dataclass
