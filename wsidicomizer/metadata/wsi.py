@@ -15,11 +15,9 @@
 """Complete WSI model."""
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import List, Optional
 
-from pydicom import Dataset
-from pydicom.uid import UID, generate_uid, VLWholeSlideMicroscopyImageStorage
-from wsidicom.instance import ImageType
+from pydicom.uid import UID, generate_uid
 from wsidicomizer.metadata.image import Image
 
 from wsidicomizer.metadata.base_model import BaseModel
@@ -30,11 +28,7 @@ from wsidicomizer.metadata.patient import Patient
 from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.slide import Slide
 from wsidicomizer.metadata.study import Study
-from wsidicomizer.metadata.dicom_attribute import (
-    DicomSequenceAttribute,
-    DicomStringAttribute,
-    DicomUidAttribute,
-)
+
 
 # TODO figure out how metadata defined here can override or be overridden by
 # *ImageMeta*. Suggestion is to have a bool flag on each module, indicating if the
@@ -55,7 +49,7 @@ from wsidicomizer.metadata.dicom_attribute import (
 # override-dictionary:
 # overrides = {
 #   'device_serial_number': True,
-#   'label_text': True
+#   'text': True
 # }
 # And feed this to all modules.
 
@@ -94,54 +88,3 @@ class WsiMetadata(BaseModel):
         if self.dimension_organization_uid is not None:
             return self.dimension_organization_uid
         return generate_uid()
-
-    def to_dataset(
-        self,
-        image_type: ImageType,
-    ) -> Dataset:
-        dataset = Dataset()
-        self.insert_into_dataset(dataset, image_type)
-        return dataset
-
-    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dicom_attributes = [
-            DicomUidAttribute("SOPClassUID", True, VLWholeSlideMicroscopyImageStorage),
-            DicomStringAttribute("Modality", True, "SM"),
-            DicomUidAttribute(
-                "FrameOfReferenceUID", True, self._frame_of_reference_uid
-            ),
-            DicomStringAttribute("PositionReferenceIndicator", True, "SLIDE_CORNER"),
-            DicomStringAttribute("VolumetricProperties", True, "VOLUME"),
-            DicomSequenceAttribute("AcquisitionContextSequence", True, []),
-            DicomSequenceAttribute(
-                "DimensionOrganizationSequence",
-                True,
-                [
-                    DicomUidAttribute(
-                        "DimensionOrganizationUID",
-                        True,
-                        self._dimension_organization_uid,
-                    ),
-                ],
-            ),
-        ]
-        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
-
-        models: List[Tuple[Optional[BaseModel], Optional[Callable[[], BaseModel]]]] = [
-            (self.study, Study),
-            (self.series, Series),
-            (self.patient, Patient),
-            (self.equipment, Equipment),
-            (self.slide, Slide),
-            (self.label, Label),
-            (self.image, Image),
-        ]
-        if len(self.optical_paths) > 0:
-            models.extend([(optical_path, None) for optical_path in self.optical_paths])
-        else:
-            models.append((None, OpticalPath))
-        for model, model_default_factory in models:
-            if model is None and model_default_factory is not None:
-                model = model_default_factory()
-            if model is not None:
-                model.insert_into_dataset(dataset, image_type)

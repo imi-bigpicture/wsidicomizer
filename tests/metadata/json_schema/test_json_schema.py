@@ -34,13 +34,13 @@ from wsidicomizer.metadata import (
     Series,
     Study,
 )
-from wsidicomizer.metadata.schema.equipment import EquipmentSchema
-from wsidicomizer.metadata.schema.image import ImageSchema
-from wsidicomizer.metadata.schema.label import LabelSchema
-from wsidicomizer.metadata.schema.optical import OpticalPathSchema
-from wsidicomizer.metadata.schema.patient import PatientSchema
-from wsidicomizer.metadata.schema.series import SeriesSchema
-from wsidicomizer.metadata.schema.study import StudySchema
+from wsidicomizer.metadata.json_schema.equipment import EquipmentSchema
+from wsidicomizer.metadata.json_schema.image import ImageSchema
+from wsidicomizer.metadata.json_schema.label import LabelSchema
+from wsidicomizer.metadata.json_schema.optical import OpticalPathSchema
+from wsidicomizer.metadata.json_schema.patient import PatientSchema
+from wsidicomizer.metadata.json_schema.series import SeriesSchema
+from wsidicomizer.metadata.json_schema.study import StudySchema
 
 
 class TestSchema:
@@ -222,8 +222,8 @@ class TestSchema:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert dumped["label_text"] == label.label_text
-        assert dumped["barcode_value"] == label.barcode_value
+        assert dumped["text"] == label.text
+        assert dumped["barcode"] == label.barcode
         assert dumped["label_in_volume_image"] == label.label_in_volume_image
         assert dumped["label_in_overview_image"] == label.label_in_overview_image
         assert dumped["label_is_phi"] == label.label_is_phi
@@ -231,8 +231,8 @@ class TestSchema:
     def test_label_deserialize(self):
         # Arrange
         dumped = {
-            "label_text": "label_text",
-            "barcode_value": "barcode_value",
+            "text": "text",
+            "barcode": "barcode",
             "label_in_volume_image": True,
             "label_in_overview_image": True,
             "label_is_phi": False,
@@ -243,12 +243,15 @@ class TestSchema:
 
         # Assert
         assert isinstance(loaded, Label)
-        assert loaded.label_text == dumped["label_text"]
-        assert loaded.barcode_value == dumped["barcode_value"]
+        assert loaded.text == dumped["text"]
+        assert loaded.barcode == dumped["barcode"]
         assert loaded.label_in_volume_image == dumped["label_in_volume_image"]
         assert loaded.label_in_overview_image == dumped["label_in_overview_image"]
         assert loaded.label_is_phi == dumped["label_is_phi"]
 
+    @pytest.mark.parametrize(
+        "illumination", [IlluminationColorCode("Full Spectrum"), 400.0]
+    )
     def test_optical_path_serialize(self, optical_path: OpticalPath):
         # Arrange
 
@@ -257,15 +260,17 @@ class TestSchema:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert optical_path.illumination_type is not None
+        assert optical_path.illumination_types is not None
         assert optical_path.light_path_filter is not None
         assert optical_path.image_path_filter is not None
         assert optical_path.objective is not None
         assert dumped["identifier"] == optical_path.identifier
         assert dumped["description"] == optical_path.description
-        assert_dict_equals_code(
-            dumped["illumination_type"], optical_path.illumination_type
-        )
+        assert len(dumped["illumination_types"]) == len(optical_path.illumination_types)
+        for dumped_type, expected_type in zip(
+            dumped["illumination_types"], optical_path.illumination_types
+        ):
+            assert_dict_equals_code(dumped_type, expected_type)
 
         if isinstance(optical_path.illumination, IlluminationColorCode):
             assert_dict_equals_code(dumped["illumination"], optical_path.illumination)
@@ -335,11 +340,13 @@ class TestSchema:
         dumped = {
             "identifier": "identifier",
             "description": "description",
-            "illumination_type": {
-                "value": "111744",
-                "scheme_designator": "DCM",
-                "meaning": "Brightfield illumination",
-            },
+            "illumination_types": [
+                {
+                    "value": "111744",
+                    "scheme_designator": "DCM",
+                    "meaning": "Brightfield illumination",
+                }
+            ],
             "light_path_filter": {
                 "filters": [
                     {
@@ -384,16 +391,17 @@ class TestSchema:
 
         # Assert
         assert isinstance(loaded, OpticalPath)
-        assert loaded.illumination_type is not None
+        assert loaded.illumination_types is not None
         assert loaded.light_path_filter is not None
         assert loaded.image_path_filter is not None
         assert loaded.objective is not None
         assert loaded.identifier == dumped["identifier"]
         assert loaded.description == dumped["description"]
-        assert_dict_equals_code(
-            dumped["illumination_type"],
-            loaded.illumination_type,
-        )
+        assert len(loaded.illumination_types) == len(dumped["illumination_types"])
+        for loaded_type, dumped_type in zip(
+            loaded.illumination_types, dumped["illumination_types"]
+        ):
+            assert_dict_equals_code(dumped_type, loaded_type)
         if isinstance(dumped["illumination"], dict):
             assert isinstance(loaded.illumination, IlluminationColorCode)
             assert_dict_equals_code(

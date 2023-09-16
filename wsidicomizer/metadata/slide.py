@@ -14,18 +14,9 @@
 
 """Slide model."""
 from dataclasses import dataclass
-from typing import Sequence, List, Optional, Sequence
-from pydicom import Dataset
-from pydicom.sequence import Sequence as DicomSequence
-from wsidicom.instance import ImageType
-from wsidicomizer.metadata.defaults import defaults
+from typing import Sequence, Optional, Sequence
 
-from wsidicomizer.metadata.dicom_attribute import (
-    DicomAttribute,
-    DicomCodeAttribute,
-    DicomSequenceAttribute,
-    DicomStringAttribute,
-)
+
 from wsidicomizer.metadata.base_model import BaseModel
 
 from wsidicomizer.metadata.sample import SlideSample, Staining
@@ -44,47 +35,3 @@ class Slide(BaseModel):
     identifier: Optional[str] = None
     stainings: Optional[Sequence[Staining]] = None
     samples: Optional[Sequence[SlideSample]] = None
-
-    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dicom_attributes: List[DicomAttribute] = [
-            DicomStringAttribute(
-                "ContainerIdentifier", True, self.identifier, defaults.string
-            ),
-            DicomCodeAttribute(
-                "ContainerTypeCodeSequence",
-                True,
-                defaults.slide_container_type,
-            ),
-            DicomSequenceAttribute("IssuerOfTheContainerIdentifierSequence", True, []),
-            DicomSequenceAttribute(
-                "ContainerComponentSequence",
-                False,
-                [
-                    DicomCodeAttribute(
-                        "ContainerComponentTypeCodeSequence",
-                        True,
-                        defaults.slide_component_type,
-                    ),
-                    DicomStringAttribute(
-                        "ContainerComponentMaterial", False, defaults.slide_material
-                    ),
-                ],
-            ),
-        ]
-        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
-        if self.samples is not None:
-            dataset.SpecimenDescriptionSequence = DicomSequence(
-                [
-                    slide_sample.to_description(self.stainings)
-                    for slide_sample in self.samples
-                ]
-            )
-        else:
-            dataset.SpecimenDescriptionSequence = DicomSequence()
-
-    @classmethod
-    def from_dataset(cls, dataset: Dataset):
-        identifier = dataset.ContainerIdentifier
-        samples, stainings = SlideSample.from_dataset(dataset)
-
-        return cls(identifier=identifier, stainings=stainings, samples=samples)

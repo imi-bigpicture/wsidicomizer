@@ -20,7 +20,7 @@ from wsidicomizer.metadata.image import (
     Image,
     ImageCoordinateSystem,
 )
-from wsidicomizer.metadata.schema.fields import PointMmField
+from wsidicomizer.metadata.json_schema.fields import PointMmField
 
 
 class ExtendedDepthOfFieldSchema(Schema):

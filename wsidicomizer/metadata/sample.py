@@ -16,7 +16,7 @@ import datetime
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 import logging
 
 from highdicom import (
@@ -29,7 +29,7 @@ from highdicom import (
     SpecimenStaining,
     UniversalEntityIDTypeValues,
 )
-from highdicom.sr import CodeContentItem, TextContentItem, CodedConcept
+from highdicom.sr import CodedConcept
 from pydicom import Dataset
 from pydicom.sr.coding import Code
 from pydicom.uid import UID, generate_uid
@@ -369,7 +369,9 @@ class Staining(PreparationStep):
             elif isinstance(substance, str):
                 substances.append(substance)
             else:
-                print(substance)
+                raise TypeError(
+                    f"Unknown type {type(substance)} for substance {substance}."
+                )
         return cls(
             substances,
             # date_time=dataset.processing_datetime,
@@ -748,7 +750,7 @@ class SlideSample(SampledSpecimen):
 
     @classmethod
     def from_dataset(
-        cls, dataset: Dataset
+        cls, specimen_description_datasets: Iterable[Dataset]
     ) -> Tuple[Optional[List["SlideSample"]], Optional[List[Staining]]]:
         """
         Parse Specimen Description Sequence in dataset into SlideSamples and Stainings.
@@ -768,7 +770,7 @@ class SlideSample(SampledSpecimen):
         try:
             descriptions = [
                 SpecimenDescription.from_dataset(specimen_description_dataset)
-                for specimen_description_dataset in dataset.SpecimenDescriptionSequence
+                for specimen_description_dataset in specimen_description_datasets
             ]
         except (AttributeError, ValueError) as exception:
             print("Failed to parse SpecimenDescriptionSequence", exception)

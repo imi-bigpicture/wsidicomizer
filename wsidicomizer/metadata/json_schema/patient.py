@@ -14,7 +14,7 @@
 
 from marshmallow import Schema, fields, post_load
 from wsidicomizer.metadata.patient import Patient, PatientDeIdentification, PatientSex
-from wsidicomizer.metadata.schema.fields import StringOrCodeField
+from wsidicomizer.metadata.json_schema.fields import StringOrCodeField
 
 
 class PatientDeIdentificationSchema(Schema):

@@ -20,7 +20,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from pydicom import config
+from pydicom import Dataset, config
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
@@ -28,6 +28,7 @@ from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicomizer.metadata import WsiMetadata
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
 from wsidicomizer.metadata.wsi import WsiMetadata
 
 config.enforce_valid_values = True
@@ -180,7 +181,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return []
 
     def _create_base_dataset(self, image_type: ImageType) -> WsiDataset:
-        return WsiDataset(self.metadata.to_dataset(image_type))
+        dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
+            self.metadata
+        )
+        assert isinstance(dataset, Dataset)
+        return WsiDataset(dataset)
 
     @staticmethod
     def _is_included_level(

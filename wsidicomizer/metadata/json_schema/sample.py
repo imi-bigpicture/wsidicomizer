@@ -63,7 +63,7 @@ from wsidicomizer.metadata.sample import (
     SpecimenIdentifier,
     Staining,
 )
-from wsidicomizer.metadata.schema.fields import (
+from wsidicomizer.metadata.json_schema.fields import (
     CodeField,
     FieldFactory,
     SlideSamplePositionField,

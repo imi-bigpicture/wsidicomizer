@@ -21,6 +21,9 @@ from wsidicom.conceptcode import (
     IlluminationCode,
     IlluminationColorCode,
 )
+from wsidicom.geometry import PointMm
+
+from wsidicomizer.metadata.image import FocusMethod
 
 
 @dataclass
@@ -34,7 +37,9 @@ class Defaults:
         "Microscope slide cover slip"
     ).code
     slide_material = "GLASS"
-    focus_method = "AUTO"
+    focus_method = FocusMethod.AUTO
+    image_coordinate_system_origin = PointMm(0, 0)
+    image_coordinate_system_rotation = 0
 
 
 defaults = Defaults()

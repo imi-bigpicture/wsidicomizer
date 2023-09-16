@@ -17,7 +17,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
 import pytest
 from pydicom.sr.coding import Code
@@ -77,6 +77,7 @@ from wsidicomizer.metadata.sample import (
     Staining,
 )
 from wsidicomizer.metadata.slide import Slide
+from wsidicomizer.metadata.wsi import WsiMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 DEFAULT_TILE_SIZE = 512
@@ -517,6 +518,26 @@ def wsis(
             wsi.close()
 
 
+@pytest.fixture
+def manufacturer():
+    yield "manufacturer"
+
+
+@pytest.fixture
+def model_name():
+    yield "model name"
+
+
+@pytest.fixture
+def serial_number():
+    yield "serial number"
+
+
+@pytest.fixture
+def versions():
+    yield ["versions"]
+
+
 @pytest.fixture()
 def equipment(
     manufacturer: Optional[str],
@@ -539,29 +560,21 @@ def image(
     extended_depth_of_field: Optional[ExtendedDepthOfField],
     image_coordinate_system: Optional[ImageCoordinateSystem],
 ):
-    # image_coordinate_system = ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
-    # extended_depth_of_field = ExtendedDepthOfField(5, 0.5)
     yield Image(
         acquisition_datetime,
         focus_method,
         extended_depth_of_field,
-        image_coordinate_system
-        # datetime.datetime(2023, 8, 5),
-        # FocusMethod.AUTO,
-        # extended_depth_of_field,
-        # image_coordinate_system,
+        image_coordinate_system,
     )
 
 
 @pytest.fixture()
 def label():
-    yield Label("label_text", "barcode_value", True, True, False)
+    yield Label("text", "barcode", True, True, False)
 
 
-@pytest.fixture(params=[IlluminationColorCode("Full Spectrum"), 400.0])
-def optical_path(request):
-    illumination = request.param
-    assert isinstance(illumination, (IlluminationColorCode, float))
+@pytest.fixture()
+def optical_path(illumination: Union[IlluminationColorCode, float]):
     light_path_filter = LightPathFilter(
         [
             LightPathFilterCode("Green optical filter"),
@@ -586,7 +599,7 @@ def optical_path(request):
     yield OpticalPath(
         "identifier",
         "description",
-        IlluminationCode("Brightfield illumination"),
+        [IlluminationCode("Brightfield illumination")],
         illumination,
         None,
         None,
@@ -781,4 +794,27 @@ def study():
         datetime.time(12, 3),
         "accession number",
         "referring physician name",
+    )
+
+
+@pytest.fixture()
+def wsi_metadata(
+    study: Study,
+    series: Series,
+    patient: Patient,
+    equipment: Equipment,
+    optical_path: OpticalPath,
+    slide: Slide,
+    label: Label,
+    image: Image,
+):
+    yield WsiMetadata(
+        study=study,
+        series=series,
+        patient=patient,
+        equipment=equipment,
+        optical_paths=[optical_path],
+        slide=slide,
+        label=label,
+        image=image,
     )

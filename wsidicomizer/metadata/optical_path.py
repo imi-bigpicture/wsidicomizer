@@ -14,9 +14,8 @@
 
 """Optical path model."""
 import struct
-from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, Optional, Sequence, Type, TypeVar, Union
+from typing import Generic, Optional, Sequence, TypeVar, Union
 
 import numpy as np
 from pydicom import Dataset
@@ -28,16 +27,7 @@ from wsidicom.conceptcode import (
     LenseCode,
     LightPathFilterCode,
 )
-from wsidicom.instance import ImageType
-from wsidicomizer.metadata.defaults import defaults
 
-from wsidicomizer.metadata.dicom_attribute import (
-    DicomAttribute,
-    DicomByteAttribute,
-    DicomCodeAttribute,
-    DicomNumericAttribute,
-    DicomStringAttribute,
-)
 from wsidicomizer.metadata.base_model import BaseModel
 
 
@@ -227,7 +217,7 @@ OpticalFilterType = TypeVar("OpticalFilterType", bound="OpticalFilter")
 
 
 @dataclass
-class OpticalFilter(Generic[OpticalFilterCodeType], metaclass=ABCMeta):
+class OpticalFilter(Generic[OpticalFilterCodeType]):
     """Metaclass for filter conditions for optical path"""
 
     filters: Sequence[OpticalFilterCodeType] = field(default_factory=list)
@@ -235,90 +225,18 @@ class OpticalFilter(Generic[OpticalFilterCodeType], metaclass=ABCMeta):
     low_pass: Optional[float] = None
     high_pass: Optional[float] = None
 
-    @classmethod
-    @abstractmethod
-    def from_ds(cls: Type[OpticalFilterType], ds: Dataset) -> OpticalFilterType:
-        raise NotImplementedError()
-
-    def insert_into_ds(self, ds: Dataset) -> Dataset:
-        """Codes and insert object into dataset.
-
-        Parameters
-        ----------
-        ds: Dataset
-           Optical path sequence item.
-
-        Returns
-        ----------
-        Dataset
-            Dataset with object inserted.
-
-        """
-        if self.nominal is not None:
-            ds.LightPathFilterPassBand = self.nominal
-        if self.low_pass is not None and self.high_pass is not None:
-            ds.LightPathFilterPassThroughWavelength = [self.low_pass, self.high_pass]
-        if self.filters is not None:
-            for filter in self.filters:
-                ds = filter.insert_into_ds(ds)
-        return ds
-
 
 class LightPathFilter(OpticalFilter[LightPathFilterCode]):
     """Set of light path filter conditions for optical path"""
 
-    @classmethod
-    def from_ds(cls, ds: Dataset) -> "LightPathFilter":
-        """Returns LightPathFilter object read from dataset
-        (optical path sequence item).
-
-        Parameters
-        ----------
-        ds: Dataset
-           Optical path sequence item.
-
-        Returns
-        ----------
-        LightPathFilter
-            Object containing light path filter conditions for optical path.
-
-        """
-        filter_band = getattr(ds, "LightPathFilterPassBand", [None, None])
-        return cls(
-            filters=LightPathFilterCode.from_ds(ds),
-            nominal=getattr(ds, "LightPathFilterPassThroughWavelength", None),
-            low_pass=filter_band[0],
-            high_pass=filter_band[1],
-        )
+    pass
 
 
 @dataclass
 class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
     """Set of image path filter conditions for optical path"""
 
-    @classmethod
-    def from_ds(cls, ds: Dataset) -> "ImagePathFilter":
-        """Returns ImagePathFilter object read from dataset
-        (optical path sequence item).
-
-        Parameters
-        ----------
-        ds: Dataset
-           Optical path sequence item.
-
-        Returns
-        ----------
-        ImagePathFilter
-            Object containing image path filter conditions for optical path.
-
-        """
-        filter_band = getattr(ds, "ImagePathFilterPassBand", [None, None])
-        return cls(
-            filters=ImagePathFilterCode.from_ds(ds),
-            nominal=getattr(ds, "ImagePathFilterPassThroughWavelengthh", None),
-            low_pass=filter_band[0],
-            high_pass=filter_band[1],
-        )
+    pass
 
 
 @dataclass
@@ -329,56 +247,6 @@ class Objectives:
     condenser_power: Optional[float] = None
     objective_power: Optional[float] = None
     objective_numerical_aperature: Optional[float] = None
-
-    @classmethod
-    def from_ds(cls, ds: Dataset) -> "Objectives":
-        """Returns Lenses object read from dataset (optical path sequence
-        item).
-
-        Parameters
-        ----------
-        ds: Dataset
-           Optical path sequence item.
-
-        Returns
-        ----------
-        Lenses
-            Object containing lense conditions for optical path.
-
-        """
-        return cls(
-            lenses=LenseCode.from_ds(ds),
-            condenser_power=getattr(ds, "CondenserLensPower", None),
-            objective_power=getattr(ds, "ObjectiveLensPower", None),
-            objective_numerical_aperature=getattr(
-                ds, "ObjectiveLensNumericalAperture", None
-            ),
-        )
-
-    def insert_into_ds(self, ds: Dataset) -> Dataset:
-        """Codes and insert object into dataset.
-
-        Parameters
-        ----------
-        ds: Dataset
-           Optical path sequence item.
-
-        Returns
-        ----------
-        Dataset
-            Dataset with object inserted.
-
-        """
-        if self.condenser_power is not None:
-            ds.CondenserLensPower = self.condenser_power
-        if self.objective_power is not None:
-            ds.ObjectiveLensPower = self.objective_power
-        if self.objective_numerical_aperature is not None:
-            ds.ObjectiveLensNumericalAperture = self.objective_numerical_aperature
-        if self.lenses is not None:
-            for lense in self.lenses:
-                ds = lense.insert_into_ds(ds)
-        return ds
 
 
 @dataclass
@@ -393,72 +261,13 @@ class OpticalPath(BaseModel):
 
     identifier: Optional[str] = None
     description: Optional[str] = None
-    illumination_type: Optional[IlluminationCode] = None
+    illumination_types: Optional[Sequence[IlluminationCode]] = None
     illumination: Optional[Union[float, IlluminationColorCode]] = None
     icc_profile: Optional[bytes] = None
     lut: Optional[Lut] = None
     light_path_filter: Optional[LightPathFilter] = None
     image_path_filter: Optional[ImagePathFilter] = None
     objective: Optional[Objectives] = None
-
-    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        if "OpticalPathSequence" not in dataset:
-            dataset.OpticalPathSequence = DicomSequence()
-        optical_path = Dataset()
-        dicom_attributes: List[DicomAttribute] = [
-            DicomStringAttribute(
-                "OpticalPathIdentifier",
-                True,
-                self.identifier,
-                lambda: self._generate_unique_identifier(dataset.OpticalPathSequence),
-            ),
-            DicomCodeAttribute(
-                "IlluminationTypeCodeSequence",
-                True,
-                self.illumination_type.code
-                if self.illumination_type is not None
-                else None,
-                defaults.illumination_type,
-            ),
-            DicomStringAttribute("OpticalPathDescription", False, self.description),
-            DicomByteAttribute(
-                "ICCProfile",
-                True,
-                self.icc_profile,
-            ),
-        ]
-        if self.objective is not None:
-            dicom_attributes.extend(
-                # TODO check dicom tags for these, add lenses.
-                (
-                    DicomNumericAttribute(
-                        "ObjectiveLensPower", False, self.objective.objective_power
-                    ),
-                    DicomNumericAttribute(
-                        "CondenserLensPower", False, self.objective.condenser_power
-                    ),
-                    DicomNumericAttribute(
-                        "ObjectiveLensNumericalAperture",
-                        False,
-                        self.objective.objective_numerical_aperature,
-                    ),
-                )
-            )
-        if isinstance(self.illumination, float):
-            dicom_attributes.append(
-                DicomNumericAttribute("IlluminationWaveLength", True, self.illumination)
-            )
-        else:
-            dicom_attributes.append(
-                DicomCodeAttribute(
-                    "IlluminationColorCodeSequence",
-                    True,
-                    self.illumination.code if self.illumination is not None else None,
-                    defaults.illumination,
-                )
-            )
-        self._insert_dicom_attributes_into_dataset(optical_path, dicom_attributes)
-        dataset.OpticalPathSequence.append(optical_path)
 
     @staticmethod
     def _generate_unique_identifier(optical_paths: DicomSequence) -> str:

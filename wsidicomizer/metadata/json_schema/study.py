@@ -14,7 +14,7 @@
 
 from marshmallow import Schema, fields, post_load
 
-from wsidicomizer.metadata.schema.fields import UidField
+from wsidicomizer.metadata.json_schema.fields import UidField
 from wsidicomizer.metadata.study import Study
 
 

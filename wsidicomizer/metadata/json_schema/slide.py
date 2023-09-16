@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 from marshmallow import Schema, fields, post_load
-from wsidicomizer.metadata.schema.sample import (
+from wsidicomizer.metadata.json_schema.sample import (
     SpecimenSchema,
     StainingSchema,
 )

@@ -16,7 +16,7 @@ from typing import Dict, Union
 import pytest
 from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition, SpecimenIdentifier
-from wsidicomizer.metadata.schema.fields import (
+from wsidicomizer.metadata.json_schema.fields import (
     CodeField,
     FieldFactory,
     PointMmField,

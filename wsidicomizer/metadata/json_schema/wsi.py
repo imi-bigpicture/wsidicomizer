@@ -1,14 +1,14 @@
 from marshmallow import Schema, fields, post_load
 
-from wsidicomizer.metadata.schema.equipment import EquipmentSchema
-from wsidicomizer.metadata.schema.fields import UidField
-from wsidicomizer.metadata.schema.image import ImageSchema
-from wsidicomizer.metadata.schema.label import LabelSchema
-from wsidicomizer.metadata.schema.optical import OpticalPathSchema
-from wsidicomizer.metadata.schema.patient import PatientSchema
-from wsidicomizer.metadata.schema.series import SeriesSchema
-from wsidicomizer.metadata.schema.slide import SlideSchema
-from wsidicomizer.metadata.schema.study import StudySchema
+from wsidicomizer.metadata.json_schema.equipment import EquipmentSchema
+from wsidicomizer.metadata.json_schema.fields import UidField
+from wsidicomizer.metadata.json_schema.image import ImageSchema
+from wsidicomizer.metadata.json_schema.label import LabelSchema
+from wsidicomizer.metadata.json_schema.optical import OpticalPathSchema
+from wsidicomizer.metadata.json_schema.patient import PatientSchema
+from wsidicomizer.metadata.json_schema.series import SeriesSchema
+from wsidicomizer.metadata.json_schema.slide import SlideSchema
+from wsidicomizer.metadata.json_schema.study import StudySchema
 from wsidicomizer.metadata.wsi import WsiMetadata
 
 

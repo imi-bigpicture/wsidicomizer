@@ -33,7 +33,7 @@ from wsidicomizer.metadata.sample import (
     Sample,
     SlideSample,
 )
-from wsidicomizer.metadata.schema.sample import (
+from wsidicomizer.metadata.json_schema.sample import (
     ExtractedSpecimenSchema,
     PreparationStepSchema,
     SampleSchema,

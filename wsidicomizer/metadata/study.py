@@ -16,7 +16,7 @@
 from dataclasses import dataclass
 import datetime
 from functools import cached_property
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
@@ -24,13 +24,6 @@ from wsidicom.instance import ImageType
 
 from wsidicomizer.metadata.base_model import (
     BaseModel,
-)
-
-from wsidicomizer.metadata.dicom_attribute import (
-    DicomAttribute,
-    DicomUidAttribute,
-    DicomDateTimeAttribute,
-    DicomStringAttribute,
 )
 
 
@@ -56,31 +49,3 @@ class Study(BaseModel):
         if self.uid is not None:
             return self.uid
         return generate_uid()
-
-    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dicom_attributes: List[DicomAttribute] = [
-            DicomUidAttribute("StudyInstanceUID", True, self._uid),
-            DicomStringAttribute("StudyID", True, self.identifier),
-            DicomDateTimeAttribute("StudyDate", True, self.date),
-            DicomDateTimeAttribute("StudyTime", True, self.time),
-            DicomStringAttribute(
-                "AccessionNumber",
-                True,
-                self.accession_number,
-            ),
-            DicomStringAttribute(
-                "ReferringPhysicianName", True, self.referring_physician_name
-            ),
-        ]
-        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
-
-    @classmethod
-    def from_dataset(cls, dataset: Dataset) -> "Study":
-        return cls(
-            dataset.StudyInstanceUID,
-            dataset.StudyID,
-            dataset.StudyDate,
-            dataset.StudyTime,
-            dataset.AccessionNumber,
-            dataset.ReferringPhysicianName,
-        )

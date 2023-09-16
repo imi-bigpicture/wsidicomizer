@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Optional, Sequence
 
-from wsidicomizer.metadata.schema.wsi import WsiMetadataSchema
+from wsidicomizer.metadata.json_schema.wsi import WsiMetadataSchema
 from wsidicomizer.metadata.wsi import WsiMetadata
 
 from wsidicomizer.wsidicomizer import WsiDicomizer

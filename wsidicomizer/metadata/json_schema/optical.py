@@ -27,7 +27,7 @@ from wsidicomizer.metadata.optical_path import (
     OpticalPath,
 )
 
-from wsidicomizer.metadata.schema.fields import FieldFactory
+from wsidicomizer.metadata.json_schema.fields import FieldFactory
 
 
 class LightPathFilterSchema(Schema):
@@ -68,7 +68,9 @@ class ObjectivesSchema(Schema):
 class OpticalPathSchema(Schema):
     identifier = fields.String(allow_none=True)
     description = fields.String(allow_none=True)
-    illumination_type = FieldFactory.concept_code(IlluminationCode)(allow_none=True)
+    illumination_types = fields.List(
+        FieldFactory.concept_code(IlluminationCode)(allow_none=True)
+    )
     illumination = FieldFactory.float_or_concept_code(IlluminationColorCode)(
         allow_none=True
     )

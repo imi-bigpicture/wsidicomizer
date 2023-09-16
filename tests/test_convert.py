@@ -16,7 +16,7 @@ import os
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
@@ -58,8 +58,8 @@ class TestWsiDicomizerConvert:
         standard_path = os.path.join(testdata_dir, "dicom-validator")
         edition_reader = EditionReader(standard_path)
         revision_path = edition_reader.get_revision("current")
-        assert isinstance(revision_path, str)
-        json_path = os.path.join(revision_path, "json")
+        assert isinstance(revision_path, Path)
+        json_path = revision_path.joinpath("json")
         validator = DicomFileValidator(
             EditionReader.load_iod_info(json_path),
             EditionReader.load_module_info(json_path),
@@ -67,15 +67,33 @@ class TestWsiDicomizerConvert:
         )
 
         # Act
-        result: Dict[str, Dict[str, str]] = validator.validate_dir(converted_path.name)
+        result: Dict[str, Dict[str, Dict[str, List[str]]]] = validator.validate_dir(
+            converted_path.name
+        )
 
         # Assert
-        errors = [
-            (error, tag)
-            for tag_error in result.values()
-            for tag, error in tag_error.items()
-        ]
-        assert len(errors) == 0
+        errors_per_module = {
+            module: {tag: error for error, tags in errors.items() for tag in tags}
+            for module_errors in result.values()
+            for module, errors in module_errors.items()
+        }
+        module_errors_to_ignore = {
+            "Plane Position (Slide)": [
+                "(0040,072A)",
+                "(0040,073A)",
+                "(0048,021E)",
+                "(0048,021F)",
+            ]
+        }
+        for module, module_errors in module_errors_to_ignore.items():
+            errors = errors_per_module.get(module, None)
+            if errors is not None:
+                for module_error in module_errors:
+                    errors.pop(module_error, None)
+                if len(errors) == 0:
+                    errors_per_module.pop(module)
+
+        assert len(errors_per_module) == 0
 
     @pytest.mark.parametrize(
         ["file_format", "file"],

@@ -14,7 +14,7 @@
 
 from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition
-from wsidicomizer.metadata.schema.slide import SlideSchema
+from wsidicomizer.metadata.json_schema.slide import SlideSchema
 from wsidicomizer.metadata.slide import Slide
 from wsidicom.conceptcode import SpecimenStainsCode
 

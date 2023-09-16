@@ -346,7 +346,7 @@ class TestSampleDicom:
         dataset.SpecimenDescriptionSequence = descriptions
 
         # Act
-        slide_samples, stainings = SlideSample.from_dataset(dataset)
+        slide_samples, stainings = SlideSample.from_dataset(descriptions)
 
         # Assert
         assert slide_samples is not None

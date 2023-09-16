@@ -15,18 +15,11 @@
 """Series model."""
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Dict, List, Optional
+from typing import Optional
 
-from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
-from wsidicom.instance import ImageType
 
 from wsidicomizer.metadata.base_model import BaseModel
-from wsidicomizer.metadata.dicom_attribute import (
-    DicomAttribute,
-    DicomNumericAttribute,
-    DicomUidAttribute,
-)
 
 
 @dataclass
@@ -49,14 +42,3 @@ class Series(BaseModel):
         if self.uid is not None:
             return self.uid
         return generate_uid()
-
-    def insert_into_dataset(self, dataset: Dataset, image_type: ImageType) -> None:
-        dicom_attributes: List[DicomAttribute] = [
-            DicomUidAttribute("SeriesInstanceUID", True, self._uid),
-            DicomNumericAttribute("SeriesNumber", True, self.number),
-        ]
-        self._insert_dicom_attributes_into_dataset(dataset, dicom_attributes)
-
-    @classmethod
-    def from_dataset(cls, dataset: Dataset) -> "Series":
-        return cls(dataset.SeriesInstanceUID, dataset.SeriesNumber)

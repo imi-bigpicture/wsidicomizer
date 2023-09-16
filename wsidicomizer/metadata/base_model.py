@@ -13,21 +13,16 @@
 #    limitations under the License.
 
 """Base model for metadata."""
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from dataclasses import dataclass, fields
 from typing import (
     Any,
     Dict,
-    Iterable,
     Optional,
     Type,
     TypeVar,
 )
 
-from pydicom import Dataset
-from wsidicom.instance import ImageType
-
-from wsidicomizer.metadata.dicom_attribute import DicomAttribute
 
 BaseModelType = TypeVar("BaseModelType", bound="BaseModel")
 
@@ -41,26 +36,9 @@ class BaseModel(metaclass=ABCMeta):
     """
 
     @property
-    def additional_attribute(self) -> Optional[Dict[str, DicomAttribute]]:
+    def additional_attribute(self) -> Optional[Dict[str, Any]]:
         """Additional attributes."""
         return None
-
-    @abstractmethod
-    def insert_into_dataset(
-        self,
-        dataset: Dataset,
-        image_type: ImageType,
-    ) -> None:
-        """Convert the model into DicomAttributes and insert them into the dataset."""
-        raise NotImplementedError()
-
-    @staticmethod
-    def _insert_dicom_attributes_into_dataset(
-        dataset: Dataset, attributes: Iterable[DicomAttribute]
-    ):
-        """Insert list of DicomAttributes into dataset."""
-        for attribute in attributes:
-            attribute.insert_into_dataset(dataset)
 
     @classmethod
     def merge(
