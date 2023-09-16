@@ -14,12 +14,12 @@
 
 from marshmallow import Schema, fields, post_load
 
-from wsidicomizer.metadata.json_schema.fields import UidField
+from wsidicomizer.metadata.json_schema.fields import UidJsonField
 from wsidicomizer.metadata.study import Study
 
 
-class StudySchema(Schema):
-    uid = UidField(allow_none=True)
+class StudyJsonSchema(Schema):
+    uid = UidJsonField(allow_none=True)
     identifier = fields.String(allow_none=True)
     date = fields.Date(allow_none=True)
     time = fields.Time(allow_none=True)

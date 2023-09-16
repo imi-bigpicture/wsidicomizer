@@ -17,7 +17,7 @@ from marshmallow import Schema, fields, post_load
 from wsidicomizer.metadata.equipment import Equipment
 
 
-class EquipmentSchema(Schema):
+class EquipmentJsonSchema(Schema):
     manufacturer = fields.String(allow_none=True)
     model_name = fields.String(allow_none=True)
     device_serial_number = fields.String(allow_none=True)

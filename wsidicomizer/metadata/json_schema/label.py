@@ -17,7 +17,7 @@ from marshmallow import Schema, fields, post_load
 from wsidicomizer.metadata.label import Label
 
 
-class LabelSchema(Schema):
+class LabelJsonSchema(Schema):
     text = fields.String(allow_none=True)
     barcode = fields.String(allow_none=True)
     label_in_volume_image = fields.Boolean(load_default=False, allow_none=True)

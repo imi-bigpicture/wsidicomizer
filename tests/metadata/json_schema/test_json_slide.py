@@ -14,17 +14,17 @@
 
 from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition
-from wsidicomizer.metadata.json_schema.slide import SlideSchema
+from wsidicomizer.metadata.json_schema.slide import SlideJsonSchema
 from wsidicomizer.metadata.slide import Slide
 from wsidicom.conceptcode import SpecimenStainsCode
 
 
-class TestSlideSchema:
+class TestSlideJsonSchema:
     def test_slide_serialize(self, slide: Slide):
         # Arrange
 
         # Act
-        dumped = SlideSchema().dump(slide)
+        dumped = SlideJsonSchema().dump(slide)
 
         # Assert
         assert slide.stainings is not None
@@ -247,7 +247,7 @@ class TestSlideSchema:
         }
 
         # Act
-        loaded = SlideSchema().load(dumped)
+        loaded = SlideJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Slide)

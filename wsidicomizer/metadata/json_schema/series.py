@@ -14,12 +14,12 @@
 
 from marshmallow import Schema, fields, post_load
 
-from wsidicomizer.metadata.json_schema.fields import UidField
+from wsidicomizer.metadata.json_schema.fields import UidJsonField
 from wsidicomizer.metadata.series import Series
 
 
-class SeriesSchema(Schema):
-    uid = UidField(allow_none=True)
+class SeriesJsonSchema(Schema):
+    uid = UidJsonField(allow_none=True)
     number = fields.Integer(allow_none=True)
 
     @post_load

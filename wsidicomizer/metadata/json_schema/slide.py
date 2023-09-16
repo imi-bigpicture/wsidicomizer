@@ -14,16 +14,16 @@
 
 from marshmallow import Schema, fields, post_load
 from wsidicomizer.metadata.json_schema.sample import (
-    SpecimenSchema,
-    StainingSchema,
+    SpecimenJsonSchema,
+    StainingJsonSchema,
 )
 from wsidicomizer.metadata.slide import Slide
 
 
-class SlideSchema(Schema):
+class SlideJsonSchema(Schema):
     identifier = fields.String(allow_none=True)
-    stainings = fields.List(fields.Nested(StainingSchema()), allow_none=True)
-    samples = fields.Nested(SpecimenSchema(), allow_none=True, many=True)
+    stainings = fields.List(fields.Nested(StainingJsonSchema()), allow_none=True)
+    samples = fields.Nested(SpecimenJsonSchema(), allow_none=True, many=True)
 
     @post_load
     def load_to_object(self, data, **kwargs):

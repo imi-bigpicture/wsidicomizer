@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Optional, Sequence, Type
 
 import pytest
 from pydicom import Dataset
 from pydicom.sr.coding import Code
-from pydicom.valuerep import DT, DSfloat
+from pydicom.valuerep import DT
 from wsidicom.conceptcode import IlluminationColorCode
 from wsidicom.geometry import PointMm
 from wsidicom.instance import ImageType
@@ -31,11 +30,7 @@ from wsidicomizer.metadata import (
     Slide,
 )
 from wsidicomizer.metadata.defaults import Defaults
-from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema
-from wsidicomizer.metadata.dicom_schema.dicom_fields import (
-    BooleanDicomField,
-    FlatteningNestedField,
-)
+
 from wsidicomizer.metadata.dicom_schema.equipment import EquipmentDicomSchema
 from wsidicomizer.metadata.dicom_schema.image import ImageDicomSchema
 from wsidicomizer.metadata.dicom_schema.label import LabelDicomSchema
@@ -45,10 +40,9 @@ from wsidicomizer.metadata.dicom_schema.series import SeriesDicomSchema
 from wsidicomizer.metadata.dicom_schema.slide import SlideDicomSchema
 from wsidicomizer.metadata.dicom_schema.study import StudyDicomSchema
 from wsidicomizer.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
-from wsidicomizer.metadata.json_schema.series import SeriesSchema
 
 
-class TestDicomMetadata:
+class TestDicomSchema:
     @pytest.mark.parametrize(
         ["manufacturer", "model_name", "serial_number", "versions"],
         [

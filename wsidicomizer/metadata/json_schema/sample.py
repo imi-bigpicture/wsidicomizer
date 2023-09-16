@@ -20,7 +20,7 @@ is serialized to a `SampledFromSimplified` replacing the linked specimen with th
 identifier of the specimen.
 
 The collection of specimens in a sampling hierarchy can be serialized/deserialized using
-the `SpecimenSchema`, which serializes all the contained specimens individually and, on
+the `SpecimenJsonSchema`, which serializes all the contained specimens individually and, on
 deserialization, recreates the specimen object linkage in the `sampled_from` attribute.
 """
 import dataclasses
@@ -64,11 +64,11 @@ from wsidicomizer.metadata.sample import (
     Staining,
 )
 from wsidicomizer.metadata.json_schema.fields import (
-    CodeField,
-    FieldFactory,
-    SlideSamplePositionField,
-    SpecimenIdentifierField,
-    UidField,
+    CodeJsonField,
+    JsonFieldFactory,
+    SlideSamplePositionJsonField,
+    SpecimenIdentifierJsonField,
+    UidJsonField,
 )
 
 
@@ -109,10 +109,10 @@ class SerializedSampling:
     description: Optional[str] = None
 
 
-class SamplingConstraintSchema(Schema):
+class SamplingConstraintJsonSchema(Schema):
     """Schema for serializing and deserializing a `SerializedSamplingChainConstraint`."""
 
-    identifier = SpecimenIdentifierField()
+    identifier = SpecimenIdentifierJsonField()
     sampling_step_index = fields.Integer()
 
     @pre_dump
@@ -126,8 +126,8 @@ class SamplingConstraintSchema(Schema):
         return SerializedSamplingChainConstraint(**data)
 
 
-class BasePreparationStepSchema(Schema):
-    """Base schema for serializing and deserializing a `PreparationStep`."""
+class BasePreparationStepJsonSchema(Schema):
+    """Base Schema for serializing and deserializing a `PreparationStep`."""
 
     _load_class: Type[
         Union[SerializedSampling, Collection, Processing, Embedding, Fixation, Staining]
@@ -147,10 +147,10 @@ class BasePreparationStepSchema(Schema):
         )
 
 
-class SamplingSchema(BasePreparationStepSchema):
-    method = FieldFactory.concept_code(SpecimenSamplingProcedureCode)()
+class SamplingJsonSchema(BasePreparationStepJsonSchema):
+    method = JsonFieldFactory.concept_code(SpecimenSamplingProcedureCode)()
     sampling_chain_constraints = fields.List(
-        fields.Nested(SamplingConstraintSchema, allow_none=True), allow_none=True
+        fields.Nested(SamplingConstraintJsonSchema, allow_none=True), allow_none=True
     )
     date_time = fields.DateTime(allow_none=True)
     description = fields.String(allow_none=True)
@@ -158,62 +158,62 @@ class SamplingSchema(BasePreparationStepSchema):
     _load_class = SerializedSampling
 
 
-class CollectionSchema(BasePreparationStepSchema):
-    method = FieldFactory.concept_code(SpecimenCollectionProcedureCode)()
+class CollectionJsonSchema(BasePreparationStepJsonSchema):
+    method = JsonFieldFactory.concept_code(SpecimenCollectionProcedureCode)()
     date_time = fields.DateTime(allow_none=True)
     description = fields.String(allow_none=True)
     preparation_type = fields.Constant("collection")
     _load_class = Collection
 
 
-class ProcessingSchema(BasePreparationStepSchema):
-    method = FieldFactory.concept_code(SpecimenPreparationStepsCode)()
+class ProcessingJsonSchema(BasePreparationStepJsonSchema):
+    method = JsonFieldFactory.concept_code(SpecimenPreparationStepsCode)()
     date_time = fields.DateTime(allow_none=True)
     preparation_type = fields.Constant("processing")
     _load_class = Processing
 
 
-class EmbeddingSchema(BasePreparationStepSchema):
-    medium = FieldFactory.concept_code(SpecimenEmbeddingMediaCode)()
+class EmbeddingJsonSchema(BasePreparationStepJsonSchema):
+    medium = JsonFieldFactory.concept_code(SpecimenEmbeddingMediaCode)()
     date_time = fields.DateTime(allow_none=True)
     preparation_type = fields.Constant("embedding")
     _load_class = Embedding
 
 
-class FixationSchema(BasePreparationStepSchema):
-    fixative = FieldFactory.concept_code(SpecimenFixativesCode)()
+class FixationJsonSchema(BasePreparationStepJsonSchema):
+    fixative = JsonFieldFactory.concept_code(SpecimenFixativesCode)()
     date_time = fields.DateTime(allow_none=True)
     preparation_type = fields.Constant("fixation")
     _load_class = Fixation
 
 
-class StainingSchema(BasePreparationStepSchema):
+class StainingJsonSchema(BasePreparationStepJsonSchema):
     substances = fields.List(
-        FieldFactory.concept_code(SpecimenStainsCode)(), allow_none=True
+        JsonFieldFactory.concept_code(SpecimenStainsCode)(), allow_none=True
     )
     date_time = fields.DateTime(allow_none=True)
     _load_class = Staining
 
 
-class PreparationStepSchema(Schema):
+class PreparationStepJsonSchema(Schema):
     """Schema to use to serialize/deserialize preparation steps."""
 
     """Mapping step type to schema."""
     _type_to_schema_mapping: Dict[Type[PreparationStep], Type[Schema]] = {
-        Sampling: SamplingSchema,
-        Collection: CollectionSchema,
-        Processing: ProcessingSchema,
-        Embedding: EmbeddingSchema,
-        Fixation: FixationSchema,
+        Sampling: SamplingJsonSchema,
+        Collection: CollectionJsonSchema,
+        Processing: ProcessingJsonSchema,
+        Embedding: EmbeddingJsonSchema,
+        Fixation: FixationJsonSchema,
     }
 
     """Mapping string in `preparation_type` of object to schema."""
     _string_to_schema_mapping: Dict[str, Type[Schema]] = {
-        "sampling": SamplingSchema,
-        "collection": CollectionSchema,
-        "processing": ProcessingSchema,
-        "embedding": EmbeddingSchema,
-        "fixation": FixationSchema,
+        "sampling": SamplingJsonSchema,
+        "collection": CollectionJsonSchema,
+        "processing": ProcessingJsonSchema,
+        "embedding": EmbeddingJsonSchema,
+        "fixation": FixationJsonSchema,
     }
 
     def dump(
@@ -250,53 +250,53 @@ class PreparationStepSchema(Schema):
         return schema().dump(step, many=False)
 
 
-class BaseSpecimenSchema(Schema):
+class BaseSpecimenJsonSchema(Schema):
     """Base schema for specimen."""
 
-    identifier = SpecimenIdentifierField()
-    steps = fields.List(fields.Nested(PreparationStepSchema()))
+    identifier = SpecimenIdentifierJsonField()
+    steps = fields.List(fields.Nested(PreparationStepJsonSchema()))
 
 
-class ExtractedSpecimenSchema(BaseSpecimenSchema):
+class ExtractedSpecimenJsonSchema(BaseSpecimenJsonSchema):
     """Schema for extracted specimen that has not been sampled from other specimen."""
 
-    type = FieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
+    type = JsonFieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
     specimen_type = fields.Constant("extracted")
 
 
-class SampleSchema(BaseSpecimenSchema):
+class SampleJsonSchema(BaseSpecimenJsonSchema):
     """Schema for sampled specimen."""
 
-    sampled_from = fields.List(fields.Nested(SamplingConstraintSchema))
-    type = FieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
+    sampled_from = fields.List(fields.Nested(SamplingConstraintJsonSchema))
+    type = JsonFieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
     specimen_type = fields.Constant("sample")
 
 
-class SlideSampleSchema(BaseSpecimenSchema):
+class SlideSampleJsonSchema(BaseSpecimenJsonSchema):
     """Schema for sampled specimen on a slide."""
 
-    anatomical_sites = fields.List(CodeField())
-    sampled_from = fields.Nested(SamplingConstraintSchema)
-    uid = UidField(allow_none=True)
-    position = SlideSamplePositionField(allow_none=True)
+    anatomical_sites = fields.List(CodeJsonField())
+    sampled_from = fields.Nested(SamplingConstraintJsonSchema)
+    uid = UidJsonField(allow_none=True)
+    position = SlideSamplePositionJsonField(allow_none=True)
     specimen_type = fields.Constant("slide")
 
 
-class SpecimenSchema(Schema):
+class SpecimenJsonSchema(Schema):
     """Schema to use to serialize/deserialize specimens."""
 
     """Mapping specimen type to schema."""
     _type_to_schema_mapping: Dict[Type[Specimen], Type[Schema]] = {
-        ExtractedSpecimen: ExtractedSpecimenSchema,
-        Sample: SampleSchema,
-        SlideSample: SlideSampleSchema,
+        ExtractedSpecimen: ExtractedSpecimenJsonSchema,
+        Sample: SampleJsonSchema,
+        SlideSample: SlideSampleJsonSchema,
     }
 
     """Mapping string in `specimen_type` of object to schema."""
     _string_to_schema_mapping: Dict[str, Type[Schema]] = {
-        "extracted": ExtractedSpecimenSchema,
-        "sample": SampleSchema,
-        "slide": SlideSampleSchema,
+        "extracted": ExtractedSpecimenJsonSchema,
+        "sample": SampleJsonSchema,
+        "slide": SlideSampleJsonSchema,
     }
 
     def dump(

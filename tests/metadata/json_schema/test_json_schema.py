@@ -34,16 +34,16 @@ from wsidicomizer.metadata import (
     Series,
     Study,
 )
-from wsidicomizer.metadata.json_schema.equipment import EquipmentSchema
-from wsidicomizer.metadata.json_schema.image import ImageSchema
-from wsidicomizer.metadata.json_schema.label import LabelSchema
-from wsidicomizer.metadata.json_schema.optical import OpticalPathSchema
-from wsidicomizer.metadata.json_schema.patient import PatientSchema
-from wsidicomizer.metadata.json_schema.series import SeriesSchema
-from wsidicomizer.metadata.json_schema.study import StudySchema
+from wsidicomizer.metadata.json_schema.equipment import EquipmentJsonSchema
+from wsidicomizer.metadata.json_schema.image import ImageJsonSchema
+from wsidicomizer.metadata.json_schema.label import LabelJsonSchema
+from wsidicomizer.metadata.json_schema.optical import OpticalPathJsonSchema
+from wsidicomizer.metadata.json_schema.patient import PatientJsonSchema
+from wsidicomizer.metadata.json_schema.series import SeriesJsonSchema
+from wsidicomizer.metadata.json_schema.study import StudyJsonSchema
 
 
-class TestSchema:
+class TestJsonSchema:
     @pytest.mark.parametrize(
         ["manufacturer", "model_name", "serial_number", "versions"],
         [
@@ -56,7 +56,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = EquipmentSchema().dump(equipment)
+        dumped = EquipmentJsonSchema().dump(equipment)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -89,7 +89,7 @@ class TestSchema:
         }
 
         # Act
-        loaded = EquipmentSchema().load(dumped)
+        loaded = EquipmentJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Equipment)
@@ -125,7 +125,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = ImageSchema().dump(image)
+        dumped = ImageJsonSchema().dump(image)
 
         # Assert
 
@@ -183,7 +183,7 @@ class TestSchema:
         }
 
         # Act
-        loaded = ImageSchema().load(dumped)
+        loaded = ImageJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Image)
@@ -218,7 +218,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = LabelSchema().dump(label)
+        dumped = LabelJsonSchema().dump(label)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -239,7 +239,7 @@ class TestSchema:
         }
 
         # Act
-        loaded = LabelSchema().load(dumped)
+        loaded = LabelJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Label)
@@ -256,7 +256,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = OpticalPathSchema().dump(optical_path)
+        dumped = OpticalPathJsonSchema().dump(optical_path)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -387,7 +387,7 @@ class TestSchema:
         dumped["illumination"] = illumination
 
         # Act
-        loaded = OpticalPathSchema().load(dumped)
+        loaded = OpticalPathJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, OpticalPath)
@@ -457,7 +457,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = PatientSchema().dump(patient)
+        dumped = PatientJsonSchema().dump(patient)
 
         # Assert
         assert patient.birth_date is not None
@@ -532,7 +532,7 @@ class TestSchema:
         dumped["de_identification"]["methods"] = [method]
 
         # Act
-        loaded = PatientSchema().load(dumped)
+        loaded = PatientJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Patient)
@@ -569,7 +569,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = SeriesSchema().dump(series)
+        dumped = SeriesJsonSchema().dump(series)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -583,7 +583,7 @@ class TestSchema:
         }
 
         # Act
-        loaded = SeriesSchema().load(dumped)
+        loaded = SeriesJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Series)
@@ -594,7 +594,7 @@ class TestSchema:
         # Arrange
 
         # Act
-        dumped = StudySchema().dump(study)
+        dumped = StudyJsonSchema().dump(study)
 
         # Assert
         assert study.date is not None
@@ -619,7 +619,7 @@ class TestSchema:
         }
 
         # Act
-        loaded = StudySchema().load(dumped)
+        loaded = StudyJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Study)

@@ -14,25 +14,27 @@
 
 from marshmallow import Schema, fields, post_load
 from wsidicomizer.metadata.patient import Patient, PatientDeIdentification, PatientSex
-from wsidicomizer.metadata.json_schema.fields import StringOrCodeField
+from wsidicomizer.metadata.json_schema.fields import StringOrCodeJsonField
 
 
-class PatientDeIdentificationSchema(Schema):
+class PatientDeIdentificationJsonSchema(Schema):
     identity_removed = fields.Boolean(load_default=False)
-    methods = fields.List(StringOrCodeField(), allow_none=True)
+    methods = fields.List(StringOrCodeJsonField(), allow_none=True)
 
     @post_load
     def load_to_object(self, data, **kwargs):
         return PatientDeIdentification(**data)
 
 
-class PatientSchema(Schema):
+class PatientJsonSchema(Schema):
     name = fields.String(allow_none=True)
     identifier = fields.String(allow_none=True)
     birth_date = fields.Date(allow_none=True)
     sex = fields.Enum(PatientSex, by_value=True, allow_none=True)
-    species_description = StringOrCodeField(allow_none=True)
-    de_identification = fields.Nested(PatientDeIdentificationSchema(), allow_none=True)
+    species_description = StringOrCodeJsonField(allow_none=True)
+    de_identification = fields.Nested(
+        PatientDeIdentificationJsonSchema(), allow_none=True
+    )
 
     @post_load
     def load_to_object(self, data, **kwargs):

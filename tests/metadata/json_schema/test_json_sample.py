@@ -34,20 +34,20 @@ from wsidicomizer.metadata.sample import (
     SlideSample,
 )
 from wsidicomizer.metadata.json_schema.sample import (
-    ExtractedSpecimenSchema,
-    PreparationStepSchema,
-    SampleSchema,
+    ExtractedSpecimenJsonSchema,
+    PreparationStepJsonSchema,
+    SampleJsonSchema,
     SerializedSamplingChainConstraint,
-    SamplingConstraintSchema,
+    SamplingConstraintJsonSchema,
     SerializedSampling,
-    SlideSampleSchema,
-    SpecimenSchema,
+    SlideSampleJsonSchema,
+    SpecimenJsonSchema,
 )
 from pydicom.sr.coding import Code
 from pydicom.uid import UID
 
 
-class TestSampleSchema:
+class TestSampleJsonSchema:
     def test_sampling_constraint_serialize(self, extracted_specimen: ExtractedSpecimen):
         # Arrange
         sampling_chain_constraint = extracted_specimen.sample(
@@ -55,7 +55,7 @@ class TestSampleSchema:
         )
 
         # Act
-        dumped = SamplingConstraintSchema().dump(sampling_chain_constraint)
+        dumped = SamplingConstraintJsonSchema().dump(sampling_chain_constraint)
 
         # Arrange
         assert isinstance(dumped, dict)
@@ -67,7 +67,7 @@ class TestSampleSchema:
         dumped = {"identifier": "specimen", "sampling_step_index": 1}
 
         # Act
-        loaded = SamplingConstraintSchema().load(dumped)
+        loaded = SamplingConstraintJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, SerializedSamplingChainConstraint)
@@ -100,7 +100,7 @@ class TestSampleSchema:
         assert sampling_2.date_time is not None
 
         # Act
-        dumped = PreparationStepSchema().dump(sampling_2)
+        dumped = PreparationStepJsonSchema().dump(sampling_2)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -130,7 +130,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = PreparationStepSchema().load(dumped)
+        loaded = PreparationStepJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, SerializedSampling)
@@ -157,7 +157,7 @@ class TestSampleSchema:
         assert collection.date_time is not None
 
         # Act
-        dumped = PreparationStepSchema().dump(collection)
+        dumped = PreparationStepJsonSchema().dump(collection)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -180,7 +180,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = PreparationStepSchema().load(dumped)
+        loaded = PreparationStepJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Collection)
@@ -197,7 +197,7 @@ class TestSampleSchema:
         assert processing.date_time is not None
 
         # Act
-        dumped = PreparationStepSchema().dump(processing)
+        dumped = PreparationStepJsonSchema().dump(processing)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -218,7 +218,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = PreparationStepSchema().load(dumped)
+        loaded = PreparationStepJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Processing)
@@ -234,7 +234,7 @@ class TestSampleSchema:
         assert embedding.date_time is not None
 
         # Act
-        dumped = PreparationStepSchema().dump(embedding)
+        dumped = PreparationStepJsonSchema().dump(embedding)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -255,7 +255,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = PreparationStepSchema().load(dumped)
+        loaded = PreparationStepJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Embedding)
@@ -271,7 +271,7 @@ class TestSampleSchema:
         assert fixation.date_time is not None
 
         # Act
-        dumped = PreparationStepSchema().dump(fixation)
+        dumped = PreparationStepJsonSchema().dump(fixation)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -292,7 +292,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = PreparationStepSchema().load(dumped)
+        loaded = PreparationStepJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, Fixation)
@@ -305,7 +305,7 @@ class TestSampleSchema:
         assert extracted_specimen.extraction_step.date_time is not None
 
         # Act
-        dumped = ExtractedSpecimenSchema().dump(extracted_specimen)
+        dumped = ExtractedSpecimenJsonSchema().dump(extracted_specimen)
 
         # Assert
 
@@ -347,7 +347,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = ExtractedSpecimenSchema().load(dumped)
+        loaded = ExtractedSpecimenJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, dict)
@@ -369,7 +369,7 @@ class TestSampleSchema:
         assert processing.date_time is not None
 
         # Act
-        dumped = SampleSchema().dump(sample)
+        dumped = SampleJsonSchema().dump(sample)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -410,7 +410,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = SampleSchema().load(dumped)
+        loaded = SampleJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, dict)
@@ -429,7 +429,7 @@ class TestSampleSchema:
         assert slide_sample.sampled_from is not None
 
         # Act
-        dumped = SlideSampleSchema().dump(slide_sample)
+        dumped = SlideSampleJsonSchema().dump(slide_sample)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -462,7 +462,7 @@ class TestSampleSchema:
         }
 
         # Act
-        loaded = SlideSampleSchema().load(dumped)
+        loaded = SlideSampleJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, dict)
@@ -481,7 +481,7 @@ class TestSampleSchema:
         specimen = sample.sampled_from[0].specimen
 
         # Act
-        dumped = SpecimenSchema().dump(slide_sample)
+        dumped = SpecimenJsonSchema().dump(slide_sample)
 
         # Assert
         assert isinstance(dumped, list)
@@ -596,7 +596,7 @@ class TestSampleSchema:
         ]
 
         # Act
-        loaded = SpecimenSchema().load(dumped)
+        loaded = SpecimenJsonSchema().load(dumped)
 
         # Assert
         assert isinstance(loaded, list)
@@ -615,8 +615,8 @@ class TestSampleSchema:
         # Arrange
 
         # Act
-        dumped = SpecimenSchema().dump(slide_sample)
-        loaded = SpecimenSchema().load(dumped)
+        dumped = SpecimenJsonSchema().dump(slide_sample)
+        loaded = SpecimenJsonSchema().load(dumped)
 
         # Assert
         assert str(loaded[0]) == str(slide_sample)

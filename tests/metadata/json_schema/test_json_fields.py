@@ -17,13 +17,13 @@ import pytest
 from tests.metadata.helpers import assert_dict_equals_code
 from wsidicomizer.metadata.sample import SlideSamplePosition, SpecimenIdentifier
 from wsidicomizer.metadata.json_schema.fields import (
-    CodeField,
-    FieldFactory,
-    PointMmField,
-    SlideSamplePositionField,
-    SpecimenIdentifierField,
-    StringOrCodeField,
-    UidField,
+    CodeJsonField,
+    JsonFieldFactory,
+    PointMmJsonField,
+    SlideSamplePositionJsonField,
+    SpecimenIdentifierJsonField,
+    StringOrCodeJsonField,
+    UidJsonField,
 )
 from wsidicom.geometry import PointMm
 from pydicom.uid import UID
@@ -41,7 +41,7 @@ class TestFields:
         # Arrange
 
         # Act
-        dumped = SlideSamplePositionField()._serialize(
+        dumped = SlideSamplePositionJsonField()._serialize(
             slide_sample_position, None, None
         )
 
@@ -63,7 +63,7 @@ class TestFields:
         # Arrange
 
         # Act
-        loaded = SlideSamplePositionField()._deserialize(
+        loaded = SlideSamplePositionJsonField()._deserialize(
             slide_sample_position, None, None
         )
 
@@ -86,7 +86,7 @@ class TestFields:
         # Arrange
 
         # Act
-        dumped = SpecimenIdentifierField()._serialize(identifier, None, None)
+        dumped = SpecimenIdentifierJsonField()._serialize(identifier, None, None)
 
         # Assert
         if isinstance(identifier, str):
@@ -110,7 +110,7 @@ class TestFields:
         # Arrange
 
         # Act
-        loaded = SpecimenIdentifierField()._deserialize(identifier, None, None)
+        loaded = SpecimenIdentifierJsonField()._deserialize(identifier, None, None)
 
         # Assert
         if isinstance(identifier, str):
@@ -126,7 +126,7 @@ class TestFields:
         point = PointMm(1.0, 2.0)
 
         # Act
-        dumped = PointMmField()._serialize(point, None, None)
+        dumped = PointMmJsonField()._serialize(point, None, None)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -138,7 +138,7 @@ class TestFields:
         dumped = {"x": 1.0, "y": 2.0}
 
         # Act
-        loaded = PointMmField()._deserialize(dumped, None, None)
+        loaded = PointMmJsonField()._deserialize(dumped, None, None)
 
         # Assert
         assert isinstance(loaded, PointMm)
@@ -150,7 +150,7 @@ class TestFields:
         uid = UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423")
 
         # Act
-        dumped = UidField()._serialize(uid, None, None)
+        dumped = UidJsonField()._serialize(uid, None, None)
 
         # Assert
         assert dumped == str(uid)
@@ -160,7 +160,7 @@ class TestFields:
         dumped = "1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"
 
         # Act
-        loaded = UidField()._deserialize(dumped, None, None)
+        loaded = UidJsonField()._deserialize(dumped, None, None)
 
         # Assert
         assert loaded == UID(dumped)
@@ -170,7 +170,7 @@ class TestFields:
         code = Code("value", "scheme", "meaning")
 
         # Act
-        dumped = CodeField()._serialize(code, None, None)
+        dumped = CodeJsonField()._serialize(code, None, None)
 
         # Assert
         assert isinstance(dumped, dict)
@@ -181,7 +181,7 @@ class TestFields:
         dumped = {"value": "value", "scheme_designator": "scheme", "meaning": "meaning"}
 
         # Act
-        loaded = CodeField()._deserialize(dumped, None, None)
+        loaded = CodeJsonField()._deserialize(dumped, None, None)
 
         # Assert
         assert isinstance(loaded, Code)
@@ -192,7 +192,7 @@ class TestFields:
         # Arrange
 
         # Act
-        dumped = StringOrCodeField()._serialize(value, None, None)
+        dumped = StringOrCodeJsonField()._serialize(value, None, None)
 
         # Assert
         if isinstance(value, str):
@@ -212,7 +212,7 @@ class TestFields:
         # Arrange
 
         # Act
-        loaded = StringOrCodeField()._deserialize(dumped, None, None)
+        loaded = StringOrCodeJsonField()._deserialize(dumped, None, None)
 
         # Assert
         if isinstance(dumped, str):
@@ -229,7 +229,7 @@ class TestFields:
         self, value: Union[float, IlluminationColorCode]
     ):
         # Arrange
-        field = FieldFactory.float_or_concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.float_or_concept_code(IlluminationColorCode)
 
         # Act
         dumped = field()._serialize(value, None, None)
@@ -255,7 +255,7 @@ class TestFields:
         self, dumped: Union[float, Dict[str, str]]
     ):
         # Arrange
-        field = FieldFactory.float_or_concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.float_or_concept_code(IlluminationColorCode)
 
         # Act
         loaded = field()._deserialize(dumped, None, None)
@@ -275,7 +275,7 @@ class TestFields:
         self, value: Union[str, IlluminationColorCode]
     ):
         # Arrange
-        field = FieldFactory.str_or_concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.str_or_concept_code(IlluminationColorCode)
 
         # Act
         dumped = field()._serialize(value, None, None)
@@ -299,7 +299,7 @@ class TestFields:
     )
     def test_str_or_concept_code_deserialize(self, dumped: Union[str, Dict[str, str]]):
         # Arrange
-        field = FieldFactory.str_or_concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.str_or_concept_code(IlluminationColorCode)
 
         # Act
         loaded = field()._deserialize(dumped, None, None)
@@ -314,7 +314,7 @@ class TestFields:
     def test_concept_code_serialize(self):
         # Arrange
         value = IlluminationColorCode("Full Spectrum")
-        field = FieldFactory.concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.concept_code(IlluminationColorCode)
 
         # Act
         dumped = field()._serialize(value, None, None)
@@ -329,7 +329,7 @@ class TestFields:
             "scheme_designator": "SCT",
             "meaning": "Full Spectrum",
         }
-        field = FieldFactory.concept_code(IlluminationColorCode)
+        field = JsonFieldFactory.concept_code(IlluminationColorCode)
 
         # Act
         loaded = field()._deserialize(dumped, None, None)

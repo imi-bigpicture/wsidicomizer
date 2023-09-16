@@ -20,10 +20,10 @@ from wsidicomizer.metadata.image import (
     Image,
     ImageCoordinateSystem,
 )
-from wsidicomizer.metadata.json_schema.fields import PointMmField
+from wsidicomizer.metadata.json_schema.fields import PointMmJsonField
 
 
-class ExtendedDepthOfFieldSchema(Schema):
+class ExtendedDepthOfFieldJsonSchema(Schema):
     number_of_focal_planes = fields.Integer()
     distance_between_focal_planes = fields.Float()
 
@@ -32,8 +32,8 @@ class ExtendedDepthOfFieldSchema(Schema):
         return ExtendedDepthOfField(**data)
 
 
-class ImageCoordinateSystemSchema(Schema):
-    origin = PointMmField()
+class ImageCoordinateSystemJsonSchema(Schema):
+    origin = PointMmJsonField()
     rotation = fields.Float()
 
     @post_load
@@ -41,14 +41,14 @@ class ImageCoordinateSystemSchema(Schema):
         return ImageCoordinateSystem(**data)
 
 
-class ImageSchema(Schema):
+class ImageJsonSchema(Schema):
     acquisition_datetime = fields.DateTime(allow_none=True)
     focus_method = fields.Enum(FocusMethod, by_value=True, allow_none=True)
     extended_depth_of_field = fields.Nested(
-        ExtendedDepthOfFieldSchema(), allow_none=True
+        ExtendedDepthOfFieldJsonSchema(), allow_none=True
     )
     image_coordinate_system = fields.Nested(
-        ImageCoordinateSystemSchema(), allow_none=True
+        ImageCoordinateSystemJsonSchema(), allow_none=True
     )
 
     @post_load

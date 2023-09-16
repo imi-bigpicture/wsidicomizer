@@ -28,7 +28,7 @@ from wsidicomizer.metadata.sample import (
 )
 
 
-class SlideSamplePositionField(fields.Field):
+class SlideSamplePositionJsonField(fields.Field):
     def _serialize(
         self, value: Optional[Union[str, SlideSamplePosition]], attr, obj, **kwargs
     ) -> Optional[Union[str, Dict]]:
@@ -59,7 +59,7 @@ class SlideSamplePositionField(fields.Field):
             ) from error
 
 
-class SpecimenIdentifierField(fields.Field):
+class SpecimenIdentifierJsonField(fields.Field):
     def _serialize(
         self,
         value: Optional[Union[Specimen, str, SpecimenIdentifier]],
@@ -96,7 +96,7 @@ class SpecimenIdentifierField(fields.Field):
             ) from error
 
 
-class PointMmField(fields.Field):
+class PointMmJsonField(fields.Field):
     def _serialize(
         self, value: Optional[PointMm], attr, obj, **kwargs
     ) -> Optional[Dict]:
@@ -120,7 +120,7 @@ class PointMmField(fields.Field):
             raise ValidationError("Could not deserialize PointMm.") from error
 
 
-class UidField(fields.Field):
+class UidJsonField(fields.Field):
     def _serialize(self, value: Optional[UID], attr, obj, **kwargs) -> Optional[str]:
         if value is None:
             return None
@@ -133,11 +133,11 @@ class UidField(fields.Field):
             raise ValidationError("Could not deserialize UID.") from error
 
 
-class CodeField(fields.Field):
+class CodeJsonField(fields.Field):
     def _serialize(self, value: Optional[Code], attr, obj, **kwargs) -> Optional[Dict]:
         if value is None:
             return None
-        return FieldFactory._serialize_code(value)
+        return JsonFieldFactory._serialize_code(value)
 
     def _deserialize(self, value: Dict, attr, data, **kwargs) -> Code:
         try:
@@ -146,7 +146,7 @@ class CodeField(fields.Field):
             raise ValidationError("Could not deserialize Code.") from error
 
 
-class StringOrCodeField(fields.Field):
+class StringOrCodeJsonField(fields.Field):
     def _serialize(
         self, value: Optional[Union[str, Code]], attr, obj, **kwargs
     ) -> Optional[Union[str, Dict]]:
@@ -174,7 +174,7 @@ class StringOrCodeField(fields.Field):
             raise ValidationError("Could not deserialize Code.") from error
 
 
-class FieldFactory:
+class JsonFieldFactory:
     @classmethod
     def float_or_concept_code(
         cls, concept_code_type: Type[CidConceptCodeType], many=False, **metadata
