@@ -64,18 +64,24 @@ class ImageDicomSchema(DicomSchema):
         DateTimeDicomField(),
         data_key="AcquisitionDateTime",
         dump_default=Defaults.date_time,
+        load_default=None,
     )
     focus_method = DefaultingDicomField(
         fields.Enum(FocusMethod),
         data_key="FocusMethod",
         dump_default=Defaults.focus_method,
+        load_default=None,
     )
     extended_depth_of_field_bool = BooleanDicomField(data_key="ExtendedDepthOfField")
     extended_depth_of_field = FlatteningNestedField(
-        ExtendedDepthOfFieldDicomSchema(), allow_none=True
+        ExtendedDepthOfFieldDicomSchema(),
+        allow_none=True,
+        load_default=None,
     )
     image_coordinate_system = FlatteningNestedField(
-        ImageCoordinateSystemDicomSchema(), allow_none=True
+        ImageCoordinateSystemDicomSchema(),
+        allow_none=True,
+        load_default=None,
     )
 
     @property
@@ -95,11 +101,12 @@ class ImageDicomSchema(DicomSchema):
     @post_load
     def post_load(self, data: Dict[str, Any], **kwargs):
         extended_depth_of_field_bool = data.pop("extended_depth_of_field_bool")
-        if (extended_depth_of_field_bool) != ("extended_depth_of_field" in data):
+        extended_depth_of_field = data.get("extended_depth_of_field", None)
+        if (extended_depth_of_field_bool) != (extended_depth_of_field != None):
             raise ValueError(
                 (
                     f"Extended depth of field bool {extended_depth_of_field_bool} did ",
-                    f"not match presence of depth of field data.",
+                    f"not match depth of field data {extended_depth_of_field}.",
                 )
             )
         return super().post_load(data, **kwargs)

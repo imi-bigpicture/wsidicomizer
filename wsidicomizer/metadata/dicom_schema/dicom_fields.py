@@ -158,6 +158,8 @@ class FlatteningNestedField(fields.Nested):
                 # TODO is this correct?
                 if nested_value is not None:
                     nested[nested_field.data_key] = nested_value
+        if len(nested) == 0:
+            return None
         return nested
 
     def flatten(self, data: Dict[str, Any]):

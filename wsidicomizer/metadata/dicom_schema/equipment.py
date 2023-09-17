@@ -20,17 +20,27 @@ class EquipmentDicomSchema(DicomSchema):
     """
 
     manufacturer = DefaultingDicomField(
-        fields.String(), dump_default=Defaults.string, data_key="Manufacturer"
+        fields.String(),
+        dump_default=Defaults.string,
+        load_default=None,
+        data_key="Manufacturer",
     )
     model_name = DefaultingDicomField(
-        fields.String(), dump_default=Defaults.string, data_key="ManufacturerModelName"
+        fields.String(),
+        dump_default=Defaults.string,
+        load_default=None,
+        data_key="ManufacturerModelName",
     )
     device_serial_number = DefaultingDicomField(
-        fields.String(), dump_default=Defaults.string, data_key="DeviceSerialNumber"
+        fields.String(),
+        dump_default=Defaults.string,
+        load_default=None,
+        data_key="DeviceSerialNumber",
     )
     software_versions = DefaultingDicomField(
         ListDicomField(fields.String()),
         dump_default=[Defaults.string],
+        load_default=None,
         data_key="SoftwareVersions",
     )
 

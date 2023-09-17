@@ -128,7 +128,6 @@ class TestJsonSchema:
         dumped = ImageJsonSchema().dump(image)
 
         # Assert
-
         assert isinstance(dumped, dict)
         if image.acquisition_datetime is None:
             assert dumped["acquisition_datetime"] == None

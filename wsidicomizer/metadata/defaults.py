@@ -30,12 +30,10 @@ from wsidicomizer.metadata.image import FocusMethod
 class Defaults:
     string = "Unknown"
     date_time = datetime.datetime(1, 1, 1)
-    illumination_type = IlluminationCode("Brightfield illumination").code
-    illumination = IlluminationColorCode("Full Spectrum").code
-    slide_container_type = ContainerTypeCode("Microscope slide").code
-    slide_component_type = ContainerComponentTypeCode(
-        "Microscope slide cover slip"
-    ).code
+    illumination_type = IlluminationCode("Brightfield illumination")
+    illumination = IlluminationColorCode("Full Spectrum")
+    slide_container_type = ContainerTypeCode("Microscope slide")
+    slide_component_type = ContainerComponentTypeCode("Microscope slide cover slip")
     slide_material = "GLASS"
     focus_method = FocusMethod.AUTO
     image_coordinate_system_origin = PointMm(0, 0)

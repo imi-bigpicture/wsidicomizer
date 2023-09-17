@@ -1,3 +1,4 @@
+from email.policy import default
 from typing import Any, Dict, Type
 from wsidicomizer.metadata.defaults import Defaults
 from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema
@@ -5,6 +6,7 @@ from marshmallow import fields, pre_dump, post_load
 
 from wsidicomizer.metadata.dicom_schema.dicom_fields import (
     CodeDicomField,
+    DefaultingDicomField,
     SingleCodeDicomField,
     FlatteningNestedField,
     FloatDicomField,
@@ -16,7 +18,7 @@ from wsidicom.conceptcode import (
     LenseCode,
     IlluminationColorCode,
 )
-
+from pydicom.sr.coding import Code
 from wsidicomizer.metadata.optical_path import (
     ImagePathFilter,
     LightPathFilter,
@@ -104,9 +106,10 @@ class ObjectivesSchema(DicomSchema):
 class OpticalPathDicomSchema(DicomSchema):
     identifier = fields.String(data_key="OpticalPathIdentifier")
     description = fields.String(data_key="OpticalPathDescription")
-    illumination_types = fields.List(
-        CodeDicomField(IlluminationCode),
+    illumination_types = DefaultingDicomField(
+        fields.List(CodeDicomField(IlluminationCode)),
         data_key="IlluminationTypeCodeSequence",
+        dump_default=[Defaults.illumination_type],
     )
     illumination_wavelength = fields.Integer(
         data_key="IlluminationWaveLength", load_default=None
@@ -114,14 +117,17 @@ class OpticalPathDicomSchema(DicomSchema):
     illumination_color_code = SingleCodeDicomField(
         IlluminationColorCode,
         data_key="IlluminationColorCodeSequence",
-        dump_default=Defaults.illumination,
         load_default=None,
     )
 
     # icc_profile: Optional[bytes] = None
-    light_path_filter = FlatteningNestedField(LightPathFilterDicomSchema())
-    image_path_filter = FlatteningNestedField(ImagePathFilterDicomSchema())
-    objective = FlatteningNestedField(ObjectivesSchema())
+    light_path_filter = FlatteningNestedField(
+        LightPathFilterDicomSchema(), load_default=None
+    )
+    image_path_filter = FlatteningNestedField(
+        ImagePathFilterDicomSchema(), load_default=None
+    )
+    objective = FlatteningNestedField(ObjectivesSchema(), load_default=None)
 
     @property
     def load_type(self) -> Type[OpticalPath]:
@@ -140,8 +146,10 @@ class OpticalPathDicomSchema(DicomSchema):
 
         if isinstance(optical_path.illumination, float):
             fields["illumination_wavelength"] = optical_path.illumination
-        else:
+        if isinstance(optical_path.illumination, Code):
             fields["illumination_color_code"] = optical_path.illumination
+        else:
+            fields["illumination_color_code"] = Defaults.illumination
         return fields
 
     @post_load
