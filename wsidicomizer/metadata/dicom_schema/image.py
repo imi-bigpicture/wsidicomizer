@@ -21,7 +21,7 @@ from wsidicomizer.metadata.image import (
 )
 
 
-class ExtendedDepthOfFieldDicomSchema(DicomSchema):
+class ExtendedDepthOfFieldDicomSchema(DicomSchema[ExtendedDepthOfField]):
     number_of_focal_planes = fields.Integer(
         data_key="NumberOfFocalPlanes", allow_none=False
     )
@@ -34,7 +34,7 @@ class ExtendedDepthOfFieldDicomSchema(DicomSchema):
         return ExtendedDepthOfField
 
 
-class ImageCoordinateSystemDicomSchema(DicomSchema):
+class ImageCoordinateSystemDicomSchema(DicomSchema[ImageCoordinateSystem]):
     origin = OffsetInSlideCoordinateSystemField(
         data_key="TotalPixelMatrixOriginSequence",
         allow_none=False,
@@ -51,7 +51,7 @@ class ImageCoordinateSystemDicomSchema(DicomSchema):
         return ImageCoordinateSystem
 
 
-class ImageDicomSchema(DicomSchema):
+class ImageDicomSchema(DicomSchema[Image]):
     """
     Type 1
     acquisition_datetime

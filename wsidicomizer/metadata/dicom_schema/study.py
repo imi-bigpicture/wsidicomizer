@@ -14,7 +14,7 @@ from wsidicomizer.metadata.series import Series
 from wsidicomizer.metadata.study import Study
 
 
-class StudyDicomSchema(DicomSchema):
+class StudyDicomSchema(DicomSchema[Study]):
     """
     Type 1
     - uid

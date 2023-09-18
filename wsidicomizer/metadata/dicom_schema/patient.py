@@ -16,7 +16,7 @@ from pydicom.sr.coding import Code
 from wsidicomizer.metadata.patient import Patient, PatientDeIdentification, PatientSex
 
 
-class PatientDeIdentificationDicomSchema(DicomSchema):
+class PatientDeIdentificationDicomSchema(DicomSchema[PatientDeIdentification]):
     identity_removed = BooleanDicomField(data_key="PatientIdentityRemoved")
     method_strings = ListDicomField(fields.String(), data_key="DeidentificationMethod")
     method_codes = fields.List(
@@ -50,7 +50,7 @@ class PatientDeIdentificationDicomSchema(DicomSchema):
         return super().post_load(data, **kwargs)
 
 
-class PatientDicomSchema(DicomSchema):
+class PatientDicomSchema(DicomSchema[Patient]):
     """
     Type 1:
     - method_strings (if identity_removed)

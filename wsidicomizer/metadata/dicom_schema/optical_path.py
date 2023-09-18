@@ -1,7 +1,7 @@
 from email.policy import default
 from typing import Any, Dict, Type
 from wsidicomizer.metadata.defaults import Defaults
-from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema
+from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema, LoadType
 from marshmallow import fields, pre_dump, post_load
 
 from wsidicomizer.metadata.dicom_schema.dicom_fields import (
@@ -28,7 +28,7 @@ from wsidicomizer.metadata.optical_path import (
 )
 
 
-class FilterDicomSchema(DicomSchema):
+class FilterDicomSchema(DicomSchema[LoadType]):
     @pre_dump
     def pre_dump(self, filter: OpticalFilter, **kwargs):
         return {
@@ -46,7 +46,7 @@ class FilterDicomSchema(DicomSchema):
         return super().post_load(data, **kwargs)
 
 
-class LightPathFilterDicomSchema(FilterDicomSchema):
+class LightPathFilterDicomSchema(FilterDicomSchema[LightPathFilter]):
     filters = fields.List(
         CodeDicomField(LightPathFilterCode),
         data_key="LightPathFilterTypeStackCodeSequence",
@@ -67,7 +67,7 @@ class LightPathFilterDicomSchema(FilterDicomSchema):
         return LightPathFilter
 
 
-class ImagePathFilterDicomSchema(FilterDicomSchema):
+class ImagePathFilterDicomSchema(FilterDicomSchema[ImagePathFilter]):
     filters = fields.List(
         CodeDicomField(ImagePathFilterCode),
         data_key="ImagePathFilterTypeStackCodeSequence",
@@ -88,7 +88,7 @@ class ImagePathFilterDicomSchema(FilterDicomSchema):
         return ImagePathFilter
 
 
-class ObjectivesSchema(DicomSchema):
+class ObjectivesSchema(DicomSchema[Objectives]):
     lenses = fields.List(
         CodeDicomField(LenseCode), data_key="LensesCodeSequence", allow_none=True
     )
@@ -103,7 +103,7 @@ class ObjectivesSchema(DicomSchema):
         return Objectives
 
 
-class OpticalPathDicomSchema(DicomSchema):
+class OpticalPathDicomSchema(DicomSchema[OpticalPath]):
     identifier = fields.String(data_key="OpticalPathIdentifier")
     description = fields.String(data_key="OpticalPathDescription")
     illumination_types = DefaultingDicomField(

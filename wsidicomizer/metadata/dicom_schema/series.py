@@ -11,7 +11,7 @@ from marshmallow import fields
 from wsidicomizer.metadata.series import Series
 
 
-class SeriesDicomSchema(DicomSchema):
+class SeriesDicomSchema(DicomSchema[Series]):
     """
     Type 1
     - uid

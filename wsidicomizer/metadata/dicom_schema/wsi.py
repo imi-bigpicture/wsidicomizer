@@ -29,7 +29,7 @@ from wsidicomizer.metadata.study import Study
 from wsidicomizer.metadata.wsi import WsiMetadata
 
 
-class WsiMetadataDicomSchema(DicomSchema):
+class WsiMetadataDicomSchema(DicomSchema[WsiMetadata]):
     study = FlatteningNestedField(StudyDicomSchema(), dump_default=Study())
     series = FlatteningNestedField(SeriesDicomSchema(), dump_default=Series())
     patient = FlatteningNestedField(

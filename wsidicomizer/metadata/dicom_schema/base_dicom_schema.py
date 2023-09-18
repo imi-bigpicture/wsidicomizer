@@ -2,14 +2,13 @@ from abc import abstractmethod
 from typing import Any, Dict, Generic, Type, TypeVar
 from marshmallow import Schema, post_dump, pre_load, post_load, types
 from pydicom import Dataset
-from pydicom.tag import Tag
 
 from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.dicom_schema.dicom_fields import (
     FlatteningNestedField,
 )
 
-LoadType = TypeVar("LoadType", bound=BaseModel)
+LoadType = TypeVar("LoadType")
 
 
 class DicomSchema(Schema, Generic[LoadType]):

@@ -10,7 +10,7 @@ from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema
 from marshmallow import fields
 
 
-class EquipmentDicomSchema(DicomSchema):
+class EquipmentDicomSchema(DicomSchema[Equipment]):
     """
     Type 1:
     - manufacturer

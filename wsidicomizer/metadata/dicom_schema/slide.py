@@ -61,7 +61,7 @@ from wsidicomizer.metadata.slide import Slide
 #         return SlideSample
 
 
-class SlideDicomSchema(DicomSchema):
+class SlideDicomSchema(DicomSchema[Slide]):
     """
     IssuerOfTheContainerIdentifierSequence
     ContainerComponentSequence:
