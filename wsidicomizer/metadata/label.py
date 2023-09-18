@@ -14,7 +14,7 @@
 
 """Label model."""
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 from wsidicomizer.metadata.base_model import BaseModel
 
@@ -34,3 +34,23 @@ class Label(BaseModel):
     label_in_volume_image: bool = False
     label_in_overview_image: bool = False
     label_is_phi: bool = True
+
+    @classmethod
+    def merge_image_types(
+        cls, volume: "Label", label: Optional["Label"], overview: Optional["Label"]
+    ):
+        labels: List[Optional[Label]] = [label, volume, overview]
+        text = next((item.text for item in labels if item is not None), None)
+        barcode = next((item.barcode for item in labels if item is not None), None)
+        label_is_phi = any(item.label_is_phi for item in labels if item is not None)
+        if overview is None:
+            label_in_overview_image = False
+        else:
+            label_in_overview_image = overview.label_in_overview_image
+        return cls(
+            text=text,
+            barcode=barcode,
+            label_in_volume_image=volume.label_in_volume_image,
+            label_in_overview_image=label_in_overview_image,
+            label_is_phi=label_is_phi,
+        )

@@ -15,6 +15,7 @@ from wsidicomizer.metadata import (
     Slide,
     Study,
     WsiMetadata,
+    Label,
 )
 from wsidicomizer.metadata.dicom_schema.slide import SlideDicomSchema
 
@@ -55,6 +56,34 @@ def dicom_image(image: Image):
     else:
         dataset.ExtendedDepthOfField = "NO"
     yield dataset
+
+
+@pytest.fixture()
+def dicom_label(label: Label, image_type: ImageType):
+    dataset = Dataset()
+    dataset.ImageType = ["ORIGINAL", "PRIMIARY", image_type.value]
+    if image_type == ImageType.LABEL:
+        dataset.LabelText = label.text
+        dataset.BarcodeValue = label.barcode
+        dataset.SpecimenLabelInImage = bool_to_dicom_literal(True)
+        dataset.BurnedInAnnotation = bool_to_dicom_literal(label.label_is_phi)
+    elif image_type == ImageType.VOLUME:
+        dataset.SpecimenLabelInImage = bool_to_dicom_literal(
+            label.label_in_volume_image
+        )
+        dataset.BurnedInAnnotation = bool_to_dicom_literal(
+            label.label_is_phi and label.label_in_volume_image
+        )
+    elif image_type == ImageType.OVERVIEW:
+        dataset.SpecimenLabelInImage = bool_to_dicom_literal(
+            label.label_in_overview_image
+        )
+        dataset.BurnedInAnnotation = bool_to_dicom_literal(
+            label.label_is_phi and label.label_in_overview_image
+        )
+    else:
+        raise ValueError(f"Unknown image type {image_type}.")
+    return dataset
 
 
 @pytest.fixture()
@@ -113,26 +142,31 @@ def dicom_patient(patient: Patient):
     dataset.PatientName = patient.name
     dataset.PatientID = patient.identifier
     dataset.PatientBirthDate = patient.birth_date
-    dataset.PatientSex = patient.sex.name
+    if patient.sex is not None:
+        dataset.PatientSex = patient.sex.name
+    else:
+        dataset.PatientSex = None
     if isinstance(patient.species_description, str):
         dataset.PatientSpeciesDescription = patient.species_description
     elif isinstance(patient.species_description, Code):
         dataset.PatientSpeciesCodeSequence = [
             code_to_code_dataset(patient.species_description)
         ]
-    dataset.PatientIdentityRemoved = bool_to_dicom_literal(
-        patient.de_identification.identity_removed
-    )
-    dataset.DeidentificationMethod = [
-        method
-        for method in patient.de_identification.methods
-        if isinstance(method, str)
-    ]
-    dataset.DeidentificationMethodCodeSequence = [
-        code_to_code_dataset(method)
-        for method in patient.de_identification.methods
-        if isinstance(method, Code)
-    ]
+    if patient.de_identification is not None:
+        dataset.PatientIdentityRemoved = bool_to_dicom_literal(
+            patient.de_identification.identity_removed
+        )
+        if patient.de_identification.methods is not None:
+            dataset.DeidentificationMethod = [
+                method
+                for method in patient.de_identification.methods
+                if isinstance(method, str)
+            ]
+            dataset.DeidentificationMethodCodeSequence = [
+                code_to_code_dataset(method)
+                for method in patient.de_identification.methods
+                if isinstance(method, Code)
+            ]
     yield dataset
 
 
@@ -167,24 +201,22 @@ def dicom_wsi_metadata(
     wsi_metadata: WsiMetadata,
     dicom_equipment: Dataset,
     dicom_image: Dataset,
-    # dicom_label: Dataset,
+    dicom_label: Dataset,
     dicom_slide: Dataset,
     dicom_optical_path: Dataset,
     dicom_study: Dataset,
     dicom_series: Dataset,
     dicom_patient: Dataset,
-    image_type: ImageType,
 ):
     dataset = Dataset()
     dataset.update(dicom_equipment)
     dataset.update(dicom_image)
-    # dataset.update(dicom_label)
+    dataset.update(dicom_label)
     dataset.update(dicom_slide)
     dataset.update(dicom_study)
     dataset.update(dicom_series)
     dataset.update(dicom_patient)
     dataset.OpticalPathSequence = [dicom_optical_path]
-    dataset.ImageType = ["ORIGINAL", "PRIMIARY", image_type.value]
     dimension_organization = Dataset()
     dimension_organization.DimensionOrganizationUID = (
         wsi_metadata.dimension_organization_uid

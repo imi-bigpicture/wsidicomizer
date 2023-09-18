@@ -7,7 +7,7 @@ from wsidicomizer.metadata.label import Label
 from wsidicom.instance import ImageType
 
 
-class LabelDicomSchema(DicomSchema):
+class LabelDicomSchema(DicomSchema[Label]):
     """
     type 1
     burned_in_annotation
@@ -23,12 +23,8 @@ class LabelDicomSchema(DicomSchema):
     label_in_volume_image = BooleanDicomField(load_only=True, allow_none=True)
     label_in_overview_image = BooleanDicomField(load_only=True, allow_none=True)
     label_is_phi = BooleanDicomField(load_only=True, allow_none=True)
-    burned_in_annotation = BooleanDicomField(
-        dump_only=True, data_key="BurnedInAnnotation"
-    )
-    specimen_label_in_image = BooleanDicomField(
-        dump_only=True, data_key="SpecimenLabelInImage"
-    )
+    burned_in_annotation = BooleanDicomField(data_key="BurnedInAnnotation")
+    specimen_label_in_image = BooleanDicomField(data_key="SpecimenLabelInImage")
     image_type = fields.List(fields.String(), load_only=True, data_key="ImageType")
 
     @property
@@ -61,4 +57,20 @@ class LabelDicomSchema(DicomSchema):
     @post_load
     def post_load(self, data: Dict[str, Any], **kwargs):
         image_type = ImageType(data.pop("image_type")[2])
+        burned_in_annotation = data.pop("burned_in_annotation")
+        specimen_label_in_image = data.pop("specimen_label_in_image")
+        label_is_phi = False
+        label_in_volume_image = False
+        label_in_overview_image = False
+        if image_type == ImageType.LABEL:
+            label_is_phi = burned_in_annotation
+        elif image_type == ImageType.VOLUME and specimen_label_in_image:
+            label_is_phi = burned_in_annotation
+            label_in_volume_image = True
+        elif image_type == ImageType.OVERVIEW and specimen_label_in_image:
+            label_is_phi = burned_in_annotation
+            label_in_overview_image = True
+        data["label_is_phi"] = label_is_phi
+        data["label_in_volume_image"] = label_in_volume_image
+        data["label_in_overview_image"] = label_in_overview_image
         return super().post_load(data, **kwargs)

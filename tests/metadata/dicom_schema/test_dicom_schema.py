@@ -224,6 +224,35 @@ class TestDicomSchema:
             assert serialized.BurnedInAnnotation == "NO"
 
     @pytest.mark.parametrize(
+        "image_type", [ImageType.LABEL, ImageType.OVERVIEW, ImageType.VOLUME]
+    )
+    def test_deserialize_label(
+        self, dicom_label: Dataset, label: Label, image_type: ImageType
+    ):
+        # Arrange
+        schema = LabelDicomSchema()
+
+        # Act
+        deserialized = schema.load(dicom_label)
+
+        # Assert
+        assert isinstance(deserialized, Label)
+        if image_type == ImageType.LABEL:
+            assert deserialized.text == label.text
+            assert deserialized.barcode == label.barcode
+            assert deserialized.label_is_phi == label.label_is_phi
+        elif image_type == ImageType.VOLUME:
+            assert deserialized.text is None
+            assert deserialized.barcode is None
+            assert deserialized.label_in_volume_image == label.label_in_volume_image
+            assert deserialized.label_is_phi == label.label_is_phi
+        elif image_type == ImageType.OVERVIEW:
+            assert deserialized.text is None
+            assert deserialized.barcode is None
+            assert deserialized.label_in_overview_image == label.label_in_overview_image
+            assert deserialized.label_is_phi == label.label_is_phi
+
+    @pytest.mark.parametrize(
         "illumination", [IlluminationColorCode("Full Spectrum"), 400.0]
     )
     def test_serialize_optical_path(self, optical_path: OpticalPath):
