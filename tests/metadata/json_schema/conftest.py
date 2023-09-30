@@ -36,7 +36,6 @@ def json_slide():
                 "sampled_from": {"identifier": "block 1", "sampling_step_index": 0},
                 "uid": "1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423",
                 "position": {"x": 0, "y": 0, "z": 0},
-                "specimen_type": "slide",
             },
             {
                 "identifier": "block 1",
@@ -86,7 +85,6 @@ def json_slide():
                     "scheme_designator": "SCT",
                     "meaning": "tissue specimen",
                 },
-                "specimen_type": "sample",
             },
             {
                 "identifier": "part 1",
@@ -127,7 +125,6 @@ def json_slide():
                     "scheme_designator": "SCT",
                     "meaning": "tissue specimen",
                 },
-                "specimen_type": "extracted",
             },
             {
                 "identifier": "part 2",
@@ -168,7 +165,6 @@ def json_slide():
                     "scheme_designator": "SCT",
                     "meaning": "tissue specimen",
                 },
-                "specimen_type": "extracted",
             },
             {
                 "identifier": "Sample 2",
@@ -183,7 +179,6 @@ def json_slide():
                 "sampled_from": {"identifier": "block 1", "sampling_step_index": 1},
                 "uid": "1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445424",
                 "position": {"x": 10, "y": 0, "z": 0},
-                "specimen_type": "slide",
             },
         ],
     }

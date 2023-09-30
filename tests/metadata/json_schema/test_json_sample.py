@@ -320,7 +320,6 @@ class TestSampleJsonSchema:
         )
         assert dumped["steps"][0]["preparation_type"] == "collection"
         assert_dict_equals_code(dumped["type"], extracted_specimen.type)
-        assert dumped["specimen_type"] == "extracted"
 
     def test_extracted_specimen_deserialize(self):
         # Arrange
@@ -343,7 +342,6 @@ class TestSampleJsonSchema:
                 "scheme_designator": "SCT",
                 "meaning": "Gross specimen",
             },
-            "specimen_type": "extracted",
         }
 
         # Act
@@ -383,7 +381,6 @@ class TestSampleJsonSchema:
             == sample.sampled_from[0].specimen.identifier
         )
         assert dumped["sampled_from"][0]["sampling_step_index"] == 0
-        assert dumped["specimen_type"] == "sample"
 
     def test_sampled_specimen_deserialize(self):
         # Arrange
@@ -406,7 +403,6 @@ class TestSampleJsonSchema:
                 "scheme_designator": "SCT",
                 "meaning": "Tissue section",
             },
-            "specimen_type": "sample",
         }
 
         # Act
@@ -445,8 +441,6 @@ class TestSampleJsonSchema:
         assert dumped["uid"] == str(slide_sample.uid)
         assert dumped["position"] == slide_sample.position
 
-        assert dumped["specimen_type"] == "slide"
-
     def test_slide_sample_deserialize(self):
         # Arrange
         dumped = {
@@ -458,7 +452,6 @@ class TestSampleJsonSchema:
             "sampled_from": {"identifier": "sample", "sampling_step_index": 1},
             "uid": "1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423",
             "position": "left",
-            "specimen_type": "slide",
         }
 
         # Act
@@ -527,7 +520,6 @@ class TestSampleJsonSchema:
                 "sampled_from": {"identifier": "sample", "sampling_step_index": 0},
                 "uid": "1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423",
                 "position": "left",
-                "specimen_type": "slide",
             },
             {
                 "identifier": "sample",
@@ -559,7 +551,6 @@ class TestSampleJsonSchema:
                     "scheme_designator": "SCT",
                     "meaning": "Tissue section",
                 },
-                "specimen_type": "sample",
             },
             {
                 "identifier": "specimen",
@@ -591,7 +582,6 @@ class TestSampleJsonSchema:
                     "scheme_designator": "SCT",
                     "meaning": "Gross specimen",
                 },
-                "specimen_type": "extracted",
             },
         ]
 

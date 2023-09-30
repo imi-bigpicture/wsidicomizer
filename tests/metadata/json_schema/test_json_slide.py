@@ -51,14 +51,12 @@ class TestSlideJsonSchema:
         assert dumped_sample["position"]["x"] == sample.position.x
         assert dumped_sample["position"]["y"] == sample.position.y
         assert dumped_sample["position"]["z"] == sample.position.z
-        assert dumped_sample["specimen_type"] == "slide"
 
         assert sample.sampled_from is not None
         block_1 = sample.sampled_from.specimen
         dumped_block_1 = dumped["samples"][1]
         assert dumped_block_1["identifier"] == block_1.identifier
         assert_dict_equals_code(dumped_block_1["type"], block_1.type)
-        assert dumped_block_1["specimen_type"] == "sample"
 
     def test_slide_deserialize(self, json_slide: Dict[str, Any]):
         # Arrange

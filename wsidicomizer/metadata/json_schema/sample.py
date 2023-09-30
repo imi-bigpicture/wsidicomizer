@@ -261,7 +261,12 @@ class ExtractedSpecimenJsonSchema(BaseSpecimenJsonSchema):
     """Schema for extracted specimen that has not been sampled from other specimen."""
 
     type = JsonFieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
-    specimen_type = fields.Constant("extracted")
+
+    def post_load(self, data: Mapping[str, Any]) -> ExtractedSpecimen:
+        return ExtractedSpecimen(
+            identifier=data["identifier"],
+            type=data["type"],
+        )
 
 
 class SampleJsonSchema(BaseSpecimenJsonSchema):
@@ -269,7 +274,15 @@ class SampleJsonSchema(BaseSpecimenJsonSchema):
 
     sampled_from = fields.List(fields.Nested(SamplingConstraintJsonSchema))
     type = JsonFieldFactory.concept_code(AnatomicPathologySpecimenTypesCode)()
-    specimen_type = fields.Constant("sample")
+
+    def post_load(
+        self, data: Mapping[str, Any], sampled_from: Sequence[Sampling]
+    ) -> Sample:
+        return Sample(
+            identifier=data["identifier"],
+            type=data["type"],
+            sampled_from=sampled_from,
+        )
 
 
 class SlideSampleJsonSchema(BaseSpecimenJsonSchema):
@@ -279,7 +292,17 @@ class SlideSampleJsonSchema(BaseSpecimenJsonSchema):
     sampled_from = fields.Nested(SamplingConstraintJsonSchema)
     uid = UidJsonField(allow_none=True)
     position = SlideSamplePositionJsonField(allow_none=True)
-    specimen_type = fields.Constant("slide")
+
+    def post_load(
+        self, data: Mapping[str, Any], parent: Optional[Sampling]
+    ) -> SlideSample:
+        return SlideSample(
+            identifier=data["identifier"],
+            sampled_from=parent,
+            anatomical_sites=data["anatomical_sites"],
+            uid=data.get("uid"),
+            position=data.get("position"),
+        )
 
 
 class SpecimenJsonSchema(Schema):
@@ -290,13 +313,6 @@ class SpecimenJsonSchema(Schema):
         ExtractedSpecimen: ExtractedSpecimenJsonSchema,
         Sample: SampleJsonSchema,
         SlideSample: SlideSampleJsonSchema,
-    }
-
-    """Mapping string in `specimen_type` of object to schema."""
-    _string_to_schema_mapping: Dict[str, Type[Schema]] = {
-        "extracted": ExtractedSpecimenJsonSchema,
-        "sample": SampleJsonSchema,
-        "slide": SlideSampleJsonSchema,
     }
 
     def dump(
@@ -326,10 +342,21 @@ class SpecimenJsonSchema(Schema):
             loaded = [self._subschema_load(item) for item in data]
         return self._post_load(loaded)
 
+    @staticmethod
+    def _subschema_select(specimen: Mapping) -> Type[Schema]:
+        print(specimen.keys())
+        if "anatomical_sites" in specimen:
+            print("Slide")
+            return SlideSampleJsonSchema
+        if "sampled_from" in specimen:
+            print("Sample")
+            return SampleJsonSchema
+        print("Extracted")
+        return ExtractedSpecimenJsonSchema
+
     def _subschema_load(self, specimen: Mapping) -> Dict[str, Any]:
         """Select a schema and load and return specimen using the schema."""
-        specimen_type = specimen["specimen_type"]
-        schema = self._string_to_schema_mapping[specimen_type]
+        schema = self._subschema_select(specimen)
         loaded = schema().load(specimen, many=False)
         assert isinstance(loaded, dict)
         return loaded
@@ -377,24 +404,16 @@ class SpecimenJsonSchema(Schema):
         """Create specimen by identifier. Create nested specimens that the specimen
         is sampled from if needed."""
         data = specimen_data[identifier]
-        specimen_type = data["specimen_type"]
-        print("Making specimen", identifier, specimen_type)
-
-        if specimen_type == "extracted":
-            specimen = ExtractedSpecimen(
-                identifier=identifier,
-                type=data["type"],
-            )
-        elif specimen_type == "sample":
+        print(identifier, data["identifier"])
+        schema = cls._subschema_select(data)()
+        if isinstance(schema, ExtractedSpecimenJsonSchema):
+            specimen = schema.post_load(data)
+        elif isinstance(schema, SampleJsonSchema):
             sampled_from = cls._get_sampled_from(
                 identifier, specimen_data, created_specimens
             )
-            specimen = Sample(
-                identifier=identifier,
-                type=data["type"],
-                sampled_from=sampled_from,
-            )
-        elif specimen_type == "slide":
+            specimen = schema.post_load(data, sampled_from)
+        elif isinstance(schema, SlideSampleJsonSchema):
             sampled_from = cls._get_sampled_from(
                 identifier, specimen_data, created_specimens
             )
@@ -404,16 +423,9 @@ class SpecimenJsonSchema(Schema):
                 parent = sampled_from[0]
             else:
                 raise ValueError()
-
-            specimen = SlideSample(
-                identifier=identifier,
-                sampled_from=parent,
-                anatomical_sites=data["anatomical_sites"],
-                uid=data.get("uid"),
-                position=data.get("position"),
-            )
+            specimen = schema.post_load(data, parent)
         else:
-            raise TypeError(f"Could not make specimen for unknown type {specimen_type}")
+            raise TypeError(f"Could not make specimen for unknown type {schema}")
 
         # Add the steps to the created specimen
         for index, step in enumerate(data.get("steps", [])):
@@ -423,7 +435,11 @@ class SpecimenJsonSchema(Schema):
                     step, specimen_data, created_specimens
                 )
                 step = Sampling(
-                    specimen, step.method, constraints, step.date_time, step.description
+                    specimen,
+                    step.method,
+                    constraints,
+                    step.date_time,
+                    step.description,
                 )
             elif isinstance(step, Collection):
                 # Special handling of collection step
