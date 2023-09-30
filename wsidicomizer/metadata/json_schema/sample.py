@@ -118,12 +118,16 @@ class SamplingConstraintJsonSchema(Schema):
     @pre_dump
     def dump_simple(self, sampling: Sampling, **kwargs):
         return SerializedSamplingChainConstraint(
-            sampling.specimen.identifier, sampling.index
+            sampling.specimen.identifier, self._sampling_index(sampling)
         )
 
     @post_load
     def load_simple(self, data: Dict, **kwargs) -> SerializedSamplingChainConstraint:
         return SerializedSamplingChainConstraint(**data)
+
+    @staticmethod
+    def _sampling_index(sampling: Sampling) -> int:
+        return [step for step in sampling.specimen.samplings].index(sampling)
 
 
 class BasePreparationStepJsonSchema(Schema):

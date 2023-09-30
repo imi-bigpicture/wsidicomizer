@@ -481,20 +481,14 @@ class TestSampleJsonSchema:
             dumpled_slide_sample["sampled_from"]["identifier"]
             == slide_sample.sampled_from.specimen.identifier
         )
-        assert (
-            dumpled_slide_sample["sampled_from"]["sampling_step_index"]
-            == slide_sample.sampled_from.index
-        )
+        assert dumpled_slide_sample["sampled_from"]["sampling_step_index"] == 0
         assert isinstance(dumpled_sample, dict)
         assert dumpled_sample["identifier"] == sample.identifier
         assert (
             dumpled_sample["sampled_from"][0]["identifier"]
             == sample.sampled_from[0].specimen.identifier
         )
-        assert (
-            dumpled_sample["sampled_from"][0]["sampling_step_index"]
-            == sample.sampled_from[0].index
-        )
+        assert dumpled_sample["sampled_from"][0]["sampling_step_index"] == 0
         assert isinstance(dumpled_specimen, dict)
         assert dumpled_specimen["identifier"] == specimen.identifier
 

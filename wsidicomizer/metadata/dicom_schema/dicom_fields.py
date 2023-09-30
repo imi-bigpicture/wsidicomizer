@@ -1,6 +1,4 @@
 import datetime
-import datetime as dt
-from enum import Enum as EnumType
 import math
 from typing import (
     Any,
@@ -16,20 +14,14 @@ from typing import (
 )
 
 from marshmallow.utils import missing
-from marshmallow import Schema, fields, post_dump, pre_load, types
-from marshmallow.base import SchemaABC
+from marshmallow import Schema, fields
 from marshmallow.fields import Field
-from marshmallow.utils import missing as missing_
 from pydicom import DataElement, Dataset
 from pydicom.multival import MultiValue
 from pydicom.sr.coding import Code
-from pydicom.uid import UID
 from pydicom.valuerep import DA, DT, TM, DSfloat, PersonName
 from wsidicom.conceptcode import ConceptCode
 from wsidicom.geometry import Orientation, PointMm
-from pydicom.sequence import Sequence as DicomSequence
-from wsidicomizer.metadata.defaults import Defaults
-from wsidicomizer.metadata.dicom_schema.dicom_constants import DicomBoolean
 
 
 class DateTimeDicomField(fields.Field):

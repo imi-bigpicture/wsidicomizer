@@ -32,6 +32,14 @@ from wsidicom.conceptcode import (
     SpecimenSamplingProcedureCode,
     AnatomicPathologySpecimenTypesCode,
 )
+from wsidicomizer.metadata.dicom_schema.sample import (
+    CollectionDicom,
+    EmbeddingDicom,
+    FixationDicom,
+    ProcessingDicom,
+    SlideSampleDicom,
+    StainingDicom,
+)
 
 from wsidicomizer.metadata.sample import (
     Collection,
@@ -199,7 +207,7 @@ class TestSampleDicom:
         )
 
         # Act
-        collection = Collection.from_dataset(dataset)
+        collection = CollectionDicom.from_dataset(dataset)
 
         # Assert
         assert collection.method == method
@@ -215,7 +223,7 @@ class TestSampleDicom:
         )
 
         # Act
-        processing = Processing.from_dataset(dataset)
+        processing = ProcessingDicom.from_dataset(dataset)
 
         # Assert
         assert processing.method == method
@@ -232,7 +240,7 @@ class TestSampleDicom:
         )
 
         # Act
-        embedding = Embedding.from_dataset(dataset)
+        embedding = EmbeddingDicom.from_dataset(dataset)
 
         # Assert
         assert embedding.medium == medium
@@ -249,7 +257,7 @@ class TestSampleDicom:
         )
 
         # Act
-        fixation = Fixation.from_dataset(dataset)
+        fixation = FixationDicom.from_dataset(dataset)
 
         # Assert
         assert fixation.fixative == fixative
@@ -271,7 +279,7 @@ class TestSampleDicom:
         dataset = SpecimenPreparationStep("identifier", SpecimenStaining(stains))
 
         # Act
-        staining = Staining.from_dataset(dataset)
+        staining = StainingDicom.from_dataset(dataset)
 
         # Assert
         assert staining.substances == stains
@@ -346,7 +354,7 @@ class TestSampleDicom:
         dataset.SpecimenDescriptionSequence = descriptions
 
         # Act
-        slide_samples, stainings = SlideSample.from_dataset(descriptions)
+        slide_samples, stainings = SlideSampleDicom.from_dataset(descriptions)
 
         # Assert
         assert slide_samples is not None
