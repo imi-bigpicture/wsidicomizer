@@ -104,10 +104,9 @@ class TestSampleJsonSchema:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert_dict_equals_code(dumped["method"], sampling_2.method)
+        assert_dict_equals_code(dumped["sampling_method"], sampling_2.method)
         assert dumped["date_time"] == sampling_2.date_time.isoformat()
         assert dumped["description"] == sampling_2.description
-        assert dumped["preparation_type"] == "sampling"
         assert (
             dumped["sampling_chain_constraints"][0]["identifier"] == specimen.identifier
         )
@@ -116,7 +115,7 @@ class TestSampleJsonSchema:
     def test_sampling_deserialize(self):
         # Arrange
         dumped = {
-            "method": {
+            "sampling_method": {
                 "value": "434472006",
                 "scheme_designator": "SCT",
                 "meaning": "Block sectioning",
@@ -126,7 +125,6 @@ class TestSampleJsonSchema:
             ],
             "date_time": "2023-08-05T00:00:00",
             "description": "description",
-            "preparation_type": "sampling",
         }
 
         # Act
@@ -135,7 +133,7 @@ class TestSampleJsonSchema:
         # Assert
         assert isinstance(loaded, SerializedSampling)
         assert loaded.sampling_chain_constraints is not None
-        assert_dict_equals_code(dumped["method"], loaded.method)
+        assert_dict_equals_code(dumped["sampling_method"], loaded.method)
         assert loaded.date_time == datetime.datetime.fromisoformat(dumped["date_time"])
         assert loaded.description == dumped["description"]
         assert (
@@ -161,22 +159,20 @@ class TestSampleJsonSchema:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert_dict_equals_code(dumped["method"], collection.method)
+        assert_dict_equals_code(dumped["extraction_method"], collection.method)
         assert dumped["date_time"] == collection.date_time.isoformat()
         assert dumped["description"] == collection.description
-        assert dumped["preparation_type"] == "collection"
 
     def test_collection_deserialize(self):
         # Arrange
         dumped = {
-            "method": {
+            "extraction_method": {
                 "value": "65801008",
                 "scheme_designator": "SCT",
                 "meaning": "Excision",
             },
             "date_time": "2023-08-05T00:00:00",
             "description": "description",
-            "preparation_type": "collection",
         }
 
         # Act
@@ -184,7 +180,7 @@ class TestSampleJsonSchema:
 
         # Assert
         assert isinstance(loaded, Collection)
-        assert_dict_equals_code(dumped["method"], loaded.method)
+        assert_dict_equals_code(dumped["extraction_method"], loaded.method)
         assert loaded.date_time == datetime.datetime.fromisoformat(dumped["date_time"])
         assert loaded.description == dumped["description"]
 
@@ -201,20 +197,18 @@ class TestSampleJsonSchema:
 
         # Assert
         assert isinstance(dumped, dict)
-        assert_dict_equals_code(dumped["method"], processing.method)
+        assert_dict_equals_code(dumped["processing_method"], processing.method)
         assert dumped["date_time"] == processing.date_time.isoformat()
-        assert dumped["preparation_type"] == "processing"
 
     def test_processing_deserialize(self):
         # Arrange
         dumped = {
-            "method": {
+            "processing_method": {
                 "value": "433452008",
                 "scheme_designator": "SCT",
                 "meaning": "Specimen clearing",
             },
             "date_time": "2023-08-05T00:00:00",
-            "preparation_type": "processing",
         }
 
         # Act
@@ -222,7 +216,7 @@ class TestSampleJsonSchema:
 
         # Assert
         assert isinstance(loaded, Processing)
-        assert_dict_equals_code(dumped["method"], loaded.method)
+        assert_dict_equals_code(dumped["processing_method"], loaded.method)
         assert loaded.date_time == datetime.datetime.fromisoformat(dumped["date_time"])
 
     def test_embedding_serialize(self):
@@ -240,7 +234,6 @@ class TestSampleJsonSchema:
         assert isinstance(dumped, dict)
         assert_dict_equals_code(dumped["medium"], embedding.medium)
         assert dumped["date_time"] == embedding.date_time.isoformat()
-        assert dumped["preparation_type"] == "embedding"
 
     def test_embedding_deserialize(self):
         # Arrange
@@ -251,7 +244,6 @@ class TestSampleJsonSchema:
                 "meaning": "Paraffin wax",
             },
             "date_time": "2023-08-05T00:00:00",
-            "preparation_type": "embedding",
         }
 
         # Act
@@ -277,7 +269,6 @@ class TestSampleJsonSchema:
         assert isinstance(dumped, dict)
         assert_dict_equals_code(dumped["fixative"], fixation.fixative)
         assert dumped["date_time"] == fixation.date_time.isoformat()
-        assert dumped["preparation_type"] == "fixation"
 
     def test_fixation_deserialize(self):
         # Arrange
@@ -288,7 +279,6 @@ class TestSampleJsonSchema:
                 "meaning": "Neutral Buffered Formalin",
             },
             "date_time": "2023-08-05T00:00:00",
-            "preparation_type": "fixation",
         }
 
         # Act
@@ -312,13 +302,13 @@ class TestSampleJsonSchema:
         assert isinstance(dumped, dict)
         assert dumped["identifier"] == extracted_specimen.identifier
         assert_dict_equals_code(
-            dumped["steps"][0]["method"], extracted_specimen.extraction_step.method
+            dumped["steps"][0]["extraction_method"],
+            extracted_specimen.extraction_step.method,
         )
         assert (
             dumped["steps"][0]["date_time"]
             == extracted_specimen.extraction_step.date_time.isoformat()
         )
-        assert dumped["steps"][0]["preparation_type"] == "collection"
         assert_dict_equals_code(dumped["type"], extracted_specimen.type)
 
     def test_extracted_specimen_deserialize(self):
@@ -327,14 +317,13 @@ class TestSampleJsonSchema:
             "identifier": "specimen",
             "steps": [
                 {
-                    "method": {
+                    "extraction_method": {
                         "value": "65801008",
                         "scheme_designator": "SCT",
                         "meaning": "Excision",
                     },
                     "date_time": "2023-08-05T00:00:00",
                     "description": "description",
-                    "preparation_type": "collection",
                 }
             ],
             "type": {
@@ -352,7 +341,9 @@ class TestSampleJsonSchema:
         assert loaded["identifier"] == dumped["identifier"]
         collection = loaded["steps"][0]
         assert isinstance(collection, Collection)
-        assert_dict_equals_code(dumped["steps"][0]["method"], collection.method)
+        assert_dict_equals_code(
+            dumped["steps"][0]["extraction_method"], collection.method
+        )
         assert collection.date_time == datetime.datetime.fromisoformat(
             dumped["steps"][0]["date_time"]
         )
@@ -372,9 +363,10 @@ class TestSampleJsonSchema:
         # Assert
         assert isinstance(dumped, dict)
         assert dumped["identifier"] == sample.identifier
-        assert_dict_equals_code(dumped["steps"][0]["method"], processing.method)
+        assert_dict_equals_code(
+            dumped["steps"][0]["processing_method"], processing.method
+        )
         assert dumped["steps"][0]["date_time"] == processing.date_time.isoformat()
-        assert dumped["steps"][0]["preparation_type"] == "processing"
         assert_dict_equals_code(dumped["type"], sample.type)
         assert (
             dumped["sampled_from"][0]["identifier"]
@@ -388,13 +380,12 @@ class TestSampleJsonSchema:
             "identifier": "sample",
             "steps": [
                 {
-                    "method": {
+                    "processing_method": {
                         "value": "433452008",
                         "scheme_designator": "SCT",
                         "meaning": "Specimen clearing",
                     },
                     "date_time": "2023-08-05T00:00:00",
-                    "preparation_type": "processing",
                 }
             ],
             "sampled_from": [{"identifier": "specimen", "sampling_step_index": 1}],
@@ -413,7 +404,9 @@ class TestSampleJsonSchema:
         assert loaded["identifier"] == dumped["identifier"]
         processing = loaded["steps"][0]
         assert isinstance(processing, Processing)
-        assert_dict_equals_code(dumped["steps"][0]["method"], processing.method)
+        assert_dict_equals_code(
+            dumped["steps"][0]["processing_method"], processing.method
+        )
         assert processing.date_time == datetime.datetime.fromisoformat(
             dumped["steps"][0]["date_time"]
         )
@@ -525,16 +518,15 @@ class TestSampleJsonSchema:
                 "identifier": "sample",
                 "steps": [
                     {
-                        "method": {
+                        "processing_method": {
                             "value": "433452008",
                             "scheme_designator": "SCT",
                             "meaning": "Specimen clearing",
                         },
                         "date_time": "2023-08-05T00:00:00",
-                        "preparation_type": "processing",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "434472006",
                             "scheme_designator": "SCT",
                             "meaning": "Block sectioning",
@@ -542,7 +534,6 @@ class TestSampleJsonSchema:
                         "sampling_chain_constraints": None,
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sectioning to slide",
-                        "preparation_type": "sampling",
                     },
                 ],
                 "sampled_from": [{"identifier": "specimen", "sampling_step_index": 0}],
@@ -556,17 +547,16 @@ class TestSampleJsonSchema:
                 "identifier": "specimen",
                 "steps": [
                     {
-                        "method": {
+                        "extraction_method": {
                             "value": "65801008",
                             "scheme_designator": "SCT",
                             "meaning": "Excision",
                         },
                         "date_time": "2023-08-05T00:00:00",
                         "description": "description",
-                        "preparation_type": "collection",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "122459003",
                             "scheme_designator": "SCT",
                             "meaning": "Dissection",
@@ -574,7 +564,6 @@ class TestSampleJsonSchema:
                         "sampling_chain_constraints": None,
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sampling to block",
-                        "preparation_type": "sampling",
                     },
                 ],
                 "type": {

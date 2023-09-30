@@ -47,10 +47,9 @@ def json_slide():
                             "meaning": "Paraffin wax",
                         },
                         "date_time": "2023-08-05T00:00:00",
-                        "preparation_type": "embedding",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "434472006",
                             "scheme_designator": "SCT",
                             "meaning": "Block sectioning",
@@ -60,10 +59,9 @@ def json_slide():
                         ],
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sampling to slide",
-                        "preparation_type": "sampling",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "434472006",
                             "scheme_designator": "SCT",
                             "meaning": "Block sectioning",
@@ -73,7 +71,6 @@ def json_slide():
                         ],
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sampling to slide",
-                        "preparation_type": "sampling",
                     },
                 ],
                 "sampled_from": [
@@ -90,14 +87,13 @@ def json_slide():
                 "identifier": "part 1",
                 "steps": [
                     {
-                        "method": {
+                        "extraction_method": {
                             "value": "17636008",
                             "scheme_designator": "SCT",
                             "meaning": "Specimen collection",
                         },
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Extracted",
-                        "preparation_type": "collection",
                     },
                     {
                         "fixative": {
@@ -106,10 +102,9 @@ def json_slide():
                             "meaning": "Neutral Buffered Formalin",
                         },
                         "date_time": "2023-08-05T00:00:00",
-                        "preparation_type": "fixation",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "122459003",
                             "scheme_designator": "SCT",
                             "meaning": "Dissection",
@@ -117,7 +112,6 @@ def json_slide():
                         "sampling_chain_constraints": None,
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sampling to block",
-                        "preparation_type": "sampling",
                     },
                 ],
                 "type": {
@@ -130,14 +124,13 @@ def json_slide():
                 "identifier": "part 2",
                 "steps": [
                     {
-                        "method": {
+                        "extraction_method": {
                             "value": "17636008",
                             "scheme_designator": "SCT",
                             "meaning": "Specimen collection",
                         },
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Extracted",
-                        "preparation_type": "collection",
                     },
                     {
                         "fixative": {
@@ -146,10 +139,9 @@ def json_slide():
                             "meaning": "Neutral Buffered Formalin",
                         },
                         "date_time": "2023-08-05T00:00:00",
-                        "preparation_type": "fixation",
                     },
                     {
-                        "method": {
+                        "sampling_method": {
                             "value": "122459003",
                             "scheme_designator": "SCT",
                             "meaning": "Dissection",
@@ -157,7 +149,6 @@ def json_slide():
                         "sampling_chain_constraints": None,
                         "date_time": "2023-08-05T00:00:00",
                         "description": "Sampling to block",
-                        "preparation_type": "sampling",
                     },
                 ],
                 "type": {
