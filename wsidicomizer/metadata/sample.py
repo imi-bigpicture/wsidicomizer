@@ -510,26 +510,16 @@ class Specimen(metaclass=ABCMeta):
     def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
         """Return complete list of formatted steps for this specimen. If specimen
         is sampled include steps for the sampled specimen."""
-        steps: List[SpecimenPreparationStep] = []
-        if isinstance(self, SampledSpecimen):
-            steps.extend(self._get_steps_for_sampling())
-        steps.extend(step.to_preparation_step(self.identifier) for step in self.steps)
-        return steps
+        return [step.to_preparation_step(self.identifier) for step in self.steps]
 
     def to_preparation_steps_for_sampling(
         self, sampling: Sampling
     ) -> List[SpecimenPreparationStep]:
         """Return formatted steps in this specimen used for the given sampling."""
-        steps: List[SpecimenPreparationStep] = []
-        if isinstance(self, SampledSpecimen):
-            steps.extend(
-                self._get_steps_for_sampling(sampling.sampling_chain_constraints)
-            )
-        steps.extend(
+        return [
             step.to_preparation_step(self.identifier)
             for step in self._get_steps_before_sampling(sampling)
-        )
-        return steps
+        ]
 
     def _get_steps_before_sampling(
         self, sampling: Sampling
@@ -569,6 +559,21 @@ class SampledSpecimen(Specimen, metaclass=ABCMeta):
                 "A collection step can only be added to specimens of type `ExtractedSpecimen`"
             )
         self.steps.append(step)
+
+    def to_preparation_steps(self) -> List[SpecimenPreparationStep]:
+        """Return complete list of formatted steps for this specimen. If specimen
+        is sampled include steps for the sampled specimen."""
+        steps = self._get_steps_for_sampling()
+        steps.extend(super().to_preparation_steps())
+        return steps
+
+    def to_preparation_steps_for_sampling(
+        self, sampling: Sampling
+    ) -> List[SpecimenPreparationStep]:
+        """Return formatted steps in this specimen used for the given sampling."""
+        steps = self._get_steps_for_sampling(sampling.sampling_chain_constraints)
+        steps.extend(super().to_preparation_steps_for_sampling(sampling))
+        return steps
 
     def _get_steps_for_sampling(
         self, sampling_chain_constraints: Optional[Sequence[Sampling]] = None
