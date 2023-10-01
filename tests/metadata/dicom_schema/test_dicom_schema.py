@@ -465,7 +465,6 @@ class TestDicomSchema:
         assert_dicom_code_dataset_equals_code(
             serialized.ContainerTypeCodeSequence[0], Defaults.slide_container_type
         )
-        print(serialized)
         if slide.samples is not None:
             assert len(serialized.SpecimenDescriptionSequence) == len(slide.samples)
             for specimen_description, sample in zip(
@@ -560,34 +559,6 @@ class TestDicomSchema:
         )
         assert_dicom_patient_equals_patient(serialized, patient)
 
-    @pytest.mark.parametrize(
-        "illumination", [IlluminationColorCode("Full Spectrum"), 400.0]
-    )
-    @pytest.mark.parametrize(
-        [
-            "acquisition_datetime",
-            "focus_method",
-            "extended_depth_of_field",
-            "image_coordinate_system",
-        ],
-        [
-            [
-                datetime(2023, 8, 5),
-                FocusMethod.AUTO,
-                ExtendedDepthOfField(5, 0.5),
-                ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0),
-            ],
-            [
-                datetime(2023, 8, 5, 12, 13, 14, 150),
-                FocusMethod.MANUAL,
-                ExtendedDepthOfField(15, 0.5),
-                ImageCoordinateSystem(PointMm(50.0, 20.0), 180.0),
-            ],
-        ],
-    )
-    @pytest.mark.parametrize(
-        "image_type", [ImageType.LABEL, ImageType.OVERVIEW, ImageType.VOLUME]
-    )
     def test_deserialize_wsi_metadata(
         self,
         wsi_metadata: WsiMetadata,
@@ -615,6 +586,38 @@ class TestDicomSchema:
         assert deserialized.study == study
         assert deserialized.series == series
         assert deserialized.patient == patient
+
+    def test_deserialize_wsi_metadata_from_multiple_datasets(
+        self,
+        wsi_metadata: WsiMetadata,
+        equipment: Equipment,
+        image: Image,
+        label: Label,
+        optical_path: OpticalPath,
+        study: Study,
+        series: Series,
+        patient: Patient,
+        image_type: ImageType,
+        dicom_wsi_metadata: Dataset,
+        dicom_label_label: Dataset,
+        dicom_overview_label: Dataset,
+    ):
+        # Arrange
+        schema = WsiMetadataDicomSchema()
+        datasets = [dicom_wsi_metadata, dicom_label_label, dicom_overview_label]
+
+        # Act
+        deserialized = schema.from_datasets(datasets)
+
+        # Assert
+        assert isinstance(deserialized, WsiMetadata)
+        assert deserialized.equipment == equipment
+        assert deserialized.image == image
+        assert deserialized.optical_paths[0] == optical_path
+        assert deserialized.study == study
+        assert deserialized.series == series
+        assert deserialized.patient == patient
+        assert deserialized.label == label
 
 
 def assert_dicom_equipment_equals_equipment(

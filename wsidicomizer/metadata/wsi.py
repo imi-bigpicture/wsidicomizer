@@ -15,9 +15,11 @@
 """Complete WSI model."""
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
+from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
+from wsidicom.instance import ImageType
 
 from wsidicomizer.metadata.base_model import BaseModel
 from wsidicomizer.metadata.equipment import Equipment

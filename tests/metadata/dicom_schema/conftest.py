@@ -1,9 +1,11 @@
+from datetime import datetime
 import pytest
 from pydicom import Dataset
 from pydicom.sr.coding import Code
 from pydicom.valuerep import DT
 from wsidicom.conceptcode import IlluminationColorCode
 from wsidicom.instance import ImageType
+from wsidicom.geometry import PointMm
 
 from tests.metadata.helpers import bool_to_dicom_literal, code_to_code_dataset
 from wsidicomizer.metadata import (
@@ -18,6 +20,11 @@ from wsidicomizer.metadata import (
     Label,
 )
 from wsidicomizer.metadata.dicom_schema.slide import SlideDicomSchema
+from wsidicomizer.metadata.image import (
+    ExtendedDepthOfField,
+    FocusMethod,
+    ImageCoordinateSystem,
+)
 
 
 @pytest.fixture()
@@ -60,6 +67,20 @@ def dicom_image(image: Image):
 
 @pytest.fixture()
 def dicom_label(label: Label, image_type: ImageType):
+    return create_dicom_label(label, image_type)
+
+
+@pytest.fixture()
+def dicom_label_label(label: Label):
+    return create_dicom_label(label, ImageType.LABEL)
+
+
+@pytest.fixture()
+def dicom_overview_label(label: Label):
+    return create_dicom_label(label, ImageType.OVERVIEW)
+
+
+def create_dicom_label(label: Label, image_type: ImageType):
     dataset = Dataset()
     dataset.ImageType = ["ORIGINAL", "PRIMIARY", image_type.value]
     if image_type == ImageType.LABEL:
@@ -224,3 +245,33 @@ def dicom_wsi_metadata(
     dataset.DimensionOrganizationSequence = [dimension_organization]
     dataset.FrameOfReferenceUID = wsi_metadata.frame_of_reference_uid
     yield dataset
+
+
+@pytest.fixture()
+def illumination():
+    yield IlluminationColorCode("Full Spectrum")
+
+
+@pytest.fixture()
+def acquisition_datetime():
+    yield datetime(2023, 8, 5)
+
+
+@pytest.fixture()
+def focus_method():
+    yield FocusMethod.AUTO
+
+
+@pytest.fixture()
+def extended_depth_of_field():
+    yield ExtendedDepthOfField(5, 0.5)
+
+
+@pytest.fixture()
+def image_coordinate_system():
+    yield ImageCoordinateSystem(PointMm(20.0, 30.0), 90.0)
+
+
+@pytest.fixture()
+def image_type():
+    yield ImageType.VOLUME

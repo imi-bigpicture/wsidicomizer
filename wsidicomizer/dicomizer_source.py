@@ -184,7 +184,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
             self.metadata
         )
-        assert isinstance(dataset, Dataset)
         return WsiDataset(dataset)
 
     @staticmethod
