@@ -19,6 +19,7 @@ from wsidicomizer.metadata import (
     WsiMetadata,
     Label,
 )
+from wsidicomizer.metadata.dicom_schema.optical_path import LutDicomFormatter
 from wsidicomizer.metadata.dicom_schema.slide import SlideDicomSchema
 from wsidicomizer.metadata.image import (
     ExtendedDepthOfField,
@@ -154,6 +155,11 @@ def dicom_optical_path(optical_path: OpticalPath):
         dataset.ObjectiveLensNumericalAperture = (
             optical_path.objective.objective_numerical_aperature
         )
+    if optical_path.lut is not None:
+        dataset.PaletteColorLookupTableSequence = LutDicomFormatter.to_dataset(
+            optical_path.lut
+        )
+
     yield dataset
 
 
@@ -238,11 +244,12 @@ def dicom_wsi_metadata(
     dataset.update(dicom_series)
     dataset.update(dicom_patient)
     dataset.OpticalPathSequence = [dicom_optical_path]
-    dimension_organization = Dataset()
-    dimension_organization.DimensionOrganizationUID = (
-        wsi_metadata.dimension_organization_uid
-    )
-    dataset.DimensionOrganizationSequence = [dimension_organization]
+    dimension_organization_sequence = list()
+    for uid in wsi_metadata.dimension_organization_uids:
+        dimension_organization = Dataset()
+        dimension_organization.DimensionOrganizationUID = uid
+        dimension_organization_sequence.append(dimension_organization)
+    dataset.DimensionOrganizationSequence = dimension_organization_sequence
     dataset.FrameOfReferenceUID = wsi_metadata.frame_of_reference_uid
     yield dataset
 

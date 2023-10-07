@@ -9,7 +9,6 @@ from wsidicomizer.metadata.dicom_schema.base_dicom_schema import DicomSchema
 from wsidicomizer.metadata.dicom_schema.dicom_fields import (
     DefaultingTagDicomField,
     FlatteningNestedField,
-    SequenceWrappingField,
     UidDicomField,
 )
 from wsidicomizer.metadata.dicom_schema.equipment import EquipmentDicomSchema
@@ -51,11 +50,11 @@ class WsiMetadataDicomSchema(DicomSchema[WsiMetadata]):
         data_key="FrameOfReferenceUID",
         tag="_frame_of_reference_uid",
     )
-    dimension_organization_uid = SequenceWrappingField(
+    dimension_organization_uids = fields.List(
         DefaultingTagDicomField(
             UidDicomField(),
             allow_none=True,
-            tag="_dimension_organization_uid",
+            tag="_dimension_organization_uids",
             data_key="DimensionOrganizationUID",
         ),
         data_key="DimensionOrganizationSequence",

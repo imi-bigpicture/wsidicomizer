@@ -9,6 +9,7 @@ from wsidicom.conceptcode import (
     LightPathFilterCode,
     LenseCode,
 )
+from pydicom.sequence import Sequence as DicomSequence
 from wsidicom.geometry import PointMm
 from wsidicom.instance import ImageType
 
@@ -41,7 +42,10 @@ from wsidicomizer.metadata.defaults import Defaults
 from wsidicomizer.metadata.dicom_schema.equipment import EquipmentDicomSchema
 from wsidicomizer.metadata.dicom_schema.image import ImageDicomSchema
 from wsidicomizer.metadata.dicom_schema.label import LabelDicomSchema
-from wsidicomizer.metadata.dicom_schema.optical_path import OpticalPathDicomSchema
+from wsidicomizer.metadata.dicom_schema.optical_path import (
+    LutDicomParser,
+    OpticalPathDicomSchema,
+)
 from wsidicomizer.metadata.dicom_schema.patient import PatientDicomSchema
 from wsidicomizer.metadata.dicom_schema.series import SeriesDicomSchema
 from wsidicomizer.metadata.dicom_schema.slide import SlideDicomSchema
@@ -151,7 +155,6 @@ class TestDicomSchema:
         assert serialized.AcquisitionDateTime == Defaults.date_time
         assert serialized.FocusMethod == Defaults.focus_method.name
         assert serialized.ExtendedDepthOfField == "NO"
-        print(serialized)
 
     @pytest.mark.parametrize(
         [
@@ -275,7 +278,6 @@ class TestDicomSchema:
         serialized = schema.dump(optical_path)
 
         # Assert
-        print(serialized)
         # TODO Assert id is filled
         assert isinstance(serialized, Dataset)
         assert_dicom_code_sequence_equals_codes(
@@ -742,6 +744,16 @@ def assert_dicom_optical_path_equals_optical_path(
             dicom_optical_path.ObjectiveLensNumericalAperture
             == optical_path.objective.objective_numerical_aperature
         )
+    if optical_path.lut is not None:
+        assert "PaletteColorLookupTableSequence" in dicom_optical_path
+        assert isinstance(
+            dicom_optical_path.PaletteColorLookupTableSequence, DicomSequence
+        )
+        assert len(dicom_optical_path.PaletteColorLookupTableSequence) == 1
+        parsed_lut = LutDicomParser.from_dataset(
+            dicom_optical_path.PaletteColorLookupTableSequence
+        )
+        assert parsed_lut == optical_path.lut
 
 
 def assert_dicom_patient_equals_patient(dicom_patient: Dataset, patient: Patient):

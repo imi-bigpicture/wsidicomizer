@@ -119,7 +119,7 @@ class ImageOrientationSlideField(fields.Field):
 
 
 class ListDicomField(fields.List):
-    """Wrapper around normala list that handles single-valued lists from pydicom."""
+    """Wrapper around normal list that handles single-valued lists from pydicom."""
 
     def _deserialize(
         self, value: Union[Any, List[Any]], attr, data, **kwargs
@@ -305,25 +305,15 @@ class NotNoneDicomField(TypeDicomField[ValueType]):
         return super()._serialize(value, attr, obj, **kwargs)
 
 
-class SequenceWrappingField(fields.Field, Generic[ValueType]):
+class SingleItemSequenceDicomField(fields.Field, Generic[ValueType]):
     def __init__(self, nested: Field, **kwargs):
         self._nested = nested
         super().__init__(**kwargs)
 
     def _serialize(self, value: Optional[ValueType], attr, obj, **kwargs):
-        dataset = Dataset()
         nested_value = self._nested._serialize(value, attr, obj, **kwargs)
-        if self._nested.data_key is not None:
-            key = self._nested.data_key
-        else:
-            key = self._nested.name
-        setattr(dataset, key, nested_value)
-        return [dataset]
+        return [nested_value]
 
     def _deserialize(self, value: Sequence[Dataset], attr, data, **kwargs):
-        if self._nested.data_key is not None:
-            key = self._nested.data_key
-        else:
-            key = self._nested.name
-        nested_value = getattr(value[0], key)
+        nested_value = value[0]
         return self._nested._deserialize(nested_value, attr, data, **kwargs)

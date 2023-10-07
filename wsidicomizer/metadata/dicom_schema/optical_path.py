@@ -1,7 +1,7 @@
 from enum import Enum
 import io
 import struct
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Type
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Type
 
 import numpy as np
 from marshmallow import fields, post_load, pre_dump
@@ -22,6 +22,7 @@ from wsidicomizer.metadata.dicom_schema.dicom_fields import (
     DefaultingDicomField,
     FlatteningNestedField,
     FloatDicomField,
+    SingleItemSequenceDicomField,
     SingleCodeDicomField,
 )
 from wsidicomizer.metadata.optical_path import (
@@ -46,7 +47,7 @@ class LutSegmentType(Enum):
 
 class LutDicomParser:
     @classmethod
-    def from_dataset(cls, dataset: Dataset) -> Optional[Lut]:
+    def from_dataset(cls, lut_sequence: Sequence[Dataset]) -> Optional[Lut]:
         """Read LUT from a DICOM optical path dataset..
 
         Parameters
@@ -55,13 +56,11 @@ class LutDicomParser:
             Optical path dataset with LUT to parse.
 
         """
-        if (
-            not "PaletteColorLookupTableSequence" in dataset
-            or len(dataset.PaletteColorLookupTableSequence) == 0
-        ):
-            return None
-        lut_dataset = dataset.PaletteColorLookupTableSequence[0]
-        length, first, bits = lut_dataset.RedPaletteColorLookupTableDescriptor
+        dataset = lut_sequence[0]
+        length, red_start, bits = dataset.RedPaletteColorLookupTableDescriptor
+        _, green_start, _ = dataset.GreenPaletteColorLookupTableDescriptor
+        _, blue_start, _ = dataset.BluePaletteColorLookupTableDescriptor
+
         bits = bits
         if bits == 8:
             data_type = np.dtype(np.uint8)
@@ -78,46 +77,52 @@ class LutDicomParser:
             "GreenPaletteColorLookupTableData",
             "BluePaletteColorLookupTableData",
         )
-        if all(key in lut_dataset for key in segmented_keys):
+        if all(key in dataset for key in segmented_keys):
             red = list(
                 cls._parse_segments(
-                    lut_dataset.SegmentedRedPaletteColorLookupTableData, data_type
+                    dataset.SegmentedRedPaletteColorLookupTableData, data_type
                 )
             )
             green = list(
                 cls._parse_segments(
-                    lut_dataset.SegmentedGreenPaletteColorLookupTableData, data_type
+                    dataset.SegmentedGreenPaletteColorLookupTableData, data_type
                 )
             )
             blue = list(
                 cls._parse_segments(
-                    lut_dataset.SegmentedBluePaletteColorLookupTableData, data_type
+                    dataset.SegmentedBluePaletteColorLookupTableData, data_type
                 )
             )
 
-        elif all(key in lut_dataset for key in non_segmented_keys):
+        elif all(key in dataset for key in non_segmented_keys):
             red = [
                 cls._parse_single_discrete_segment(
-                    lut_dataset.RedPaletteColorLookupTableData, data_type
+                    dataset.RedPaletteColorLookupTableData, data_type
                 )
             ]
             green = [
                 cls._parse_single_discrete_segment(
-                    lut_dataset.GreenPaletteColorLookupTableData, data_type
+                    dataset.GreenPaletteColorLookupTableData, data_type
                 )
             ]
             blue = [
                 cls._parse_single_discrete_segment(
-                    lut_dataset.BluePaletteColorLookupTableData, data_type
+                    dataset.BluePaletteColorLookupTableData, data_type
                 )
             ]
+
         else:
             raise ValueError(
                 "Lookup table data or segmented lookup table data missing for one "
                 "or more components."
             )
-        for color in (red, green, blue):
-            cls._add_start_and_end(first, length, color)
+        for color, start in (
+            (red, red_start),
+            (green, green_start),
+            (blue, blue_start),
+        ):
+            cls._add_start_and_end(start, length, color)
+
         return Lut(
             red=red,
             green=green,
@@ -316,90 +321,65 @@ class LutDicomParser:
 
 class LutDicomFormatter:
     @classmethod
-    def to_dataset(cls, lut: Lut) -> Dataset:
+    def to_dataset(cls, lut: Lut) -> List[Dataset]:
         """Convert lut into dataset."""
-        lut_dataset = Dataset()
-        start = cls._find_common_start(lut)
-        end = cls._find_common_end(lut)
-        if start is None:
-            start = 0
+        dataset = Dataset()
         if lut.length == 2**16:
             length = 0
         else:
             length = lut.length
-        descriptor = (length, start, lut.bits)
-        lut_dataset.RedPaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.GreenPaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.BluePaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.RedPaletteColorLookupTableData = cls._pack_segments(
-            lut.red, lut.data_type, start, end
-        )
-        lut_dataset.GreenPaletteColorLookupTableData = cls._pack_segments(
-            lut.green, lut.data_type, start, end
-        )
-        lut_dataset.BluePaletteColorLookupTableData = cls._pack_segments(
-            lut.blue, lut.data_type, start, end
-        )
-        dataset = Dataset()
-        dataset.PaletteColorLookupTableSequence = [lut_dataset]
-        return dataset
-
-    @classmethod
-    def _find_common_start(cls, lut: Lut) -> Optional[int]:
-        """Return constant start length (not necessary same value) across components."""
-        first_segments = (lut.red[0], lut.green[0], lut.blue[0])
-        return cls._find_common_constant_length(first_segments)
-
-    @classmethod
-    def _find_common_end(cls, lut: Lut) -> Optional[int]:
-        """Return constant end length (not necessary same value) across components."""
-        last_segments = (lut.red[-1], lut.green[-1], lut.blue[-1])
-        return cls._find_common_constant_length(last_segments)
-
-    @staticmethod
-    def _find_common_constant_length(segments: Sequence[LutSegment]) -> Optional[int]:
-        """Return minumum constant length between components."""
-        if not all(isinstance(segment, ConstantLutSegment) for segment in segments):
-            return None
-        return min(len(segment) for segment in segments)
+        red_start, red_data = cls._pack_segments(lut.red, lut.data_type)
+        green_start, green_data = cls._pack_segments(lut.green, lut.data_type)
+        blue_start, blue_data = cls._pack_segments(lut.blue, lut.data_type)
+        dataset.RedPaletteColorLookupTableDescriptor = (length, red_start, lut.bits)
+        dataset.GreenPaletteColorLookupTableDescriptor = (length, green_start, lut.bits)
+        dataset.BluePaletteColorLookupTableDescriptor = (length, blue_start, lut.bits)
+        dataset.SegmentedRedPaletteColorLookupTableData = red_data
+        dataset.SegmentedGreenPaletteColorLookupTableData = green_data
+        dataset.SegmentedBluePaletteColorLookupTableData = blue_data
+        return [dataset]
 
     @classmethod
     def _pack_segments(
         cls,
         segments: Sequence[LutSegment],
         data_type: np.dtype,
-        start: Optional[int],
-        end: Optional[int],
-    ) -> bytes:
-        """Pack segments into bytes."""
+    ) -> Tuple[int, bytes]:
+        """Pack segments into bytes.
+
+        Return start position (if constant first segment could be skipped) and bytes.
+        """
         if data_type == np.dtype(np.uint8):
             data_format = "B"
         else:
             data_format = "H"
         previous_segment: Optional[LutSegment] = None
         end_index = len(segments) - 1
+        start = 0
         with io.BytesIO() as buffer:
             for index, segment in enumerate(segments):
-                if isinstance(segment, DiscreteLutSegment):
-                    if index + 1 <= end_index:
+                if isinstance(segment, ConstantLutSegment):
+                    if index == 0 and len(segments) > 1:
+                        # Starting with constant segment and not only segment, we can
+                        # skip it and set start of segmented data to length of segment.
+                        start = segment.length
+                    elif index != end_index or len(segments) == 1:
+                        # Last contstant segment can be skipped if not only segment.
+                        cls._pack_constant_segment(
+                            buffer,
+                            segment,
+                            previous_segment,
+                            data_format,
+                        )
+                elif isinstance(segment, DiscreteLutSegment):
+                    # Get next segment if not last segment.
+                    if index < end_index:
                         next_segment = segments[index + 1]
                     else:
                         next_segment = None
                     cls._pack_discrete_segment(
                         buffer, segment, next_segment, data_format
                     )
-                elif isinstance(segment, ConstantLutSegment):
-                    cls._pack_constant_segment(
-                        buffer,
-                        segment,
-                        previous_segment,
-                        index,
-                        end_index,
-                        start,
-                        end,
-                        data_format,
-                    )
-
                 elif isinstance(segment, LinearLutSegment):
                     cls._pack_linear_segment(
                         buffer, segment, previous_segment, data_format
@@ -407,7 +387,7 @@ class LutDicomFormatter:
                 else:
                     raise NotImplementedError()
                 previous_segment = segment
-            return buffer.getvalue()
+            return start, buffer.getvalue()
 
     @classmethod
     def _pack_discrete_segment(
@@ -429,24 +409,15 @@ class LutDicomFormatter:
         buffer: io.BytesIO,
         segment: ConstantLutSegment,
         previous_segment: Optional[LutSegment],
-        index: int,
-        end_index: int,
-        start: Optional[int],
-        end: Optional[int],
         data_format: str,
     ):
-        length = segment.length
-        if start is not None and index == 0:
-            length = segment.length - start
-        elif end is not None and index == end_index:
-            length = segment.length - end
         if not isinstance(previous_segment, DiscreteLutSegment):
             cls._pack_discrete_data(
                 buffer,
                 [segment.value],
                 data_format,
             )
-        cls._pack_linear_data(buffer, length - 1, segment.value, data_format)
+        cls._pack_linear_data(buffer, segment.length - 1, segment.value, data_format)
 
     @classmethod
     def _pack_linear_segment(
@@ -499,6 +470,24 @@ class LutDicomFormatter:
                 end_value,
             )
         )
+
+
+class LutDicomField(fields.Field):
+    def _serialize(self, value: Optional[Lut], attr: Optional[str], obj: Any, **kwargs):
+        if value is None:
+            return None
+        return LutDicomFormatter.to_dataset(value)
+
+    def _deserialize(
+        self,
+        value: Optional[Dataset],
+        attr: Optional[str],
+        data: Optional[Dict[str, Any]],
+        **kwargs,
+    ) -> Optional[Lut]:
+        if value is None:
+            return None
+        return LutDicomParser.from_dataset(value)
 
 
 class FilterDicomSchema(DicomSchema[LoadType]):
@@ -594,6 +583,7 @@ class OpticalPathDicomSchema(DicomSchema[OpticalPath]):
     )
 
     # icc_profile: Optional[bytes] = None
+    lut = LutDicomField(data_key="PaletteColorLookupTableSequence", load_default=None)
     light_path_filter = FlatteningNestedField(
         LightPathFilterDicomSchema(), load_default=None
     )
@@ -615,6 +605,7 @@ class OpticalPathDicomSchema(DicomSchema[OpticalPath]):
             "light_path_filter": optical_path.light_path_filter,
             "image_path_filter": optical_path.image_path_filter,
             "objective": optical_path.objective,
+            "lut": optical_path.lut,
         }
 
         if isinstance(optical_path.illumination, float):

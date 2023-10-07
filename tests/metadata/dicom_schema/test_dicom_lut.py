@@ -51,6 +51,18 @@ class TestDicomLut:
                     np.dtype(np.uint16),
                 ),
             ),
+            (
+                (256, 0, 16),
+                b"\x00\x00\x01\x00\x00\x00\x01\x00\xff\x00\x00\x00",
+                b"\x00\x00\x01\x00\x00\x00\x01\x00\xff\x00\x00\x00",
+                b"\x00\x00\x01\x00\x00\x00\x01\x00\xff\x00\xff\x00",
+                Lut(
+                    [ConstantLutSegment(0, 256)],
+                    [ConstantLutSegment(0, 256)],
+                    [LinearLutSegment(0, 255, 256)],
+                    np.dtype(np.uint16),
+                ),
+            ),
         ],
     )
     def test_from_dataset(
@@ -62,18 +74,16 @@ class TestDicomLut:
         expected: Lut,
     ):
         # Arrange
-        lut_dataset = Dataset()
-        lut_dataset.RedPaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.GreenPaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.BluePaletteColorLookupTableDescriptor = descriptor
-        lut_dataset.SegmentedRedPaletteColorLookupTableData = red_lut
-        lut_dataset.SegmentedGreenPaletteColorLookupTableData = green_lut
-        lut_dataset.SegmentedBluePaletteColorLookupTableData = blue_lut
         dataset = Dataset()
-        dataset.PaletteColorLookupTableSequence = [lut_dataset]
+        dataset.RedPaletteColorLookupTableDescriptor = descriptor
+        dataset.GreenPaletteColorLookupTableDescriptor = descriptor
+        dataset.BluePaletteColorLookupTableDescriptor = descriptor
+        dataset.SegmentedRedPaletteColorLookupTableData = red_lut
+        dataset.SegmentedGreenPaletteColorLookupTableData = green_lut
+        dataset.SegmentedBluePaletteColorLookupTableData = blue_lut
 
         # Act
-        lut = LutDicomParser.from_dataset(dataset)
+        lut = LutDicomParser.from_dataset([dataset])
 
         # Assert
         assert lut == expected
@@ -148,19 +158,18 @@ class TestDicomLut:
         # Arrange
 
         # Act
-        dataset = LutDicomFormatter.to_dataset(lut)
+        dataset_sequence = LutDicomFormatter.to_dataset(lut)
 
         # Assert
-        assert "PaletteColorLookupTableSequence" in dataset
-        assert len(dataset.PaletteColorLookupTableSequence) == 1
-        lut_dataset = dataset.PaletteColorLookupTableSequence[0]
-        assert isinstance(lut_dataset, Dataset)
-        assert lut_dataset.RedPaletteColorLookupTableDescriptor == expected_descriptor
-        assert lut_dataset.GreenPaletteColorLookupTableDescriptor == expected_descriptor
-        assert lut_dataset.BluePaletteColorLookupTableDescriptor == expected_descriptor
-        assert lut_dataset.RedPaletteColorLookupTableData == expected_red_lut
-        assert lut_dataset.GreenPaletteColorLookupTableData == expected_green_lut
-        assert lut_dataset.BluePaletteColorLookupTableData == expected_blue_lut
+        assert len(dataset_sequence) == 1
+        dataset = dataset_sequence[0]
+        assert isinstance(dataset, Dataset)
+        assert dataset.RedPaletteColorLookupTableDescriptor == expected_descriptor
+        assert dataset.GreenPaletteColorLookupTableDescriptor == expected_descriptor
+        assert dataset.BluePaletteColorLookupTableDescriptor == expected_descriptor
+        assert dataset.SegmentedRedPaletteColorLookupTableData == expected_red_lut
+        assert dataset.SegmentedGreenPaletteColorLookupTableData == expected_green_lut
+        assert dataset.SegmentedBluePaletteColorLookupTableData == expected_blue_lut
 
     @pytest.mark.parametrize(
         ["given_data_type", "data", "expected_data_type"],
