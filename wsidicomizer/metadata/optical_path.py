@@ -13,13 +13,11 @@
 #    limitations under the License.
 
 """Optical path model."""
-import struct
+from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Generic, Optional, Sequence, TypeVar, Union
 
 import numpy as np
-from pydicom import Dataset
-from pydicom import Sequence as DicomSequence
 from wsidicom.conceptcode import (
     IlluminationCode,
     IlluminationColorCode,
@@ -31,30 +29,123 @@ from wsidicom.conceptcode import (
 from wsidicomizer.metadata.base_model import BaseModel
 
 
+class LutSegment:
+    @abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def array(
+        self, data_type: Union[np.dtype[np.uint8], np.dtype[np.uint16]]
+    ) -> np.ndarray:
+        raise NotImplementedError()
+
+
+@dataclass
+class DiscreteLutSegment(LutSegment):
+    """A discrete segmented defined by a sequence of values.
+
+    Note that when serializing, if the next segment is a Linear segment its start value
+    will be included in this segment."""
+
+    values: Sequence[int]
+
+    def __len__(self) -> int:
+        return len(self.values)
+
+    def array(
+        self, data_type: Union[np.dtype[np.uint8], np.dtype[np.uint16]]
+    ) -> np.ndarray:
+        return np.array(self.values, dtype=data_type)
+
+
+@dataclass
+class LinearLutSegment(LutSegment):
+    """A linear segment defined by start and end values and a length.
+
+    Note that the corresponding Dicom Linear Segment Type does not define the start
+    value. When serialized to Dicom the start value will be included in the previous
+    segment (as last value in a Discrete or Linear segment) and the length reduced by
+    one."""
+
+    start_value: int
+    end_value: int
+    length: int
+
+    def __len__(self) -> int:
+        return self.length
+
+    def array(
+        self, data_type: Union[np.dtype[np.uint8], np.dtype[np.uint16]]
+    ) -> np.ndarray:
+        return np.linspace(
+            start=self.start_value,
+            stop=self.end_value,
+            num=self.length,
+            dtype=data_type,
+        )
+
+
+@dataclass
+class ConstantLutSegment(LutSegment):
+    """A constant segment defined by a value and a length."""
+
+    value: int
+    length: int
+
+    def __len__(self) -> int:
+        return self.length
+
+    def array(
+        self, data_type: Union[np.dtype[np.uint8], np.dtype[np.uint16]]
+    ) -> np.ndarray:
+        return np.full(
+            self.length,
+            self.value,
+            dtype=data_type,
+        )
+
+
+@dataclass
 class Lut:
     """Represents a LUT."""
 
-    # TODO the init should take a tuple of lists that defines the LUT
-    def __init__(self, lut_sequence: DicomSequence):
-        """Read LUT from a DICOM LUT sequence.
+    red: Sequence[LutSegment]
+    green: Sequence[LutSegment]
+    blue: Sequence[LutSegment]
+    data_type: Union[np.dtype[np.uint8], np.dtype[np.uint16]]
 
-        Parameters
-        ----------
-        size: int
-            the number of entries in the table
-        bits: int
-            the bits for each entry (currently forced to 16)
-        """
-        self._lut_item = lut_sequence[0]
-        length, first, bits = self._lut_item.RedPaletteColorLookupTableDescriptor
-        self._length = length
-        self._bits = bits
-        if bits == 8:
-            self._type = np.dtype(np.uint8)
-        else:
-            self._type = np.dtype(np.uint16)
-        self._byte_format = "<HHH"  # Do we need to set endianness?
-        self.table = self._parse_lut(self._lut_item)
+    @property
+    def bits(self) -> int:
+        if self.data_type == np.uint8:
+            return 8
+        if self.data_type == np.uint16:
+            return 16
+        raise ValueError("Value type should be 'np.uint8' or np.uint16'.")
+
+    @property
+    def table(self) -> np.ndarray:
+        return np.stack(
+            [
+                np.concatenate([segment.array(self.data_type) for segment in self.red]),
+                np.concatenate(
+                    [segment.array(self.data_type) for segment in self.green]
+                ),
+                np.concatenate(
+                    [segment.array(self.data_type) for segment in self.blue]
+                ),
+            ]
+        )
+
+    @property
+    def length(self) -> int:
+        length_by_color = set(
+            sum(len(segment) for segment in color)
+            for color in (self.red, self.green, self.blue)
+        )
+        if len(length_by_color) != 1:
+            raise ValueError("Color components have different length.")
+        return length_by_color.pop()
 
     def array(self, mode: str) -> np.ndarray:
         """Return flattened representation of the lookup table with order
@@ -75,137 +166,7 @@ class Lut:
             bits = 16
         else:
             bits = 8
-        return self.table.flatten() / (2**self._bits / 2**bits)
-
-    def insert_into_ds(self, ds: Dataset) -> Dataset:
-        """Codes and insert object into sequence in dataset.
-
-        Parameters
-        ----------
-        ds: Dataset
-           Dataset to insert into.
-
-        Returns
-        ----------
-        Dataset
-            Dataset with object inserted.
-
-        """
-        ds.PaletteColorLookupTableSequence = DicomSequence([self._lut_item])
-        return ds
-
-    @classmethod
-    def from_ds(cls, ds: Dataset) -> Optional["Lut"]:
-        if "PaletteColorLookupTableSequence" in ds:
-            return cls(ds.PaletteColorLookupTableSequence)
-        return None
-
-    def get(self) -> np.ndarray:
-        """Return 2D representation of the lookup table.
-
-        Returns
-        ----------
-        np.ndarray
-            Lookup table ordered by color x entry
-        """
-        return self.table
-
-    def _parse_color(self, segmented_lut_data: bytes):
-        LENGTH = 6
-        parsed_table = np.ndarray((0,), dtype=self._type)
-        for segment in range(int(len(segmented_lut_data) / LENGTH)):
-            segment_bytes = segmented_lut_data[
-                segment * LENGTH : segment * LENGTH + LENGTH
-            ]
-            lut_type, lut_length, lut_value = struct.unpack(
-                self._byte_format, segment_bytes
-            )
-            if lut_type == 0:
-                parsed_table = self._add_discret(parsed_table, lut_length, lut_value)
-            elif lut_type == 1:
-                parsed_table = self._add_linear(parsed_table, lut_length, lut_value)
-            else:
-                raise NotImplementedError("Unknown lut segment type")
-        return parsed_table
-
-    def _parse_lut(self, lut: Dataset) -> np.ndarray:
-        """Parse a dicom Palette Color Lookup Table Sequence item.
-
-        Parameters
-        ----------
-        lut: Dataset
-            A Palette Color Lookup Table Sequence item
-        """
-        tables = [
-            lut.SegmentedRedPaletteColorLookupTableData,
-            lut.SegmentedGreenPaletteColorLookupTableData,
-            lut.SegmentedBluePaletteColorLookupTableData,
-        ]
-        parsed_tables = np.zeros((len(tables), self._length), dtype=self._type)
-
-        for color, table in enumerate(tables):
-            parsed_tables[color] = self._parse_color(table)
-        return parsed_tables
-
-    @classmethod
-    def _insert(cls, table: np.ndarray, segment: np.ndarray):
-        """Insert a segment into the lookup table of channel.
-
-        Parameters
-        ----------
-        channel: int
-            The channel (r=0, g=1, b=2) to operate on
-        segment: np.ndarray
-            The segment to insert
-        """
-        table = np.append(table, segment)
-        return table
-
-    @classmethod
-    def _add_discret(cls, table: np.ndarray, length: int, value: int):
-        """Add a discret segment into the lookup table of channel.
-
-        Parameters
-        ----------
-        channel: int
-            The channel (r=0, g=1, b=2) to operate on
-        length: int
-            The length of the discret segment
-        value: int
-            The value of the deiscret segment
-        """
-        segment = np.full(length, value, dtype=table.dtype)
-        table = cls._insert(table, segment)
-        return table
-
-    @classmethod
-    def _add_linear(cls, table: np.ndarray, length: int, value: int):
-        """Add a linear segment into the lookup table of channel.
-
-        Parameters
-        ----------
-        channel: int
-            The channel (r=0, g=1, b=2) to operate on
-        length: int
-            The length of the discret segment
-        value: int
-            The value of the deiscret segment
-        """
-        # Default shift segment by one to not include first value
-        # (same as last value)
-        start_position = 1
-        # If no last value, set it to 0 and include
-        # first value in segment
-        try:
-            last_value = table[-1]
-        except IndexError:
-            last_value = 0
-            start_position = 0
-        segment = np.linspace(
-            start=last_value, stop=value, num=start_position + length, dtype=table.dtype
-        )
-        table = cls._insert(table, segment[start_position:])
-        return table
+        return self.table.flatten() / (2**self.bits / 2**bits)
 
 
 OpticalFilterCodeType = TypeVar(
@@ -218,7 +179,7 @@ OpticalFilterType = TypeVar("OpticalFilterType", bound="OpticalFilter")
 
 @dataclass
 class OpticalFilter(Generic[OpticalFilterCodeType]):
-    """Metaclass for filter conditions for optical path"""
+    """Metaclass for filter conditions for optical path."""
 
     filters: Sequence[OpticalFilterCodeType] = field(default_factory=list)
     nominal: Optional[float] = None
@@ -227,21 +188,17 @@ class OpticalFilter(Generic[OpticalFilterCodeType]):
 
 
 class LightPathFilter(OpticalFilter[LightPathFilterCode]):
-    """Set of light path filter conditions for optical path"""
-
-    pass
+    """Set of light path filter conditions for optical path."""
 
 
 @dataclass
 class ImagePathFilter(OpticalFilter[ImagePathFilterCode]):
-    """Set of image path filter conditions for optical path"""
-
-    pass
+    """Set of image path filter conditions for optical path."""
 
 
 @dataclass
 class Objectives:
-    """Set of lens conditions for optical path"""
+    """Set of lens conditions for optical path."""
 
     lenses: Sequence[LenseCode] = field(default_factory=list)
     condenser_power: Optional[float] = None
@@ -268,13 +225,3 @@ class OpticalPath(BaseModel):
     light_path_filter: Optional[LightPathFilter] = None
     image_path_filter: Optional[ImagePathFilter] = None
     objective: Optional[Objectives] = None
-
-    @staticmethod
-    def _generate_unique_identifier(optical_paths: DicomSequence) -> str:
-        identifiers = [
-            optical_path.OpticalPathIdentifier for optical_path in optical_paths
-        ]
-        identifier = 0
-        while identifier in identifiers:
-            identifier += 1
-        return str(identifier)
