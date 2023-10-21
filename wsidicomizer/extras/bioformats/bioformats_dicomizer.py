@@ -23,7 +23,7 @@ from wsidicom import WsiDicom
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 from wsidicomizer.wsidicomizer import WsiDicomizer
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata.wsi import WsiMetadata
 
 
 class BioformatsDicomizer(WsiDicomizer):

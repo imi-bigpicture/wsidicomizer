@@ -13,12 +13,18 @@
 #    limitations under the License.
 
 import pytest
+from wsidicom.metadata import (
+    Equipment,
+    Image,
+    Label,
+    Patient,
+    Series,
+    Slide,
+    Study,
+    WsiMetadata,
+)
 
-from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.patient import Patient
-from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.study import Study
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicomizer.metadata.base_model import ModelMerger
 
 
 @pytest.fixture
@@ -46,7 +52,9 @@ class TestMetadataMerge:
         # Arrange
 
         # Act
-        merged = Equipment.merge(base_equipment, user_equipment, default_equipment)
+        merged = ModelMerger.merge(
+            Equipment, base_equipment, user_equipment, default_equipment
+        )
 
         # Assert
         assert merged is not None
@@ -64,12 +72,39 @@ class TestMetadataMerge:
         series: Series,
         patient: Patient,
     ):
-        base = WsiMetadata(equipment=base_equipment, series=series)
-        user = WsiMetadata(equipment=user_equipment, study=study)
-        default = WsiMetadata(equipment=default_equipment, patient=patient)
+        base = WsiMetadata(
+            study=Study(),
+            series=series,
+            patient=Patient(),
+            equipment=base_equipment,
+            optical_paths=[],
+            slide=Slide(),
+            label=Label(),
+            image=Image(),
+        )
+        user = WsiMetadata(
+            study=study,
+            series=Series(),
+            patient=Patient(),
+            equipment=user_equipment,
+            optical_paths=[],
+            slide=Slide(),
+            label=Label(),
+            image=Image(),
+        )
+        default = WsiMetadata(
+            study=study,
+            series=Series(),
+            patient=patient,
+            equipment=default_equipment,
+            optical_paths=[],
+            slide=Slide(),
+            label=Label(),
+            image=Image(),
+        )
 
         # Act
-        merged = WsiMetadata.merge(base, user, default)
+        merged = ModelMerger.merge(WsiMetadata, base, user, default)
 
         # Assert
         assert merged is not None

@@ -24,7 +24,7 @@ from tiffslide import TiffSlide
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import WsiMetadata
+from wsidicom.metadata import WsiMetadata
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
     TiffSlideAssociatedImageData,
     TiffSlideAssociatedImageType,

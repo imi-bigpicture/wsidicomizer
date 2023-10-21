@@ -22,7 +22,7 @@ from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.geometry import Point, Size, SizeMm, Orientation
 from wsidicom.instance import ImageCoordinateSystem
-from wsidicomizer.metadata.image import (
+from wsidicom.metadata.image import (
     ImageCoordinateSystem as ImageCoordinateSystemMetadata,
 )
 from wsidicomizer.encoding import Encoder

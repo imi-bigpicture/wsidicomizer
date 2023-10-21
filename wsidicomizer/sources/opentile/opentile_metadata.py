@@ -17,12 +17,11 @@
 from opentile import Metadata as OpenTileMetadata
 from pydicom.uid import generate_uid
 from wsidicom.geometry import PointMm
-
-from wsidicomizer.metadata import WsiMetadata
-from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.image import Image, ImageCoordinateSystem
-from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.study import Study
+from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata.equipment import Equipment
+from wsidicom.metadata.image import Image, ImageCoordinateSystem
+from wsidicom.metadata.series import Series
+from wsidicom.metadata.study import Study
 
 
 class OpentileMetadata(WsiMetadata):

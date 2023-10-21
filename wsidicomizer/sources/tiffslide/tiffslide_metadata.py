@@ -17,11 +17,11 @@
 from tiffslide import TiffSlide
 from tiffslide.tiffslide import PROPERTY_NAME_OBJECTIVE_POWER, PROPERTY_NAME_VENDOR
 
-from wsidicomizer.metadata import WsiMetadata, Equipment, OpticalPath
-from wsidicomizer.metadata.image import Image
-from wsidicomizer.metadata.optical_path import Objectives
-from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.study import Study
+from wsidicom.metadata import WsiMetadata, Equipment, OpticalPath
+from wsidicom.metadata.image import Image
+from wsidicom.metadata.optical_path import Objectives
+from wsidicom.metadata.series import Series
+from wsidicom.metadata.study import Study
 from pydicom.uid import generate_uid
 
 

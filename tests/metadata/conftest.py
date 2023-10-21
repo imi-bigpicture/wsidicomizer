@@ -14,8 +14,8 @@
 
 import datetime
 from typing import Optional, Sequence, Union
-import numpy as np
 
+import numpy as np
 import pytest
 from pydicom.sr.coding import Code
 from pydicom.uid import UID
@@ -34,8 +34,8 @@ from wsidicom.conceptcode import (
     SpecimenSamplingProcedureCode,
     SpecimenStainsCode,
 )
-
-from wsidicomizer.metadata import (
+from wsidicom.metadata import (
+    ConstantLutSegment,
     Equipment,
     ExtendedDepthOfField,
     FocusMethod,
@@ -44,25 +44,19 @@ from wsidicomizer.metadata import (
     ImagePathFilter,
     Label,
     LightPathFilter,
+    LinearLutSegment,
+    Lut,
     Objectives,
     OpticalPath,
     Patient,
     PatientDeIdentification,
     PatientSex,
     Series,
+    Slide,
     Study,
-    Lut,
+    WsiMetadata,
 )
-from wsidicomizer.metadata.equipment import Equipment
-from wsidicomizer.metadata.image import (
-    ExtendedDepthOfField,
-    FocusMethod,
-    Image,
-    ImageCoordinateSystem,
-)
-from wsidicomizer.metadata.label import Label
-from wsidicomizer.metadata.optical_path import ConstantLutSegment, LinearLutSegment
-from wsidicomizer.metadata.sample import (
+from wsidicom.metadata.sample import (
     Collection,
     Embedding,
     ExtractedSpecimen,
@@ -73,8 +67,6 @@ from wsidicomizer.metadata.sample import (
     SlideSamplePosition,
     Staining,
 )
-from wsidicomizer.metadata.slide import Slide
-from wsidicomizer.metadata.wsi import WsiMetadata
 
 
 @pytest.fixture
@@ -165,7 +157,7 @@ def lut():
         [ConstantLutSegment(0, 256)],
         [ConstantLutSegment(0, 256)],
         [LinearLutSegment(0, 255, 256)],
-        np.dtype(np.uint16),
+        np.uint16,
     )
 
 

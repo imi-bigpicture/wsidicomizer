@@ -25,10 +25,10 @@ from dateutil import parser as dateparser
 from wsidicom.geometry import SizeMm
 
 from pydicom.uid import generate_uid
-from wsidicomizer.metadata import WsiMetadata, Image, Equipment
-from wsidicomizer.metadata.optical_path import Objectives, OpticalPath
-from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.study import Study
+from wsidicom.metadata import WsiMetadata, Image, Equipment
+from wsidicom.metadata.optical_path import Objectives, OpticalPath
+from wsidicom.metadata.series import Series
+from wsidicom.metadata.study import Study
 
 ElementType = TypeVar("ElementType", str, int, float)
 

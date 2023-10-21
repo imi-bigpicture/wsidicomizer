@@ -17,8 +17,8 @@ import os
 from pathlib import Path
 from typing import Optional, Sequence
 
-from wsidicomizer.metadata.json_schema.wsi import WsiMetadataSchema
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata.json_schema.wsi import WsiMetadataJsonSchema
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -217,7 +217,7 @@ class WsiDicomizerCli:
     @staticmethod
     def _load_metadata(filepath: Path) -> WsiMetadata:
         with open(filepath) as json_file:
-            metadata = WsiMetadataSchema().loads(json_file.read())
+            metadata = WsiMetadataJsonSchema().loads(json_file.read())
             assert isinstance(metadata, WsiMetadata)
             return metadata
 

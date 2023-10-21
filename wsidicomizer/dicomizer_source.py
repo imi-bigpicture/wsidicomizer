@@ -20,16 +20,17 @@ from functools import cached_property
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from pydicom import Dataset, config
+from pydicom import config
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
 
-from wsidicomizer.metadata import WsiMetadata
+from wsidicom.metadata import WsiMetadata
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
+from wsidicom.metadata.wsi import WsiMetadata
+from wsidicomizer.metadata.base_model import ModelMerger
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -55,10 +56,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
-        if metadata is None:
-            metadata = WsiMetadata()
-        if default_metadata is None:
-            default_metadata = WsiMetadata()
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
@@ -118,18 +115,18 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     def metadata(self) -> WsiMetadata:
-        merged = WsiMetadata.merge(
-            self.image_metadata, self.user_metadata, self.default_metadata
+        merged = ModelMerger.merge(
+            WsiMetadata, self.image_metadata, self.user_metadata, self.default_metadata
         )
         assert merged is not None
         return merged
 
     @property
-    def user_metadata(self) -> WsiMetadata:
+    def user_metadata(self) -> Optional[WsiMetadata]:
         return self._user_metadata
 
     @property
-    def default_metadata(self) -> WsiMetadata:
+    def default_metadata(self) -> Optional[WsiMetadata]:
         return self._default_metadata
 
     @property

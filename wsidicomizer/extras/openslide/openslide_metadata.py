@@ -21,11 +21,11 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_VENDOR,
     OpenSlide,
 )
-from wsidicomizer.metadata import Equipment, OpticalPath, WsiMetadata
-from wsidicomizer.metadata.image import Image
-from wsidicomizer.metadata.optical_path import Objectives
-from wsidicomizer.metadata.series import Series
-from wsidicomizer.metadata.study import Study
+from wsidicom.metadata import Equipment, OpticalPath, WsiMetadata
+from wsidicom.metadata.image import Image
+from wsidicom.metadata.optical_path import Objectives
+from wsidicom.metadata.series import Series
+from wsidicom.metadata.study import Study
 
 
 class OpenSlideMetadata(WsiMetadata):

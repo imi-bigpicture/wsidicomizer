@@ -20,8 +20,8 @@ from typing import List, Optional, Sequence
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import WsiMetadata
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
 
 

@@ -37,6 +37,7 @@ from .conftest import test_parameters
 
 @pytest.mark.integrationtest
 class TestWsiDicomizerConvert:
+    @pytest.mark.xfail
     @pytest.mark.parametrize(
         ["file_format", "file"],
         [

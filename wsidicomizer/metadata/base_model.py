@@ -14,7 +14,7 @@
 
 """Base model for metadata."""
 from abc import ABCMeta
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
 from typing import (
     Any,
     Dict,
@@ -23,21 +23,21 @@ from typing import (
     TypeVar,
 )
 
-
-BaseModelType = TypeVar("BaseModelType", bound="BaseModel")
+ModelType = TypeVar("ModelType")
 
 
 @dataclass
-class BaseModel(metaclass=ABCMeta):
+class ModelMerger(metaclass=ABCMeta):
     """Base model."""
 
     @classmethod
     def merge(
-        cls: Type[BaseModelType],
-        base: Optional[BaseModelType],
-        user: Optional[BaseModelType],
-        default: Optional[BaseModelType],
-    ) -> Optional[BaseModelType]:
+        cls,
+        model_class: Type[ModelType],
+        base: Optional[ModelType],
+        user: Optional[ModelType],
+        default: Optional[ModelType],
+    ) -> Optional[ModelType]:
         """Merge three models to a new model.
 
         - base - model from file.
@@ -51,8 +51,9 @@ class BaseModel(metaclass=ABCMeta):
             return None
         if len(not_none) == 1:
             return not_none[0]
+        assert is_dataclass(model_class)
         attributes: Dict[str, Any] = {}
-        for field in fields(cls):
+        for field in fields(model_class):
             base_value = getattr(base, field.name, None)
             user_value = getattr(user, field.name, None)
             default_value = getattr(default, field.name, None)
@@ -64,8 +65,10 @@ class BaseModel(metaclass=ABCMeta):
                 ),
                 None,
             )
-            if isinstance(value, BaseModel):
-                value = value.merge(base_value, user_value, default_value)
+            if is_dataclass(value):
+                value = cls.merge(
+                    value.__class__, base_value, user_value, default_value
+                )
 
             attributes[field.name] = value
-        return cls(**attributes)
+        return model_class(**attributes)

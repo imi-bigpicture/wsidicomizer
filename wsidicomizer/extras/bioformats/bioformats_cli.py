@@ -19,7 +19,7 @@ from typing import Optional, Sequence
 
 from wsidicomizer.cli import WsiDicomizerCli
 from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata.wsi import WsiMetadata
 
 
 class BioformatsCli(WsiDicomizerCli):

@@ -22,7 +22,7 @@ from opentile import OpenTile
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata.wsi import WsiMetadata
+from wsidicom.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.opentile.opentile_image_data import OpenTileImageData
 from wsidicomizer.sources.opentile.opentile_metadata import OpentileMetadata
 
