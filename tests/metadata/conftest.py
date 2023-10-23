@@ -17,7 +17,6 @@ from typing import Optional, Sequence, Union
 
 import numpy as np
 import pytest
-from pydicom.sr.coding import Code
 from pydicom.uid import UID
 from wsidicom.conceptcode import (
     AnatomicPathologySpecimenTypesCode,

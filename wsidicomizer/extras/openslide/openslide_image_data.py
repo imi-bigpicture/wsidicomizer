@@ -25,8 +25,9 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Orientation, Point, PointMm, Region, Size, SizeMm
+from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import (
@@ -35,8 +36,6 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_WIDTH,
     PROPERTY_NAME_BOUNDS_X,
     PROPERTY_NAME_BOUNDS_Y,
-    PROPERTY_NAME_MPP_X,
-    PROPERTY_NAME_MPP_Y,
     OpenSlide,
     _read_region,
     convert_argb_to_rgba,
@@ -187,7 +186,12 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
 
 class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
-        self, open_slide: OpenSlide, level_index: int, tile_size: int, encoder: Encoder
+        self,
+        open_slide: OpenSlide,
+        image_metadata: ImageMetadata,
+        level_index: int,
+        tile_size: int,
+        encoder: Encoder,
     ):
         super().__init__(open_slide, encoder)
         """Wraps a OpenSlide level to ImageData.
@@ -211,26 +215,21 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         )
         self._downsample = self._slide.level_downsamples[self._level_index]
         self._pyramid_index = int(round(math.log2(self.downsample)))
+        if image_metadata.pixel_spacing is None:
+            raise ValueError("Could not determine pixel spacing for openslide image.")
+        self._pixel_spacing = SizeMm(
+            image_metadata.pixel_spacing.width * self.downsample,
+            image_metadata.pixel_spacing.height * self.downsample,
+        )
 
-        try:
-            base_mpp_x = float(self._slide.properties[PROPERTY_NAME_MPP_X])
-            base_mpp_y = float(self._slide.properties[PROPERTY_NAME_MPP_Y])
-            self._pixel_spacing = SizeMm(
-                base_mpp_x * self.downsample / 1000.0,
-                base_mpp_y * self.downsample / 1000.0,
-            )
-        except KeyError:
-            raise Exception(
-                "Could not determine pixel spacing as openslide did not "
-                "provide mpp from the file."
-            )
-
-        # Get set image origin and size to bounds if available
-        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X, 0)
-        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y, 0)
+        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X)
+        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y)
         bounds_w = self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH)
         bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
-        self._offset = Point(int(bounds_x), int(bounds_y))
+        if bounds_x is not None and bounds_y is not None:
+            self._offset = Point(int(bounds_x), int(bounds_y))
+        else:
+            self._offset = Point(0, 0)
         if bounds_w is not None and bounds_h is not None:
             self._image_size = Size(int(bounds_w), int(bounds_h)) // int(
                 round(self.downsample)
@@ -244,12 +243,13 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
-        self._image_coordinate_system = ImageCoordinateSystem(
-            PointMm(
-                self._offset.x * base_mpp_x / 1000, self._offset.y * base_mpp_y / 1000
-            ),
-            Orientation((0, 1, 0, 1, 0, 0)),
-        )
+        if image_metadata.image_coordinate_system is not None:
+            self._image_coordinate_system = ImageCoordinateSystem(
+                image_metadata.image_coordinate_system.origin,
+                image_metadata.image_coordinate_system.orientation,
+            )
+        else:
+            self._image_coordinate_system = None
 
     @property
     def image_size(self) -> Size:
@@ -278,6 +278,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
         return self._image_coordinate_system
 
     def stitch_tiles(

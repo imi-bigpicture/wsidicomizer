@@ -23,7 +23,10 @@ from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
+from wsidicom.geometry import SizeMm
 from wsidicom.errors import WsiDicomNotFoundError
+from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_X,
@@ -373,3 +376,28 @@ class TestWsiDicomizerConvert:
         assert image_coordinate_system is not None
         assert image_coordinate_system.origin.x == expected_image_coordinate_system["x"]
         assert image_coordinate_system.origin.y == expected_image_coordinate_system["y"]
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file in format_files.keys()
+        ],
+    )
+    def test_change_pixel_spacing(
+        self, file_format: str, file: str, wsi_files: Dict[str, Dict[str, Path]]
+    ):
+        # Arrange
+        wsi_file = wsi_files[file_format][file]
+        given_pixel_spacing = SizeMm(47, 47)
+        metadata = WsiDicomizerMetadata(
+            image=ImageMetadata(pixel_spacing=given_pixel_spacing)
+        )
+
+        # Act
+        with WsiDicomizer.open(wsi_file, metadata=metadata) as wsi:
+            base_pixel_spacing = wsi.pixel_spacing
+
+        # Assert
+        assert base_pixel_spacing == given_pixel_spacing

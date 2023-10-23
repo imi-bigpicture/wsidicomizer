@@ -14,17 +14,15 @@
 
 """Image data for opentile compatible file."""
 
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 from opentile.tiff_image import TiffImage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.geometry import Point, Size, SizeMm, Orientation
+from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
-from wsidicom.metadata.image import (
-    ImageCoordinateSystem as ImageCoordinateSystemMetadata,
-)
+from wsidicom.metadata import Image as ImageMetadata
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -34,7 +32,6 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiff_image: TiffImage,
         encoder: Encoder,
-        image_coordinate_system: Optional[ImageCoordinateSystemMetadata] = None,
     ):
         """Wraps a TiffImage to ImageData.
 
@@ -44,8 +41,6 @@ class OpenTileImageData(DicomizerImageData):
             TiffImage to wrap.
         encoded: Encoder
             Encoder to use.
-        image_coordinate_system: Optional[ImageCoordinateSystemMetadata] = None
-            Metadata for image coordinate system.
         """
         super().__init__(encoder)
         self._tiff_image = tiff_image
@@ -58,17 +53,6 @@ class OpenTileImageData(DicomizerImageData):
         self._image_size = Size(*self._tiff_image.image_size.to_tuple())
         self._tile_size = Size(*self._tiff_image.tile_size.to_tuple())
         self._tiled_size = Size(*self._tiff_image.tiled_size.to_tuple())
-        if self._tiff_image.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
-        else:
-            self._pixel_spacing = None
-        if image_coordinate_system is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                origin=image_coordinate_system.origin,
-                orientation=image_coordinate_system.orientation,
-            )
-        else:
-            self._image_coordinate_system = None
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiff_image}"
@@ -103,11 +87,6 @@ class OpenTileImageData(DicomizerImageData):
         return self._tile_size
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
     def focal_planes(self) -> List[float]:
         """Focal planes available in the image defined in um."""
         return [self._tiff_image.focal_plane]
@@ -127,12 +106,6 @@ class OpenTileImageData(DicomizerImageData):
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
         return self._tiff_image.pyramid_index
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
-        return self._image_coordinate_system
 
     @property
     def photometric_interpretation(self) -> str:
@@ -252,3 +225,62 @@ class OpenTileImageData(DicomizerImageData):
         elif compression == COMPRESSION.APERIO_JP2000_RGB:
             return JPEG2000
         raise NotImplementedError(f"Not supported compression {compression}")
+
+
+class OpenTileLevelImageData(OpenTileImageData):
+    def __init__(
+        self,
+        tiff_image: TiffImage,
+        image_metadata: ImageMetadata,
+        merged_metadata: ImageMetadata,
+        encoder: Encoder,
+    ):
+        super().__init__(tiff_image, encoder)
+        if (
+            merged_metadata.pixel_spacing is not None
+            and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
+        ):
+            # Override pixel spacing
+            self._pixel_spacing = merged_metadata.pixel_spacing * int(
+                2**self._tiff_image.pyramid_index
+            )
+        elif self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        else:
+            raise ValueError("Could not determine pixel spacing for tiff image.")
+
+        if merged_metadata.image_coordinate_system is not None:
+            self._image_coordinate_system = ImageCoordinateSystem(
+                origin=merged_metadata.image_coordinate_system.origin,
+                orientation=merged_metadata.image_coordinate_system.orientation,
+            )
+        else:
+            self._image_coordinate_system = None
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
+
+    @property
+    def pixel_spacing(self) -> SizeMm:
+        return self._pixel_spacing
+
+
+class OpenTileAssociatedImageData(OpenTileImageData):
+    def __init__(
+        self,
+        tiff_image: TiffImage,
+        encoder: Encoder,
+    ):
+        super().__init__(tiff_image, encoder)
+        if self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        else:
+            self._pixel_spacing = None
+
+    @property
+    def pixel_spacing(self) -> Optional[SizeMm]:
+        """Size of the pixels in mm/pixel."""
+        return self._pixel_spacing

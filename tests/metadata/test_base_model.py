@@ -24,7 +24,7 @@ from wsidicom.metadata import (
     WsiMetadata,
 )
 
-from wsidicomizer.metadata.base_model import ModelMerger
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ class TestMetadataMerge:
         # Arrange
 
         # Act
-        merged = ModelMerger.merge(
+        merged = WsiDicomizerMetadata._merge(
             Equipment, base_equipment, user_equipment, default_equipment
         )
 
@@ -61,7 +61,7 @@ class TestMetadataMerge:
         assert merged.manufacturer == user_equipment.manufacturer
         assert merged.model_name == base_equipment.model_name
         assert merged.device_serial_number == default_equipment.device_serial_number
-        assert merged.software_versions == None
+        assert merged.software_versions is None
 
     def test_merge_nested(
         self,
@@ -72,7 +72,7 @@ class TestMetadataMerge:
         series: Series,
         patient: Patient,
     ):
-        base = WsiMetadata(
+        base = WsiDicomizerMetadata(
             study=Study(),
             series=series,
             patient=Patient(),
@@ -104,7 +104,7 @@ class TestMetadataMerge:
         )
 
         # Act
-        merged = ModelMerger.merge(WsiMetadata, base, user, default)
+        merged = base.merge(user, default, True)
 
         # Assert
         assert merged is not None
@@ -115,7 +115,7 @@ class TestMetadataMerge:
             merged.equipment.device_serial_number
             == default_equipment.device_serial_number
         )
-        assert merged.equipment.software_versions == None
+        assert merged.equipment.software_versions is None
         assert merged.study == study
         assert merged.series == series
         assert merged.patient == patient

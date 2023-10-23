@@ -46,7 +46,7 @@ class OpenSlideSource(DicomizerSource):
     ) -> None:
         self._slide = OpenSlide(filepath)
         self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._image_metadata = OpenSlideMetadata(self._slide)
+        self._base_metadata = OpenSlideMetadata(self._slide)
         super().__init__(
             filepath,
             encoder,
@@ -71,8 +71,8 @@ class OpenSlideSource(DicomizerSource):
         return OpenSlideAssociatedImageType.MACRO.value in self._slide.associated_images
 
     @property
-    def image_metadata(self) -> WsiMetadata:
-        return self._image_metadata
+    def base_metadata(self) -> WsiMetadata:
+        return self._base_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -85,7 +85,11 @@ class OpenSlideSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenSlideLevelImageData(
-            self._slide, level_index, self._tile_size, self._encoder
+            self._slide,
+            self.metadata.image,
+            level_index,
+            self._tile_size,
+            self._encoder,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:

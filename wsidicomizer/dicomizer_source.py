@@ -21,16 +21,15 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from pydicom import config
-from wsidicom.instance import ImageType, WsiDataset, WsiInstance
-from wsidicom.source import Source
 from wsidicom.graphical_annotations import AnnotationInstance
-
+from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
+from wsidicom.source import Source
+
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicom.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
-from wsidicom.metadata.wsi import WsiMetadata
-from wsidicomizer.metadata.base_model import ModelMerger
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -60,7 +59,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._encoder = encoder
         self._tile_size = tile_size
         self._user_metadata = metadata
-        self._default_metadata = metadata
+        self._default_metadata = default_metadata
         self._include_levels = include_levels
         self._include_label = include_label
         self._include_overview = include_overview
@@ -74,7 +73,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def image_metadata(self) -> WsiMetadata:
+    def base_metadata(self) -> WsiDicomizerMetadata:
         """Return metadata for file."""
         raise NotImplementedError()
 
@@ -113,10 +112,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         """Return image data instance for overview."""
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def metadata(self) -> WsiMetadata:
-        merged = ModelMerger.merge(
-            WsiMetadata, self.image_metadata, self.user_metadata, self.default_metadata
+        merged = self.base_metadata.merge(
+            self.user_metadata, self.default_metadata, self._include_confidential
         )
         assert merged is not None
         return merged

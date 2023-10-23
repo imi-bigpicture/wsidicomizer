@@ -23,7 +23,10 @@ from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicom.metadata.wsi import WsiMetadata
-from wsidicomizer.sources.opentile.opentile_image_data import OpenTileImageData
+from wsidicomizer.sources.opentile.opentile_image_data import (
+    OpenTileAssociatedImageData,
+    OpenTileLevelImageData,
+)
 from wsidicomizer.sources.opentile.opentile_metadata import OpentileMetadata
 
 
@@ -41,7 +44,7 @@ class OpenTileSource(DicomizerSource):
         include_confidential: bool = True,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
-        self._image_metadata = OpentileMetadata(self._tiler.metadata)
+        self._base_metadata = OpentileMetadata(self._tiler.metadata)
         super().__init__(
             filepath,
             encoder,
@@ -66,8 +69,8 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @property
-    def image_metadata(self) -> OpentileMetadata:
-        return self._image_metadata
+    def base_metadata(self) -> OpentileMetadata:
+        return self._base_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -80,14 +83,14 @@ class OpenTileSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(
-            level, self._encoder, self.image_metadata.image.image_coordinate_system
+        return OpenTileLevelImageData(
+            level, self.base_metadata.image, self.metadata.image, self._encoder
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]
-        return OpenTileImageData(label, self._encoder)
+        return OpenTileAssociatedImageData(label, self._encoder)
 
     def _create_overview_image_data(self) -> DicomizerImageData:
         overview = self._tiler.overviews[0]
-        return OpenTileImageData(overview, self._encoder)
+        return OpenTileAssociatedImageData(overview, self._encoder)

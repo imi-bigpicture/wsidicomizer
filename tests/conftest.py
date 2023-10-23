@@ -449,7 +449,7 @@ def wsis(
         for file, file_path in file_format_parameters.items():
             if not file_path.exists():
                 continue
-            if not file_format in converted or file not in converted[file_format]:
+            if file_format not in converted or file not in converted[file_format]:
                 wsi = WsiDicomizer.open(file_path)
             else:
                 wsi = WsiDicom.open(converted[file_format][file].name)

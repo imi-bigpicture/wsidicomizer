@@ -48,7 +48,7 @@ class TiffSlideSource(DicomizerSource):
         **source_args,
     ) -> None:
         self._tiffslide = TiffSlide(filepath, **source_args)
-        self._image_metadata = TiffSlideMetadata(self._tiffslide)
+        self._base_metadata = TiffSlideMetadata(self._tiffslide)
         self._pyramid_levels = [
             int(round(math.log2(downsample)))
             for downsample in self._tiffslide.level_downsamples
@@ -77,8 +77,8 @@ class TiffSlideSource(DicomizerSource):
         return "macro" in self._tiffslide.associated_images
 
     @property
-    def image_metadata(self) -> WsiMetadata:
-        return self._image_metadata
+    def base_metadata(self) -> WsiMetadata:
+        return self._base_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -92,7 +92,11 @@ class TiffSlideSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return TiffSlideLevelImageData(
-            self._tiffslide, level_index, self._tile_size, self._encoder
+            self._tiffslide,
+            self.metadata.image,
+            level_index,
+            self._tile_size,
+            self._encoder,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:

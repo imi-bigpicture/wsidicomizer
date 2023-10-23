@@ -27,6 +27,8 @@ from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
 from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.config import settings
 from wsidicomizer.encoding import Encoder
@@ -42,7 +44,14 @@ class CziBlock:
 
 
 class CziImageData(DicomizerImageData):
-    def __init__(self, filepath: Path, tile_size: int, encoder: Encoder) -> None:
+    def __init__(
+        self,
+        czi: CziFile,
+        tile_size: int,
+        encoder: Encoder,
+        czi_metadata: CziMetadata,
+        merged_metadata: ImageMetadata,
+    ) -> None:
         """Wraps a czi file to ImageData. Multiple pyramid levels are currently
         not supported.
 
@@ -54,17 +63,34 @@ class CziImageData(DicomizerImageData):
             Output tile size.
         encoded: Encoder
             Encoded to use.
+        czi_metadata: CziMetadata
+            Czi metadata to use.
+        merged_metadata: ImageMetadata
+            Merged image metadata to use.
         """
-        self._filepath = filepath
-        self._czi = CziFile(filepath)
+        self._czi = czi
+        self._czi_metadata = czi_metadata
+        self._merged_metadata = merged_metadata
+
+        assert self._merged_metadata.pixel_spacing is not None
         self._czi._fh.lock = True
         self._dtype = self._czi.dtype
         super().__init__(encoder)
         self._tile_size = Size(tile_size, tile_size)
-        self._metadata = CziMetadata(self._czi)
         assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
         self._block_locks: Dict[int, Lock] = defaultdict(Lock)
+
+        if self._merged_metadata.pixel_spacing is None:
+            raise ValueError("Could not determine pixel spacing for czi image.")
+        self._pixel_spacing = self._merged_metadata.pixel_spacing
+        if merged_metadata.image_coordinate_system is not None:
+            self._image_coordinate_system = ImageCoordinateSystem(
+                origin=merged_metadata.image_coordinate_system.origin,
+                orientation=merged_metadata.image_coordinate_system.orientation,
+            )
+        else:
+            self._image_coordinate_system = None
 
     @property
     def pyramid_index(self) -> int:
@@ -80,7 +106,7 @@ class CziImageData(DicomizerImageData):
 
     @property
     def pixel_spacing(self) -> SizeMm:
-        return self._metadata.pixel_spacing
+        return self._pixel_spacing
 
     @cached_property
     def image_size(self) -> Size:
@@ -99,12 +125,12 @@ class CziImageData(DicomizerImageData):
     @cached_property
     def focal_planes(self) -> List[float]:
         """Focal planes available in the image defined in um."""
-        return sorted(self._metadata.focal_plane_mapping)
+        return sorted(self._czi_metadata.focal_plane_mapping)
 
     @property
     def optical_paths(self) -> List[str]:
         """Optical paths available in the image."""
-        return self._metadata.channel_mapping
+        return self._czi_metadata.channel_mapping
 
     @cached_property
     def blank_decoded_tile(self) -> PILImage:
@@ -147,10 +173,6 @@ class CziImageData(DicomizerImageData):
 
         return tile_directory
 
-    @property
-    def metadata(self) -> CziMetadata:
-        return self._metadata
-
     @cached_property
     def samples_per_pixel(self) -> int:
         return self._get_size(axis="0")
@@ -162,15 +184,10 @@ class CziImageData(DicomizerImageData):
     @staticmethod
     def detect_format(filepath: Path) -> Optional[str]:
         try:
-            czi = CziFile(filepath)
-            czi.close()
-            return "czi"
+            with CziFile(filepath):
+                return "czi"
         except ValueError:
             return None
-
-    def close(self) -> None:
-        """Close wrapped file."""
-        self._czi.close()
 
     def _get_tile(self, tile_point: Point, z: float, path: str) -> np.ndarray:
         """Return tile data as numpy array for tile.
@@ -352,9 +369,9 @@ class CziImageData(DicomizerImageData):
                 y_start = dimension_entry.start
                 y_size = dimension_entry.size
             elif dimension_entry.dimension == "Z":
-                z = self.metadata.focal_plane_mapping[dimension_entry.start]
+                z = self._czi_metadata.focal_plane_mapping[dimension_entry.start]
             elif dimension_entry.dimension == "C":
-                c = self.metadata.channel_mapping[dimension_entry.start]
+                c = self._czi_metadata.channel_mapping[dimension_entry.start]
 
         if x_start is None or x_size is None or y_start is None or y_size is None:
             raise ValueError("Could not determine position of block.")

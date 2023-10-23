@@ -30,12 +30,11 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_BOUNDS_WIDTH,
     PROPERTY_NAME_BOUNDS_X,
     PROPERTY_NAME_BOUNDS_Y,
-    PROPERTY_NAME_MPP_X,
-    PROPERTY_NAME_MPP_Y,
 )
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Orientation, Point, PointMm, Region, Size, SizeMm
+from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
@@ -172,7 +171,12 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
 
 class TiffSlideLevelImageData(TiffSlideImageData):
     def __init__(
-        self, tiff_slide: TiffSlide, level_index: int, tile_size: int, encoder: Encoder
+        self,
+        tiff_slide: TiffSlide,
+        image_metadata: ImageMetadata,
+        level_index: int,
+        tile_size: int,
+        encoder: Encoder,
     ):
         super().__init__(tiff_slide, encoder)
         """Wraps a TiffSlide level to ImageData.
@@ -196,20 +200,13 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         )
         self._downsample = self._slide.level_downsamples[self._level_index]
         self._pyramid_index = int(round(math.log2(self.downsample)))
-        try:
-            base_mpp_x = float(self._slide.properties[PROPERTY_NAME_MPP_X])
-            base_mpp_y = float(self._slide.properties[PROPERTY_NAME_MPP_Y])
-            self._pixel_spacing = SizeMm(
-                base_mpp_x * self.downsample / 1000.0,
-                base_mpp_y * self.downsample / 1000.0,
-            )
-        except KeyError:
-            raise Exception(
-                "Could not determine pixel spacing as tiffslide did not "
-                "provide mpp from the file."
-            )
+        if image_metadata.pixel_spacing is None:
+            raise ValueError("Could not determine pixel spacing for tiffslide image.")
+        self._pixel_spacing = SizeMm(
+            image_metadata.pixel_spacing.width * self.downsample,
+            image_metadata.pixel_spacing.height * self.downsample,
+        )
 
-        # Get set image origin and size to bounds if available
         bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X)
         bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y)
         bounds_w = self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH)
@@ -231,12 +228,13 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
-        self._image_coordinate_system = ImageCoordinateSystem(
-            PointMm(
-                self._offset.x * base_mpp_x / 1000, self._offset.y * base_mpp_y / 1000
-            ),
-            Orientation((0, 1, 0, 1, 0, 0)),
-        )
+        if image_metadata.image_coordinate_system is not None:
+            self._image_coordinate_system = ImageCoordinateSystem(
+                image_metadata.image_coordinate_system.origin,
+                image_metadata.image_coordinate_system.orientation,
+            )
+        else:
+            self._image_coordinate_system = None
 
     @property
     def image_size(self) -> Size:
@@ -265,6 +263,8 @@ class TiffSlideLevelImageData(TiffSlideImageData):
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
         return self._image_coordinate_system
 
     def stitch_tiles(

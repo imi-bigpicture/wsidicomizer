@@ -23,35 +23,31 @@ import numpy as np
 from czifile import CziFile
 from dateutil import parser as dateparser
 from wsidicom.geometry import SizeMm
+from wsidicom.metadata import Equipment, Image, Objectives, OpticalPath
 
-from pydicom.uid import generate_uid
-from wsidicom.metadata import WsiMetadata, Image, Equipment
-from wsidicom.metadata.optical_path import Objectives, OpticalPath
-from wsidicom.metadata.series import Series
-from wsidicom.metadata.study import Study
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 ElementType = TypeVar("ElementType", str, int, float)
 
 
-class CziMetadata(WsiMetadata):
-    study = Study()
-    series = Series()
-    frame_of_reference_uid = generate_uid()
-    dimension_organization_uid = generate_uid()
-
+class CziMetadata(WsiDicomizerMetadata):
     def __init__(self, czi: CziFile):
         metadata_xml = czi.metadata()
         if metadata_xml is None or not isinstance(metadata_xml, str):
             raise ValueError("No metadata string in file.")
         self._metadata = ElementTree.fromstring(metadata_xml)
-        self.image = Image(acquisition_datetime=self.aquisition_datetime)
-        self.equipment = Equipment(
+        image = Image(
+            acquisition_datetime=self.aquisition_datetime,
+            pixel_spacing=self.pixel_spacing,
+        )
+        equipment = Equipment(
             model_name=self.scanner_model,
             software_versions=self.scanner_software_versions,
         )
-        self.optical_paths = [
+        optical_paths = [
             OpticalPath("0", objective=Objectives(objective_power=self.magnification))
         ]
+        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
 
     @property
     def aquisition_datetime(self) -> Optional[datetime]:
