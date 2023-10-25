@@ -22,6 +22,7 @@ from wsidicom.metadata import (
     Slide,
     Study,
     WsiMetadata,
+    OpticalPath,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
@@ -71,13 +72,17 @@ class TestWsiDicomizerMetadata:
         study: Study,
         series: Series,
         patient: Patient,
+        icc_profile: bytes,
     ):
         base = WsiDicomizerMetadata(
             study=Study(),
             series=series,
             patient=Patient(),
             equipment=base_equipment,
-            optical_paths=[],
+            optical_paths=[
+                OpticalPath(identifier="base 1"),
+                OpticalPath(identifier="base 2"),
+            ],
             slide=Slide(),
             label=Label(),
             image=Image(),
@@ -87,7 +92,10 @@ class TestWsiDicomizerMetadata:
             series=Series(),
             patient=Patient(),
             equipment=user_equipment,
-            optical_paths=[],
+            optical_paths=[
+                OpticalPath(description="user 1"),
+                OpticalPath(description="user 2"),
+            ],
             slide=Slide(),
             label=Label(),
             image=Image(),
@@ -97,7 +105,7 @@ class TestWsiDicomizerMetadata:
             series=Series(),
             patient=patient,
             equipment=default_equipment,
-            optical_paths=[],
+            optical_paths=[OpticalPath(icc_profile=icc_profile)],
             slide=Slide(),
             label=Label(),
             image=Image(),
@@ -119,3 +127,14 @@ class TestWsiDicomizerMetadata:
         assert merged.study == study
         assert merged.series == series
         assert merged.patient == patient
+        assert len(merged.optical_paths) == len(base.optical_paths)
+        assert merged.optical_paths[0].identifier == base.optical_paths[0].identifier
+        assert merged.optical_paths[0].description == user.optical_paths[0].description
+        assert (
+            merged.optical_paths[0].icc_profile == default.optical_paths[0].icc_profile
+        )
+        assert merged.optical_paths[1].identifier == base.optical_paths[1].identifier
+        assert merged.optical_paths[1].description == user.optical_paths[1].description
+        assert (
+            merged.optical_paths[1].icc_profile == default.optical_paths[0].icc_profile
+        )

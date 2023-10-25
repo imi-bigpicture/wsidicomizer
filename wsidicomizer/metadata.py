@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 """Base model for metadata."""
-from dataclasses import fields, is_dataclass
+from dataclasses import Field, fields, is_dataclass
 from typing import Any, Optional, Sequence, Type, TypeVar
 
 from pydicom.uid import UID
@@ -73,9 +73,27 @@ class WsiDicomizerMetadata(WsiMetadata):
             base = self
         if user is None and default is None:
             return base
-        merged = self._merge(WsiMetadata, base, user, default)
-        assert merged is not None
-        return merged
+        if user is None:
+            user = WsiDicomizerMetadata()
+        if default is None:
+            default = WsiDicomizerMetadata()
+        return WsiDicomizerMetadata(
+            study=self._merge(Study, base.study, user.study, default.study),
+            series=self._merge(Series, base.series, user.series, default.series),
+            patient=self._merge(Patient, base.patient, user.patient, default.patient),
+            equipment=self._merge(
+                Equipment, base.equipment, user.equipment, default.equipment
+            ),
+            optical_paths=self._merge_list(
+                OpticalPath,
+                base.optical_paths,
+                user.optical_paths,
+                default.optical_paths,
+            ),
+            slide=self._merge(Slide, base.slide, user.slide, default.slide),
+            label=self._merge(Label, base.label, user.label, default.label),
+            image=self._merge(Image, base.image, user.image, default.image),
+        )
 
     def _remove_confidential(self) -> "WsiDicomizerMetadata":
         return WsiDicomizerMetadata(
@@ -106,6 +124,38 @@ class WsiDicomizerMetadata(WsiMetadata):
         )
 
     @classmethod
+    def _merge_list(
+        cls,
+        model_class: Type[ModelType],
+        base: Sequence[ModelType],
+        user: Sequence[ModelType],
+        default: Sequence[ModelType],
+    ) -> Optional[Sequence[ModelType]]:
+        models = [model for model in (user, base, default) if len(model) > 0]
+        if len(models) == 0:
+            # All lists empty
+            return []
+        if len(models) == 1:
+            # Only one list not empty
+            return models[0]
+        user = cls._repeat_list(base, user)
+        default = cls._repeat_list(base, default)
+        return [
+            cls._merge_not_none(model_class, base_item, user_item, default_item)
+            for base_item, user_item, default_item in zip(base, user, default)
+        ]
+
+    @staticmethod
+    def _repeat_list(
+        base: Sequence[ModelType], to_repeat: Sequence[ModelType]
+    ) -> Sequence[ModelType]:
+        if len(to_repeat) == len(base):
+            return to_repeat
+        if not len(to_repeat) == 1:
+            raise ValueError()
+        return [to_repeat[0] for _ in range(len(base))]
+
+    @classmethod
     def _merge(
         cls,
         model_class: Type[ModelType],
@@ -128,22 +178,35 @@ class WsiDicomizerMetadata(WsiMetadata):
             return not_none[0]
         assert is_dataclass(model_class)
         attributes = {
-            field.name: cls._select_value(field.name, base, user, default)
+            field.name: cls._select_value(field, base, user, default)
             for field in fields(model_class)
         }
+
         return model_class(**attributes)
+
+    @classmethod
+    def _merge_not_none(
+        cls,
+        model_class: Type[ModelType],
+        base: Optional[ModelType],
+        user: Optional[ModelType],
+        default: Optional[ModelType],
+    ) -> ModelType:
+        merged = cls._merge(model_class, base, user, default)
+        assert merged is not None
+        return merged
 
     @classmethod
     def _select_value(
         cls,
-        field_name,
+        field: Field,
         base: Optional[ModelType],
         user: Optional[ModelType],
         default: Optional[ModelType],
     ) -> Any:
-        base_value = getattr(base, field_name, None)
-        user_value = getattr(user, field_name, None)
-        default_value = getattr(default, field_name, None)
+        base_value = getattr(base, field.name, None)
+        user_value = getattr(user, field.name, None)
+        default_value = getattr(default, field.name, None)
         value = next(
             (
                 value

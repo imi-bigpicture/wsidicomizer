@@ -398,6 +398,11 @@ test_parameters = {
 
 
 @pytest.fixture(scope="module")
+def icc_profile():
+    yield bytes([0x00, 0x01, 0x02, 0x03])
+
+
+@pytest.fixture(scope="module")
 def testdata_dir():
     yield Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
 
@@ -416,6 +421,7 @@ def wsi_files(testdata_dir: Path):
 @pytest.fixture(scope="module")
 def converted(
     wsi_files: Dict[str, Dict[str, Path]],
+    icc_profile: bytes,
 ):
     converted_folders: Dict[str, Dict[str, TemporaryDirectory]] = defaultdict(dict)
     for file_format, file_format_parameters in test_parameters.items():
@@ -426,7 +432,6 @@ def converted(
             include_levels = file_parameters["include_levels"]
             tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
             tempdir = TemporaryDirectory()
-            icc_profile = bytes([0x00, 0x01, 0x02, 0x04])
             optical_path = OpticalPath(icc_profile=icc_profile)
             metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
             WsiDicomizer.convert(

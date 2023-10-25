@@ -19,7 +19,6 @@ from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 from typing import List, Optional, Sequence
-
 from pydicom import config
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance

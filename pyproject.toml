@@ -22,7 +22,7 @@ python = "^3.8"
 wsidicom = { path = "../wsidicom/", develop = true }
 opentile = "^0.10.0"
 numpy = "^1.22.0"
-pydicom = ">=2.2.0, <2.4.0"
+pydicom = ">=2.2.0"
 highdicom = "^0.20.0"
 czifile = "^2019.7.2"
 imagecodecs = "^2022.9.26"
