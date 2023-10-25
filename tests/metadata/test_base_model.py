@@ -42,7 +42,7 @@ def default_equipment():
     yield Equipment("default", "default", "default", None)
 
 
-class TestMetadataMerge:
+class TestWsiDicomizerMetadata:
     def test_merge_simple(
         self,
         base_equipment: Equipment,

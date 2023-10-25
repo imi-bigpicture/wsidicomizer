@@ -40,7 +40,6 @@ from .conftest import test_parameters
 
 @pytest.mark.integrationtest
 class TestWsiDicomizerConvert:
-    @pytest.mark.xfail
     @pytest.mark.parametrize(
         ["file_format", "file"],
         [
@@ -82,6 +81,7 @@ class TestWsiDicomizerConvert:
             for module, errors in module_errors.items()
         }
         module_errors_to_ignore = {
+            # These are not required for TILED_FULL organization type
             "Plane Position (Slide)": [
                 "(0040,072A)",
                 "(0040,073A)",

@@ -20,6 +20,8 @@ from typing import Dict
 
 import pytest
 from wsidicom import WsiDicom
+from wsidicom.metadata import OpticalPath
+from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 DEFAULT_TILE_SIZE = 512
@@ -424,9 +426,13 @@ def converted(
             include_levels = file_parameters["include_levels"]
             tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
             tempdir = TemporaryDirectory()
+            icc_profile = bytes([0x00, 0x01, 0x02, 0x04])
+            optical_path = OpticalPath(icc_profile=icc_profile)
+            metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
             WsiDicomizer.convert(
                 file_path,
                 output_path=str(tempdir.name),
+                default_metadata=metadata,
                 tile_size=tile_size,
                 include_levels=include_levels,
                 encoding_format="jpeg2000",
@@ -436,7 +442,10 @@ def converted(
     yield converted_folders
     for file_format in converted_folders.values():
         for converted_folder in file_format.values():
-            converted_folder.cleanup()
+            try:
+                converted_folder.cleanup()
+            except Exception as exception:
+                raise Exception("Failed to cleanup", converted_folder) from exception
 
 
 @pytest.fixture(scope="module")
