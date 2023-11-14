@@ -19,10 +19,9 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from wsidicom import ImageData
+from wsidicom.codec import Encoder
 from wsidicom.geometry import Orientation, PointMm
 from wsidicom.instance import ImageCoordinateSystem
-
-from wsidicomizer.encoding import Encoder
 
 
 class DicomizerImageData(ImageData, metaclass=ABCMeta):
@@ -54,6 +53,15 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
         """Return a default ImageCoordinateSystem."""
         return ImageCoordinateSystem(PointMm(0, 0), Orientation((0, 1, 0, 1, 0, 0)))
 
+    @property
+    def bits(self) -> int:
+        return self.encoder.bits
+
+    @property
+    def lossy_compressed(self) -> bool:
+        # TODO: This should be set from encoder and base file.
+        return self.encoder.lossy
+
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
         options.
@@ -68,4 +76,4 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
         bytes
             Jpeg bytes.
         """
-        return self._encoder.encode(image_data)
+        return self.encoder.encode(image_data)

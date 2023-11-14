@@ -20,9 +20,9 @@ from typing import List, Optional, Sequence, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import OpenSlide
 from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideAssociatedImageData,

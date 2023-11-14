@@ -33,11 +33,11 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_MPP_X,
     PROPERTY_NAME_MPP_Y,
 )
+from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Orientation, Point, PointMm, Region, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -64,11 +64,11 @@ class TiffSlideImageData(DicomizerImageData):
     @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        return self._encoder.transfer_syntax
+        return self.encoder.transfer_syntax
 
     @property
     def photometric_interpretation(self) -> str:
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+        return self.encoder.photometric_interpretation
 
     @property
     def samples_per_pixel(self) -> int:
@@ -137,7 +137,7 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
         image = self._slide.associated_images[image_type.value]
         self._image_size = Size.from_tuple(image.size)
         self._decoded_image = image
-        self._encoded_image = self._encode(np.asarray(image))
+        self._encoded_image = self.encoder.encode(np.asarray(image))
 
     @property
     def image_size(self) -> Size:
@@ -342,7 +342,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             frame = np.full(
                 size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
             )
-            self._blank_encoded_frame = self._encode(frame)
+            self._blank_encoded_frame = self.encoder.encode(frame)
             self._blank_encoded_frame_size = size
         return self._blank_encoded_frame
 
@@ -421,7 +421,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self._encode(tile)
+        return self.encoder.encode(tile)
 
     def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> PILImage:
         """Return Image for tile. Image mode is RGB.

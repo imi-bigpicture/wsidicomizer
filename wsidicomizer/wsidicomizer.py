@@ -25,9 +25,10 @@ from PIL.Image import Image as PILImage
 from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
+from wsidicom.codec import Encoder, JpegSettings
+from wsidicom.codec import Settings as EncodingSettings
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
 
 # List of supported Dicomizers in prioritization order.
@@ -58,9 +59,7 @@ class WsiDicomizer(WsiDicom):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
+        encoding_settings: Optional[EncodingSettings] = None,
         label: Optional[Union[PILImage, str, Path]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
@@ -119,9 +118,9 @@ class WsiDicomizer(WsiDicom):
             selected_source = preferred_source
         if selected_source is None:
             raise NotImplementedError(f"{filepath} is not supported")
-        encoder = Encoder.create_encoder(
-            encoding_format, encoding_quality, subsampling=jpeg_subsampling
-        )
+        if encoding_settings is None:
+            encoding_settings = JpegSettings()
+        encoder = Encoder.create(encoding_settings)
 
         source = selected_source(
             filepath,
@@ -150,9 +149,7 @@ class WsiDicomizer(WsiDicom):
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
+        encoding_settings: Optional[EncodingSettings] = None,
         offset_table: Optional[str] = "bot",
         label: Optional[Union[PILImage, str, Path]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
@@ -220,9 +217,7 @@ class WsiDicomizer(WsiDicom):
             include_label,
             include_overview,
             include_confidential,
-            encoding_format,
-            encoding_quality,
-            jpeg_subsampling,
+            encoding_settings,
             label,
             preferred_source,
             **source_args,

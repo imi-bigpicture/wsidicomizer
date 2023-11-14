@@ -26,10 +26,10 @@ from czifile import CziFile, DirectoryEntryDV
 from PIL import Image
 from PIL.Image import Image as PILImage
 from pydicom.uid import UID as Uid
+from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
 from wsidicomizer.config import settings
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
@@ -72,11 +72,11 @@ class CziImageData(DicomizerImageData):
 
     @property
     def transfer_syntax(self) -> Uid:
-        return self._encoder.transfer_syntax
+        return self.encoder.transfer_syntax
 
     @cached_property
     def photometric_interpretation(self) -> str:
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+        return self.encoder.photometric_interpretation
 
     @property
     def pixel_spacing(self) -> SizeMm:
@@ -112,7 +112,7 @@ class CziImageData(DicomizerImageData):
 
     @cached_property
     def blank_encoded_tile(self) -> bytes:
-        return self._encode(self._create_blank_tile())
+        return self.encoder.encode(self._create_blank_tile())
 
     @cached_property
     def pixel_origin(self) -> Point:
@@ -265,7 +265,7 @@ class CziImageData(DicomizerImageData):
         if (tile, z, path) not in self.tile_directory:
             return self.blank_encoded_tile
         frame = self._get_tile(tile, z, path)
-        return self._encode(frame)
+        return self.encoder.encode(frame)
 
     def _get_size(self, axis: str) -> int:
         index = self._get_axis_index(axis)

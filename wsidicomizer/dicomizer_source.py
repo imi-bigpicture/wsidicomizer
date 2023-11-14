@@ -21,13 +21,12 @@ from typing import List, Optional, Sequence, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset, config
-from pydicom.dataset import Dataset
+from wsidicom.codec import Encoder
+from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.source import Source
-from wsidicom.graphical_annotations import AnnotationInstance
 
 from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
 config.enforce_valid_values = True

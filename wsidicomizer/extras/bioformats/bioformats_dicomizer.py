@@ -20,8 +20,9 @@ from typing import Optional, Sequence, Union
 from PIL.Image import Image as PILImage
 from pydicom import Dataset
 from wsidicom import WsiDicom
+from wsidicom.codec import Encoder, JpegSettings
+from wsidicom.codec import Settings as EncodingSettings
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -37,10 +38,8 @@ class BioformatsDicomizer(WsiDicomizer):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = 'jpeg',
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = '420',
-        label: Optional[Union[PILImage, str, Path]] = None
+        encoding_settings: Optional[EncodingSettings] = None,
+        label: Optional[Union[PILImage, str, Path]] = None,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
@@ -85,11 +84,9 @@ class BioformatsDicomizer(WsiDicomizer):
 
         if not BioformatsSource.is_supported(filepath):
             raise NotImplementedError(f"{filepath} is not supported")
-        encoder = Encoder.create_encoder(
-            encoding_format,
-            encoding_quality,
-            subsampling=jpeg_subsampling
-        )
+        if encoding_settings is None:
+            encoding_settings = JpegSettings()
+        encoder = Encoder.create(encoding_settings)
 
         dicomizer = BioformatsSource(
             filepath,
@@ -99,6 +96,6 @@ class BioformatsDicomizer(WsiDicomizer):
             include_levels,
             include_label,
             include_overview,
-            include_confidential
+            include_confidential,
         )
         return cls(dicomizer, label)

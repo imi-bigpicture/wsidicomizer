@@ -25,6 +25,7 @@ from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from parameterized import parameterized
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
+from wsidicom.codec import Jpeg2kLosslessSettings
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -78,13 +79,13 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         path: Path, include_levels: Sequence[int], tile_size: int
     ) -> TemporaryDirectory:
         tempdir = TemporaryDirectory()
+        encoding_settings = Jpeg2kLosslessSettings()
         WsiDicomizer.convert(
             str(path),
             output_path=str(tempdir.name),
             tile_size=tile_size,
             include_levels=include_levels,
-            encoding_format="jpeg2000",
-            encoding_quality=0,
+            encoding_settings=encoding_settings,
         )
         return tempdir
 

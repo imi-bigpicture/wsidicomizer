@@ -20,9 +20,9 @@ from typing import List, Optional, Sequence, Union
 from opentile import OpenTile
 from opentile.metadata import Metadata
 from pydicom import Dataset
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.opentile.opentile_image_data import OpenTileImageData
 
@@ -38,9 +38,11 @@ class OpenTileSource(DicomizerSource):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
+        force_transcoding: bool = False,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
         self._metadata = self._tiler.metadata
+        self._force_transcoding = force_transcoding
         super().__init__(
             filepath,
             encoder,
@@ -78,12 +80,18 @@ class OpenTileSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
-        return OpenTileImageData(level, self._encoder, self.metadata.image_offset)
+        return OpenTileImageData(
+            level, self._encoder, self.metadata.image_offset, self._force_transcoding
+        )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]
-        return OpenTileImageData(label, self._encoder)
+        return OpenTileImageData(
+            label, self._encoder, force_transcoding=self._force_transcoding
+        )
 
     def _create_overview_image_data(self) -> DicomizerImageData:
         overview = self._tiler.overviews[0]
-        return OpenTileImageData(overview, self._encoder)
+        return OpenTileImageData(
+            overview, self._encoder, force_transcoding=self._force_transcoding
+        )

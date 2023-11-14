@@ -20,10 +20,10 @@ from opentile.tiff_image import TiffImage
 from PIL import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
+from wsidicom.codec import Encoder
 from wsidicom.geometry import Orientation, Point, PointMm, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -33,6 +33,7 @@ class OpenTileImageData(DicomizerImageData):
         tiff_image: TiffImage,
         encoder: Encoder,
         image_offset: Optional[Tuple[float, float]] = None,
+        force_transcoding: bool = False,
     ):
         """Wraps a TiffImage to ImageData.
 
@@ -46,9 +47,11 @@ class OpenTileImageData(DicomizerImageData):
         super().__init__(encoder)
         self._tiff_image = tiff_image
 
-        self._needs_transcoding = not self.is_supported_transfer_syntax()
+        self._needs_transcoding = (
+            not self.is_supported_transfer_syntax() or force_transcoding
+        )
         if self.needs_transcoding:
-            self._transfer_syntax = self._encoder.transfer_syntax
+            self._transfer_syntax = self.encoder.transfer_syntax
         else:
             self._transfer_syntax = self.get_transfer_syntax()
         self._image_size = Size(*self._tiff_image.image_size.to_tuple())
@@ -133,7 +136,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def photometric_interpretation(self) -> str:
         if self.needs_transcoding:
-            return self._encoder.photometric_interpretation(self.samples_per_pixel)
+            return self.encoder.photometric_interpretation
         if self._tiff_image.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
                 return "YBR_FULL_422"
@@ -176,7 +179,7 @@ class OpenTileImageData(DicomizerImageData):
             raise ValueError()
         if self.needs_transcoding:
             decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
-            return self._encode(decoded_tile)
+            return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
     def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
@@ -226,7 +229,7 @@ class OpenTileImageData(DicomizerImageData):
         if not self.needs_transcoding:
             return self._tiff_image.get_tiles(tiles_tuples)
         decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
-        return [self._encode(tile) for tile in decoded_tiles]
+        return [self.encoder.encode(tile) for tile in decoded_tiles]
 
     def close(self) -> None:
         self._tiff_image.close()

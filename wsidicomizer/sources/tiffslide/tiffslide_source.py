@@ -22,9 +22,9 @@ from typing import List, Optional, Sequence, Union
 from opentile.metadata import Metadata
 from pydicom import Dataset
 from tiffslide import TiffSlide
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
     TiffSlideAssociatedImageData,

@@ -20,8 +20,7 @@ from typing import Optional, Sequence
 from pydicom import Dataset
 
 from wsidicomizer.cli import WsiDicomizerCli
-from wsidicomizer.extras.bioformats.bioformats_dicomizer import \
-    BioformatsDicomizer
+from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
 
 
 class BioformatsCli(WsiDicomizerCli):
@@ -37,12 +36,11 @@ class BioformatsCli(WsiDicomizerCli):
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = 'jpeg',
+        encoding_format: str = "jpeg",
         encoding_quality: float = 90,
-        jpeg_subsampling: str = '420',
-        offset_table: Optional[str] = 'bot',
-        label: Optional[Path] = None
-
+        jpeg_subsampling: str = "420",
+        offset_table: Optional[str] = "bot",
+        label: Optional[Path] = None,
     ):
         with BioformatsDicomizer.open(
             filepath=filepath,
@@ -54,13 +52,13 @@ class BioformatsCli(WsiDicomizerCli):
             encoding_format=encoding_format,
             encoding_quality=encoding_quality,
             jpeg_subsampling=jpeg_subsampling,
-            label=label
+            label=label,
         ) as wsi:
             wsi.save(
                 output_path=output_path,
                 offset_table=offset_table,
                 workers=workers,
-                chunk_size=chunk_size
+                chunk_size=chunk_size,
             )
 
 
