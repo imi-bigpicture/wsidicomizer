@@ -111,7 +111,7 @@ test_parameters = {
             "tile_size": 1024,
             "encode_format": "jpeg2000",
             "encode_quality": 0,
-            "photometric_interpretation": "YBR_RCT",
+            "photometric_interpretation": "YBR_ICT",
             "image_coordinate_system": {"x": 2.3061675, "y": 20.79015},
             "read_region": [
                 # OpenSlide produces different results across platforms

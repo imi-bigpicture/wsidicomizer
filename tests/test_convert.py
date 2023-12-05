@@ -24,8 +24,10 @@ from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from parameterized import parameterized
 from PIL import Image, ImageChops, ImageStat
+from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
-from wsidicom.codec import Jpeg2kLosslessSettings
+from wsidicom.codec import Jpeg2kSettings
+from wsidicom.codec.encoder import Jpeg2kEncoder
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -38,6 +40,27 @@ from wsidicomizer.wsidicomizer import WsiDicomizer
 from .testdata.test_parameters import test_parameters
 
 testdata_dir = Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+
+
+class Jpeg2kTestEncoder(Jpeg2kEncoder):
+    """Jpeg 2000 encoder used for testing.
+    Pretends to be lossy but encodes losslessly so that image data is not changed."""
+
+    def __init__(self):
+        settings = Jpeg2kSettings(level=0)
+        super().__init__(settings)
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    @property
+    def transfer_syntax(self) -> UID:
+        return JPEG2000
+
+    @property
+    def photometric_interpretation(self) -> str:
+        return "YBR_ICT"
 
 
 @pytest.mark.integrationtest
@@ -79,13 +102,12 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         path: Path, include_levels: Sequence[int], tile_size: int
     ) -> TemporaryDirectory:
         tempdir = TemporaryDirectory()
-        encoding_settings = Jpeg2kLosslessSettings()
         WsiDicomizer.convert(
             str(path),
             output_path=str(tempdir.name),
             tile_size=tile_size,
             include_levels=include_levels,
-            encoding_settings=encoding_settings,
+            encoding=Jpeg2kTestEncoder(),
         )
         return tempdir
 

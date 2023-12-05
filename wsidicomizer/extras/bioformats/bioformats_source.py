@@ -113,7 +113,6 @@ class BioformatsSource(DicomizerSource):
         return pyramid_image_index, label_image_index, overview_image_index
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        print("create level for index", level_index)
         level = BioformatsImageData(
             self._reader,
             self._tile_size,
@@ -121,7 +120,6 @@ class BioformatsSource(DicomizerSource):
             self._pyramid_image_index,
             level_index,
         )
-        print(level.pixel_spacing, level.image_size)
         return level
 
     def _create_label_image_data(self) -> DicomizerImageData:

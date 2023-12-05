@@ -60,7 +60,7 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     @property
     def lossy_compressed(self) -> bool:
         # TODO: This should be set from encoder and base file.
-        return self.encoder.lossy
+        return True
 
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample

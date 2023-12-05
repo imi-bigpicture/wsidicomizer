@@ -181,45 +181,6 @@ class BioformatsReader:
                 for image_index in range(self.images_count)
             }
 
-    def print_debug(self, reader: Memoizer):
-        for image in range(reader.getSeriesCount()):
-            reader.setSeries(image)
-            order = reader.getDimensionOrder()
-            rgb_channel_count = reader.getRGBChannelCount()
-            interleaved = reader.isInterleaved()
-            indexed = reader.isIndexed()
-            width = reader.getSizeX()
-            rgb = reader.isRGB()
-            height = reader.getSizeY()
-            level = reader.getResolution()
-            pixels = self.metadata.images[image].pixels
-            name = self.metadata.images[image].name
-            resolutions = reader.getResolutionCount()
-            print(
-                "image:",
-                image,
-                "name:",
-                name,
-                "order:",
-                order,
-                "rgb_channel_count:",
-                rgb_channel_count,
-                "indexed:",
-                indexed,
-                "interleaved:",
-                interleaved,
-                "rgb:",
-                rgb,
-                "(width, height):",
-                (width, height),
-                "pixels.physical_size_x:",
-                pixels.physical_size_x,
-                "level:",
-                level,
-                "resolutions:",
-                resolutions,
-            )
-
     @staticmethod
     def is_supported(filepath: Path) -> bool:
         try:

@@ -107,7 +107,6 @@ def populate_base_dataset(
     for property_name, property_value in properties.items():
         if not hasattr(base_dataset, property_name) and property_value is not None:
             setattr(base_dataset, property_name, property_value)
-
     return base_dataset
 
 
@@ -517,7 +516,7 @@ def add_anatomical_sites_to_specimen(
         Dataset containing a specimen description.
     """
     anatomical_site_datasets: List[Dataset] = []
-    for (anatomical_site, modifiers) in anatomical_sites:
+    for anatomical_site, modifiers in anatomical_sites:
         anatomical_site_dataset = ConceptCode.from_code(anatomical_site).to_ds()
 
         if modifiers != []:

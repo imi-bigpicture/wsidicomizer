@@ -18,7 +18,7 @@ import ctypes
 import math
 import re
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image
@@ -95,10 +95,12 @@ class OpenSlideImageData(DicomizerImageData):
         return ["0"]
 
     @property
-    def blank_color(self) -> Tuple[int, int, int]:
+    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
         return self._blank_color
 
-    def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
+    def _get_blank_color(
+        self, photometric_interpretation: str
+    ) -> Union[int, Tuple[int, int, int]]:
         """Return color to use blank tiles. Parses background color from
         openslide if present.
 
@@ -109,8 +111,8 @@ class OpenSlideImageData(DicomizerImageData):
 
         Returns
         ----------
-        Tuple[int, int, int]
-            RGB color.
+        Union[int, Tuple[int, int, int]]
+            Grayscale or RGB color.
 
         """
         slide_background_color_string = self._slide.properties.get(
