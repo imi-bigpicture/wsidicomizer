@@ -19,7 +19,6 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from wsidicom import ImageData
-from wsidicom.codec import Encoder
 from wsidicom.geometry import Orientation, PointMm
 from wsidicom.instance import ImageCoordinateSystem
 
@@ -31,16 +30,6 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     """
 
     _default_z = None
-
-    def __init__(self, encoder: Encoder):
-        """Metaclass for Dicomized image data.
-
-        Parameters
-        ----------
-        encoded: Encoder
-            Encoder to use.
-        """
-        self._encoder = encoder
 
     @property
     @abstractmethod

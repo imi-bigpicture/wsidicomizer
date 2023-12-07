@@ -61,15 +61,8 @@ class BioformatsDicomizer(WsiDicomizer):
             Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
-        encoding_format: str = 'jpeg'
-            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: float = 90
-            Quality to use if re-encoding. It is recommended to not use > 95 for jpeg.
-            Use < 1 or > 1000 for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
-            Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
+        encoding: Optional[Union[EncodingSettings, Encoder]] = None,
+            Encoding setting or encoder to use if re-encoding.
         label: Optional[Union[PILImage, str, Path]] = None
             Optional label image to use instead of label found in file.
 
@@ -86,7 +79,7 @@ class BioformatsDicomizer(WsiDicomizer):
             raise NotImplementedError(f"{filepath} is not supported")
         if encoding_settings is None:
             encoding_settings = JpegSettings()
-        encoder = Encoder.create(encoding_settings)
+        encoder = Encoder.create_for_settings(encoding_settings)
 
         dicomizer = BioformatsSource(
             filepath,

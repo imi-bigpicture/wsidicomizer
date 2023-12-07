@@ -27,7 +27,7 @@ from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
-from wsidicom.file.wsidicom_file_base import OffsetTableType
+from wsidicom.file import OffsetTableType
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
@@ -87,7 +87,6 @@ class WsiDicomizer(WsiDicom):
             Include confidential metadata.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
-
         label: Optional[Union[PILImage, str, Path]] = None
             Optional label image to use instead of label found in file.
         preferred_source: Optional[Type[DicomizerSource]] = None
@@ -116,7 +115,7 @@ class WsiDicomizer(WsiDicom):
         if encoding is None:
             encoding = JpegSettings()
         if isinstance(encoding, EncodingSettings):
-            encoder = Encoder.create(encoding)
+            encoder = Encoder.create_for_settings(encoding)
         else:
             encoder = encoding
 

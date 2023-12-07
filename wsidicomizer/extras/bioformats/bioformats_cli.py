@@ -19,7 +19,7 @@ from typing import Optional, Sequence, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Settings
-from wsidicom.file.wsidicom_file import OffsetTableType
+from wsidicom.file import OffsetTableType
 
 from wsidicomizer.cli import WsiDicomizerCli
 from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer

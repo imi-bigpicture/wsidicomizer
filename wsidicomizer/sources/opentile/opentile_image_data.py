@@ -14,7 +14,7 @@
 
 """Image data for opentile compatible file."""
 
-from typing import List, Optional, Sequence, Tuple
+from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
 from opentile.tiff_image import TiffImage
 from PIL import Image
@@ -203,33 +203,16 @@ class OpenTileImageData(DicomizerImageData):
             raise ValueError
         return Image.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
 
-    def get_encoded_tiles(
-        self, tiles: Sequence[Point], z: float, path: str
-    ) -> List[bytes]:
-        """Return list of image bytes for tiles. Returns transcoded tiles if
-        non-supported encoding.
-
-        Parameters
-        ----------
-        tiles: Sequence[Point]
-            Tile positions to get.
-        z: float
-            Focal plane of tile to get.
-        path: str
-            Optical path of tile to get.
-
-        Returns
-        ----------
-        Iterator[List[bytes]]
-            Iterator of tile bytes.
-        """
+    def _get_encoded_tiles(
+        self, tiles: Iterable[Point], z: float, path: str
+    ) -> Iterator[bytes]:
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tiles_tuples = [tile.to_tuple() for tile in tiles]
         if not self.needs_transcoding:
             return self._tiff_image.get_tiles(tiles_tuples)
         decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
-        return [self.encoder.encode(tile) for tile in decoded_tiles]
+        return (self.encoder.encode(tile) for tile in decoded_tiles)
 
     def close(self) -> None:
         self._tiff_image.close()

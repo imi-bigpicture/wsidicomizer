@@ -159,7 +159,6 @@ def create_wsi_dataset(uid_generator: Callable[..., Uid] = generate_uid) -> Data
     dataset.SeriesNumber = ""
     dataset.SeriesInstanceUID = uid_generator()
     dataset.Modality = "SM"
-    dataset.LossyImageCompression = "00"
 
     # Frame of reference module
     dataset.FrameOfReferenceUID = uid_generator()
