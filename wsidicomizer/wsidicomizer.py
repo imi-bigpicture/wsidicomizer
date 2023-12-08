@@ -56,7 +56,7 @@ class WsiDicomizer(WsiDicom):
         filepath: Union[str, Path],
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
-        include_levels: Optional[Sequence[int]] = None,
+        # include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
@@ -124,7 +124,7 @@ class WsiDicomizer(WsiDicom):
             encoder,
             tile_size,
             modules,
-            include_levels,
+            # include_levels,
             include_label,
             include_overview,
             include_confidential,
@@ -140,6 +140,7 @@ class WsiDicomizer(WsiDicom):
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
+        add_missing_levels: bool = False,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -203,7 +204,6 @@ class WsiDicomizer(WsiDicom):
             filepath,
             modules,
             tile_size,
-            include_levels,
             include_label,
             include_overview,
             include_confidential,
@@ -221,7 +221,13 @@ class WsiDicomizer(WsiDicom):
             except FileExistsError:
                 ValueError(f"Output path {output_path} already exists")
             created_files = wsi.save(
-                output_path, uid_generator, workers, chunk_size, offset_table
+                output_path,
+                uid_generator,
+                workers,
+                chunk_size,
+                offset_table,
+                include_levels=include_levels,
+                add_missing_levels=add_missing_levels,
             )
 
         return [str(filepath) for filepath in created_files]

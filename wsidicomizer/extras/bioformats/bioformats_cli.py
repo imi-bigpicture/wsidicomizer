@@ -46,7 +46,6 @@ class BioformatsCli(WsiDicomizerCli):
             filepath=filepath,
             modules=modules,
             tile_size=tile_size,
-            include_levels=include_levels,
             include_label=include_label,
             include_overview=include_overview,
             encoding_settings=encoding_settings,
@@ -57,6 +56,7 @@ class BioformatsCli(WsiDicomizerCli):
                 offset_table=offset_table,
                 workers=workers,
                 chunk_size=chunk_size,
+                include_levels=include_levels,
             )
 
 
