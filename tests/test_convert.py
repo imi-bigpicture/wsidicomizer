@@ -19,11 +19,13 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from parameterized import parameterized
-from PIL import Image, ImageChops, ImageStat
+from PIL import Image as Pillow
+from PIL import ImageChops, ImageStat
 from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Jpeg2kSettings
@@ -287,7 +289,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 (region["size"]["width"], region["size"]["height"]),
             )
 
-        reference_no_alpha = Image.new("RGB", reference.size, (255, 255, 255))
+        reference_no_alpha = Pillow.new("RGB", reference.size, (255, 255, 255))
         reference_no_alpha.paste(reference, mask=reference.split()[3])
         self.assertEqual(
             md5(converted.tobytes()).hexdigest(),
@@ -348,9 +350,16 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         path = next(
             paths[0] for paths in self.test_folders.values() if paths is not None
         )
-        new_label = Image.new("RGB", (256, 256), (128, 128, 128))
-        with WsiDicomizer.open(path, label=new_label) as wsi:
-            self.assertEqual(new_label, wsi.read_label())
+        new_label = Pillow.new("RGB", (256, 256), (128, 128, 128))
+
+        with TemporaryDirectory() as tempdir:
+            with WsiDicomizer.open(path) as wsi:
+                wsi.save(tempdir, include_levels=[-1], label=new_label)
+
+            with WsiDicom.open(tempdir) as wsi:
+                self.assertTrue(
+                    np.array_equal(np.array(new_label), np.array(wsi.read_label()))
+                )
 
     @parameterized.expand(
         [

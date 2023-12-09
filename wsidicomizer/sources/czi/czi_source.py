@@ -33,8 +33,6 @@ class CziSource(DicomizerSource):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._imaga_data = CziImageData(filepath, tile_size, encoder)
@@ -44,8 +42,6 @@ class CziSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_label,
-            include_overview,
             include_confidential,
         )
 

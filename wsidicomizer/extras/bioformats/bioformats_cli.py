@@ -14,7 +14,6 @@
 
 """Cli for bioformats source."""
 
-from pathlib import Path
 from typing import Optional, Sequence, Union
 
 from pydicom import Dataset
@@ -40,16 +39,12 @@ class BioformatsCli(WsiDicomizerCli):
         chunk_size: Optional[int] = None,
         encoding_settings: Optional[Settings] = None,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
-        label: Optional[Path] = None,
     ):
         with BioformatsDicomizer.open(
             filepath=filepath,
             modules=modules,
             tile_size=tile_size,
-            include_label=include_label,
-            include_overview=include_overview,
             encoding_settings=encoding_settings,
-            label=label,
         ) as wsi:
             wsi.save(
                 output_path=output_path,
@@ -57,6 +52,8 @@ class BioformatsCli(WsiDicomizerCli):
                 workers=workers,
                 chunk_size=chunk_size,
                 include_levels=include_levels,
+                include_labels=include_label,
+                include_overviews=include_overview,
             )
 
 

@@ -17,7 +17,6 @@
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
-from PIL.Image import Image as PILImage
 from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
@@ -34,11 +33,8 @@ class BioformatsDicomizer(WsiDicomizer):
         filepath: Union[str, Path],
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         encoding_settings: Optional[EncodingSettings] = None,
-        label: Optional[Union[PILImage, str, Path]] = None,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
@@ -50,20 +46,10 @@ class BioformatsDicomizer(WsiDicomizer):
             Module datasets to use in files. If none, use default modules.
         tile_size: int = 512
             Tile size to use if not defined by file.
-        include_levels: Optional[Sequence[int]] = None
-            Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes the two highest levels.
-        include_label: bool = True
-            Include label(s), default true.
-        include_overwiew: bool = True
-            Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
 
 
         Returns
@@ -85,8 +71,6 @@ class BioformatsDicomizer(WsiDicomizer):
             encoder,
             tile_size,
             modules,
-            include_label,
-            include_overview,
             include_confidential,
         )
-        return cls(dicomizer, label)
+        return cls(dicomizer)

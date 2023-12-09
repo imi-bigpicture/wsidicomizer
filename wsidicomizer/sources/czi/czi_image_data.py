@@ -23,8 +23,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
-from PIL import Image
-from PIL.Image import Image as PILImage
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import UID as Uid
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -107,8 +107,8 @@ class CziImageData(DicomizerImageData):
         return self._metadata.channel_mapping
 
     @cached_property
-    def blank_decoded_tile(self) -> PILImage:
-        return Image.fromarray(self._create_blank_tile())
+    def blank_decoded_tile(self) -> Image:
+        return Pillow.fromarray(self._create_blank_tile())
 
     @cached_property
     def blank_encoded_tile(self) -> bytes:
@@ -224,7 +224,7 @@ class CziImageData(DicomizerImageData):
             ]
         return image_data
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> PILImage:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -238,12 +238,12 @@ class CziImageData(DicomizerImageData):
 
         Returns
         ----------
-        PILImage
+        Image
             Tile as Image.
         """
         if (tile, z, path) not in self.tile_directory:
             return self.blank_decoded_tile
-        return Image.fromarray(self._get_tile(tile, z, path))
+        return Pillow.fromarray(self._get_tile(tile, z, path))
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Tile is encoded as jpeg.

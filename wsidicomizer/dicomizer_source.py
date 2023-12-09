@@ -47,18 +47,12 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
         self._modules = modules
-        self._include_levels = include_levels
-        self._include_label = include_label
-        self._include_overview = include_overview
         self._include_confidential = include_confidential
         self._base_dataset = populate_base_dataset(
             self.metadata, create_base_dataset(modules), include_confidential
@@ -124,16 +118,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
                 ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
-            if self._is_included_level(
-                self.pyramid_levels[level_index],
-                self.pyramid_levels,
-                self._include_levels,
-            )
         ]
 
     @property
     def label_instances(self) -> List[WsiInstance]:
-        if not self.has_label or not self._include_label:
+        if not self.has_label:
             return []
 
         label = WsiInstance.create_instance(
@@ -143,7 +132,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     def overview_instances(self) -> List[WsiInstance]:
-        if not self.has_overview or not self._include_overview:
+        if not self.has_overview:
             return []
 
         overview = WsiInstance.create_instance(

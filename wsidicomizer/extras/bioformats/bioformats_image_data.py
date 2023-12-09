@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import ContextManager, List, Optional
 
 import numpy as np
-from PIL import Image
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -99,11 +100,11 @@ class BioformatsImageData(DicomizerImageData):
             self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:
-            return Image.fromarray(data)
+            return Pillow.fromarray(data)
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,

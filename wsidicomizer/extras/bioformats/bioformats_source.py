@@ -35,8 +35,6 @@ class BioformatsSource(DicomizerSource):
         encoder: Encoder,
         tile_size: Optional[int] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
@@ -55,8 +53,6 @@ class BioformatsSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_label,
-            include_overview,
             include_confidential,
         )
 

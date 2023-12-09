@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
-from PIL.Image import Image as PILImage
+from PIL.Image import Image
 from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
@@ -56,12 +56,8 @@ class WsiDicomizer(WsiDicom):
         filepath: Union[str, Path],
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
-        # include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-        label: Optional[Union[PILImage, str, Path]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
     ) -> WsiDicom:
@@ -75,20 +71,10 @@ class WsiDicomizer(WsiDicom):
             Module datasets to use in files. If none, use default modules.
         tile_size: int = 512
             Tile size to use if not defined by file.
-        include_levels: Optional[Sequence[int]] = None
-            Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes the two highest levels.
-        include_label: bool = True
-            Include label(s), default true.
-        include_overwiew: bool = True
-            Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
         preferred_source: Optional[Type[DicomizerSource]] = None
             Optional override source to use.
         **source_args
@@ -124,13 +110,10 @@ class WsiDicomizer(WsiDicom):
             encoder,
             tile_size,
             modules,
-            # include_levels,
-            include_label,
-            include_overview,
             include_confidential,
             **source_args,
         )
-        return cls(source, label)
+        return cls(source)
 
     @classmethod
     def convert(
@@ -145,11 +128,11 @@ class WsiDicomizer(WsiDicom):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
+        label: Optional[Union[Image, str, Path]] = None,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
         encoding: Optional[Union[Encoder, EncodingSettings]] = None,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
-        label: Optional[Union[PILImage, str, Path]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
     ) -> List[str]:
@@ -178,6 +161,8 @@ class WsiDicomizer(WsiDicom):
             Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
+        label: Optional[Union[Image, str, Path]] = None,
+            Optional label image to use instead of label found in file.
         workers: Optional[int] = None,
             Maximum number of thread workers to use.
         chunk_size: Optional[int] = None,
@@ -188,8 +173,6 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
         preferred_source: Optional[Type[DicomizerSource]] = None
             Optional override source to use.
         **source_args
@@ -204,11 +187,8 @@ class WsiDicomizer(WsiDicom):
             filepath,
             modules,
             tile_size,
-            include_label,
-            include_overview,
             include_confidential,
             encoding,
-            label,
             preferred_source,
             **source_args,
         ) as wsi:
@@ -227,7 +207,10 @@ class WsiDicomizer(WsiDicom):
                 chunk_size,
                 offset_table,
                 include_levels=include_levels,
+                include_labels=include_label,
+                include_overviews=include_overview,
                 add_missing_levels=add_missing_levels,
+                label=label,
             )
 
         return [str(filepath) for filepath in created_files]

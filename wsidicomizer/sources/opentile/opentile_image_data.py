@@ -14,10 +14,11 @@
 
 """Image data for opentile compatible file."""
 
-from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import Iterable, Iterator, List, Optional, Tuple
 
 from opentile.tiff_image import TiffImage
-from PIL import Image
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder
@@ -182,7 +183,7 @@ class OpenTileImageData(DicomizerImageData):
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -201,7 +202,7 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Image.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
+        return Pillow.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
 
     def _get_encoded_tiles(
         self, tiles: Iterable[Point], z: float, path: str

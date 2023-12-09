@@ -34,8 +34,6 @@ class OpenTileSource(DicomizerSource):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         force_transcoding: bool = False,
     ) -> None:
@@ -47,8 +45,6 @@ class OpenTileSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_label,
-            include_overview,
             include_confidential,
         )
 
