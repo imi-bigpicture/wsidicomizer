@@ -19,9 +19,9 @@ from typing import List, Optional, Sequence, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
 
@@ -33,9 +33,6 @@ class CziSource(DicomizerSource):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._imaga_data = CziImageData(filepath, tile_size, encoder)
@@ -45,9 +42,6 @@ class CziSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 

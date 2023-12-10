@@ -21,13 +21,15 @@ import os
 from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
-from PIL.Image import Image as PILImage
+from PIL.Image import Image
 from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
+from wsidicom.codec import Encoder, JpegSettings
+from wsidicom.codec import Settings as EncodingSettings
+from wsidicom.file import OffsetTableType
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
 
 # List of supported Dicomizers in prioritization order.
@@ -54,14 +56,8 @@ class WsiDicomizer(WsiDicom):
         filepath: Union[str, Path],
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
-        label: Optional[Union[PILImage, str, Path]] = None,
+        encoding: Optional[Union[EncodingSettings, Encoder]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
     ) -> WsiDicom:
@@ -75,27 +71,10 @@ class WsiDicomizer(WsiDicom):
             Module datasets to use in files. If none, use default modules.
         tile_size: int = 512
             Tile size to use if not defined by file.
-        include_levels: Optional[Sequence[int]] = None
-            Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
-            e.g. [-1, -2] includes the two highest levels.
-        include_label: bool = True
-            Include label(s), default true.
-        include_overwiew: bool = True
-            Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
-        encoding_format: str = 'jpeg'
-            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: float = 90
-            Quality to use if re-encoding. It is recommended to not use > 95 for jpeg.
-            Use < 1 or > 1000 for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
-            Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
+        encoding: Optional[Union[EncodingSettings, Encoder]] = None,
+            Encoding setting or encoder to use if re-encoding.
         preferred_source: Optional[Type[DicomizerSource]] = None
             Optional override source to use.
         **source_args
@@ -119,22 +98,22 @@ class WsiDicomizer(WsiDicom):
             selected_source = preferred_source
         if selected_source is None:
             raise NotImplementedError(f"{filepath} is not supported")
-        encoder = Encoder.create_encoder(
-            encoding_format, encoding_quality, subsampling=jpeg_subsampling
-        )
+        if encoding is None:
+            encoding = JpegSettings()
+        if isinstance(encoding, EncodingSettings):
+            encoder = Encoder.create_for_settings(encoding)
+        else:
+            encoder = encoding
 
         source = selected_source(
             filepath,
             encoder,
             tile_size,
             modules,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
             **source_args,
         )
-        return cls(source, label)
+        return cls(source)
 
     @classmethod
     def convert(
@@ -144,17 +123,16 @@ class WsiDicomizer(WsiDicom):
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
+        add_missing_levels: bool = False,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
+        label: Optional[Union[Image, str, Path]] = None,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
-        offset_table: Optional[str] = "bot",
-        label: Optional[Union[PILImage, str, Path]] = None,
+        encoding: Optional[Union[Encoder, EncodingSettings]] = None,
+        offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
     ) -> List[str]:
@@ -183,25 +161,18 @@ class WsiDicomizer(WsiDicom):
             Include overview(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
+        label: Optional[Union[Image, str, Path]] = None,
+            Optional label image to use instead of label found in file.
         workers: Optional[int] = None,
             Maximum number of thread workers to use.
         chunk_size: Optional[int] = None,
             Chunk size (number of tiles) to process at a time. Actual chunk
             size also depends on minimun_chunk_size from image_data.
-        encoding_format: str = 'jpeg'
-            Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.
-        encoding_quality: float = 90
-            Quality to use if re-encoding. It is recommended to not use > 95 for jpeg.
-            Use < 1 or > 1000 for lossless jpeg2000.
-        jpeg_subsampling: str = '420'
-            Subsampling option if using jpeg for re-encoding. Use '444' for
-            no subsampling, '422' for 2x1 subsampling, and '420' for 2x2
-            subsampling.
-        offset_table: Optional[str] = 'bot'
+        encoding: Optional[Union[EncodingSettings, Encoder]] = None,
+            Encoding setting or encoder to use if re-encoding.
+        offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
-            offset table, None - no offset table.
-        label: Optional[Union[PILImage, str, Path]] = None
-            Optional label image to use instead of label found in file.
+            offset table, 'empty' - empty offset table.
         preferred_source: Optional[Type[DicomizerSource]] = None
             Optional override source to use.
         **source_args
@@ -216,14 +187,8 @@ class WsiDicomizer(WsiDicom):
             filepath,
             modules,
             tile_size,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
-            encoding_format,
-            encoding_quality,
-            jpeg_subsampling,
-            label,
+            encoding,
             preferred_source,
             **source_args,
         ) as wsi:
@@ -236,7 +201,16 @@ class WsiDicomizer(WsiDicom):
             except FileExistsError:
                 ValueError(f"Output path {output_path} already exists")
             created_files = wsi.save(
-                output_path, uid_generator, workers, chunk_size, offset_table
+                output_path,
+                uid_generator,
+                workers,
+                chunk_size,
+                offset_table,
+                include_levels=include_levels,
+                include_labels=include_label,
+                include_overviews=include_overview,
+                add_missing_levels=add_missing_levels,
+                label=label,
             )
 
         return [str(filepath) for filepath in created_files]

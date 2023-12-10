@@ -19,10 +19,10 @@ from typing import List, Optional, Sequence, Tuple, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
@@ -35,9 +35,6 @@ class BioformatsSource(DicomizerSource):
         encoder: Encoder,
         tile_size: Optional[int] = None,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
@@ -56,9 +53,6 @@ class BioformatsSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 
@@ -113,7 +107,6 @@ class BioformatsSource(DicomizerSource):
         return pyramid_image_index, label_image_index, overview_image_index
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        print("create level for index", level_index)
         level = BioformatsImageData(
             self._reader,
             self._tile_size,
@@ -121,7 +114,6 @@ class BioformatsSource(DicomizerSource):
             self._pyramid_image_index,
             level_index,
         )
-        print(level.pixel_spacing, level.image_size)
         return level
 
     def _create_label_image_data(self) -> DicomizerImageData:

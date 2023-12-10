@@ -19,12 +19,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+import numpy as np
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from parameterized import parameterized
-from PIL import Image, ImageChops, ImageStat
+from PIL import Image as Pillow
+from PIL import ImageChops, ImageStat
+from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
+from wsidicom.codec import Jpeg2kSettings
+from wsidicom.codec.encoder import Jpeg2kEncoder
 from wsidicom.errors import WsiDicomNotFoundError
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -37,6 +42,27 @@ from wsidicomizer.wsidicomizer import WsiDicomizer
 from .testdata.test_parameters import test_parameters
 
 testdata_dir = Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+
+
+class Jpeg2kTestEncoder(Jpeg2kEncoder):
+    """Jpeg 2000 encoder used for testing.
+    Pretends to be lossy but encodes losslessly so that image data is not changed."""
+
+    def __init__(self):
+        settings = Jpeg2kSettings(level=0)
+        super().__init__(settings)
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    @property
+    def transfer_syntax(self) -> UID:
+        return JPEG2000
+
+    @property
+    def photometric_interpretation(self) -> str:
+        return "YBR_ICT"
 
 
 @pytest.mark.integrationtest
@@ -83,8 +109,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
             output_path=str(tempdir.name),
             tile_size=tile_size,
             include_levels=include_levels,
-            encoding_format="jpeg2000",
-            encoding_quality=0,
+            encoding=Jpeg2kTestEncoder(),
         )
         return tempdir
 
@@ -264,7 +289,7 @@ class WsiDicomizerConvertTests(unittest.TestCase):
                 (region["size"]["width"], region["size"]["height"]),
             )
 
-        reference_no_alpha = Image.new("RGB", reference.size, (255, 255, 255))
+        reference_no_alpha = Pillow.new("RGB", reference.size, (255, 255, 255))
         reference_no_alpha.paste(reference, mask=reference.split()[3])
         self.assertEqual(
             md5(converted.tobytes()).hexdigest(),
@@ -325,9 +350,16 @@ class WsiDicomizerConvertTests(unittest.TestCase):
         path = next(
             paths[0] for paths in self.test_folders.values() if paths is not None
         )
-        new_label = Image.new("RGB", (256, 256), (128, 128, 128))
-        with WsiDicomizer.open(path, label=new_label) as wsi:
-            self.assertEqual(new_label, wsi.read_label())
+        new_label = Pillow.new("RGB", (256, 256), (128, 128, 128))
+
+        with TemporaryDirectory() as tempdir:
+            with WsiDicomizer.open(path) as wsi:
+                wsi.save(tempdir, include_levels=[-1], label=new_label)
+
+            with WsiDicom.open(tempdir) as wsi:
+                self.assertTrue(
+                    np.array_equal(np.array(new_label), np.array(wsi.read_label()))
+                )
 
     @parameterized.expand(
         [

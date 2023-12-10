@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.11.0] - 2023-12-10
+
+### Changed
+
+- Use `Encoder` from wsidicom for encoding data.
+- Moved `include_levels`, `include_label`, and `include_overview` parameters to `save()`.
+
+### Removed
+
+- Support for Python 3.8
+
 ## [0.10.2] - 2023-09-01
 
 ### Fixed

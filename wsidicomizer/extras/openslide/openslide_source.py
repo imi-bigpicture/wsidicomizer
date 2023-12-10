@@ -20,9 +20,9 @@ from typing import List, Optional, Sequence, Union
 
 from opentile.metadata import Metadata
 from pydicom import Dataset
+from wsidicom.codec import Encoder
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import OpenSlide
 from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideAssociatedImageData,
@@ -40,9 +40,6 @@ class OpenSlideSource(DicomizerSource):
         encoder: Encoder,
         tile_size: int = 512,
         modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._slide = OpenSlide(filepath)
@@ -53,9 +50,6 @@ class OpenSlideSource(DicomizerSource):
             encoder,
             tile_size,
             modules,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 
