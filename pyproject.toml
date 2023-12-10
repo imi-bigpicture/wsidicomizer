@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9, <3.12"
 wsidicom = "^0.17.0"
 opentile = "^0.11.1"
 numpy = "^1.22.0"
