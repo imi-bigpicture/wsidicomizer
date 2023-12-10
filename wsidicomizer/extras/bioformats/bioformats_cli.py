@@ -14,8 +14,10 @@
 
 """Cli for bioformats source."""
 
-from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
+
+from wsidicom.codec import Settings
+from wsidicom.file import OffsetTableType
 
 from wsidicomizer.cli import WsiDicomizerCli
 from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
@@ -36,30 +38,24 @@ class BioformatsCli(WsiDicomizerCli):
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
-        offset_table: Optional[str] = "bot",
-        label: Optional[Path] = None,
+        encoding_settings: Optional[Settings] = None,
+        offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
     ):
         with BioformatsDicomizer.open(
             filepath=filepath,
             metadata=metadata,
             default_metadata=default_metadata,
             tile_size=tile_size,
-            include_levels=include_levels,
-            include_label=include_label,
-            include_overview=include_overview,
-            encoding_format=encoding_format,
-            encoding_quality=encoding_quality,
-            jpeg_subsampling=jpeg_subsampling,
-            label=label,
+            encoding_settings=encoding_settings,
         ) as wsi:
             wsi.save(
                 output_path=output_path,
                 offset_table=offset_table,
                 workers=workers,
                 chunk_size=chunk_size,
+                include_levels=include_levels,
+                include_labels=include_label,
+                include_overviews=include_overview,
             )
 
 

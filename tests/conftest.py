@@ -19,8 +19,11 @@ from tempfile import TemporaryDirectory
 from typing import Dict
 
 import pytest
+from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
+from wsidicom.codec.encoder import Jpeg2kEncoder, Jpeg2kSettings
 from wsidicom.metadata import OpticalPath
+
 from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -139,7 +142,7 @@ test_parameters = {
             "tile_size": 1024,
             "encode_format": "jpeg2000",
             "encode_quality": 0,
-            "photometric_interpretation": "YBR_RCT",
+            "photometric_interpretation": "YBR_ICT",
             "image_coordinate_system": {"x": 2.3061675, "y": 20.79015},
             "read_region": [
                 # OpenSlide produces different results across platforms
@@ -397,6 +400,27 @@ test_parameters = {
 }
 
 
+class Jpeg2kTestEncoder(Jpeg2kEncoder):
+    """Jpeg 2000 encoder used for testing.
+    Pretends to be lossy but encodes losslessly so that image data is not changed."""
+
+    def __init__(self):
+        settings = Jpeg2kSettings(level=0)
+        super().__init__(settings)
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    @property
+    def transfer_syntax(self) -> UID:
+        return JPEG2000
+
+    @property
+    def photometric_interpretation(self) -> str:
+        return "YBR_ICT"
+
+
 @pytest.fixture(scope="module")
 def icc_profile():
     yield bytes([0x00, 0x01, 0x02, 0x03])
@@ -436,12 +460,11 @@ def converted(
             metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
             WsiDicomizer.convert(
                 file_path,
-                output_path=str(tempdir.name),
+                output_path=tempdir.name,
                 default_metadata=metadata,
                 tile_size=tile_size,
                 include_levels=include_levels,
-                encoding_format="jpeg2000",
-                encoding_quality=0,
+                encoding=Jpeg2kTestEncoder(),
             )
             converted_folders[file_format][file] = tempdir
     yield converted_folders

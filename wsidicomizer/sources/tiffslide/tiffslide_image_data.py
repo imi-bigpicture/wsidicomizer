@@ -17,11 +17,11 @@
 import math
 import re
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from PIL import Image
-from PIL.Image import Image as PILImage
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import UID as Uid
 from tiffslide import TiffSlide
 from tiffslide.tiffslide import (
@@ -31,12 +31,12 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_BOUNDS_X,
     PROPERTY_NAME_BOUNDS_Y,
 )
+from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -63,11 +63,11 @@ class TiffSlideImageData(DicomizerImageData):
     @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        return self._encoder.transfer_syntax
+        return self.encoder.transfer_syntax
 
     @property
     def photometric_interpretation(self) -> str:
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+        return self.encoder.photometric_interpretation
 
     @property
     def samples_per_pixel(self) -> int:
@@ -82,12 +82,14 @@ class TiffSlideImageData(DicomizerImageData):
         return ["0"]
 
     @property
-    def blank_color(self) -> Tuple[int, int, int]:
+    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
         return self._blank_color
 
-    def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
+    def _get_blank_color(
+        self, photometric_interpretation: str
+    ) -> Union[int, Tuple[int, int, int]]:
         """Return color to use blank tiles. Parses background color from
-        tiffslide if present.
+        openslide if present.
 
         Parameters
         ----------
@@ -96,8 +98,8 @@ class TiffSlideImageData(DicomizerImageData):
 
         Returns
         ----------
-        Tuple[int, int, int]
-            RGB color.
+        Union[int, Tuple[int, int, int]]
+            Grayscale or RGB color.
 
         """
         slide_background_color_string = self._slide.properties.get(
@@ -136,7 +138,7 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
         image = self._slide.associated_images[image_type.value]
         self._image_size = Size.from_tuple(image.size)
         self._decoded_image = image
-        self._encoded_image = self._encode(np.asarray(image))
+        self._encoded_image = self.encoder.encode(np.asarray(image))
 
     @property
     def image_size(self) -> Size:
@@ -163,7 +165,7 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> PILImage:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
@@ -269,7 +271,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
 
     def stitch_tiles(
         self, region: Region, path: str, z: float, threads: int
-    ) -> PILImage:
+    ) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         tiffslide object.
 
@@ -284,7 +286,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
 
         Returns
         ----------
-        PILImage
+        Image
             Stitched image
         """
         if z not in self.focal_planes:
@@ -294,7 +296,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         image_data = self._get_region(region)
         if image_data is None:
             image_data = self._get_blank_decoded_frame(region.size)
-        return Image.fromarray(image_data)
+        return Pillow.fromarray(image_data)
 
     def _detect_blank_tile(self, data: np.ndarray) -> bool:
         """Detect if tile data is a blank tile, i.e. either has full
@@ -342,11 +344,11 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             frame = np.full(
                 size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
             )
-            self._blank_encoded_frame = self._encode(frame)
+            self._blank_encoded_frame = self.encoder.encode(frame)
             self._blank_encoded_frame_size = size
         return self._blank_encoded_frame
 
-    def _get_blank_decoded_frame(self, size: Size) -> PILImage:
+    def _get_blank_decoded_frame(self, size: Size) -> Image:
         """Return cached blank decoded frame for size, or create frame if
         cached frame not available or of wrong size.
 
@@ -361,7 +363,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             Decoded blank frame.
         """
         if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
-            frame = Image.new("RGB", size.to_tuple(), self.blank_color)
+            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
             self._blank_decoded_frame = frame
         return self._blank_decoded_frame
 
@@ -421,9 +423,9 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self._encode(tile)
+        return self.encoder.encode(tile)
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> PILImage:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile. Image mode is RGB.
 
         Parameters
@@ -437,7 +439,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
 
         Returns
         ----------
-        PILImage
+        Image
             Tile as Image.
         """
         if z not in self.focal_planes:
@@ -447,4 +449,4 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
-        return Image.fromarray(tile)
+        return Pillow.fromarray(tile)

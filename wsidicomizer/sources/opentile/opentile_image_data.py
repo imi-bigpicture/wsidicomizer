@@ -14,16 +14,18 @@
 
 """Image data for opentile compatible file."""
 
-from typing import List, Optional, Sequence
+from typing import Iterable, Iterator, List, Optional
 
 from opentile.tiff_image import TiffImage
-from PIL import Image
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
+from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicomizer.encoding import Encoder
+
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -32,6 +34,7 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiff_image: TiffImage,
         encoder: Encoder,
+        force_transcoding: bool = False,
     ):
         """Wraps a TiffImage to ImageData.
 
@@ -41,13 +44,17 @@ class OpenTileImageData(DicomizerImageData):
             TiffImage to wrap.
         encoded: Encoder
             Encoder to use.
+        force_transcoding: bool
+            Force transcoding of image data.
         """
         super().__init__(encoder)
         self._tiff_image = tiff_image
 
-        self._needs_transcoding = not self.is_supported_transfer_syntax()
+        self._needs_transcoding = (
+            not self.is_supported_transfer_syntax() or force_transcoding
+        )
         if self.needs_transcoding:
-            self._transfer_syntax = self._encoder.transfer_syntax
+            self._transfer_syntax = self.encoder.transfer_syntax
         else:
             self._transfer_syntax = self.get_transfer_syntax()
         self._image_size = Size(*self._tiff_image.image_size.to_tuple())
@@ -110,7 +117,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def photometric_interpretation(self) -> str:
         if self.needs_transcoding:
-            return self._encoder.photometric_interpretation(self.samples_per_pixel)
+            return self.encoder.photometric_interpretation
         if self._tiff_image.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
                 return "YBR_FULL_422"
@@ -153,10 +160,10 @@ class OpenTileImageData(DicomizerImageData):
             raise ValueError()
         if self.needs_transcoding:
             decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
-            return self._encode(decoded_tile)
+            return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -175,35 +182,18 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Image.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
+        return Pillow.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
 
-    def get_encoded_tiles(
-        self, tiles: Sequence[Point], z: float, path: str
-    ) -> List[bytes]:
-        """Return list of image bytes for tiles. Returns transcoded tiles if
-        non-supported encoding.
-
-        Parameters
-        ----------
-        tiles: Sequence[Point]
-            Tile positions to get.
-        z: float
-            Focal plane of tile to get.
-        path: str
-            Optical path of tile to get.
-
-        Returns
-        ----------
-        Iterator[List[bytes]]
-            Iterator of tile bytes.
-        """
+    def _get_encoded_tiles(
+        self, tiles: Iterable[Point], z: float, path: str
+    ) -> Iterator[bytes]:
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tiles_tuples = [tile.to_tuple() for tile in tiles]
         if not self.needs_transcoding:
             return self._tiff_image.get_tiles(tiles_tuples)
         decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
-        return [self._encode(tile) for tile in decoded_tiles]
+        return (self.encoder.encode(tile) for tile in decoded_tiles)
 
     def close(self) -> None:
         self._tiff_image.close()
@@ -234,8 +224,9 @@ class OpenTileLevelImageData(OpenTileImageData):
         image_metadata: ImageMetadata,
         merged_metadata: ImageMetadata,
         encoder: Encoder,
+        force_transcoding: bool = False,
     ):
-        super().__init__(tiff_image, encoder)
+        super().__init__(tiff_image, encoder, force_transcoding)
         if (
             merged_metadata.pixel_spacing is not None
             and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
@@ -273,8 +264,9 @@ class OpenTileAssociatedImageData(OpenTileImageData):
         self,
         tiff_image: TiffImage,
         encoder: Encoder,
+        force_transcoding: bool = False,
     ):
-        super().__init__(tiff_image, encoder)
+        super().__init__(tiff_image, encoder, force_transcoding)
         if self._tiff_image.pixel_spacing is not None:
             self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
         else:

@@ -16,10 +16,12 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional
+
+from wsidicom.codec import Encoder
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import OpenSlide
 from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideAssociatedImageData,
@@ -28,7 +30,6 @@ from wsidicomizer.extras.openslide.openslide_image_data import (
 )
 from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicom.metadata.wsi import WsiMetadata
 
 
 class OpenSlideSource(DicomizerSource):
@@ -39,9 +40,6 @@ class OpenSlideSource(DicomizerSource):
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
     ) -> None:
         self._slide = OpenSlide(filepath)
@@ -53,9 +51,6 @@ class OpenSlideSource(DicomizerSource):
             tile_size,
             metadata,
             default_metadata,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 

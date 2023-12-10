@@ -18,18 +18,18 @@ import ctypes
 import math
 import re
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
-from PIL import Image
-from PIL.Image import Image as PILImage
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import UID as Uid
+from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
     PROPERTY_NAME_BOUNDS_HEIGHT,
@@ -75,11 +75,11 @@ class OpenSlideImageData(DicomizerImageData):
     @property
     def transfer_syntax(self) -> Uid:
         """The uid of the transfer syntax of the image."""
-        return self._encoder.transfer_syntax
+        return self.encoder.transfer_syntax
 
     @property
     def photometric_interpretation(self) -> str:
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+        return self.encoder.photometric_interpretation
 
     @property
     def samples_per_pixel(self) -> int:
@@ -94,10 +94,12 @@ class OpenSlideImageData(DicomizerImageData):
         return ["0"]
 
     @property
-    def blank_color(self) -> Tuple[int, int, int]:
+    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
         return self._blank_color
 
-    def _get_blank_color(self, photometric_interpretation: str) -> Tuple[int, int, int]:
+    def _get_blank_color(
+        self, photometric_interpretation: str
+    ) -> Union[int, Tuple[int, int, int]]:
         """Return color to use blank tiles. Parses background color from
         openslide if present.
 
@@ -108,8 +110,8 @@ class OpenSlideImageData(DicomizerImageData):
 
         Returns
         ----------
-        Tuple[int, int, int]
-            RGB color.
+        Union[int, Tuple[int, int, int]]
+            Grayscale or RGB color.
 
         """
         slide_background_color_string = self._slide.properties.get(
@@ -146,11 +148,11 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
             raise ValueError(f"{image_type.value} not in {self._slide}")
 
         image = self._slide.associated_images[image_type.value]
-        no_alpha = Image.new("RGB", image.size, self.blank_color)
+        no_alpha = Pillow.new("RGB", image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[3])
         self._image_size = Size.from_tuple(no_alpha.size)
         self._decoded_image = no_alpha
-        self._encoded_image = self._encode(np.asarray(no_alpha))
+        self._encoded_image = self.encoder.encode(np.asarray(no_alpha))
 
     @property
     def image_size(self) -> Size:
@@ -178,7 +180,7 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> PILImage:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
@@ -193,7 +195,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         tile_size: int,
         encoder: Encoder,
     ):
-        super().__init__(open_slide, encoder)
+
         """Wraps a OpenSlide level to ImageData.
 
         Parameters
@@ -207,6 +209,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         encoded: Encoder
             Encoder to use.
         """
+        super().__init__(open_slide, encoder)
         self._tile_size = Size(tile_size, tile_size)
         self._slide = open_slide
         self._level_index = level_index
@@ -284,7 +287,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
     def stitch_tiles(
         self, region: Region, path: str, z: float, threads: int
-    ) -> PILImage:
+    ) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         openslide object.
 
@@ -299,7 +302,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        PILImage
+        Image
             Stitched image
         """
         if z not in self.focal_planes:
@@ -362,11 +365,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             frame = np.full(
                 size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
             )
-            self._blank_encoded_frame = self._encode(frame)
+            self._blank_encoded_frame = self.encoder.encode(frame)
             self._blank_encoded_frame_size = size
         return self._blank_encoded_frame
 
-    def _get_blank_decoded_frame(self, size: Size) -> PILImage:
+    def _get_blank_decoded_frame(self, size: Size) -> Image:
         """Return cached blank decoded frame for size, or create frame if
         cached frame not available or of wrong size.
 
@@ -381,11 +384,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Decoded blank frame.
         """
         if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
-            frame = Image.new("RGB", size.to_tuple(), self.blank_color)
+            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
             self._blank_decoded_frame = frame
         return self._blank_decoded_frame
 
-    def _get_region(self, region: Region) -> Optional[PILImage]:
+    def _get_region(self, region: Region) -> Optional[Image]:
         """Return Image read from region in openslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
         background color
@@ -397,7 +400,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        Optional[PILImage]
+        Optional[Image]
             Image of region, or None if region is blank.
         """
         if region.size.width < 0 or region.size.height < 0:
@@ -426,8 +429,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         convert_argb_to_rgba(region_data.view(ctypes.c_uint32))
 
-        image = Image.fromarray(region_data)
-        no_alpha = Image.new("RGB", image.size, self.blank_color)
+        image = Pillow.fromarray(region_data)
+        no_alpha = Pillow.new("RGB", image.size, self.blank_color)
         no_alpha.paste(image, mask=image.split()[TRANSPARENCY])
         return no_alpha
 
@@ -456,9 +459,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self._encode(np.asarray(tile))
+        return self.encoder.encode(np.asarray(tile))
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> PILImage:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile. Image mode is RGB.
 
         Parameters
@@ -472,7 +475,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
 
         Returns
         ----------
-        PILImage
+        Image
             Tile as Image.
         """
         if z not in self.focal_planes:

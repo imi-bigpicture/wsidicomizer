@@ -17,14 +17,14 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional
 
 from tiffslide import TiffSlide
+from wsidicom.codec import Encoder
+from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicom.metadata import WsiMetadata
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
     TiffSlideAssociatedImageData,
     TiffSlideAssociatedImageType,
@@ -41,9 +41,6 @@ class TiffSlideSource(DicomizerSource):
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         **source_args,
     ) -> None:
@@ -59,9 +56,6 @@ class TiffSlideSource(DicomizerSource):
             tile_size,
             metadata,
             default_metadata,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 

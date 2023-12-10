@@ -15,14 +15,14 @@
 """Source for reading opentile compatible file."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import List, Optional
 
 from opentile import OpenTile
+from wsidicom.codec import Encoder
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicom.metadata.wsi import WsiMetadata
 from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
     OpenTileLevelImageData,
@@ -38,22 +38,19 @@ class OpenTileSource(DicomizerSource):
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
+        force_transcoding: bool = False,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
         self._base_metadata = OpentileMetadata(self._tiler.metadata)
+
+        self._force_transcoding = force_transcoding
         super().__init__(
             filepath,
             encoder,
             tile_size,
             metadata,
             default_metadata,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 
@@ -84,13 +81,21 @@ class OpenTileSource(DicomizerSource):
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         level = self._tiler.levels[level_index]
         return OpenTileLevelImageData(
-            level, self.base_metadata.image, self.metadata.image, self._encoder
+            level,
+            self.base_metadata.image,
+            self.metadata.image,
+            self._encoder,
+            self._force_transcoding,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         label = self._tiler.labels[0]
-        return OpenTileAssociatedImageData(label, self._encoder)
+        return OpenTileAssociatedImageData(
+            label, self._encoder, self._force_transcoding
+        )
 
     def _create_overview_image_data(self) -> DicomizerImageData:
         overview = self._tiler.overviews[0]
-        return OpenTileAssociatedImageData(overview, self._encoder)
+        return OpenTileAssociatedImageData(
+            overview, self._encoder, self._force_transcoding
+        )

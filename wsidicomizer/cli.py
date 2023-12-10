@@ -19,6 +19,7 @@ from typing import Optional, Sequence
 
 from wsidicom.metadata.json_schema.wsi import WsiMetadataJsonSchema
 from wsidicom.metadata.wsi import WsiMetadata
+from wsidicom.codec import Jpeg2kSettings, JpegSettings, Settings, Subsampling
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -154,9 +155,16 @@ class WsiDicomizerCli:
             levels = None
         else:
             levels = args.levels
-        offset_table: Optional[str] = args.offset_table
-        if offset_table == "None":
-            offset_table = None
+        encoding_format = args.format
+        if encoding_format == "jpeg":
+            subsampling = Subsampling.from_string(args.subsampling)
+            encoding_settings = JpegSettings(
+                quality=args.quality, subsampling=subsampling
+            )
+        elif encoding_format == "jpeg2000":
+            encoding_settings = Jpeg2kSettings(level=args.quality)
+        else:
+            encoding_settings = None
         self.convert(
             filepath=args.input,
             output_path=args.output,
@@ -169,10 +177,8 @@ class WsiDicomizerCli:
             include_confidential=not args.no_confidential,
             workers=args.workers,
             chunk_size=args.chunk_size,
-            encoding_format=args.format,
-            encoding_quality=args.quality,
-            jpeg_subsampling=args.subsampling,
-            offset_table=offset_table,
+            encoding_settings=encoding_settings,
+            offset_table=args.offset_table,
             label=args.label,
         )
 
@@ -189,10 +195,8 @@ class WsiDicomizerCli:
         include_confidential: bool = True,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
-        encoding_format: str = "jpeg",
-        encoding_quality: float = 90,
-        jpeg_subsampling: str = "420",
-        offset_table: Optional[str] = "bot",
+        encoding_settings: Optional[Settings] = None,
+        offset_table: str = "bot",
         label: Optional[Path] = None,
     ):
         WsiDicomizer.convert(
@@ -207,9 +211,7 @@ class WsiDicomizerCli:
             include_confidential=include_confidential,
             workers=workers,
             chunk_size=chunk_size,
-            encoding_format=encoding_format,
-            encoding_quality=encoding_quality,
-            jpeg_subsampling=jpeg_subsampling,
+            encoding=encoding_settings,
             offset_table=offset_table,
             label=label,
         )

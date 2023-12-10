@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] -
 
+## [0.11.0] - 2023-12-10
+
+### Changed
+
+- Use `Encoder` from wsidicom for encoding data.
+- Moved `include_levels`, `include_label`, and `include_overview` parameters to `save()`.
+
+### Removed
+
+- Support for Python 3.8
+
+## [0.10.2] - 2023-09-01
+
+### Fixed
+
+- Update dependency requirements to allow newer tifffile and imagecodecs.
+
 ## [0.10.1] - 2023-07-06
 
 ### Fixed
@@ -177,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.1..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.2..HEAD
+[0.10.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.1..0.10.2
 [0.10.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.0..0.10.1
 [0.10.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.3..0.10.0
 [0.9.3]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.2..0.9.3

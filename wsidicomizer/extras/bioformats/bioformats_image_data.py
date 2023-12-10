@@ -18,11 +18,12 @@ from pathlib import Path
 from typing import ContextManager, List, Optional
 
 import numpy as np
-from PIL import Image
+from PIL import Image as Pillow
+from PIL.Image import Image
 from pydicom.uid import UID
+from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -59,7 +60,7 @@ class BioformatsImageData(DicomizerImageData):
     @property
     def transfer_syntax(self) -> UID:
         """Return the uid of the transfer syntax of the image."""
-        return self._encoder.transfer_syntax
+        return self.encoder.transfer_syntax
 
     @property
     def image_size(self) -> Size:
@@ -88,7 +89,7 @@ class BioformatsImageData(DicomizerImageData):
     def photometric_interpretation(self) -> str:
         """Return the photophotometric interpretation of the image
         data."""
-        return self._encoder.photometric_interpretation(self.samples_per_pixel)
+        return self.encoder.photometric_interpretation
 
     def _get_tile(
         self, tile_point: Point, z: float, path: str
@@ -99,17 +100,17 @@ class BioformatsImageData(DicomizerImageData):
             self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image.Image:
+    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:
-            return Image.fromarray(data)
+            return Pillow.fromarray(data)
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:
-            return self._encode(data)
+            return self.encoder.encode(data)
 
     @staticmethod
     def detect_format(filepath: Path) -> bool:

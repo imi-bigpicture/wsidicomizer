@@ -17,15 +17,15 @@ from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List
+import numpy as np
 
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
-from wsidicom.geometry import SizeMm
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -33,9 +33,10 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_Y,
     OpenSlide,
 )
+from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-from .conftest import test_parameters
+from .conftest import Jpeg2kTestEncoder, test_parameters
 
 
 @pytest.mark.integrationtest
@@ -63,11 +64,7 @@ class TestWsiDicomizerConvert:
         revision_path = edition_reader.get_revision("current")
         assert isinstance(revision_path, Path)
         json_path = revision_path.joinpath("json")
-        validator = DicomFileValidator(
-            EditionReader.load_iod_info(json_path),
-            EditionReader.load_module_info(json_path),
-            EditionReader.load_dict_info(json_path),
-        )
+        validator = DicomFileValidator(EditionReader.load_dicom_info(json_path))
 
         # Act
         result: Dict[str, Dict[str, Dict[str, List[str]]]] = validator.validate_dir(
@@ -343,11 +340,20 @@ class TestWsiDicomizerConvert:
         label = Image.new("RGB", (256, 256), (128, 128, 128))
 
         # Act
-        with WsiDicomizer.open(wsi_file, label=label) as wsi:
-            new_label = wsi.read_label()
+        with TemporaryDirectory() as temp_dir:
+            WsiDicomizer.convert(
+                wsi_file,
+                temp_dir,
+                include_levels=[-1],
+                label=label,
+                encoding=Jpeg2kTestEncoder(),
+            )
 
-        # Assert
-        assert label == new_label
+            # Assert
+            with WsiDicom.open(temp_dir) as wsi:
+                new_label = wsi.read_label()
+
+        assert np.array_equal(np.array(new_label), np.array(label))
 
     @pytest.mark.parametrize(
         ["file_format", "file", "expected_image_coordinate_system"],

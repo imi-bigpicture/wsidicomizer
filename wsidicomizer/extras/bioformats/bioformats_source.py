@@ -15,14 +15,15 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
+
+from wsidicom.codec import Encoder
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.encoding import Encoder
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicom.metadata.wsi import WsiMetadata
 
 
 class BioformatsSource(DicomizerSource):
@@ -33,9 +34,6 @@ class BioformatsSource(DicomizerSource):
         tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
         include_confidential: bool = True,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
@@ -54,9 +52,6 @@ class BioformatsSource(DicomizerSource):
             tile_size,
             metadata,
             default_metadata,
-            include_levels,
-            include_label,
-            include_overview,
             include_confidential,
         )
 
