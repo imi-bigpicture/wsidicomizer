@@ -23,15 +23,13 @@ wsidicom = { path = "../wsidicom", develop = true }
 opentile = "^0.11.1"
 numpy = "^1.22.0"
 pydicom = ">=2.2.0,<2.4.0"
-highdicom = "^0.21.1"
 czifile = ">=2019.7.2"
 imagecodecs = ">=2022.9.26"
-python-dateutil = "^2.8.2"
 tiffslide = "^2.1.1"
+marshmallow = "^3.19.0"
 openslide-python = { version = "^1.1.2", optional = true }
 scyjava = { version = "^1.8.1", optional = true }
 ome-types = {version = "^0.4.0", optional = true }
-marshmallow = "^3.19.0"
 
 [tool.poetry.extras]
 openslide = ["openslide-python"]

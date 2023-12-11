@@ -21,7 +21,6 @@ from xml.etree import ElementTree
 
 import numpy as np
 from czifile import CziFile
-from dateutil import parser as dateparser
 from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Equipment, Image, Objectives, OpticalPath
 
@@ -57,7 +56,7 @@ class CziMetadata(WsiDicomizerMetadata):
             str,
             nested=["Metadata", "Information", "Image"],
         )
-        return dateparser.parse(value)
+        return datetime.fromisoformat(value)
 
     @property
     def scanner_model(self) -> Optional[str]:
