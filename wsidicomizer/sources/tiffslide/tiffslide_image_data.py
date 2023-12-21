@@ -269,9 +269,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             return super().image_coordinate_system
         return self._image_coordinate_system
 
-    def stitch_tiles(
-        self, region: Region, path: str, z: float, threads: int
-    ) -> Image:
+    def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         tiffslide object.
 
@@ -295,7 +293,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             raise WsiDicomNotFoundError(f"optical path {path}", str(self))
         image_data = self._get_region(region)
         if image_data is None:
-            image_data = self._get_blank_decoded_frame(region.size)
+            return self._get_blank_decoded_frame(region.size)
         return Pillow.fromarray(image_data)
 
     def _detect_blank_tile(self, data: np.ndarray) -> bool:
