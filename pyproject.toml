@@ -22,7 +22,7 @@ python = ">=3.9, <3.12"
 wsidicom = { path = "../wsidicom", develop = true }
 opentile = "^0.11.1"
 numpy = "^1.22.0"
-pydicom = ">=2.2.0,<2.4.0"
+pydicom = ">=2.1.0"
 czifile = ">=2019.7.2"
 imagecodecs = ">=2022.9.26"
 tiffslide = "^2.1.1"
