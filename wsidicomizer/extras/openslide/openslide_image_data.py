@@ -27,8 +27,8 @@ from pydicom.uid import UID as Uid
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
@@ -245,13 +245,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
-        if image_metadata.image_coordinate_system is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                image_metadata.image_coordinate_system.origin,
-                image_metadata.image_coordinate_system.orientation,
-            )
-        else:
-            self._image_coordinate_system = None
+        self._image_coordinate_system = image_metadata.image_coordinate_system
 
     @property
     def image_size(self) -> Size:

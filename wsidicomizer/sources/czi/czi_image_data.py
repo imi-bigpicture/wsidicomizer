@@ -28,7 +28,6 @@ from PIL.Image import Image
 from pydicom.uid import UID as Uid
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
 
 from wsidicomizer.config import settings
@@ -84,13 +83,7 @@ class CziImageData(DicomizerImageData):
         if self._merged_metadata.pixel_spacing is None:
             raise ValueError("Could not determine pixel spacing for czi image.")
         self._pixel_spacing = self._merged_metadata.pixel_spacing
-        if merged_metadata.image_coordinate_system is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                origin=merged_metadata.image_coordinate_system.origin,
-                orientation=merged_metadata.image_coordinate_system.orientation,
-            )
-        else:
-            self._image_coordinate_system = None
+        self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
     def pyramid_index(self) -> int:

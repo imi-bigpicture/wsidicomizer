@@ -23,8 +23,8 @@ from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size, SizeMm
-from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -239,14 +239,7 @@ class OpenTileLevelImageData(OpenTileImageData):
             self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
         else:
             raise ValueError("Could not determine pixel spacing for tiff image.")
-
-        if merged_metadata.image_coordinate_system is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                origin=merged_metadata.image_coordinate_system.origin,
-                orientation=merged_metadata.image_coordinate_system.orientation,
-            )
-        else:
-            self._image_coordinate_system = None
+        self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:

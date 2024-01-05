@@ -34,8 +34,8 @@ from tiffslide.tiffslide import (
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
-from wsidicom.instance import ImageCoordinateSystem
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -230,13 +230,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         self._blank_encoded_frame_size = None
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
-        if image_metadata.image_coordinate_system is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                image_metadata.image_coordinate_system.origin,
-                image_metadata.image_coordinate_system.orientation,
-            )
-        else:
-            self._image_coordinate_system = None
+        self._image_coordinate_system = image_metadata.image_coordinate_system
 
     @property
     def image_size(self) -> Size:

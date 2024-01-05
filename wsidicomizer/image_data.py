@@ -19,8 +19,8 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 from wsidicom import ImageData
-from wsidicom.geometry import Orientation, PointMm
-from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.geometry import PointMm
+from wsidicom.metadata import ImageCoordinateSystem
 
 
 class DicomizerImageData(ImageData, metaclass=ABCMeta):
@@ -40,7 +40,7 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
         """Return a default ImageCoordinateSystem."""
-        return ImageCoordinateSystem(PointMm(0, 0), Orientation((0, 1, 0, 1, 0, 0)))
+        return ImageCoordinateSystem(PointMm(0, 0), 90)
 
     @property
     def bits(self) -> int:

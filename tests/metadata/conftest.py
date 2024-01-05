@@ -32,6 +32,7 @@ from wsidicom.conceptcode import (
     SpecimenPreparationStepsCode,
     SpecimenSamplingProcedureCode,
     SpecimenStainsCode,
+    UnitCode,
 )
 from wsidicom.metadata import (
     ConstantLutSegment,
@@ -54,16 +55,17 @@ from wsidicom.metadata import (
     Slide,
     Study,
     WsiMetadata,
+    Measurement,
 )
-from wsidicom.metadata.sample import (
+from wsidicom.metadata import (
     Collection,
     Embedding,
-    ExtractedSpecimen,
+    Specimen,
     Fixation,
     Processing,
     Sample,
     SlideSample,
-    SlideSamplePosition,
+    SampleLocalization,
     Staining,
 )
 
@@ -214,20 +216,21 @@ def collection():
 
 @pytest.fixture()
 def extracted_specimen(collection: Collection):
-    yield ExtractedSpecimen(
-        "specimen", AnatomicPathologySpecimenTypesCode("Gross specimen"), collection
+    yield Specimen(
+        "specimen",
+        collection,
+        AnatomicPathologySpecimenTypesCode("Gross specimen"),
     )
 
 
 @pytest.fixture()
-def sample(extracted_specimen: ExtractedSpecimen):
+def sample(extracted_specimen: Specimen):
     processing = Processing(
         SpecimenPreparationStepsCode("Specimen clearing"),
         datetime.datetime(2023, 8, 5),
     )
     yield Sample(
         "sample",
-        AnatomicPathologySpecimenTypesCode("Tissue section"),
         [
             extracted_specimen.sample(
                 SpecimenSamplingProcedureCode("Dissection"),
@@ -235,6 +238,7 @@ def sample(extracted_specimen: ExtractedSpecimen):
                 "Sampling to block",
             ),
         ],
+        AnatomicPathologySpecimenTypesCode("Tissue section"),
         [processing],
     )
 
@@ -250,20 +254,20 @@ def slide_sample(sample: Sample):
             "Sectioning to slide",
         ),
         uid=UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
-        position="left",
+        localization=SampleLocalization(description="left"),
     )
 
 
 @pytest.fixture()
 def slide():
-    part_1 = ExtractedSpecimen(
+    part_1 = Specimen(
         "part 1",
-        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         Collection(
             SpecimenCollectionProcedureCode("Specimen collection"),
             datetime.datetime(2023, 8, 5),
             "Extracted",
         ),
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         [
             Fixation(
                 SpecimenFixativesCode("Neutral Buffered Formalin"),
@@ -272,14 +276,14 @@ def slide():
         ],
     )
 
-    part_2 = ExtractedSpecimen(
+    part_2 = Specimen(
         "part 2",
-        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         Collection(
             SpecimenCollectionProcedureCode("Specimen collection"),
             datetime.datetime(2023, 8, 5),
             "Extracted",
         ),
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         [
             Fixation(
                 SpecimenFixativesCode("Neutral Buffered Formalin"),
@@ -290,7 +294,6 @@ def slide():
 
     block = Sample(
         "block 1",
-        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         [
             part_1.sample(
                 SpecimenSamplingProcedureCode("Dissection"),
@@ -303,6 +306,7 @@ def slide():
                 "Sampling to block",
             ),
         ],
+        AnatomicPathologySpecimenTypesCode("tissue specimen"),
         [
             Embedding(
                 SpecimenEmbeddingMediaCode("Paraffin wax"),
@@ -321,7 +325,10 @@ def slide():
             [part_1.samplings[0]],
         ),
         UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445423"),
-        SlideSamplePosition(0, 0, 0),
+        localization=SampleLocalization(
+            x=Measurement(0, UnitCode("mm")),
+            y=Measurement(0, UnitCode("mm")),
+        ),
     )
 
     sample_2 = SlideSample(
@@ -334,7 +341,10 @@ def slide():
             [part_2.samplings[0]],
         ),
         UID("1.2.826.0.1.3680043.8.498.11522107373528810886192809691753445424"),
-        position=SlideSamplePosition(10, 0, 0),
+        localization=SampleLocalization(
+            x=Measurement(10, UnitCode("mm")),
+            y=Measurement(0, UnitCode("mm")),
+        ),
     )
 
     stainings = [

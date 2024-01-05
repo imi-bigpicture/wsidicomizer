@@ -25,7 +25,7 @@ from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.metadata import WsiMetadata
-from wsidicom.metadata.dicom_schema.wsi import WsiMetadataDicomSchema
+from wsidicom.metadata.schema.dicom.wsi import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
 from wsidicomizer.image_data import DicomizerImageData

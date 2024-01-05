@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Optional, Sequence
 
-from wsidicom.metadata.json_schema.wsi import WsiMetadataJsonSchema
+from wsidicom.metadata.schema.json.wsi import WsiMetadataJsonSchema
 from wsidicom.metadata.wsi import WsiMetadata
 from wsidicom.codec import Jpeg2kSettings, JpegSettings, Settings, Subsampling
 

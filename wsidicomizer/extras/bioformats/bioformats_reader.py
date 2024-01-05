@@ -23,7 +23,7 @@ from tempfile import TemporaryDirectory
 from threading import Lock
 from typing import Dict, Generator, List, Optional, Type, Union
 
-import jpype.imports  # Needed for loci import to work
+import jpype.imports  # Needed for loci import to work # noqa
 import numpy as np
 import ome_types
 import scyjava
@@ -126,7 +126,7 @@ class ReaderPool:
     def _create_new_reader(self) -> Memoizer:
         """Return a new reader."""
         # Create a reader using Memoizer to load file faster
-        # See https://docs.openmicroscopy.org/bio-formats/6.11.0/developers/matlab-dev.html#reader-performance  # NOQA
+        # See https://docs.openmicroscopy.org/bio-formats/6.11.0/developers/matlab-dev.html#reader-performance
         reader = Memoizer(ImageReader(), 0, self._cache_path)
         reader.setFlattenedResolutions(False)
         reader.setId(str(self._filepath))
@@ -359,7 +359,7 @@ class BioformatsReader:
                     )
                 padding_width = output_size.width - data.shape[0]
                 padding_height = output_size.height - data.shape[1]
-                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))
+                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))  # type: ignore
             yield data
         finally:
             raw_data.release()

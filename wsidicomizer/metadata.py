@@ -215,6 +215,6 @@ class WsiDicomizerMetadata(WsiMetadata):
             ),
             None,
         )
-        if is_dataclass(value):
+        if is_dataclass(value) and isinstance(value, object):
             value = cls._merge(value.__class__, base_value, user_value, default_value)
         return value
