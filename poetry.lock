@@ -1371,13 +1371,13 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.18.0"
+version = "0.18.1"
 description = "Tools for handling DICOM based whole scan images"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "wsidicom-0.18.0-py3-none-any.whl", hash = "sha256:60ea06210689bac36b4bd65c4754195b051709cef0dda0444821b81db01fb37f"},
-    {file = "wsidicom-0.18.0.tar.gz", hash = "sha256:df711f7ad2f708e8852c99276c81157584b567b53cddd5c5dedca1a9508ce01e"},
+    {file = "wsidicom-0.18.1-py3-none-any.whl", hash = "sha256:f25eed9c35876e400c7b247f760e2f8b413980b62cc0cc79aba3daf6b167d7a0"},
+    {file = "wsidicom-0.18.1.tar.gz", hash = "sha256:d705e4020faacd16469a8befc73162b749709385f0158cb4d115386ae765274c"},
 ]
 
 [package.dependencies]
@@ -1440,4 +1440,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.12"
-content-hash = "0f3fd7c6429a3f79ddb2e13ff5c5ee96aefea4d13a02bc3744c522ab8290bb4b"
+content-hash = "f90b64f410e6b205af607df19c589e9a2323b44002a58aa621dee859905b0f25"
