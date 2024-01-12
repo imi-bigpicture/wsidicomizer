@@ -35,7 +35,7 @@ from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
 
-@dataclass
+@dataclass(frozen=True)
 class CziBlock:
     index: int
     start: Point

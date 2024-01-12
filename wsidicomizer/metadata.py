@@ -99,26 +99,12 @@ class WsiDicomizerMetadata(WsiMetadata):
         return WsiDicomizerMetadata(
             study=None,
             series=None,
-            patient=Patient(de_identification=self.patient.de_identification),
-            equipment=Equipment(
-                manufacturer=self.equipment.manufacturer,
-                model_name=self.equipment.model_name,
-                software_versions=self.equipment.software_versions,
-            ),
+            patient=self.patient.remove_confidential() if self.patient else None,
+            equipment=self.equipment.remove_confidential() if self.equipment else None,
             optical_paths=self.optical_paths,
             slide=None,
-            label=Label(
-                label_in_overview_image=self.label.label_in_overview_image,
-                label_in_volume_image=self.label.label_in_volume_image,
-                label_is_phi=self.label.label_is_phi,
-            ),
-            image=Image(
-                focus_method=self.image.focus_method,
-                extended_depth_of_field=self.image.extended_depth_of_field,
-                pixel_spacing=self.image.pixel_spacing,
-                focal_plane_spacing=self.image.focal_plane_spacing,
-                depth_of_field=self.image.depth_of_field,
-            ),
+            label=self.label.remove_confidential() if self.label else None,
+            image=self.image.remove_confidential() if self.image else None,
             frame_of_reference_uid=None,
             dimension_organization_uids=None,
         )
