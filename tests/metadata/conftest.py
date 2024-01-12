@@ -35,9 +35,12 @@ from wsidicom.conceptcode import (
     UnitCode,
 )
 from wsidicom.metadata import (
+    Collection,
     ConstantLutSegment,
+    Embedding,
     Equipment,
     ExtendedDepthOfField,
+    Fixation,
     FocusMethod,
     Image,
     ImageCoordinateSystem,
@@ -46,27 +49,22 @@ from wsidicom.metadata import (
     LightPathFilter,
     LinearLutSegment,
     Lut,
+    Measurement,
     Objectives,
     OpticalPath,
     Patient,
     PatientDeIdentification,
     PatientSex,
-    Series,
-    Slide,
-    Study,
-    WsiMetadata,
-    Measurement,
-)
-from wsidicom.metadata import (
-    Collection,
-    Embedding,
-    Specimen,
-    Fixation,
     Processing,
     Sample,
-    SlideSample,
     SampleLocalization,
+    Series,
+    Slide,
+    SlideSample,
+    Specimen,
     Staining,
+    Study,
+    WsiMetadata,
 )
 
 

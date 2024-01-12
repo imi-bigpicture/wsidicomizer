@@ -34,7 +34,6 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_VENDOR,
     OpenSlide,
 )
-
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
 

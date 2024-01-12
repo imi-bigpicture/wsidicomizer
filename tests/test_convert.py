@@ -17,8 +17,8 @@ from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List
-import numpy as np
 
+import numpy as np
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
@@ -318,7 +318,7 @@ class TestWsiDicomizerConvert:
         wsi = wsis[file_format][file]
 
         # Act
-        image_data = wsi.levels[0].default_instance.image_data
+        image_data = wsi.pyramids[0].base_level.default_instance.image_data
 
         # Assert
         assert image_data.photometric_interpretation == photometric_interpretation
@@ -374,9 +374,9 @@ class TestWsiDicomizerConvert:
         wsi = wsis[file_format][file]
 
         # Act
-        image_coordinate_system = wsi.levels[
+        image_coordinate_system = wsi.pyramids[
             0
-        ].default_instance.image_data.image_coordinate_system
+        ].base_level.default_instance.image_data.image_coordinate_system
 
         # Arrange
         assert image_coordinate_system is not None

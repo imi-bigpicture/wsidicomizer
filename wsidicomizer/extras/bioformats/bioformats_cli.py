@@ -18,10 +18,10 @@ from typing import Optional, Sequence, Union
 
 from wsidicom.codec import Settings
 from wsidicom.file import OffsetTableType
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.cli import WsiDicomizerCli
 from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
-from wsidicom.metadata.wsi import WsiMetadata
 
 
 class BioformatsCli(WsiDicomizerCli):

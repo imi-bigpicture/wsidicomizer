@@ -17,12 +17,12 @@ from wsidicom.metadata import (
     Equipment,
     Image,
     Label,
+    OpticalPath,
     Patient,
     Series,
     Slide,
     Study,
     WsiMetadata,
-    OpticalPath,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata

@@ -13,11 +13,12 @@
 #    limitations under the License.
 
 import os
+import zipfile
+from hashlib import md5
 from pathlib import Path
 from typing import Any, Dict
+
 import requests
-from hashlib import md5
-import zipfile
 
 FILES: Dict[str, Dict[str, Any]] = {
     "slides/svs/CMU-1/CMU-1.svs": {

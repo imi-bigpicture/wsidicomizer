@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## Fixed
+## [0.12.0] - 2023-01-12
+
+### Changed
+
+- Replaced `Dataset` based metadata by `modules`-parameter to `open()` and `convert()` with metadata models from `WsiDicom`. Use the `metadata`-parameter to define metadata that should override any metadata found in the source file, and the`default_metadata`-parameter to define metadata that should be used if no other metadata is defiend.
+
+### Fixed
 
 - Fixed fetching empty tile regions with tiffslide and openslide.
 
@@ -198,7 +204,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.2..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.0..HEAD
+[0.12.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.11.0..0.12.0
+[0.11.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.2..0.11.0
 [0.10.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.1..0.10.2
 [0.10.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.0..0.10.1
 [0.10.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.9.3..0.10.0
