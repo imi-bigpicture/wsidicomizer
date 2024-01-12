@@ -15,13 +15,11 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.metadata.wsi import WsiMetadata
 
-from wsidicomizer.dataset import create_base_dataset
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
@@ -34,14 +32,14 @@ class BioformatsSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: Optional[int] = None,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
     ) -> None:
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
-        self._base_dataset = create_base_dataset(modules)
         self._reader = BioformatsReader(Path(filepath), readers, cache_path)
         (
             self._pyramid_image_index,
@@ -52,7 +50,8 @@ class BioformatsSource(DicomizerSource):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
         )
 
@@ -75,8 +74,8 @@ class BioformatsSource(DicomizerSource):
         return list(range(self._reader.resolution_count(self._pyramid_image_index)))
 
     @property
-    def metadata(self) -> Metadata:
-        return Metadata()
+    def base_metadata(self) -> Optional[WsiMetadata]:
+        return None
 
     @staticmethod
     def _get_image_indices(
@@ -107,14 +106,13 @@ class BioformatsSource(DicomizerSource):
         return pyramid_image_index, label_image_index, overview_image_index
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        level = BioformatsImageData(
+        return BioformatsImageData(
             self._reader,
             self._tile_size,
             self._encoder,
             self._pyramid_image_index,
             level_index,
         )
-        return level
 
     def _create_label_image_data(self) -> DicomizerImageData:
         assert self._label_image_index is not None

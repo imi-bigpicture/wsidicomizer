@@ -13,11 +13,12 @@
 #    limitations under the License.
 
 import os
+import zipfile
+from hashlib import md5
 from pathlib import Path
 from typing import Any, Dict
+
 import requests
-from hashlib import md5
-import zipfile
 
 FILES: Dict[str, Dict[str, Any]] = {
     "slides/svs/CMU-1/CMU-1.svs": {
@@ -115,7 +116,7 @@ def main():
                 data = saved_file_io.read()
                 if not hash == md5(data).hexdigest():
                     raise ValueError(
-                        f"Checksum faild for {saved_file_path}. Try removing "
+                        f"Checksum failed for {saved_file_path}. Try removing "
                         "the parent folder and try again."
                     )
                 else:

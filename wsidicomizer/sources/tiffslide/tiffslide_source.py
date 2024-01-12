@@ -17,12 +17,11 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
 from tiffslide import TiffSlide
 from wsidicom.codec import Encoder
+from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
@@ -40,12 +39,13 @@ class TiffSlideSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
         **source_args,
     ) -> None:
         self._tiffslide = TiffSlide(filepath, **source_args)
-        self._metadata = TiffSlideMetadata(self._tiffslide)
+        self._base_metadata = TiffSlideMetadata(self._tiffslide)
         self._pyramid_levels = [
             int(round(math.log2(downsample)))
             for downsample in self._tiffslide.level_downsamples
@@ -54,7 +54,8 @@ class TiffSlideSource(DicomizerSource):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
         )
 
@@ -70,8 +71,8 @@ class TiffSlideSource(DicomizerSource):
         return "macro" in self._tiffslide.associated_images
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def base_metadata(self) -> WsiMetadata:
+        return self._base_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -85,7 +86,11 @@ class TiffSlideSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return TiffSlideLevelImageData(
-            self._tiffslide, level_index, self._tile_size, self._encoder
+            self._tiffslide,
+            self.metadata.image,
+            level_index,
+            self._tile_size,
+            self._encoder,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:

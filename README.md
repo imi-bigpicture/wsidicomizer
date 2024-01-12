@@ -64,13 +64,19 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 -i, --input, path to input wsi file
 -o, --output, path to output folder
 -t, --tile-size, required depending on input format
--d, --dataset, optional path to json file defining base dataset
+-m, --metadata, optional path to json file defining metadata
+-d, --default-metadata, optional path to json file defining default metadata
 -l, --levels, optional levels to include
 -w, --workers, number of threads to use
+--label, optional label image to use instead of label found in file
+--no-label, if not to include label image
+--no-overview, if not to include overview image
+--no-confidential, if to not include confidential metadata
 --chunk-size, number of tiles to give each worker at a time
 --format, encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'
 --quality, quality to use if re-encoding.
 --subsampling, subsampling option to use if re-encoding.
+--offset-table, offset table to use, 'bot', 'eot', or 'None'
 ~~~~
 
 ### Flags
@@ -86,32 +92,89 @@ Using the no-confidential-flag properties according to [DICOM Basic Confidential
 - Acquisition DateTime
 - Device Serial Number
 
-## Basic notebook-usage
+## Basic usage
 
-***Create module datasets (Optional)***
+***Create metadata (Optional)***
 
 ```python
-from wsidicomizer.dataset import create_device_module, create_sample, create_specimen_module, create_brightfield_optical_path_module, create_patient_module, create_study_module
-device_module = create_device_module(
-    manufacturer='Scanner manufacturer',
-    model_name='Scanner model name',
-    serial_number='Scanner serial number',
-    software_versions=['Scanner software versions']
+from wsidicom.conceptcode import (
+    AnatomicPathologySpecimenTypesCode,
+    ContainerTypeCode,
+    SpecimenCollectionProcedureCode,
+    SpecimenEmbeddingMediaCode,
+    SpecimenFixativesCode,
+    SpecimenSamplingProcedureCode,
+    SpecimenStainsCode,
 )
-sample = create_sample(
-    sample_id='sample id',
-    embedding_medium='Paraffin wax',
-    fixative='Formalin',
-    stainings=['hematoxylin stain', 'water soluble eosin stain']
+from wsidicom.metadata import (
+    Collection,
+    Embedding,
+    Equipment,
+    Fixation,
+    Label,
+    Patient,
+    Sample,
+    Series,
+    Slide,
+    SlideSample,
+    Specimen,
+    Staining,
+    Study,
 )
-specimen_module = create_specimen_module(
-    slide_id='slide id',
-    samples=[sample]
-)
-optical_module = create_brightfield_optical_path_module()
-patient_module = create_patient_module()
-study_module = create_study_module()
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
+study = Study(identifier="Study identifier")
+series = Series(number=1)
+patient = Patient(name="FamilyName^GivenName")
+label = Label(text="Label text")
+equipment = Equipment(
+    manufacturer="Scanner manufacturer",
+    model_name="Scanner model name",
+    device_serial_number="Scanner serial number",
+    software_versions=["Scanner software versions"],
+)
+
+specimen = Specimen(
+    identifier="Specimen",
+    extraction_step=Collection(method=SpecimenCollectionProcedureCode("Excision")),
+    type=AnatomicPathologySpecimenTypesCode("Gross specimen"),
+    container=ContainerTypeCode("Specimen container"),
+    steps=[Fixation(fixative=SpecimenFixativesCode("Neutral Buffered Formalin"))],
+)
+
+block = Sample(
+    identifier="Block",
+    sampled_from=[specimen.sample(method=SpecimenSamplingProcedureCode("Dissection"))],
+    type=AnatomicPathologySpecimenTypesCode("tissue specimen"),
+    container=ContainerTypeCode("Tissue cassette"),
+    steps=[Embedding(medium=SpecimenEmbeddingMediaCode("Paraffin wax"))],
+)
+
+slide_sample = SlideSample(
+    identifier="Slide sample",
+    sampled_from=block.sample(method=SpecimenSamplingProcedureCode("Block sectioning")),
+)
+
+slide = Slide(
+    identifier="Slide",
+    stainings=[
+        Staining(
+            substances=[
+                SpecimenStainsCode("hematoxylin stain"),
+                SpecimenStainsCode("water soluble eosin stain"),
+            ]
+        )
+    ],
+    samples=[slide_sample],
+)
+metadata = WsiDicomizerMetadata(
+    study=study,
+    series=series,
+    patient=patient,
+    equipment=equipment,
+    slide=slide,
+    label=label,
+)
 ```
 
 ***Convert a wsi-file into DICOM using python-interface***
@@ -119,14 +182,12 @@ study_module = create_study_module()
 ```python
 from wsidicomizer import WsiDicomizer
 created_files = WsiDicomizer.convert(
-    path_to_wsi_file,
-    path_to_output_folder,
-    [device_module, specimen_module, optical_module, patient_module, study_module],
-    tile_size
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata=metadata,
+    tile_size=tile_size
 )
 ```
-
-tile_size is required for Ndpi- and OpenSlide-files.
 
 ***Import a wsi file as a WsiDicom object.***
 
@@ -147,7 +208,7 @@ Support for reading images using Openslide c library can optionally be enabled b
 pip install wsidicomizer[openslide]
 ```
 
-The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is avaiable on <https://openslide.org/download/>
+The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is available on <https://openslide.org/download/>
 For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
 
 ## Bioformats support
@@ -164,7 +225,7 @@ The `bioformats` extra enables usage of the `bioformats` module and the `bioform
 
 ### Using
 
-As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therfore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
+As the Bioformats library is a java library it needs to run in a java virtual machine (JVM). A JVM is started automatically when the `bioformats` module is imported. The JVM can´t be restarted in the same Python inteprenter, and is therefore left running once started. If you want to shutdown the JVM (without closing the Python inteprenter) you can call the shutdown_jvm()-method:
 
 ```python
 import scyjava
@@ -175,7 +236,7 @@ Due to the need to start a JVM, the `bioformats` module is not imported when usi
 
 ### Bioformats version
 
-The Bioformats java library is avaiable in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only avaible in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
+The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
 
 ## Limitations
 

@@ -16,18 +16,20 @@
 files."""
 
 from abc import ABCMeta, abstractmethod
+from functools import cached_property
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional, Sequence
 
-from opentile.metadata import Metadata
-from pydicom import Dataset, config
+from pydicom import config
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
+from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata.schema.dicom.wsi import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
-from wsidicomizer.dataset import create_base_dataset, populate_base_dataset
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -46,17 +48,16 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
     ) -> None:
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size
-        self._modules = modules
+        self._user_metadata = metadata
+        self._default_metadata = default_metadata
         self._include_confidential = include_confidential
-        self._base_dataset = populate_base_dataset(
-            self.metadata, create_base_dataset(modules), include_confidential
-        )
 
     @staticmethod
     @abstractmethod
@@ -66,7 +67,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def metadata(self) -> Metadata:
+    def base_metadata(self) -> WsiDicomizerMetadata:
         """Return metadata for file."""
         raise NotImplementedError()
 
@@ -105,44 +106,70 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         """Return image data instance for overview."""
         raise NotImplementedError()
 
-    @property
-    def base_dataset(self) -> WsiDataset:
-        return WsiDataset(self._base_dataset)
+    @cached_property
+    def metadata(self) -> WsiMetadata:
+        merged = self.base_metadata.merge(
+            self.user_metadata, self.default_metadata, self._include_confidential
+        )
+        assert merged is not None
+        return merged
 
     @property
+    def user_metadata(self) -> Optional[WsiMetadata]:
+        return self._user_metadata
+
+    @property
+    def default_metadata(self) -> Optional[WsiMetadata]:
+        return self._default_metadata
+
+    @property
+    def base_dataset(self) -> WsiDataset:
+        return self.level_instances[0].dataset
+
+    @cached_property
     def level_instances(self) -> List[WsiInstance]:
         return [
             WsiInstance.create_instance(
                 self._create_level_image_data(level_index),
-                self._base_dataset,
+                self._create_base_dataset(ImageType.VOLUME),
                 ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
         ]
 
-    @property
+    @cached_property
     def label_instances(self) -> List[WsiInstance]:
         if not self.has_label:
             return []
 
         label = WsiInstance.create_instance(
-            self._create_label_image_data(), self._base_dataset, ImageType.LABEL
+            self._create_label_image_data(),
+            self._create_base_dataset(ImageType.LABEL),
+            ImageType.LABEL,
         )
         return [label]
 
-    @property
+    @cached_property
     def overview_instances(self) -> List[WsiInstance]:
         if not self.has_overview:
             return []
 
         overview = WsiInstance.create_instance(
-            self._create_overview_image_data(), self._base_dataset, ImageType.OVERVIEW
+            self._create_overview_image_data(),
+            self._create_base_dataset(ImageType.OVERVIEW),
+            ImageType.OVERVIEW,
         )
         return [overview]
 
     @property
     def annotation_instances(self) -> List[AnnotationInstance]:
         return []
+
+    def _create_base_dataset(self, image_type: ImageType) -> WsiDataset:
+        dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
+            self.metadata
+        )
+        return WsiDataset(dataset)
 
     @staticmethod
     def _is_included_level(
@@ -160,9 +187,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             List of pyramid levels present.
         include_indices: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
+            includes the two lowest levels. Negative indices can be used,
             e.g. [-1, -2] includes the two highest levels. Default of None
-            will not limit the selection. An empty sequence will exluded all
+            will not limit the selection. An empty sequence will excluded all
             levels.
 
         Returns

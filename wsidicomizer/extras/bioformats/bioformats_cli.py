@@ -16,9 +16,9 @@
 
 from typing import Optional, Sequence, Union
 
-from pydicom import Dataset
 from wsidicom.codec import Settings
 from wsidicom.file import OffsetTableType
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.cli import WsiDicomizerCli
 from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
@@ -29,7 +29,8 @@ class BioformatsCli(WsiDicomizerCli):
         self,
         filepath: str,
         output_path: str,
-        modules: Optional[Dataset] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
@@ -42,7 +43,8 @@ class BioformatsCli(WsiDicomizerCli):
     ):
         with BioformatsDicomizer.open(
             filepath=filepath,
-            modules=modules,
+            metadata=metadata,
+            default_metadata=default_metadata,
             tile_size=tile_size,
             encoding_settings=encoding_settings,
         ) as wsi:

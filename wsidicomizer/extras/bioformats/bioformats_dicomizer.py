@@ -15,12 +15,12 @@
 """Dicomizer for bioformats source."""
 
 from pathlib import Path
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
-from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 from wsidicomizer.wsidicomizer import WsiDicomizer
@@ -31,7 +31,8 @@ class BioformatsDicomizer(WsiDicomizer):
     def open(
         cls,
         filepath: Union[str, Path],
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_confidential: bool = True,
         encoding_settings: Optional[EncodingSettings] = None,
@@ -42,8 +43,10 @@ class BioformatsDicomizer(WsiDicomizer):
         ----------
         filepath: str
             Path to file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         include_confidential: bool = True
@@ -70,7 +73,8 @@ class BioformatsDicomizer(WsiDicomizer):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
         )
         return cls(dicomizer)

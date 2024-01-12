@@ -22,12 +22,12 @@ from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image
-from pydicom.dataset import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
@@ -54,7 +54,8 @@ class WsiDicomizer(WsiDicom):
     def open(
         cls,
         filepath: Union[str, Path],
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_confidential: bool = True,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
@@ -67,8 +68,10 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: str
             Path to file
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         include_confidential: bool = True
@@ -109,7 +112,8 @@ class WsiDicomizer(WsiDicom):
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
             **source_args,
         )
@@ -120,7 +124,8 @@ class WsiDicomizer(WsiDicom):
         cls,
         filepath: Union[str, Path],
         output_path: Optional[Union[str, Path]] = None,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         add_missing_levels: bool = False,
@@ -145,15 +150,17 @@ class WsiDicomizer(WsiDicom):
             Path to file
         output_path: str = None
             Folder path to save files to.
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None
-            Module datasets to use in files. If none, use default modules.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
         tile_size: int = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
-             Function that can gernerate unique identifiers.
+             Function that can generate unique identifiers.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
-            includes the two lowest levels. Negative indicies can be used,
+            includes the two lowest levels. Negative indices can be used,
             e.g. [-1, -2] includes the two highest levels.
         include_label: bool = True
             Include label(s), default true.
@@ -185,7 +192,8 @@ class WsiDicomizer(WsiDicom):
         """
         with cls.open(
             filepath,
-            modules,
+            metadata,
+            default_metadata,
             tile_size,
             include_confidential,
             encoding,

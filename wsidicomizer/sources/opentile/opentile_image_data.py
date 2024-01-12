@@ -14,7 +14,7 @@
 
 """Image data for opentile compatible file."""
 
-from typing import Iterable, Iterator, List, Optional, Tuple
+from typing import Iterable, Iterator, List, Optional
 
 from opentile.tiff_image import TiffImage
 from PIL import Image as Pillow
@@ -22,8 +22,9 @@ from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder
-from wsidicom.geometry import Orientation, Point, PointMm, Size, SizeMm
-from wsidicom.instance import ImageCoordinateSystem
+from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -33,7 +34,6 @@ class OpenTileImageData(DicomizerImageData):
         self,
         tiff_image: TiffImage,
         encoder: Encoder,
-        image_offset: Optional[Tuple[float, float]] = None,
         force_transcoding: bool = False,
     ):
         """Wraps a TiffImage to ImageData.
@@ -44,6 +44,8 @@ class OpenTileImageData(DicomizerImageData):
             TiffImage to wrap.
         encoded: Encoder
             Encoder to use.
+        force_transcoding: bool
+            Force transcoding of image data.
         """
         super().__init__(encoder)
         self._tiff_image = tiff_image
@@ -58,17 +60,6 @@ class OpenTileImageData(DicomizerImageData):
         self._image_size = Size(*self._tiff_image.image_size.to_tuple())
         self._tile_size = Size(*self._tiff_image.tile_size.to_tuple())
         self._tiled_size = Size(*self._tiff_image.tiled_size.to_tuple())
-        if self._tiff_image.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
-        else:
-            self._pixel_spacing = None
-        if image_offset is not None:
-            self._image_coordinate_system = ImageCoordinateSystem(
-                origin=PointMm(image_offset[0], image_offset[1]),
-                orientation=Orientation((0, 1, 0, 1, 0, 0)),
-            )
-        else:
-            self._image_coordinate_system = None
 
     def __str__(self) -> str:
         return f"{type(self).__name__} for page {self._tiff_image}"
@@ -84,7 +75,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def needs_transcoding(self) -> bool:
         """Return true if image data requires transcoding for Dicom
-        compatibilty."""
+        compatibility."""
         return self._needs_transcoding
 
     @property
@@ -103,23 +94,18 @@ class OpenTileImageData(DicomizerImageData):
         return self._tile_size
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
     def focal_planes(self) -> List[float]:
-        """Focal planes avaiable in the image defined in um."""
+        """Focal planes available in the image defined in um."""
         return [self._tiff_image.focal_plane]
 
     @property
     def optical_paths(self) -> List[str]:
-        """Optical paths avaiable in the image."""
+        """Optical paths available in the image."""
         return [self._tiff_image.optical_path]
 
     @property
     def suggested_minimum_chunk_size(self) -> int:
-        """Return suggested minumum chunk size for optimal performance with
+        """Return suggested minimum chunk size for optimal performance with
         get_encoeded_tiles()."""
         return self._tiff_image.suggested_minimum_chunk_size
 
@@ -127,12 +113,6 @@ class OpenTileImageData(DicomizerImageData):
     def pyramid_index(self) -> int:
         """The pyramidal index in relation to the base layer."""
         return self._tiff_image.pyramid_index
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
-        return self._image_coordinate_system
 
     @property
     def photometric_interpretation(self) -> str:
@@ -235,3 +215,57 @@ class OpenTileImageData(DicomizerImageData):
         elif compression == COMPRESSION.APERIO_JP2000_RGB:
             return JPEG2000
         raise NotImplementedError(f"Not supported compression {compression}")
+
+
+class OpenTileLevelImageData(OpenTileImageData):
+    def __init__(
+        self,
+        tiff_image: TiffImage,
+        image_metadata: ImageMetadata,
+        merged_metadata: ImageMetadata,
+        encoder: Encoder,
+        force_transcoding: bool = False,
+    ):
+        super().__init__(tiff_image, encoder, force_transcoding)
+        if (
+            merged_metadata.pixel_spacing is not None
+            and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
+        ):
+            # Override pixel spacing
+            self._pixel_spacing = merged_metadata.pixel_spacing * int(
+                2**self._tiff_image.pyramid_index
+            )
+        elif self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        else:
+            raise ValueError("Could not determine pixel spacing for tiff image.")
+        self._image_coordinate_system = merged_metadata.image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
+
+    @property
+    def pixel_spacing(self) -> SizeMm:
+        return self._pixel_spacing
+
+
+class OpenTileAssociatedImageData(OpenTileImageData):
+    def __init__(
+        self,
+        tiff_image: TiffImage,
+        encoder: Encoder,
+        force_transcoding: bool = False,
+    ):
+        super().__init__(tiff_image, encoder, force_transcoding)
+        if self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        else:
+            self._pixel_spacing = None
+
+    @property
+    def pixel_spacing(self) -> Optional[SizeMm]:
+        """Size of the pixels in mm/pixel."""
+        return self._pixel_spacing

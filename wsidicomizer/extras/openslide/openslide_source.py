@@ -16,11 +16,10 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.openslide.openslide import OpenSlide
@@ -39,17 +38,19 @@ class OpenSlideSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
     ) -> None:
         self._slide = OpenSlide(filepath)
         self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._metadata = OpenSlideMetadata(self._slide)
+        self._base_metadata = OpenSlideMetadata(self._slide)
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
         )
 
@@ -65,8 +66,8 @@ class OpenSlideSource(DicomizerSource):
         return OpenSlideAssociatedImageType.MACRO.value in self._slide.associated_images
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def base_metadata(self) -> WsiMetadata:
+        return self._base_metadata
 
     @property
     def pyramid_levels(self) -> List[int]:
@@ -79,7 +80,11 @@ class OpenSlideSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenSlideLevelImageData(
-            self._slide, level_index, self._tile_size, self._encoder
+            self._slide,
+            self.metadata.image,
+            level_index,
+            self._tile_size,
+            self._encoder,
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:

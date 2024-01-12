@@ -1,3 +1,34 @@
+#    Copyright 2023 SECTRA AB
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+import os
+from collections import defaultdict
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any, Dict
+
+import pytest
+from pydicom.uid import JPEG2000, UID
+from wsidicom import WsiDicom
+from wsidicom.codec.encoder import Jpeg2kEncoder, Jpeg2kSettings
+from wsidicom.metadata import OpticalPath
+
+from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.wsidicomizer import WsiDicomizer
+
+DEFAULT_TILE_SIZE = 512
+
 test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
@@ -367,3 +398,141 @@ test_parameters = {
         }
     },
 }
+
+
+class Jpeg2kTestEncoder(Jpeg2kEncoder):
+    """Jpeg 2000 encoder used for testing.
+    Pretends to be lossy but encodes losslessly so that image data is not changed."""
+
+    def __init__(self):
+        settings = Jpeg2kSettings(level=0)
+        super().__init__(settings)
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    @property
+    def transfer_syntax(self) -> UID:
+        return JPEG2000
+
+    @property
+    def photometric_interpretation(self) -> str:
+        return "YBR_ICT"
+
+
+def convert_wsi(file_path: Path, file_parameters: Dict[str, Any], icc_profile: bytes):
+    include_levels = file_parameters["include_levels"]
+    tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
+    tempdir = TemporaryDirectory()
+    optical_path = OpticalPath(icc_profile=icc_profile)
+    metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
+    WsiDicomizer.convert(
+        file_path,
+        output_path=tempdir.name,
+        default_metadata=metadata,
+        tile_size=tile_size,
+        include_levels=include_levels,
+        encoding=Jpeg2kTestEncoder(),
+    )
+    return tempdir
+
+
+@pytest.fixture(scope="module")
+def icc_profile():
+    yield bytes([0x00, 0x01, 0x02, 0x03])
+
+
+@pytest.fixture(scope="module")
+def testdata_dir():
+    yield Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+
+
+@pytest.fixture(scope="module")
+def wsi_files(testdata_dir: Path):
+    return {
+        file_format: {
+            file: testdata_dir.joinpath("slides", file_format, file)
+            for file in file_format_parameters
+        }
+        for file_format, file_format_parameters in test_parameters.items()
+    }
+
+
+@pytest.fixture(scope="module")
+def converted(
+    wsi_files: Dict[str, Dict[str, Path]],
+    icc_profile: bytes,
+):
+    converted_folders = {
+        file_format: {
+            file: convert_wsi(
+                wsi_files[file_format][file], file_parameters, icc_profile
+            )
+            for file, file_parameters in file_format_parameters.items()
+            if wsi_files[file_format][file].exists() and file_parameters["convert"]
+        }
+        for file_format, file_format_parameters in test_parameters.items()
+    }
+    yield converted_folders
+    for file_format in converted_folders.values():
+        for converted_folder in file_format.values():
+            try:
+                converted_folder.cleanup()
+            except Exception as exception:
+                raise Exception("Failed to cleanup", converted_folder) from exception
+
+
+@pytest.fixture(scope="module")
+def wsis(
+    wsi_files: Dict[str, Dict[str, Path]],
+    converted: Dict[str, Dict[str, TemporaryDirectory]],
+):
+    wsis: Dict[str, Dict[str, WsiDicom]] = defaultdict(dict)
+    for file_format, file_format_parameters in wsi_files.items():
+        for file, file_path in file_format_parameters.items():
+            if not file_path.exists():
+                continue
+            if file_format not in converted or file not in converted[file_format]:
+                wsi = WsiDicomizer.open(file_path)
+            else:
+                wsi = WsiDicom.open(converted[file_format][file].name)
+            wsis[file_format][file] = wsi
+    yield wsis
+    for file_format in wsis.values():
+        for wsi in file_format.values():
+            wsi.close()
+
+
+@pytest.fixture(scope="module")
+def converted_path(
+    converted: Dict[str, Dict[str, TemporaryDirectory]], file_format: str, file: str
+):
+    if file_format not in converted or file not in converted[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield converted[file_format][file]
+
+
+@pytest.fixture(scope="module")
+def wsi(
+    wsis: Dict[str, Dict[str, WsiDicom]],
+    file_format: str,
+    file: str,
+):
+    if file_format not in wsis or file not in wsis[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield wsis[file_format][file]
+
+
+@pytest.fixture(scope="module")
+def wsi_file(
+    wsi_files: Dict[str, Dict[str, Path]],
+    file_format: str,
+    file: str,
+):
+    if file_format not in wsi_files or file not in wsi_files[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to no test parameters.")
+    filepath = wsi_files[file_format][file]
+    if not filepath.exists():
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield filepath

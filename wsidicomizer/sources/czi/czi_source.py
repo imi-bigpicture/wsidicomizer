@@ -15,15 +15,16 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional
 
-from opentile.metadata import Metadata
-from pydicom import Dataset
+from czifile import CziFile
 from wsidicom.codec import Encoder
+from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
+from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
 
 class CziSource(DicomizerSource):
@@ -32,21 +33,23 @@ class CziSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        modules: Optional[Union[Dataset, Sequence[Dataset]]] = None,
+        metadata: Optional[WsiMetadata] = None,
+        default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
     ) -> None:
-        self._imaga_data = CziImageData(filepath, tile_size, encoder)
-        self._metadata = self._imaga_data.metadata
         super().__init__(
             filepath,
             encoder,
             tile_size,
-            modules,
+            metadata,
+            default_metadata,
             include_confidential,
         )
+        self._czi = CziFile(filepath)
+        self._base_metadata = CziMetadata(self._czi)
 
     def close(self) -> None:
-        return self._imaga_data.close()
+        return self._czi.close()
 
     @property
     def has_label(self) -> bool:
@@ -61,8 +64,8 @@ class CziSource(DicomizerSource):
         return [0]
 
     @property
-    def metadata(self) -> Metadata:
-        return self._metadata
+    def base_metadata(self) -> CziMetadata:
+        return self._base_metadata
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:
@@ -72,7 +75,13 @@ class CziSource(DicomizerSource):
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         if level_index != 0:
             raise ValueError()  # TODO
-        return CziImageData(self._filepath, self._tile_size, self._encoder)
+        return CziImageData(
+            self._czi,
+            self._tile_size,
+            self._encoder,
+            self.base_metadata,
+            self.metadata.image,
+        )
 
     def _create_label_image_data(self) -> DicomizerImageData:
         return super()._create_label_image_data()

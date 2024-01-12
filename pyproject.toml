@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wsidicomizer"
-version = "0.11.0"
+version = "0.12.0"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 license = "Apache-2.0"
@@ -18,14 +18,11 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
-wsidicom = "^0.17.0"
+wsidicom = "^0.18.1"
 opentile = "^0.11.1"
 numpy = "^1.22.0"
-pydicom = ">=2.2.0,<2.4.0"
-highdicom = "^0.21.1"
+pydicom = ">=2.1.0"
 czifile = ">=2019.7.2"
-imagecodecs = ">=2022.9.26"
-python-dateutil = "^2.8.2"
 tiffslide = "^2.1.1"
 openslide-python = { version = "^1.1.2", optional = true }
 scyjava = { version = "^1.8.1", optional = true }
@@ -38,13 +35,13 @@ bioformats = ["scyjava", "ome-types"]
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
 pytest-watch = "^4.2.0"
-pycodestyle = "^2.8.0"
-parameterized = "^0.8.1"
 requests = "^2.28.1"
-flake8 = "^4.0.1"
-dicom-validator = "0.3.4"
+dicom-validator = "^0.4.0"
 black = "^22.12.0"
 openslide-python = "^1.1.2"
+coverage = "^7.2.7"
+codespell = "^2.2.5"
+flake8 = "^4.0.1"
 
 [build-system]
 requires = ["poetry-core>=1.2.0"]
@@ -53,4 +50,3 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 wsidicomizer = "wsidicomizer.cli:main"
 bioformats_wsidicomizer = "wsidicomizer.extras.bioformats.bioformats_cli:main"
-
