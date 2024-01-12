@@ -49,16 +49,14 @@ class TestWsiDicomizerConvert:
             for file, file_parameters in format_files.items()
             if file_parameters["convert"]
         ],
+        scope="module",
     )
     def test_validate(
         self,
-        file_format: str,
-        file: str,
         testdata_dir: Path,
-        converted: Dict[str, Dict[str, TemporaryDirectory]],
+        converted_path: TemporaryDirectory,
     ):
         # Arrange
-        converted_path = converted[file_format][file]
         standard_path = os.path.join(testdata_dir, "dicom-validator")
         edition_reader = EditionReader(standard_path)
         revision_path = edition_reader.get_revision("current")
@@ -103,12 +101,10 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
         ],
+        scope="module",
     )
-    def test_optical_path_not_found(
-        self, file_format: str, file: str, wsis: Dict[str, Dict[str, WsiDicom]]
-    ):
+    def test_optical_path_not_found(self, wsi: WsiDicom):
         # Arrange
-        wsi = wsis[file_format][file]
 
         # Act & Assert
         with pytest.raises(WsiDicomNotFoundError):
@@ -121,12 +117,10 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
         ],
+        scope="module",
     )
-    def test_focal_plane_not_found(
-        self, file_format: str, file: str, wsis: Dict[str, Dict[str, WsiDicom]]
-    ):
+    def test_focal_plane_not_found(self, wsi: WsiDicom):
         # Arrange
-        wsi = wsis[file_format][file]
 
         # Act & Assert
         with pytest.raises(WsiDicomNotFoundError):
@@ -145,6 +139,7 @@ class TestWsiDicomizerConvert:
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region"]
         ],
+        scope="module",
     )
     def test_read_region_from_converted_file_should_match_hash(
         self,
@@ -152,10 +147,9 @@ class TestWsiDicomizerConvert:
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        wsi: WsiDicom,
     ):
         # Arrange
-        wsi = wsis[file_format][file]
         level = region["level"] - lowest_included_level
 
         # Act
@@ -178,16 +172,12 @@ class TestWsiDicomizerConvert:
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
         ],
+        scope="module",
     )
     def test_read_thumbnail_from_converted_file_should_match_hash(
-        self,
-        file_format: str,
-        file: str,
-        thumbnail: Dict[str, Any],
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        self, file_format: str, file: str, thumbnail: Dict[str, Any], wsi: WsiDicom
     ):
         # Arrange
-        wsi = wsis[file_format][file]
 
         # Act
         im = wsi.read_thumbnail(
@@ -212,6 +202,7 @@ class TestWsiDicomizerConvert:
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region_openslide"]
         ],
+        scope="module",
     )
     def test_read_region_from_converted_file_should_match_openslide(
         self,
@@ -219,14 +210,12 @@ class TestWsiDicomizerConvert:
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
-        wsi_files: Dict[str, Dict[str, Path]],
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        wsi_file: Path,
+        wsi: WsiDicom,
     ):
         # Arrange
-        wsi = wsis[file_format][file]
         level = region["level"] - lowest_included_level
-        original_path = wsi_files[file_format][file]
-        with OpenSlide(original_path) as openslide_wsi:
+        with OpenSlide(wsi_file) as openslide_wsi:
             scale: float = openslide_wsi.level_downsamples[region["level"]]
             # If scale is not integer image can be blurry
             assert scale.is_integer
@@ -272,19 +261,18 @@ class TestWsiDicomizerConvert:
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
         ],
+        scope="module",
     )
     def test_read_thumbnail_from_converted_file_should_almost_match_thumbnail(
         self,
         file_format: str,
         file: str,
         thumbnail: Dict[str, Any],
-        wsi_files: Dict[str, Dict[str, Path]],
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        wsi_file: Path,
+        wsi: WsiDicom,
     ):
         # Arrange
-        wsi = wsis[file_format][file]
-        original_path = wsi_files[file_format][file]
-        with OpenSlide(original_path) as openslide_wsi:
+        with OpenSlide(wsi_file) as openslide_wsi:
             open_im = openslide_wsi.get_thumbnail(
                 (thumbnail["size"]["width"], thumbnail["size"]["height"])
             ).convert("RGB")
@@ -306,16 +294,14 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ],
+        scope="module",
     )
     def test_photometric_interpretation(
         self,
-        file_format: str,
-        file: str,
         photometric_interpretation: str,
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        wsi: WsiDicom,
     ):
         # Arrange
-        wsi = wsis[file_format][file]
 
         # Act
         image_data = wsi.pyramids[0].base_level.default_instance.image_data
@@ -330,12 +316,10 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
         ],
+        scope="module",
     )
-    def test_replace_label_should_equal_new_label(
-        self, file_format: str, file: str, wsi_files: Dict[str, Dict[str, Path]]
-    ):
+    def test_replace_label_should_equal_new_label(self, wsi_file: Path):
         # Arrange
-        wsi_file = wsi_files[file_format][file]
 
         label = Image.new("RGB", (256, 256), (128, 128, 128))
 
@@ -362,16 +346,14 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ],
+        scope="module",
     )
     def test_image_coordinate_system(
         self,
-        file_format: str,
-        file: str,
         expected_image_coordinate_system: Dict[str, float],
-        wsis: Dict[str, Dict[str, WsiDicom]],
+        wsi: WsiDicom,
     ):
         # Arrange
-        wsi = wsis[file_format][file]
 
         # Act
         image_coordinate_system = wsi.pyramids[
@@ -390,12 +372,10 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
         ],
+        scope="module",
     )
-    def test_change_pixel_spacing(
-        self, file_format: str, file: str, wsi_files: Dict[str, Dict[str, Path]]
-    ):
+    def test_change_pixel_spacing(self, wsi_file: Path):
         # Arrange
-        wsi_file = wsi_files[file_format][file]
         given_pixel_spacing = SizeMm(47, 47)
         metadata = WsiDicomizerMetadata(
             image=ImageMetadata(pixel_spacing=given_pixel_spacing)

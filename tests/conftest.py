@@ -16,7 +16,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict
+from typing import Any, Dict
 
 import pytest
 from pydicom.uid import JPEG2000, UID
@@ -421,6 +421,23 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
         return "YBR_ICT"
 
 
+def convert_wsi(file_path: Path, file_parameters: Dict[str, Any], icc_profile: bytes):
+    include_levels = file_parameters["include_levels"]
+    tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
+    tempdir = TemporaryDirectory()
+    optical_path = OpticalPath(icc_profile=icc_profile)
+    metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
+    WsiDicomizer.convert(
+        file_path,
+        output_path=tempdir.name,
+        default_metadata=metadata,
+        tile_size=tile_size,
+        include_levels=include_levels,
+        encoding=Jpeg2kTestEncoder(),
+    )
+    return tempdir
+
+
 @pytest.fixture(scope="module")
 def icc_profile():
     yield bytes([0x00, 0x01, 0x02, 0x03])
@@ -433,13 +450,13 @@ def testdata_dir():
 
 @pytest.fixture(scope="module")
 def wsi_files(testdata_dir: Path):
-    files: Dict[str, Dict[str, Path]] = defaultdict(dict)
-    for file_format, file_format_parameters in test_parameters.items():
-        for file in file_format_parameters:
-            files[file_format][file] = testdata_dir.joinpath(
-                "slides", file_format, file
-            )
-    return files
+    return {
+        file_format: {
+            file: testdata_dir.joinpath("slides", file_format, file)
+            for file in file_format_parameters
+        }
+        for file_format, file_format_parameters in test_parameters.items()
+    }
 
 
 @pytest.fixture(scope="module")
@@ -447,26 +464,16 @@ def converted(
     wsi_files: Dict[str, Dict[str, Path]],
     icc_profile: bytes,
 ):
-    converted_folders: Dict[str, Dict[str, TemporaryDirectory]] = defaultdict(dict)
-    for file_format, file_format_parameters in test_parameters.items():
-        for file, file_parameters in file_format_parameters.items():
-            file_path = wsi_files[file_format][file]
-            if not file_path.exists() or not file_parameters["convert"]:
-                continue
-            include_levels = file_parameters["include_levels"]
-            tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
-            tempdir = TemporaryDirectory()
-            optical_path = OpticalPath(icc_profile=icc_profile)
-            metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
-            WsiDicomizer.convert(
-                file_path,
-                output_path=tempdir.name,
-                default_metadata=metadata,
-                tile_size=tile_size,
-                include_levels=include_levels,
-                encoding=Jpeg2kTestEncoder(),
+    converted_folders = {
+        file_format: {
+            file: convert_wsi(
+                wsi_files[file_format][file], file_parameters, icc_profile
             )
-            converted_folders[file_format][file] = tempdir
+            for file, file_parameters in file_format_parameters.items()
+            if wsi_files[file_format][file].exists() and file_parameters["convert"]
+        }
+        for file_format, file_format_parameters in test_parameters.items()
+    }
     yield converted_folders
     for file_format in converted_folders.values():
         for converted_folder in file_format.values():
@@ -495,3 +502,37 @@ def wsis(
     for file_format in wsis.values():
         for wsi in file_format.values():
             wsi.close()
+
+
+@pytest.fixture(scope="module")
+def converted_path(
+    converted: Dict[str, Dict[str, TemporaryDirectory]], file_format: str, file: str
+):
+    if file_format not in converted or file not in converted[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield converted[file_format][file]
+
+
+@pytest.fixture(scope="module")
+def wsi(
+    wsis: Dict[str, Dict[str, WsiDicom]],
+    file_format: str,
+    file: str,
+):
+    if file_format not in wsis or file not in wsis[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield wsis[file_format][file]
+
+
+@pytest.fixture(scope="module")
+def wsi_file(
+    wsi_files: Dict[str, Dict[str, Path]],
+    file_format: str,
+    file: str,
+):
+    if file_format not in wsi_files or file not in wsi_files[file_format]:
+        pytest.skip(f"Skipping {file_format} {file} due to no test parameters.")
+    filepath = wsi_files[file_format][file]
+    if not filepath.exists():
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    yield filepath
