@@ -16,6 +16,7 @@
 
 import logging
 
+from PIL.ImageCms import ImageCmsProfile
 from wsidicom.geometry import PointMm, SizeMm
 from wsidicom.metadata import (
     Equipment,
@@ -74,4 +75,11 @@ class OpenSlideMetadata(WsiDicomizerMetadata):
         image = Image(
             pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
         )
-        super().__init__(equipment=equipment, image=image)
+        if slide.color_profile is not None:
+            optical_path = OpticalPath(
+                icc_profile=ImageCmsProfile(slide.color_profile).tobytes()
+            )
+            optical_paths = [optical_path]
+        else:
+            optical_paths = None
+        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)

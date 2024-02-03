@@ -21,6 +21,7 @@ class Settings:
 
     def __init__(self) -> None:
         self._czi_block_cache_size = 8
+        self._insert_icc_profile_if_missing = True
 
     @property
     def czi_block_cache_size(self) -> int:
@@ -30,6 +31,16 @@ class Settings:
     @czi_block_cache_size.setter
     def czi_block_cache_size(self, value: int) -> None:
         self._czi_block_cache_size = value
+
+    @property
+    def insert_icc_profile_if_missing(self) -> bool:
+        """Whether to insert a default ICC profile in the DICOM file if no profile
+        is present in the source file or provided metadata."""
+        return self._insert_icc_profile_if_missing
+
+    @insert_icc_profile_if_missing.setter
+    def insert_icc_profile_if_missing(self, value: bool) -> None:
+        self._insert_icc_profile_if_missing = value
 
 
 settings = Settings()

@@ -39,6 +39,18 @@ from wsidicomizer.wsidicomizer import WsiDicomizer
 from .conftest import Jpeg2kTestEncoder, test_parameters
 
 
+@pytest.fixture(scope="module")
+def validator(
+    testdata_dir: Path,
+):
+    standard_path = os.path.join(testdata_dir, "dicom-validator")
+    edition_reader = EditionReader(standard_path)
+    revision_path = edition_reader.get_revision("current")
+    assert isinstance(revision_path, Path)
+    json_path = revision_path.joinpath("json")
+    yield DicomFileValidator(EditionReader.load_dicom_info(json_path))
+
+
 @pytest.mark.integrationtest
 class TestWsiDicomizerConvert:
     @pytest.mark.parametrize(
@@ -53,16 +65,10 @@ class TestWsiDicomizerConvert:
     )
     def test_validate(
         self,
-        testdata_dir: Path,
+        validator: DicomFileValidator,
         converted_path: TemporaryDirectory,
     ):
         # Arrange
-        standard_path = os.path.join(testdata_dir, "dicom-validator")
-        edition_reader = EditionReader(standard_path)
-        revision_path = edition_reader.get_revision("current")
-        assert isinstance(revision_path, Path)
-        json_path = revision_path.joinpath("json")
-        validator = DicomFileValidator(EditionReader.load_dicom_info(json_path))
 
         # Act
         result: Dict[str, Dict[str, Dict[str, List[str]]]] = validator.validate_dir(
@@ -387,3 +393,24 @@ class TestWsiDicomizerConvert:
 
         # Assert
         assert base_pixel_spacing == given_pixel_spacing
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_icc_profile(
+        self,
+        wsi: WsiDicom,
+    ):
+        # Arrange
+
+        # Act
+        icc_profile = wsi.pyramids[0].metadata.optical_paths[0].icc_profile
+
+        # Arrange
+        assert icc_profile is not None

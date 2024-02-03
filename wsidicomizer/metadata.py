@@ -72,7 +72,7 @@ class WsiDicomizerMetadata(WsiMetadata):
         else:
             base = self
         if user is None and default is None:
-            return base
+            return self._merge_not_none(WsiDicomizerMetadata, base, None, None)
         if user is None:
             user = WsiDicomizerMetadata()
         if default is None:
@@ -116,30 +116,40 @@ class WsiDicomizerMetadata(WsiMetadata):
         base: Sequence[ModelType],
         user: Sequence[ModelType],
         default: Sequence[ModelType],
-    ) -> Optional[Sequence[ModelType]]:
+    ) -> Sequence[ModelType]:
         models = [model for model in (user, base, default) if len(model) > 0]
-        if len(models) == 0:
+        if len(models) == 0 or all(item is None for model in models for item in model):
             # All lists empty
             return []
         if len(models) == 1:
             # Only one list not empty
             return models[0]
-        user = cls._repeat_list(base, user)
-        default = cls._repeat_list(base, default)
+        user_expanded = cls._repeat_list(base, user)
+        default_expanded = cls._repeat_list(base, default)
         return [
             cls._merge_not_none(model_class, base_item, user_item, default_item)
-            for base_item, user_item, default_item in zip(base, user, default)
+            for base_item, user_item, default_item in zip(
+                base, user_expanded, default_expanded
+            )
         ]
 
     @staticmethod
     def _repeat_list(
         base: Sequence[ModelType], to_repeat: Sequence[ModelType]
-    ) -> Sequence[ModelType]:
+    ) -> Sequence[Optional[ModelType]]:
+        if len(to_repeat) > 1 and len(to_repeat) != len(base):
+            raise ValueError(
+                "List to repeat must have length 0, 1 or length of base. "
+                f"Length of list to repeat: {len(to_repeat)}. "
+                f"Length of base: {len(base)}."
+            )
         if len(to_repeat) == len(base):
             return to_repeat
-        if not len(to_repeat) == 1:
-            raise ValueError()
-        return [to_repeat[0] for _ in range(len(base))]
+        if len(to_repeat) == 0:
+            item_to_repeat = None
+        else:
+            item_to_repeat = to_repeat[0]
+        return [item_to_repeat for _ in range(len(base))]
 
     @classmethod
     def _merge(
@@ -160,8 +170,6 @@ class WsiDicomizerMetadata(WsiMetadata):
         not_none = [model for model in [user, base, default] if model is not None]
         if len(not_none) == 0:
             return None
-        if len(not_none) == 1:
-            return not_none[0]
         assert is_dataclass(model_class)
         attributes = {
             field.name: cls._select_value(field, base, user, default)

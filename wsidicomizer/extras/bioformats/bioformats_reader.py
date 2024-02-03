@@ -100,13 +100,13 @@ class ReaderPool:
         if self._current_count < self._max_readers:
             self._current_count += 1
             return
-        raise ValueError()
+        raise ValueError("Current count should never be higher than max readers.")
 
     def _decrement(self):
         if self._current_count > 0:
             self._current_count -= 1
             return
-        raise ValueError()
+        raise ValueError("Current count should never be lower than 0.")
 
     def _get_reader(self) -> Memoizer:
         """Return a reader with no wait if one is available. Else if current

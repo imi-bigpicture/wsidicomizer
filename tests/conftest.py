@@ -22,9 +22,7 @@ import pytest
 from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
 from wsidicom.codec.encoder import Jpeg2kEncoder, Jpeg2kSettings
-from wsidicom.metadata import OpticalPath
 
-from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 DEFAULT_TILE_SIZE = 512
@@ -37,6 +35,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "image_coordinate_system": {"x": 25.691574, "y": 23.449873},
+            "icc_profile": True,
             "read_region": [
                 {
                     "location": {"x": 900, "y": 1200},
@@ -78,6 +77,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "image_coordinate_system": {"x": 18.34152, "y": 22.716894},
+            "icc_profile": True,
             "read_region": [
                 {
                     "location": {"x": 500, "y": 500},
@@ -122,6 +122,7 @@ test_parameters = {
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
             "read_region": [
                 {
                     "location": {"x": 30000, "y": 30000},
@@ -144,6 +145,7 @@ test_parameters = {
             "encode_quality": 0,
             "photometric_interpretation": "YBR_ICT",
             "image_coordinate_system": {"x": 2.3061675, "y": 20.79015},
+            "icc_profile": False,
             "read_region": [
                 # OpenSlide produces different results across platforms
                 # {
@@ -194,6 +196,7 @@ test_parameters = {
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
             "read_region": [
                 {
                     "location": {"x": 940, "y": 1500},
@@ -240,6 +243,7 @@ test_parameters = {
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
             "read_region": [
                 {
                     "location": {"x": 0, "y": 0},
@@ -352,6 +356,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
             "read_region": [
                 {
                     "location": {"x": 500, "y": 1000},
@@ -421,16 +426,13 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
         return "YBR_ICT"
 
 
-def convert_wsi(file_path: Path, file_parameters: Dict[str, Any], icc_profile: bytes):
+def convert_wsi(file_path: Path, file_parameters: Dict[str, Any]):
     include_levels = file_parameters["include_levels"]
     tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
     tempdir = TemporaryDirectory()
-    optical_path = OpticalPath(icc_profile=icc_profile)
-    metadata = WsiDicomizerMetadata(optical_paths=[optical_path])
     WsiDicomizer.convert(
         file_path,
         output_path=tempdir.name,
-        default_metadata=metadata,
         tile_size=tile_size,
         include_levels=include_levels,
         encoding=Jpeg2kTestEncoder(),
@@ -460,15 +462,10 @@ def wsi_files(testdata_dir: Path):
 
 
 @pytest.fixture(scope="module")
-def converted(
-    wsi_files: Dict[str, Dict[str, Path]],
-    icc_profile: bytes,
-):
+def converted(wsi_files: Dict[str, Dict[str, Path]]):
     converted_folders = {
         file_format: {
-            file: convert_wsi(
-                wsi_files[file_format][file], file_parameters, icc_profile
-            )
+            file: convert_wsi(wsi_files[file_format][file], file_parameters)
             for file, file_parameters in file_format_parameters.items()
             if wsi_files[file_format][file].exists() and file_parameters["convert"]
         }
