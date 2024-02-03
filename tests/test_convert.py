@@ -45,6 +45,7 @@ def validator(
 ):
     standard_path = os.path.join(testdata_dir, "dicom-validator")
     edition_reader = EditionReader(standard_path)
+    edition_reader.get_editions()
     revision_path = edition_reader.get_revision("current")
     assert isinstance(revision_path, Path)
     json_path = revision_path.joinpath("json")
@@ -88,7 +89,9 @@ class TestWsiDicomizerConvert:
                 "(0040,073A)",
                 "(0048,021E)",
                 "(0048,021F)",
-            ]
+            ],
+            # Validator flags Series Number as unexpected due to error in DICOM 2024a
+            "Root": ["(0020,0011)"],
         }
         for module, module_errors in module_errors_to_ignore.items():
             errors = errors_per_module.get(module, None)
