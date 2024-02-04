@@ -13,9 +13,10 @@
 #    limitations under the License.
 
 """Base model for metadata."""
-from dataclasses import Field, fields, is_dataclass
+from dataclasses import Field, fields, is_dataclass, replace
 from typing import Any, Optional, Sequence, Type, TypeVar
 
+from PIL import ImageCms
 from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
@@ -66,7 +67,7 @@ class WsiDicomizerMetadata(WsiMetadata):
         user: Optional[WsiMetadata],
         default: Optional[WsiMetadata],
         include_confidential: bool,
-    ) -> WsiMetadata:
+    ) -> "WsiDicomizerMetadata":
         if not include_confidential:
             base = self._remove_confidential()
         else:
@@ -212,3 +213,33 @@ class WsiDicomizerMetadata(WsiMetadata):
         if is_dataclass(value) and isinstance(value, object):
             value = cls._merge(value.__class__, base_value, user_value, default_value)
         return value
+
+    def insert_default_icc_profile(self) -> WsiMetadata:
+        if len(self.optical_paths) == 0:
+            # No optical paths defined, add one with icc profile
+            optical_paths = [
+                OpticalPath(icc_profile=self._create_default_icc_profile())
+            ]
+        else:
+            # Optical paths defined, add icc profile if missing
+            optical_paths = [
+                (
+                    replace(
+                        optical_path,
+                        icc_profile=self._create_default_icc_profile(),
+                    )
+                    if optical_path.icc_profile is None
+                    else optical_path
+                )
+                for optical_path in self.optical_paths
+            ]
+        return replace(
+            self,
+            optical_paths=optical_paths,
+            frame_of_reference_uid=self.default_frame_of_reference_uid,
+            dimension_organization_uids=self.default_dimension_organization_uids,
+        )
+
+    @staticmethod
+    def _create_default_icc_profile() -> bytes:
+        return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()

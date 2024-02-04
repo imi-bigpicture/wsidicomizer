@@ -15,19 +15,17 @@
 """Module containing a base Source implementation suitable for use with non-DICOM
 files."""
 
-import dataclasses
 from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from PIL import ImageCms
 from pydicom import config
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
-from wsidicom.metadata import OpticalPath, WsiMetadata
+from wsidicom.metadata import WsiMetadata
 from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
@@ -109,7 +107,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @cached_property
-    def metadata(self) -> WsiMetadata:
+    def metadata(self) -> WsiDicomizerMetadata:
         return self.base_metadata.merge(
             self.user_metadata, self.default_metadata, self._include_confidential
         )
@@ -180,7 +178,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             settings.insert_icc_profile_if_missing
             and not photometric_interpretation.startswith("MONOCHROME")
         ):
-            metadata = self._insert_default_icc_profile(self.metadata)
+            metadata = self.metadata.insert_default_icc_profile()
         else:
             metadata = self.metadata
         dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
@@ -224,33 +222,3 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             if -len(present_levels) <= level < len(present_levels)
         ]
         return level in absolute_levels
-
-    def _insert_default_icc_profile(self, metadata: WsiMetadata) -> WsiMetadata:
-        if len(metadata.optical_paths) == 0:
-            # No optical paths defined, add one with icc profile
-            optical_paths = [
-                OpticalPath(icc_profile=self._create_default_icc_profile())
-            ]
-        else:
-            # Optical paths defined, add icc profile if missing
-            optical_paths = [
-                (
-                    dataclasses.replace(
-                        optical_path,
-                        icc_profile=self._create_default_icc_profile(),
-                    )
-                    if optical_path.icc_profile is None
-                    else optical_path
-                )
-                for optical_path in metadata.optical_paths
-            ]
-        return dataclasses.replace(
-            metadata,
-            optical_paths=optical_paths,
-            frame_of_reference_uid=metadata.default_frame_of_reference_uid,
-            dimension_organization_uids=metadata.default_dimension_organization_uids,
-        )
-
-    @staticmethod
-    def _create_default_icc_profile() -> bytes:
-        return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
