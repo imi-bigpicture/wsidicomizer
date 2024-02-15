@@ -70,27 +70,29 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         raise NotImplementedError()
 
     def __init__(self, slide: TiffSlide):
-        magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
+        magnification = slide.properties.get(self.objective_power_property_name)
         if magnification is not None:
             OpticalPath("0", objective=Objectives(objective_power=float(magnification)))
-        equipment = Equipment(manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR))
+        equipment = Equipment(
+            manufacturer=slide.properties.get(self.vendor_property_name)
+        )
         try:
-            base_mpp_x = float(slide.properties[PROPERTY_NAME_MPP_X])
-            base_mpp_y = float(slide.properties[PROPERTY_NAME_MPP_Y])
+            base_mpp_x = float(slide.properties[self.mpp_x_property_name])
+            base_mpp_y = float(slide.properties[self.mpp_y_property_name])
             pixel_spacing = SizeMm(
                 base_mpp_x / 1000.0,
                 base_mpp_y / 1000.0,
             )
         except (KeyError, TypeError):
             logging.warning(
-                "Could not determine pixel spacing as tiffslide did not "
+                f"Could not determine pixel spacing as {slide} did not "
                 "provide mpp from the file.",
                 exc_info=True,
             )
             pixel_spacing = None
         # Get set image origin and size to bounds if available
-        bounds_x = slide.properties.get(PROPERTY_NAME_BOUNDS_X, None)
-        bounds_y = slide.properties.get(PROPERTY_NAME_BOUNDS_Y, None)
+        bounds_x = slide.properties.get(self.bounds_x_property_name, None)
+        bounds_y = slide.properties.get(self.bounds_y_property_name, None)
         if bounds_x is not None and bounds_y is not None and pixel_spacing is not None:
             origin = PointMm(
                 int(bounds_x) * pixel_spacing.width,
