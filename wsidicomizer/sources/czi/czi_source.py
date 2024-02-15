@@ -74,7 +74,7 @@ class CziSource(DicomizerSource):
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         if level_index != 0:
-            raise ValueError()  # TODO
+            raise NotImplementedError("Only base level is supported.")
         return CziImageData(
             self._czi,
             self._tile_size,

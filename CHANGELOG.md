@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2023-02-15
+
+### Added
+
+- Support for incorporating ICC profiles from source image if avaiable. This is currently limited to images read by the `OpenTile` and `OpenSlide` source, and only for supported formats (primarily `Aperio svs`).
+
+- If no ICC profile is present in the source file or the provided metadata, an empty profile will be used if the photometric interpretation requires it for DICOM compatibility. This behavior can be disabled with `settings.insert_icc_profile_if_missing = False`
+
 ## [0.12.1] - 2023-01-12
 
 ### Fixed
@@ -210,7 +218,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.1..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.0..HEAD
+[0.13.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.1..0.13.0
 [0.12.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.0..0.12.1
 [0.12.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.11.0..0.12.0
 [0.11.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.10.2..0.11.0

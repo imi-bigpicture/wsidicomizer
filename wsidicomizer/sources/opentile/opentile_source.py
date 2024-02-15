@@ -27,7 +27,7 @@ from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
     OpenTileLevelImageData,
 )
-from wsidicomizer.sources.opentile.opentile_metadata import OpentileMetadata
+from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 
 
 class OpenTileSource(DicomizerSource):
@@ -42,7 +42,9 @@ class OpenTileSource(DicomizerSource):
         force_transcoding: bool = False,
     ) -> None:
         self._tiler = OpenTile.open(filepath, tile_size)
-        self._base_metadata = OpentileMetadata(self._tiler.metadata)
+        self._base_metadata = OpenTileMetadata(
+            self._tiler.metadata, self._tiler.icc_profile
+        )
 
         self._force_transcoding = force_transcoding
         super().__init__(
@@ -66,7 +68,7 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @property
-    def base_metadata(self) -> OpentileMetadata:
+    def base_metadata(self) -> OpenTileMetadata:
         return self._base_metadata
 
     @property

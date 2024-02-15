@@ -157,7 +157,7 @@ class OpenTileImageData(DicomizerImageData):
             Tile bytes.
         """
         if z not in self.focal_planes or path not in self.optical_paths:
-            raise ValueError()
+            raise ValueError("Requested focal plane or optical path not available.")
         if self.needs_transcoding:
             decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
             return self.encoder.encode(decoded_tile)

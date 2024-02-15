@@ -14,15 +14,17 @@
 
 """Metadata for opentile file."""
 
-from opentile import Metadata as OpenTileMetadata
+from typing import Optional
+
+from opentile import Metadata
 from wsidicom.geometry import PointMm
-from wsidicom.metadata import Equipment, Image, ImageCoordinateSystem
+from wsidicom.metadata import Equipment, Image, ImageCoordinateSystem, OpticalPath
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
-class OpentileMetadata(WsiDicomizerMetadata):
-    def __init__(self, metadata: OpenTileMetadata):
+class OpenTileMetadata(WsiDicomizerMetadata):
+    def __init__(self, metadata: Metadata, icc_profile: Optional[bytes] = None):
         equipment = Equipment(
             metadata.scanner_manufacturer,
             metadata.scanner_model,
@@ -39,4 +41,9 @@ class OpentileMetadata(WsiDicomizerMetadata):
             metadata.aquisition_datetime,
             image_coordinate_system=image_coordinate_system,
         )
-        super().__init__(equipment=equipment, image=image)
+        if icc_profile is not None:
+            optical_path = OpticalPath(icc_profile=icc_profile)
+            optical_paths = [optical_path]
+        else:
+            optical_paths = None
+        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)

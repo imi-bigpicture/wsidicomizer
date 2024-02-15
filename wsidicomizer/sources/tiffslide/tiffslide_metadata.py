@@ -15,6 +15,7 @@
 """Metadata for tiffslide file."""
 
 import logging
+from abc import abstractmethod
 
 from tiffslide import TiffSlide
 from tiffslide.tiffslide import (
@@ -37,29 +38,61 @@ from wsidicom.metadata import (
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
-class TiffSlideMetadata(WsiDicomizerMetadata):
+class OpenSlideLikeMetadata(WsiDicomizerMetadata):
+    @property
+    @abstractmethod
+    def bounds_x_property_name(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def bounds_y_property_name(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def mpp_x_property_name(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def mpp_y_property_name(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def objective_power_property_name(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def vendor_property_name(self) -> str:
+        raise NotImplementedError()
+
     def __init__(self, slide: TiffSlide):
-        magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
+        magnification = slide.properties.get(self.objective_power_property_name)
         if magnification is not None:
             OpticalPath("0", objective=Objectives(objective_power=float(magnification)))
-        equipment = Equipment(manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR))
+        equipment = Equipment(
+            manufacturer=slide.properties.get(self.vendor_property_name)
+        )
         try:
-            base_mpp_x = float(slide.properties[PROPERTY_NAME_MPP_X])
-            base_mpp_y = float(slide.properties[PROPERTY_NAME_MPP_Y])
+            base_mpp_x = float(slide.properties[self.mpp_x_property_name])
+            base_mpp_y = float(slide.properties[self.mpp_y_property_name])
             pixel_spacing = SizeMm(
                 base_mpp_x / 1000.0,
                 base_mpp_y / 1000.0,
             )
         except (KeyError, TypeError):
             logging.warning(
-                "Could not determine pixel spacing as tiffslide did not "
+                f"Could not determine pixel spacing as {slide} did not "
                 "provide mpp from the file.",
                 exc_info=True,
             )
             pixel_spacing = None
         # Get set image origin and size to bounds if available
-        bounds_x = slide.properties.get(PROPERTY_NAME_BOUNDS_X, None)
-        bounds_y = slide.properties.get(PROPERTY_NAME_BOUNDS_Y, None)
+        bounds_x = slide.properties.get(self.bounds_x_property_name, None)
+        bounds_y = slide.properties.get(self.bounds_y_property_name, None)
         if bounds_x is not None and bounds_y is not None and pixel_spacing is not None:
             origin = PointMm(
                 int(bounds_x) * pixel_spacing.width,
@@ -74,4 +107,35 @@ class TiffSlideMetadata(WsiDicomizerMetadata):
         image = Image(
             pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
         )
-        super().__init__(equipment=equipment, image=image)
+        if slide.color_profile is not None:
+            optical_path = OpticalPath(icc_profile=slide.color_profile.tobytes())
+            optical_paths = [optical_path]
+        else:
+            optical_paths = None
+        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
+
+
+class TiffSlideMetadata(OpenSlideLikeMetadata):
+    @property
+    def bounds_x_property_name(self) -> str:
+        return PROPERTY_NAME_BOUNDS_X
+
+    @property
+    def bounds_y_property_name(self) -> str:
+        return PROPERTY_NAME_BOUNDS_Y
+
+    @property
+    def mpp_x_property_name(self) -> str:
+        return PROPERTY_NAME_MPP_X
+
+    @property
+    def mpp_y_property_name(self) -> str:
+        return PROPERTY_NAME_MPP_Y
+
+    @property
+    def objective_power_property_name(self) -> str:
+        return PROPERTY_NAME_OBJECTIVE_POWER
+
+    @property
+    def vendor_property_name(self) -> str:
+        return PROPERTY_NAME_VENDOR

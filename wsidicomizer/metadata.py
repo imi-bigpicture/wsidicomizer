@@ -13,9 +13,10 @@
 #    limitations under the License.
 
 """Base model for metadata."""
-from dataclasses import Field, fields, is_dataclass
+from dataclasses import Field, fields, is_dataclass, replace
 from typing import Any, Optional, Sequence, Type, TypeVar
 
+from PIL import ImageCms
 from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
@@ -66,13 +67,13 @@ class WsiDicomizerMetadata(WsiMetadata):
         user: Optional[WsiMetadata],
         default: Optional[WsiMetadata],
         include_confidential: bool,
-    ) -> WsiMetadata:
+    ) -> "WsiDicomizerMetadata":
         if not include_confidential:
             base = self._remove_confidential()
         else:
             base = self
         if user is None and default is None:
-            return base
+            return self._merge_not_none(WsiDicomizerMetadata, base, None, None)
         if user is None:
             user = WsiDicomizerMetadata()
         if default is None:
@@ -116,30 +117,40 @@ class WsiDicomizerMetadata(WsiMetadata):
         base: Sequence[ModelType],
         user: Sequence[ModelType],
         default: Sequence[ModelType],
-    ) -> Optional[Sequence[ModelType]]:
+    ) -> Sequence[ModelType]:
         models = [model for model in (user, base, default) if len(model) > 0]
-        if len(models) == 0:
+        if len(models) == 0 or all(item is None for model in models for item in model):
             # All lists empty
             return []
         if len(models) == 1:
             # Only one list not empty
             return models[0]
-        user = cls._repeat_list(base, user)
-        default = cls._repeat_list(base, default)
+        user_expanded = cls._repeat_list(base, user)
+        default_expanded = cls._repeat_list(base, default)
         return [
             cls._merge_not_none(model_class, base_item, user_item, default_item)
-            for base_item, user_item, default_item in zip(base, user, default)
+            for base_item, user_item, default_item in zip(
+                base, user_expanded, default_expanded
+            )
         ]
 
     @staticmethod
     def _repeat_list(
         base: Sequence[ModelType], to_repeat: Sequence[ModelType]
-    ) -> Sequence[ModelType]:
+    ) -> Sequence[Optional[ModelType]]:
+        if len(to_repeat) > 1 and len(to_repeat) != len(base):
+            raise ValueError(
+                "List to repeat must have length 0, 1 or length of base. "
+                f"Length of list to repeat: {len(to_repeat)}. "
+                f"Length of base: {len(base)}."
+            )
         if len(to_repeat) == len(base):
             return to_repeat
-        if not len(to_repeat) == 1:
-            raise ValueError()
-        return [to_repeat[0] for _ in range(len(base))]
+        if len(to_repeat) == 0:
+            item_to_repeat = None
+        else:
+            item_to_repeat = to_repeat[0]
+        return [item_to_repeat for _ in range(len(base))]
 
     @classmethod
     def _merge(
@@ -160,8 +171,6 @@ class WsiDicomizerMetadata(WsiMetadata):
         not_none = [model for model in [user, base, default] if model is not None]
         if len(not_none) == 0:
             return None
-        if len(not_none) == 1:
-            return not_none[0]
         assert is_dataclass(model_class)
         attributes = {
             field.name: cls._select_value(field, base, user, default)
@@ -204,3 +213,33 @@ class WsiDicomizerMetadata(WsiMetadata):
         if is_dataclass(value) and isinstance(value, object):
             value = cls._merge(value.__class__, base_value, user_value, default_value)
         return value
+
+    def insert_default_icc_profile(self) -> WsiMetadata:
+        if len(self.optical_paths) == 0:
+            # No optical paths defined, add one with icc profile
+            optical_paths = [
+                OpticalPath(icc_profile=self._create_default_icc_profile())
+            ]
+        else:
+            # Optical paths defined, add icc profile if missing
+            optical_paths = [
+                (
+                    replace(
+                        optical_path,
+                        icc_profile=self._create_default_icc_profile(),
+                    )
+                    if optical_path.icc_profile is None
+                    else optical_path
+                )
+                for optical_path in self.optical_paths
+            ]
+        return replace(
+            self,
+            optical_paths=optical_paths,
+            frame_of_reference_uid=self.default_frame_of_reference_uid,
+            dimension_organization_uids=self.default_dimension_organization_uids,
+        )
+
+    @staticmethod
+    def _create_default_icc_profile() -> bytes:
+        return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()

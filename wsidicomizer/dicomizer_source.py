@@ -21,13 +21,15 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from pydicom import config
+from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import ImageType, WsiDataset, WsiInstance
 from wsidicom.metadata import WsiMetadata
-from wsidicom.metadata.schema.dicom.wsi import WsiMetadataDicomSchema
+from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
+from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
@@ -95,9 +97,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_label_image_data(
-        self,
-    ) -> DicomizerImageData:
+    def _create_label_image_data(self) -> DicomizerImageData:
         """Return image data instance for label."""
         raise NotImplementedError()
 
@@ -107,12 +107,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @cached_property
-    def metadata(self) -> WsiMetadata:
-        merged = self.base_metadata.merge(
+    def metadata(self) -> WsiDicomizerMetadata:
+        return self.base_metadata.merge(
             self.user_metadata, self.default_metadata, self._include_confidential
         )
-        assert merged is not None
-        return merged
 
     @property
     def user_metadata(self) -> Optional[WsiMetadata]:
@@ -129,9 +127,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     @cached_property
     def level_instances(self) -> List[WsiInstance]:
         return [
-            WsiInstance.create_instance(
+            self._create_instance(
                 self._create_level_image_data(level_index),
-                self._create_base_dataset(ImageType.VOLUME),
                 ImageType.VOLUME,
             )
             for level_index in range(len(self.pyramid_levels))
@@ -141,10 +138,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def label_instances(self) -> List[WsiInstance]:
         if not self.has_label:
             return []
-
-        label = WsiInstance.create_instance(
+        label = self._create_instance(
             self._create_label_image_data(),
-            self._create_base_dataset(ImageType.LABEL),
             ImageType.LABEL,
         )
         return [label]
@@ -153,10 +148,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def overview_instances(self) -> List[WsiInstance]:
         if not self.has_overview:
             return []
-
-        overview = WsiInstance.create_instance(
+        overview = self._create_instance(
             self._create_overview_image_data(),
-            self._create_base_dataset(ImageType.OVERVIEW),
             ImageType.OVERVIEW,
         )
         return [overview]
@@ -165,9 +158,31 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def annotation_instances(self) -> List[AnnotationInstance]:
         return []
 
-    def _create_base_dataset(self, image_type: ImageType) -> WsiDataset:
+    def _create_instance(
+        self, image_data: ImageData, image_type: ImageType
+    ) -> WsiInstance:
+        """Create instance from image data."""
+        dataset = self._create_dataset(
+            image_type, image_data.photometric_interpretation
+        )
+        return WsiInstance.create_instance(
+            image_data,
+            dataset,
+            image_type,
+        )
+
+    def _create_dataset(
+        self, image_type: ImageType, photometric_interpretation: str
+    ) -> WsiDataset:
+        if (
+            settings.insert_icc_profile_if_missing
+            and not photometric_interpretation.startswith("MONOCHROME")
+        ):
+            metadata = self.metadata.insert_default_icc_profile()
+        else:
+            metadata = self.metadata
         dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
-            self.metadata
+            metadata
         )
         return WsiDataset(dataset)
 

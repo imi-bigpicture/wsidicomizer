@@ -27,7 +27,7 @@ from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
-from wsidicom.metadata.wsi import WsiMetadata
+from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
