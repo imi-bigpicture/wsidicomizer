@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support for incorporating ICC profiles from source image if avaiable. This is currently limited to images read by the `OpenTile` and `OpenSlide` source, and only for supported formats (primarily `Aperio svs`).
+- Support for incorporating ICC profiles from source image if available. This is currently limited to images read by the `OpenTile` and `OpenSlide` source, and only for supported formats (primarily `Aperio svs`).
 
 - If no ICC profile is present in the source file or the provided metadata, an empty profile will be used if the photometric interpretation requires it for DICOM compatibility. This behavior can be disabled with `settings.insert_icc_profile_if_missing = False`
 
