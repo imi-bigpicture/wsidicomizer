@@ -14,17 +14,9 @@
 
 """Metadata for openslide file."""
 
-import logging
+from typing import cast
 
-from PIL.ImageCms import ImageCmsProfile
-from wsidicom.geometry import PointMm, SizeMm
-from wsidicom.metadata import (
-    Equipment,
-    Image,
-    ImageCoordinateSystem,
-    Objectives,
-    OpticalPath,
-)
+from tiffslide import TiffSlide
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_X,
@@ -35,51 +27,33 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_VENDOR,
     OpenSlide,
 )
-from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.sources.tiffslide.tiffslide_metadata import OpenSlideLikeMetadata
 
 
-class OpenSlideMetadata(WsiDicomizerMetadata):
+class OpenSlideMetadata(OpenSlideLikeMetadata):
     def __init__(self, slide: OpenSlide):
-        magnification = slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER)
-        if magnification is not None:
-            OpticalPath("0", objective=Objectives(objective_power=float(magnification)))
-        equipment = Equipment(manufacturer=slide.properties.get(PROPERTY_NAME_VENDOR))
-        try:
-            base_mpp_x = float(slide.properties[PROPERTY_NAME_MPP_X])
-            base_mpp_y = float(slide.properties[PROPERTY_NAME_MPP_Y])
-            pixel_spacing = SizeMm(
-                base_mpp_x / 1000.0,
-                base_mpp_y / 1000.0,
-            )
-        except (KeyError, TypeError):
-            logging.warning(
-                "Could not determine pixel spacing as tiffslide did not "
-                "provide mpp from the file.",
-                exc_info=True,
-            )
-            pixel_spacing = None
-        # Get set image origin and size to bounds if available
-        bounds_x = slide.properties.get(PROPERTY_NAME_BOUNDS_X, 0)
-        bounds_y = slide.properties.get(PROPERTY_NAME_BOUNDS_Y, 0)
-        if pixel_spacing is not None:
-            origin = PointMm(
-                int(bounds_x) * pixel_spacing.width,
-                int(bounds_y) * pixel_spacing.height,
-            )
-            image_coordinate_system = ImageCoordinateSystem(
-                origin,
-                0,
-            )
-        else:
-            image_coordinate_system = None
-        image = Image(
-            pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
-        )
-        if slide.color_profile is not None:
-            optical_path = OpticalPath(
-                icc_profile=ImageCmsProfile(slide.color_profile).tobytes()
-            )
-            optical_paths = [optical_path]
-        else:
-            optical_paths = None
-        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
+        super().__init__(cast(TiffSlide, slide))
+
+    @property
+    def bounds_x_property_name(self) -> str:
+        return PROPERTY_NAME_BOUNDS_X
+
+    @property
+    def bounds_y_property_name(self) -> str:
+        return PROPERTY_NAME_BOUNDS_Y
+
+    @property
+    def mpp_x_property_name(self) -> str:
+        return PROPERTY_NAME_MPP_X
+
+    @property
+    def mpp_y_property_name(self) -> str:
+        return PROPERTY_NAME_MPP_Y
+
+    @property
+    def objective_power_property_name(self) -> str:
+        return PROPERTY_NAME_OBJECTIVE_POWER
+
+    @property
+    def vendor_property_name(self) -> str:
+        return PROPERTY_NAME_VENDOR
