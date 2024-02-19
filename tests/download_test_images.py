@@ -77,8 +77,8 @@ def download_file(url: str, filename: Path):
 
 def main():
     print("Downloading and/or checking testdata from cytomine.")
-    test_data_dir = os.environ.get("WSIDICOMIZER_TESTDIR")
-    if test_data_dir is None:
+    test_data_folder = os.environ.get("WSIDICOMIZER_TESTDIR")
+    if test_data_folder is None:
         slide_path = Path(DEFAULT_SLIDE_FOLDER)
         print(
             'Env "WSIDICOMIZER_TESTDIR" not set, '
@@ -86,7 +86,7 @@ def main():
             f"{slide_path}."
         )
     else:
-        slide_path = Path(test_data_dir).joinpath("slides")
+        slide_path = Path(test_data_folder).joinpath("slides")
         print(f"Downloading to {slide_path}")
 
     os.makedirs(slide_path, exist_ok=True)
