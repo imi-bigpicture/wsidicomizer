@@ -778,26 +778,26 @@ files = [
 
 [[package]]
 name = "ome-types"
-version = "0.4.5"
+version = "0.5.0"
 description = "Python dataclasses for the OME data model"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "ome_types-0.4.5-py3-none-any.whl", hash = "sha256:002650fb7f4577a5519e657659383c8e5b56df256cb1bd96b9c84f3750d86c90"},
-    {file = "ome_types-0.4.5.tar.gz", hash = "sha256:5027dca479ed23f60035e7b097a745db7de029cc6034a2a2eb39a29848eff3f3"},
+    {file = "ome_types-0.5.0-py3-none-any.whl", hash = "sha256:7109d2e986dd9f2c6496703f3895afbccdc65d629b2aa40458a0279607b9566f"},
+    {file = "ome_types-0.5.0.tar.gz", hash = "sha256:c34d5f2523e495abf9f2470d2f0d1d5cf9f7c1bc3d4c550bef549a99878d6a53"},
 ]
 
 [package.dependencies]
 pydantic = ">=1.9.0"
 pydantic-compat = ">=0.1.0"
-xsdata = ">=23.5"
+xsdata = ">=23.6,<25"
 
 [package.extras]
-dev = ["black", "mypy", "pre-commit", "ruff", "types-lxml", "xsdata[cli] (>=23.6)"]
+dev = ["pre-commit", "types-lxml"]
 docs = ["mkdocs-material", "mkdocstrings-python"]
 lxml = ["lxml (>=4.8.0)"]
 pint = ["pint (>=0.15)"]
-test = ["lxml", "numpy", "pint", "pytest", "pytest-codspeed", "pytest-cov", "pytest-mypy-plugins", "xmlschema (<2.5)"]
+test = ["black", "lxml", "mypy", "numpy", "pint", "pytest", "pytest-codspeed", "pytest-cov", "pytest-mypy-plugins", "ruff", "xmlschema (<2.5)", "xsdata[cli]"]
 test-qt = ["pytest-qt", "qtpy"]
 
 [[package]]
@@ -825,20 +825,20 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.11.1"
+version = "0.11.2"
 description = "Read tiles from wsi-TIFF files"
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "opentile-0.11.1-py3-none-any.whl", hash = "sha256:7f086e994f3fafdce50e5b11e2189fbd7686acd296663bbc94f3b56744e7b91a"},
-    {file = "opentile-0.11.1.tar.gz", hash = "sha256:09142a685a0322be281d3ba4065c6a15e39527e72da5cfe8009ba3ebb27f0536"},
+    {file = "opentile-0.11.2-py3-none-any.whl", hash = "sha256:177affd3efc24bdabb6a2807fac855ef79883112b38fe432d604359225dcb557"},
+    {file = "opentile-0.11.2.tar.gz", hash = "sha256:c5bd18f07aef6db0660c9eab9558983ffd7f2d12bebddd76e56133201634a284"},
 ]
 
 [package.dependencies]
 defusedxml = ">=0.7.1,<0.8.0"
 imagecodecs = ">=2022.12.24"
 numpy = ">=1.22.0,<2.0.0"
-ome-types = ">=0.4.0,<0.5.0"
+ome-types = ">=0.5.0,<0.6.0"
 Pillow = ">=10.1.0,<11.0.0"
 PyTurboJPEG = ">=1.7.3,<2.0.0"
 tifffile = ">=2022.5.4"
@@ -1477,4 +1477,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8458875a5bd2ce9e1c55dcb1357221da1e1672b1cf82a6ecf81060dfae192a45"
+content-hash = "d3fdcfa025b54b3aff88e434e447152647d9b70c98fef7d3a22b5b7b378b3cd9"
