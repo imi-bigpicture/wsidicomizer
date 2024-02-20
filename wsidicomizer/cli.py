@@ -58,7 +58,8 @@ class WsiDicomizerCli:
             "--metadata",
             type=Path,
             help=(
-                "Path to json metadata that will override metadata from source image file."
+                "Path to json metadata that will override metadata from source image "
+                "file."
             ),
         )
         self._parser.add_argument(

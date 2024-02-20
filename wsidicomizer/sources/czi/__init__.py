@@ -15,3 +15,5 @@
 """Module containing implemented source for reading czi files."""
 
 from wsidicomizer.sources.czi.czi_source import CziSource
+
+__all__ = ["CziSource"]

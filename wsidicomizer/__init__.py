@@ -15,3 +15,5 @@
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 __version__ = "0.13.0"
+
+__all__ = ["WsiDicomizer"]

@@ -17,3 +17,5 @@
 from wsidicomizer.sources.czi import CziSource
 from wsidicomizer.sources.opentile import OpenTileSource
 from wsidicomizer.sources.tiffslide import TiffSlideSource
+
+__all__ = ["CziSource", "OpenTileSource", "TiffSlideSource"]

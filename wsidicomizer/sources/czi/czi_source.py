@@ -84,7 +84,7 @@ class CziSource(DicomizerSource):
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:
-        return super()._create_label_image_data()
+        raise NotImplementedError("Czi does not support labels.")
 
     def _create_overview_image_data(self) -> DicomizerImageData:
-        return super()._create_overview_image_data()
+        raise NotImplementedError("Czi does not support overviews.")

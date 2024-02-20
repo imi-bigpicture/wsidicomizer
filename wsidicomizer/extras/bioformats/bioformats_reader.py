@@ -359,7 +359,7 @@ class BioformatsReader:
                     )
                 padding_width = output_size.width - data.shape[0]
                 padding_height = output_size.height - data.shape[1]
-                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))  # type: ignore
+                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))
             yield data
         finally:
             raw_data.release()

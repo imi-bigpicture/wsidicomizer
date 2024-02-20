@@ -15,3 +15,5 @@
 """Module containing implemented source for reading files with tiffslide."""
 
 from wsidicomizer.sources.tiffslide.tiffslide_source import TiffSlideSource
+
+__all__ = ["TiffSlideSource"]

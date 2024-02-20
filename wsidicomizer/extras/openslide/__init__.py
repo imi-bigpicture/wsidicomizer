@@ -15,3 +15,5 @@
 """Module containing implemented source for reading files with openslide."""
 
 from wsidicomizer.extras.openslide.openslide_source import OpenSlideSource
+
+__all__ = ["OpenSlideSource"]

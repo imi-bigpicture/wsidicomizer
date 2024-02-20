@@ -15,3 +15,5 @@
 """Module containing implemented source for reading files with opentile."""
 
 from wsidicomizer.sources.opentile.opentile_source import OpenTileSource
+
+__all__ = ["OpenTileSource"]
