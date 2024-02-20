@@ -163,7 +163,7 @@ class WsiDicomizerCli:
                 quality=args.quality, subsampling=subsampling
             )
         elif encoding_format == "jpeg2000":
-            encoding_settings = Jpeg2kSettings(level=args.quality)
+            encoding_settings = Jpeg2kSettings(levels=[args.quality])
         else:
             encoding_settings = None
         self.convert(

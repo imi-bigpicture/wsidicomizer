@@ -410,7 +410,7 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
     Pretends to be lossy but encodes losslessly so that image data is not changed."""
 
     def __init__(self):
-        settings = Jpeg2kSettings(level=0)
+        settings = Jpeg2kSettings(levels=[0])
         super().__init__(settings)
 
     @property
