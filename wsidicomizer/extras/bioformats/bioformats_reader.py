@@ -170,7 +170,6 @@ class BioformatsReader:
         self._reader_pool = ReaderPool(filepath, max_readers, cache_path)
 
         with self._reader_pool.get_reader() as reader:
-            # self.print_debug(reader)
             self._resolution_counts = [
                 self._get_resolution_count(reader, image_index)
                 for image_index in range(self.images_count)
