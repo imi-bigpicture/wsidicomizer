@@ -1,4 +1,4 @@
-name: wsidicomizer pytest
+name: pytest
 
 on: [push, pull_request]
 

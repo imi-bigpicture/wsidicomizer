@@ -1,0 +1,3 @@
+[flake8]
+exclude = .git,__pycache__,.pytest_cache,dist
+extend-ignore = E501, E203, F841
