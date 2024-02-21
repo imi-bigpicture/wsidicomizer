@@ -15,9 +15,11 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, BinaryIO, Dict, List, Optional
 
 from czifile import CziFile
+from fsspec.core import open
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.metadata import WsiMetadata
 
@@ -30,12 +32,13 @@ from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 class CziSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        file_options: Optional[Dict[str, Any]] = None,
     ) -> None:
         super().__init__(
             filepath,
@@ -45,7 +48,8 @@ class CziSource(DicomizerSource):
             default_metadata,
             include_confidential,
         )
-        self._czi = CziFile(filepath)
+        file: BinaryIO = open(str(filepath), **file_options or {})  # type: ignore
+        self._czi = CziFile(file)
         self._base_metadata = CziMetadata(self._czi)
 
     def close(self) -> None:

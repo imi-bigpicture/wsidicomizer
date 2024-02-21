@@ -56,8 +56,8 @@ class CziImageData(DicomizerImageData):
 
         Parameters
         ----------
-        filepath: str
-            Path to czi file to wrap.
+        czi: CziFile,
+            Czi file to wrap.
         tile_size: int
             Output tile size.
         encoded: Encoder

@@ -17,10 +17,10 @@ files."""
 
 from abc import ABCMeta, abstractmethod
 from functools import cached_property
-from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from pydicom import config
+from upath import UPath
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
@@ -47,12 +47,13 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        file_options: Optional[Dict[str, Any]] = None,
     ) -> None:
         self._filepath = filepath
         self._encoder = encoder
@@ -63,7 +64,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def is_supported(path: Path) -> bool:
+    def is_supported(path: UPath) -> bool:
         """Return True if file in filepath is supported by Dicomizer."""
         raise NotImplementedError()
 

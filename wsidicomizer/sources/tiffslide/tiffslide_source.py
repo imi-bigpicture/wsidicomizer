@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from tiffslide import TiffSlide
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.metadata import WsiMetadata
 
@@ -36,7 +37,7 @@ from wsidicomizer.sources.tiffslide.tiffslide_metadata import TiffSlideMetadata
 class TiffSlideSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,

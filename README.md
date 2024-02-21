@@ -198,6 +198,33 @@ region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
 
+## fsspec support
+
+*wsidicomizer* can open files using [fsspec](https://filesystem-spec.readthedocs.io/), enabling for example using files over protocols such as http or s3, if the source can use `Python` file-like objects. Currently this is supported for files opened with:
+
+- OpenTileSource
+- TiffSlideSource
+- CziSource
+
+Use the `file_options` argument to pass any needed options for opening the file:
+
+```python
+from wsidicomizer import WsiDicomizer
+wsi = WsiDicomizer.open("s3://bucket/key", file_options={"s3": "anon": True})
+```
+
+When converting a file, the options for saving new files can be specified with the `output_file_options` argument:
+
+```python
+from wsidicomizer import WsiDicomizer
+wsi = WsiDicomizer.convert(
+    "s3://bucket/key",
+    "s3://bucket/output_key",
+    file_options={"s3": "anon": True},
+    output_file_options={"s3": "anon": True}
+)
+```
+
 ## Openslide support
 
 ### Installation

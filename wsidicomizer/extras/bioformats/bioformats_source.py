@@ -15,8 +15,11 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+from fsspec.core import url_to_fs
+from fsspec.implementations.local import LocalFileSystem
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -29,7 +32,7 @@ from wsidicomizer.image_data import DicomizerImageData
 class BioformatsSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder,
         tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
@@ -37,10 +40,14 @@ class BioformatsSource(DicomizerSource):
         include_confidential: bool = True,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
+        file_options: Optional[Dict[str, Any]] = None,
     ) -> None:
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
-        self._reader = BioformatsReader(Path(filepath), readers, cache_path)
+        fs, path = url_to_fs(str(filepath), **file_options or {})
+        if not isinstance(fs, LocalFileSystem):
+            raise ValueError("Bioformats only supports local files.")
+        self._reader = BioformatsReader(Path(path), readers, cache_path)
         (
             self._pyramid_image_index,
             self._label_image_index,
@@ -53,6 +60,7 @@ class BioformatsSource(DicomizerSource):
             metadata,
             default_metadata,
             include_confidential,
+            file_options,
         )
 
     @property

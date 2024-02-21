@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from opentile import OpenTile
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -33,15 +34,16 @@ from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 class OpenTileSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
         force_transcoding: bool = False,
+        file_options: Optional[dict] = None,
     ) -> None:
-        self._tiler = OpenTile.open(filepath, tile_size)
+        self._tiler = OpenTile.open(filepath, tile_size, file_options)
         self._base_metadata = OpenTileMetadata(
             self._tiler.metadata, self._tiler.icc_profile
         )

@@ -15,8 +15,9 @@
 """Dicomizer for bioformats source."""
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Dict, Optional, Union
 
+from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
@@ -30,18 +31,19 @@ class BioformatsDicomizer(WsiDicomizer):
     @classmethod
     def open(
         cls,
-        filepath: Union[str, Path],
+        filepath: Union[str, Path, UPath],
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_confidential: bool = True,
         encoding_settings: Optional[EncodingSettings] = None,
+        file_options: Optional[Dict[str, Any]] = None,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
         Parameters
         ----------
-        filepath: str
+        filepath: Union[str, Path, UPath]
             Path to file
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
@@ -53,6 +55,8 @@ class BioformatsDicomizer(WsiDicomizer):
             Include confidential metadata.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
+        file_options: Optional[Dict[str, Any]] = None
+            Options to pass to filesystem when opening file.
 
 
         Returns
@@ -60,8 +64,8 @@ class BioformatsDicomizer(WsiDicomizer):
         WsiDicom
             WsiDicom object of file.
         """
-        if not isinstance(filepath, Path):
-            filepath = Path(filepath)
+        if not isinstance(filepath, UPath):
+            filepath = UPath(filepath)
 
         if not BioformatsSource.is_supported(filepath):
             raise NotImplementedError(f"{filepath} is not supported")
@@ -76,5 +80,6 @@ class BioformatsDicomizer(WsiDicomizer):
             metadata,
             default_metadata,
             include_confidential,
+            file_options=file_options,
         )
         return cls(dicomizer)

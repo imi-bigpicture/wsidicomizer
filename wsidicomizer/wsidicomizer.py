@@ -17,12 +17,12 @@ Main module containing the WsiDicomizer class that allows non-DICOM files to be 
 like DICOM instances, enabling viewing and saving.
 """
 
-import os
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image
 from pydicom.uid import UID, generate_uid
+from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
@@ -53,20 +53,21 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def open(
         cls,
-        filepath: Union[str, Path],
+        filepath: Union[str, Path, UPath],
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
         include_confidential: bool = True,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
+        file_options: Optional[Dict[str, Any]] = None,
         **source_args,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
 
         Parameters
         ----------
-        filepath: str
+        filepath: Union[str, Path, UPath]
             Path to file
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
@@ -88,8 +89,8 @@ class WsiDicomizer(WsiDicom):
         WsiDicom
             WsiDicom object of file.
         """
-        if not isinstance(filepath, Path):
-            filepath = Path(filepath)
+        if not isinstance(filepath, UPath):
+            filepath = UPath(filepath)
 
         selected_source = None
         if preferred_source is None:
@@ -115,6 +116,7 @@ class WsiDicomizer(WsiDicom):
             metadata,
             default_metadata,
             include_confidential,
+            file_options=file_options,
             **source_args,
         )
         return cls(source)
@@ -122,8 +124,8 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def convert(
         cls,
-        filepath: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
+        filepath: Union[str, Path, UPath],
+        output_path: Optional[Union[str, Path, UPath]] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
@@ -139,16 +141,18 @@ class WsiDicomizer(WsiDicom):
         encoding: Optional[Union[Encoder, EncodingSettings]] = None,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         preferred_source: Optional[Type[DicomizerSource]] = None,
+        file_options: Optional[Dict[str, Any]] = None,
+        output_file_options: Optional[Dict[str, Any]] = None,
         **source_args,
-    ) -> List[str]:
+    ) -> List[UPath]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
         Parameters
         ----------
-        filepath: Union[str, Path],
+        filepath: Union[str, Path, UPath],
             Path to file
-        output_path: str = None
+        output_path: Optional[Union[str, Path, UPath]] = None,
             Folder path to save files to.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
@@ -182,12 +186,16 @@ class WsiDicomizer(WsiDicom):
             offset table, 'empty' - empty offset table.
         preferred_source: Optional[Type[DicomizerSource]] = None
             Optional override source to use.
+        file_options: Optional[Dict[str, Any]] = None,
+            Options to pass to filesystem when opening file.
+        output_file_options: Optional[Dict[str, Any]] = None,
+            Options to pass to filesystem when saving file.
         **source_args
             Optional keyword args to pass to source.
 
         Returns
         ----------
-        List[str]
+        List[UPath]
             List of paths of created files.
         """
         with cls.open(
@@ -198,17 +206,18 @@ class WsiDicomizer(WsiDicom):
             include_confidential,
             encoding,
             preferred_source,
+            file_options=file_options,
             **source_args,
         ) as wsi:
             if output_path is None:
-                output_path = str(
-                    Path(filepath).parents[0].joinpath(Path(filepath).stem)
-                )
+                output_path = UPath(filepath).parent.joinpath(UPath(filepath).stem)
+            else:
+                output_path = UPath(output_path)
             try:
-                os.mkdir(output_path)
+                output_path.mkdir(parents=True, exist_ok=False)
             except FileExistsError:
-                ValueError(f"Output path {output_path} already exists")
-            created_files = wsi.save(
+                ValueError(f"Output path {output_path} already exists.")
+            return wsi.save(
                 output_path,
                 uid_generator,
                 workers,
@@ -219,6 +228,5 @@ class WsiDicomizer(WsiDicom):
                 include_overviews=include_overview,
                 add_missing_levels=add_missing_levels,
                 label=label,
+                file_options=output_file_options,
             )
-
-        return [str(filepath) for filepath in created_files]
