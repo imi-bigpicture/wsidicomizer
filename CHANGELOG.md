@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2023-02-22
+
+### Fixed
+
+- Updated version of `WsiDicom` to 0.20.1 to fix missing to close file handle.
+
 ## [0.13.0] - 2023-02-15
 
 ### Added

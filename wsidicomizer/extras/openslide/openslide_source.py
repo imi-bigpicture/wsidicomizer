@@ -16,11 +16,8 @@
 
 import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-from fsspec.core import url_to_fs
-from fsspec.implementations.local import LocalFileSystem
-from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -38,18 +35,15 @@ from wsidicomizer.image_data import DicomizerImageData
 class OpenSlideSource(DicomizerSource):
     def __init__(
         self,
-        filepath: UPath,
+        filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
-        file_options: Optional[Dict[str, Any]] = None,
     ) -> None:
-        fs, path = url_to_fs(str(filepath), **file_options or {})
-        if not isinstance(fs, LocalFileSystem):
-            raise ValueError("OpenSlideSource only supports local files.")
-        self._slide = OpenSlide(path)
+        self._slide = OpenSlide(filepath)
+
         self._pyramid_levels = self._get_pyramid_levels(self._slide)
         self._base_metadata = OpenSlideMetadata(self._slide)
         super().__init__(
@@ -59,7 +53,6 @@ class OpenSlideSource(DicomizerSource):
             metadata,
             default_metadata,
             include_confidential,
-            file_options,
         )
 
     def close(self) -> None:
