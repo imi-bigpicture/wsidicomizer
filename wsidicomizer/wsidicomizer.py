@@ -117,7 +117,7 @@ class WsiDicomizer(WsiDicom):
             include_confidential,
             **source_args,
         )
-        return cls(source)
+        return cls(source, True)
 
     @classmethod
     def convert(
