@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2023-03-20
+
+### Fixed
+
+- Missing handling of pyramid index when creating WsiInstance using create_instance().
+
 ## [0.13.1] - 2023-02-22
 
 ### Fixed
@@ -224,7 +230,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.2..HEAD
+[0.13.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.1..0.13.2
+[0.13.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.0..0.13.1
 [0.13.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.1..0.13.0
 [0.12.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.12.0..0.12.1
 [0.12.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.11.0..0.12.0
