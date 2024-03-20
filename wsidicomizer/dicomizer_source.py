@@ -130,6 +130,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             self._create_instance(
                 self._create_level_image_data(level_index),
                 ImageType.VOLUME,
+                level_index,
             )
             for level_index in range(len(self.pyramid_levels))
         ]
@@ -159,16 +160,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return []
 
     def _create_instance(
-        self, image_data: ImageData, image_type: ImageType
+        self,
+        image_data: ImageData,
+        image_type: ImageType,
+        pyramid_index: Optional[int] = None,
     ) -> WsiInstance:
         """Create instance from image data."""
         dataset = self._create_dataset(
             image_type, image_data.photometric_interpretation
         )
         return WsiInstance.create_instance(
-            image_data,
-            dataset,
-            image_type,
+            image_data, dataset, image_type, pyramid_index
         )
 
     def _create_dataset(
