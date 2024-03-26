@@ -20,8 +20,18 @@ class Settings:
     global variable settings."""
 
     def __init__(self) -> None:
+        self._default_tile_size = 512
         self._czi_block_cache_size = 8
         self._insert_icc_profile_if_missing = True
+
+    @property
+    def default_tile_size(self) -> int:
+        """Default tile size to use."""
+        return self._default_tile_size
+
+    @default_tile_size.setter
+    def default_tile_size(self, value: int) -> None:
+        self._default_tile_size = value
 
     @property
     def czi_block_cache_size(self) -> int:

@@ -37,7 +37,7 @@ class OpenSlideSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int = 512,
+        tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
@@ -57,14 +57,6 @@ class OpenSlideSource(DicomizerSource):
 
     def close(self) -> None:
         return self._slide.close()
-
-    @property
-    def has_label(self) -> bool:
-        return OpenSlideAssociatedImageType.LABEL.value in self._slide.associated_images
-
-    @property
-    def has_overview(self) -> bool:
-        return OpenSlideAssociatedImageType.MACRO.value in self._slide.associated_images
 
     @property
     def base_metadata(self) -> WsiMetadata:
@@ -88,12 +80,22 @@ class OpenSlideSource(DicomizerSource):
             self._encoder,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData:
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            OpenSlideAssociatedImageType.LABEL.value
+            not in self._slide.associated_images
+        ):
+            return None
         return OpenSlideAssociatedImageData(
             self._slide, OpenSlideAssociatedImageType.LABEL, self._encoder
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData:
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            OpenSlideAssociatedImageType.MACRO.value
+            not in self._slide.associated_images
+        ):
+            return None
         return OpenSlideAssociatedImageData(
             self._slide, OpenSlideAssociatedImageType.MACRO, self._encoder
         )
