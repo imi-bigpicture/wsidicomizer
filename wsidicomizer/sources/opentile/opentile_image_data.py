@@ -208,7 +208,7 @@ class OpenTileImageData(DicomizerImageData):
             return False
 
     def get_transfer_syntax(self) -> UID:
-        """Return transfer syntax (Uid) for compression type in image data."""
+        """Return transfer syntax (UID) for compression type in image data."""
         compression = self.native_compression
         if compression == COMPRESSION.JPEG:
             return JPEGBaseline8Bit

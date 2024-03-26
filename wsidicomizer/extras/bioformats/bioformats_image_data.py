@@ -24,6 +24,7 @@ from pydicom.uid import UID
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 
+from wsidicomizer.config import settings
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -32,12 +33,14 @@ class BioformatsImageData(DicomizerImageData):
     def __init__(
         self,
         reader: BioformatsReader,
-        tile_size: int,
+        tile_size: Optional[int],
         encoder: Encoder,
         image_index: int,
         resolution_index: int,
     ) -> None:
         super().__init__(encoder)
+        if tile_size is None:
+            tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._image_reader = reader
         self._image_index = image_index
