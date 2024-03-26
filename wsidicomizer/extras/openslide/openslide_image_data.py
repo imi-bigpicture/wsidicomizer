@@ -30,6 +30,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
+from wsidicomizer.config import settings
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
     PROPERTY_NAME_BOUNDS_HEIGHT,
@@ -192,7 +193,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         open_slide: OpenSlide,
         image_metadata: ImageMetadata,
         level_index: int,
-        tile_size: int,
+        tile_size: Optional[int],
         encoder: Encoder,
     ):
         """Wraps a OpenSlide level to ImageData.
@@ -209,6 +210,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
             Encoder to use.
         """
         super().__init__(open_slide, encoder)
+        if tile_size is None:
+            tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._slide = open_slide
         self._level_index = level_index
@@ -304,80 +307,6 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         if image_data is None:
             return self._get_blank_decoded_frame(region.size)
         return image_data
-
-    def _detect_blank_tile(self, data: np.ndarray) -> bool:
-        """Detect if tile data is a blank tile, i.e. either has full
-        transparency or is filled with background color. First checks if the
-        corners are transparent or has background color before checking whole
-        data.
-
-        Parameters
-        ----------
-        data: np.ndarray
-            Data to check if blank.
-
-        Returns
-        ----------
-        bool
-            True if tile is blank.
-        """
-
-        TOP = RIGHT = -1
-        BOTTOM = LEFT = 0
-        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
-        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
-        TRANSPARENCY = 3
-        corners_transparency = np.ix_(CORNERS_X, CORNERS_Y, [TRANSPARENCY])
-        if np.all(data[corners_transparency] == 0):
-            if np.all(data[:, :, TRANSPARENCY] == 0):
-                return True
-        background = np.array(self.blank_color)
-        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(TRANSPARENCY))
-        if np.all(data[corners_rgb] == background):
-            if np.all(data[:, :, 0:TRANSPARENCY] == background):
-                return True
-        return False
-
-    def _get_blank_encoded_frame(self, size: Size) -> bytes:
-        """Return cached blank encoded frame for size, or create frame if
-        cached frame not available or of wrong size.
-
-        Parameters
-        ----------
-        size: Size
-            Size of frame to get.
-
-        Returns
-        ----------
-        bytes
-            Encoded blank frame.
-        """
-        if self._blank_encoded_frame_size != size:
-            frame = np.full(
-                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
-            )
-            self._blank_encoded_frame = self.encoder.encode(frame)
-            self._blank_encoded_frame_size = size
-        return self._blank_encoded_frame
-
-    def _get_blank_decoded_frame(self, size: Size) -> Image:
-        """Return cached blank decoded frame for size, or create frame if
-        cached frame not available or of wrong size.
-
-        Parameters
-        ----------
-        size: Size
-            Size of frame to get.
-
-        Returns
-        ----------
-        bytes
-            Decoded blank frame.
-        """
-        if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
-            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
-            self._blank_decoded_frame = frame
-        return self._blank_decoded_frame
 
     def _get_region(self, region: Region) -> Optional[Image]:
         """Return Image read from region in openslide image. If image data for
@@ -477,3 +406,36 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return tile
+
+    def _detect_blank_tile(self, tile: np.ndarray) -> bool:
+        """Detect if tile is a blank tile, i.e. either has full
+        transparency or is filled with background color. First checks if the
+        corners are transparent or has background color before checking whole
+        tile.
+
+        Parameters
+        ----------
+        tile: np.ndarray
+            Tile to check if blank.
+
+        Returns
+        ----------
+        bool
+            True if tile is blank.
+        """
+
+        TOP = RIGHT = -1
+        BOTTOM = LEFT = 0
+        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
+        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
+        TRANSPARENCY = 3
+        corners_transparency = np.ix_(CORNERS_X, CORNERS_Y, [TRANSPARENCY])
+        if np.all(tile[corners_transparency] == 0):
+            if np.all(tile[:, :, TRANSPARENCY] == 0):
+                return True
+        background = np.array(self.blank_color)
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(TRANSPARENCY))
+        if np.all(tile[corners_rgb] == background):
+            if np.all(tile[:, :, 0:TRANSPARENCY] == background):
+                return True
+        return False
