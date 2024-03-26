@@ -61,6 +61,10 @@ FILES: Dict[str, Dict[str, Any]] = {
         },
         "zip": True,
     },
+    "isyntax/isyntax1/testslide.isyntax": {
+        "url": "https://zenodo.org/record/5037046/files/testslide.isyntax",  # NOQA
+        "md5": {"testslide.isyntax": "d762ed9e13d4c47549672a54777f40e3"},
+    },
 }
 
 DEFAULT_SLIDE_FOLDER = "tests/testdata/slides"
