@@ -41,15 +41,15 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     """
     Metaclass for Dicomizer sources. Subclasses should implement the method
     is_supported(), _create_level_image_data(), _create_label_image_data(), and
-     _create_overview_image_data() and the properties metadata, pyramid_levels,
-     has_label, and has_overview. Subclasses can override the __init__().
+     _create_overview_image_data() and the properties metadata, pyramid_levels.
+     Subclasses can override the __init__().
     """
 
     def __init__(
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int = 512,
+        tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
@@ -80,30 +80,18 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         value for levels in file."""
         raise NotImplementedError()
 
-    @property
-    @abstractmethod
-    def has_label(self) -> bool:
-        """Return True if file has a label image."""
-        raise NotImplementedError()
-
-    @property
-    @abstractmethod
-    def has_overview(self) -> bool:
-        """Return True if file has a overview image."""
-        raise NotImplementedError()
-
     @abstractmethod
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         """Return image data instance for level."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_label_image_data(self) -> DicomizerImageData:
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
         """Return image data instance for label."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_overview_image_data(self) -> DicomizerImageData:
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
         """Return image data instance for overview."""
         raise NotImplementedError()
 
@@ -138,23 +126,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @cached_property
     def label_instances(self) -> List[WsiInstance]:
-        if not self.has_label:
+        label = self._create_label_image_data()
+        if label is None:
             return []
-        label = self._create_instance(
-            self._create_label_image_data(),
-            ImageType.LABEL,
-        )
-        return [label]
+        return [self._create_instance(label, ImageType.LABEL)]
 
     @cached_property
     def overview_instances(self) -> List[WsiInstance]:
-        if not self.has_overview:
+        overview = self._create_overview_image_data()
+        if overview is None:
             return []
-        overview = self._create_instance(
-            self._create_overview_image_data(),
-            ImageType.OVERVIEW,
-        )
-        return [overview]
+        return [self._create_instance(overview, ImageType.OVERVIEW)]
 
     @property
     def annotation_instances(self) -> List[AnnotationInstance]:

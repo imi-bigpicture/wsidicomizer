@@ -18,8 +18,10 @@ files."""
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
+from PIL import Image as Pillow
+from PIL.Image import Image
 from wsidicom import ImageData
-from wsidicom.geometry import PointMm
+from wsidicom.geometry import PointMm, Size
 from wsidicom.metadata import ImageCoordinateSystem
 
 
@@ -66,3 +68,71 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
             Jpeg bytes.
         """
         return self.encoder.encode(image_data)
+
+    def _get_blank_encoded_frame(self, size: Size) -> bytes:
+        """Return cached blank encoded frame for size, or create frame if
+        cached frame not available or of wrong size.
+
+        Parameters
+        ----------
+        size: Size
+            Size of frame to get.
+
+        Returns
+        ----------
+        bytes
+            Encoded blank frame.
+        """
+        if self._blank_encoded_frame_size != size:
+            frame = np.full(
+                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
+            )
+            self._blank_encoded_frame = self.encoder.encode(frame)
+            self._blank_encoded_frame_size = size
+        return self._blank_encoded_frame
+
+    def _get_blank_decoded_frame(self, size: Size) -> Image:
+        """Return cached blank decoded frame for size, or create frame if
+        cached frame not available or of wrong size.
+
+        Parameters
+        ----------
+        size: Size
+            Size of frame to get.
+
+        Returns
+        ----------
+        bytes
+            Decoded blank frame.
+        """
+        if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
+            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
+            self._blank_decoded_frame = frame
+            self._blank_decoded_frame_size = size
+        return self._blank_decoded_frame
+
+    def _detect_blank_tile(self, tile: np.ndarray) -> bool:
+        """Detect if tile is a blank tile, i.e. is filled with background color.
+        First checks if the corners  before checking whole tile.
+
+        Parameters
+        ----------
+        tile: np.ndarray
+            Tile to check if blank.
+
+        Returns
+        ----------
+        bool
+            True if tile is blank.
+        """
+
+        TOP = RIGHT = -1
+        BOTTOM = LEFT = 0
+        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
+        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
+        background = np.array(self.blank_color)
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
+        if np.all(tile[corners_rgb] == background):
+            if np.all(tile == background):
+                return True
+        return False

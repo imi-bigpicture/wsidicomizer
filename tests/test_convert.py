@@ -210,6 +210,7 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region_openslide"]
+            if file_parameters["openslide"]
         ],
         scope="module",
     )
@@ -269,10 +270,11 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
+            if file_parameters["openslide"]
         ],
         scope="module",
     )
-    def test_read_thumbnail_from_converted_file_should_almost_match_thumbnail(
+    def test_read_thumbnail_from_converted_file_should_almost_match_openslide_thumbnail(
         self,
         file_format: str,
         file: str,
@@ -324,6 +326,7 @@ class TestWsiDicomizerConvert:
             (file_format, file)
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
+            if format_files[file]["convert"]
         ],
         scope="module",
     )

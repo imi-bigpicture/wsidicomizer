@@ -31,6 +31,7 @@ test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
             "convert": True,
+            "openslide": True,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
@@ -73,6 +74,7 @@ test_parameters = {
         },
         "svs1/input.svs": {
             "convert": True,
+            "openslide": True,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
@@ -117,6 +119,7 @@ test_parameters = {
     "czi": {
         "czi1/input.czi": {
             "convert": False,
+            "openslide": False,
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
@@ -144,6 +147,7 @@ test_parameters = {
     "mirax": {
         "CMU-1/CMU-1.mrxs": {
             "convert": True,
+            "openslide": True,
             "include_levels": [4, 6],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
@@ -197,6 +201,7 @@ test_parameters = {
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
             "convert": True,
+            "openslide": True,
             "include_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
@@ -244,6 +249,7 @@ test_parameters = {
         },
         "ndpi1/input.ndpi": {
             "convert": True,
+            "openslide": True,
             "include_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
@@ -358,6 +364,7 @@ test_parameters = {
     "philips_tiff": {
         "philips1/input.tif": {
             "convert": True,
+            "openslide": True,
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
@@ -406,6 +413,39 @@ test_parameters = {
                     "md5": "922ab1407d79de6b117bc561625f1a49",
                 }
             ],
+        }
+    },
+    "isyntax": {
+        "isyntax1/testslide.isyntax": {
+            "convert": False,
+            "openslide": False,
+            "include_levels": [0],
+            "lowest_included_pyramid_level": 0,
+            "photometric_interpretation": "YBR_FULL_422",
+            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": True,
+            "read_region": [
+                {
+                    "location": {"x": 18000, "y": 39000},
+                    "level": 0,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "47d0eea527c6203817350a5b38c34a85",
+                },
+                {
+                    "location": {"x": 20000, "y": 40000},
+                    "level": 0,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "3690f9decbd78ef83ed0b5c949050a15",
+                },
+                {
+                    "location": {"x": 20500, "y": 40300},
+                    "level": 0,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "abb552d51b81feaf0768067708b1c169",
+                },
+            ],
+            "read_thumbnail": [],
+            "read_region_openslide": [],
         }
     },
 }

@@ -40,6 +40,13 @@ loaded_sources: List[Type[DicomizerSource]] = [
 ]
 
 try:
+    from wsidicomizer.extras.isyntax import ISyntaxSource
+
+    loaded_sources.append(ISyntaxSource)
+except ImportError:
+    pass
+
+try:
     from wsidicomizer.extras.openslide import OpenSlideSource
 
     loaded_sources.append(OpenSlideSource)
@@ -56,7 +63,7 @@ class WsiDicomizer(WsiDicom):
         filepath: Union[str, Path],
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        tile_size: int = 512,
+        tile_size: Optional[int] = 512,
         include_confidential: bool = True,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
@@ -72,7 +79,7 @@ class WsiDicomizer(WsiDicom):
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
-        tile_size: int = 512
+        tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         include_confidential: bool = True
             Include confidential metadata.
@@ -126,7 +133,7 @@ class WsiDicomizer(WsiDicom):
         output_path: Optional[Union[str, Path]] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
-        tile_size: int = 512,
+        tile_size: Optional[int] = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         add_missing_levels: bool = False,
         include_levels: Optional[Sequence[int]] = None,
@@ -154,7 +161,7 @@ class WsiDicomizer(WsiDicom):
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
-        tile_size: int = 512
+        tile_size: Optional[int] = 512
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
              Function that can generate unique identifiers.
