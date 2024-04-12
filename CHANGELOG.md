@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Missing ´label` parameter in bioformats cli.
+- Change to empty `WsiDicomizerMetadata` for bioformat source.
+
 ## [0.13.2] - 2023-03-20
 
 ### Fixed
