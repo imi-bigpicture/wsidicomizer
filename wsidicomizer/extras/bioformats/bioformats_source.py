@@ -24,6 +24,7 @@ from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
 class BioformatsSource(DicomizerSource):
@@ -74,8 +75,8 @@ class BioformatsSource(DicomizerSource):
         return list(range(self._reader.resolution_count(self._pyramid_image_index)))
 
     @property
-    def base_metadata(self) -> Optional[WsiMetadata]:
-        return None
+    def base_metadata(self) -> WsiDicomizerMetadata:
+        return WsiDicomizerMetadata()
 
     @staticmethod
     def _get_image_indices(
