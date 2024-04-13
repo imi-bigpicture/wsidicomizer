@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `add_missing_levels` parameter to cli.
+
 ### Fixed
 
 - Missing ´label` parameter in bioformats cli.

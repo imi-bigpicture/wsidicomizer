@@ -79,6 +79,11 @@ class WsiDicomizerCli:
             ),
         )
         self._parser.add_argument(
+            "--add-missing-levels",
+            action="store_true",
+            help="If to add missing dyadic levels up to the single tile level.",
+        )
+        self._parser.add_argument(
             "--label",
             type=Path,
             help="Optional label image to use instead of label found in file.",
@@ -172,6 +177,7 @@ class WsiDicomizerCli:
             metadata=metadata,
             default_metadata=default_metadata,
             tile_size=args.tile_size,
+            add_missing_levels=args.add_missing_levels,
             include_levels=levels,
             include_label=not args.no_label,
             include_overview=not args.no_overview,
@@ -190,6 +196,7 @@ class WsiDicomizerCli:
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         tile_size: int = 512,
+        add_missing_levels: bool = False,
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -206,6 +213,7 @@ class WsiDicomizerCli:
             metadata=metadata,
             default_metadata=default_metadata,
             tile_size=tile_size,
+            add_missing_levels=add_missing_levels,
             include_levels=include_levels,
             include_label=include_label,
             include_overview=include_overview,

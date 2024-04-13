@@ -158,6 +158,8 @@ class WsiDicomizer(WsiDicom):
             Tile size to use if not defined by file.
         uid_generator: Callable[..., UID] = generate_uid
              Function that can generate unique identifiers.
+        add_missing_levels: bool = False
+            If to add missing dyadic levels up to the single tile level.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
             includes the two lowest levels. Negative indices can be used,
