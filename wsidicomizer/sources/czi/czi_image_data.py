@@ -157,7 +157,7 @@ class CziImageData(DicomizerImageData):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
-                (block_start + block_size) // self.tile_size,
+                (block_start + block_size).ceil_div(self.tile_size),
             )
             for tile in tile_region.iterate_all():
                 tile_directory[tile, z, c].append(
