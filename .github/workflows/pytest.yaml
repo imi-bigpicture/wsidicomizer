@@ -66,7 +66,10 @@ jobs:
         run: sudo apt-get install -y libturbojpeg libopenslide0
       - name: Set up OSX
         if: matrix.os == 'macos-latest'
-        run: brew install jpeg-turbo openslide
+        run: |
+          echo OS_TAG=macos >> $GITHUB_ENV
+          echo DYLD_LIBRARY_PATH=/opt/homebrew/lib >> $GITHUB_ENV
+          brew install jpeg-turbo openslide
       - name: Set up Windows
         shell: pwsh
         if: matrix.os == 'windows-latest'
