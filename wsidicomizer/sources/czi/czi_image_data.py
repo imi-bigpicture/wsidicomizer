@@ -18,7 +18,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -78,7 +78,7 @@ class CziImageData(DicomizerImageData):
         self._tile_size = Size(tile_size, tile_size)
         assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
-        self._block_locks: Dict[int, Lock] = defaultdict(Lock)
+        self._block_locks: Dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
             raise ValueError("Could not determine pixel spacing for czi image.")
@@ -157,7 +157,7 @@ class CziImageData(DicomizerImageData):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
-                (block_start + block_size) // self.tile_size,
+                (block_start + block_size).ceil_div(self.tile_size),
             )
             for tile in tile_region.iterate_all():
                 tile_directory[tile, z, c].append(
@@ -202,9 +202,8 @@ class CziImageData(DicomizerImageData):
             # should already have checked).
             return image_data
 
+        # For each block covering the tile
         for block in self.tile_directory[tile_point, z, path]:
-            # For each block covering the tile
-
             # Start and end coordinates for block and tile
             block_end = block.start + block.size
             tile_start = tile_point * self.tile_size
@@ -318,17 +317,21 @@ class CziImageData(DicomizerImageData):
         prevent multiple threads proceseing the same tile, use a lock for
         each block."""
         block_lock = self._block_locks[block_index]
-        if block_lock.locked():
-            # Another thread is already reading the block. Wait for lock and
-            # read from cache.
-            with block_lock:
+        try:
+            # Try to lock block.
+            aquired = block_lock.acquire(blocking=False)
+            if not aquired:
+                # Another thread is already reading the block.
+                # Wait for lock and hopefully read from cache.
+                aquired = block_lock.acquire(blocking=True)
                 return self._get_tile_data(block_index)
-
-        with block_lock:
-            # Lock block and read from block.
-            block = self.block_directory[block_index]
-            data = block.data_segment().data()
-            return data
+            else:
+                # Read the block data.
+                block = self.block_directory[block_index]
+                return block.data_segment().data()
+        finally:
+            if aquired:
+                block_lock.release()
 
     def _get_block_dimensions(
         self, block: DirectoryEntryDV

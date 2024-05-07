@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.14.0] - 2023-04-15
+## [0.14.1] - 2024-05-07
+
+### Fixed
+
+- Fix stripes with missing image data for czi source.
+- Fix possible cache deadlock for czi source.
+
+## [0.14.0] - 2024-04-15
 
 ### Added
 
@@ -18,19 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing ´label` parameter in bioformats cli.
 - Change to empty `WsiDicomizerMetadata` for bioformat source.
 
-## [0.13.2] - 2023-03-20
+## [0.13.2] - 2024-03-20
 
 ### Fixed
 
 - Missing handling of pyramid index when creating WsiInstance using create_instance().
 
-## [0.13.1] - 2023-02-22
+## [0.13.1] - 2024-02-22
 
 ### Fixed
 
 - Updated version of `WsiDicom` to 0.20.1 to fix missing to close file handle.
 
-## [0.13.0] - 2023-02-15
+## [0.13.0] - 2024-02-15
 
 ### Added
 
@@ -38,13 +45,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - If no ICC profile is present in the source file or the provided metadata, an empty profile will be used if the photometric interpretation requires it for DICOM compatibility. This behavior can be disabled with `settings.insert_icc_profile_if_missing = False`
 
-## [0.12.1] - 2023-01-12
+## [0.12.1] - 2024-01-12
 
 ### Fixed
 
 - Fixed missing support for Python 3.12.
 
-## [0.12.0] - 2023-01-12
+## [0.12.0] - 2024-01-12
 
 ### Changed
 
@@ -241,7 +248,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..HEAD
+[0.14.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.0..0.14.1
 [0.14.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.2..0.14.0
 [0.13.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.1..0.13.2
 [0.13.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.0..0.13.1
