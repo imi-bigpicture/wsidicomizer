@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.2] - 2024-07-01
+
+### Fixed
+
+- Update opentile version to fix missing file handle closing.
+
 ## [0.14.1] - 2024-05-07
 
 ### Fixed
@@ -248,7 +254,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.2..HEAD
+[0.14.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..0.14.2
 [0.14.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.0..0.14.1
 [0.14.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.2..0.14.0
 [0.13.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.13.1..0.13.2

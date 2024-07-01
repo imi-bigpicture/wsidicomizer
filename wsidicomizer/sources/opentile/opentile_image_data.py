@@ -20,7 +20,7 @@ from opentile.tiff_image import TiffImage
 from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
-from tifffile.tifffile import COMPRESSION, PHOTOMETRIC
+from tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
