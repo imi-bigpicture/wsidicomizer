@@ -22,7 +22,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
-from pydicom.uid import UID as Uid
+from pydicom.uid import UID
 from tiffslide import TiffSlide
 from tiffslide.tiffslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
@@ -37,6 +37,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
+from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -61,7 +62,7 @@ class TiffSlideImageData(DicomizerImageData):
         self._blank_color = self._get_blank_color(self.photometric_interpretation)
 
     @property
-    def transfer_syntax(self) -> Uid:
+    def transfer_syntax(self) -> UID:
         """The uid of the transfer syntax of the image."""
         return self.encoder.transfer_syntax
 
@@ -177,7 +178,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         tiff_slide: TiffSlide,
         image_metadata: ImageMetadata,
         level_index: int,
-        tile_size: int,
+        tile_size: Optional[int],
         encoder: Encoder,
     ):
         super().__init__(tiff_slide, encoder)
@@ -194,6 +195,8 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         encoded: Encoder
             Encoder to use.
         """
+        if tile_size is None:
+            tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._slide = tiff_slide
         self._level_index = level_index
@@ -290,75 +293,6 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             return self._get_blank_decoded_frame(region.size)
         return Pillow.fromarray(image_data)
 
-    def _detect_blank_tile(self, data: np.ndarray) -> bool:
-        """Detect if tile data is a blank tile, i.e. either has full
-        transparency or is filled with background color. First checks if the
-        corners are transparent or has background color before checking whole
-        data.
-
-        Parameters
-        ----------
-        data: np.ndarray
-            Data to check if blank.
-
-        Returns
-        ----------
-        bool
-            True if tile is blank.
-        """
-
-        TOP = RIGHT = -1
-        BOTTOM = LEFT = 0
-        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
-        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
-        background = np.array(self.blank_color)
-        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
-        if np.all(data[corners_rgb] == background):
-            if np.all(data == background):
-                return True
-        return False
-
-    def _get_blank_encoded_frame(self, size: Size) -> bytes:
-        """Return cached blank encoded frame for size, or create frame if
-        cached frame not available or of wrong size.
-
-        Parameters
-        ----------
-        size: Size
-            Size of frame to get.
-
-        Returns
-        ----------
-        bytes
-            Encoded blank frame.
-        """
-        if self._blank_encoded_frame_size != size:
-            frame = np.full(
-                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
-            )
-            self._blank_encoded_frame = self.encoder.encode(frame)
-            self._blank_encoded_frame_size = size
-        return self._blank_encoded_frame
-
-    def _get_blank_decoded_frame(self, size: Size) -> Image:
-        """Return cached blank decoded frame for size, or create frame if
-        cached frame not available or of wrong size.
-
-        Parameters
-        ----------
-        size: Size
-            Size of frame to get.
-
-        Returns
-        ----------
-        bytes
-            Decoded blank frame.
-        """
-        if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
-            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
-            self._blank_decoded_frame = frame
-        return self._blank_decoded_frame
-
     def _get_region(self, region: Region) -> Optional[np.ndarray]:
         """Return Image read from region in tiffslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
@@ -442,3 +376,31 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return Pillow.fromarray(tile)
+
+    def _detect_blank_tile2(self, data: np.ndarray) -> bool:
+        """Detect if tile data is a blank tile, i.e. either has full
+        transparency or is filled with background color. First checks if the
+        corners are transparent or has background color before checking whole
+        data.
+
+        Parameters
+        ----------
+        data: np.ndarray
+            Data to check if blank.
+
+        Returns
+        ----------
+        bool
+            True if tile is blank.
+        """
+
+        TOP = RIGHT = -1
+        BOTTOM = LEFT = 0
+        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
+        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
+        background = np.array(self.blank_color)
+        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
+        if np.all(data[corners_rgb] == background):
+            if np.all(data == background):
+                return True
+        return False
