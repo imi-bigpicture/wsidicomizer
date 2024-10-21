@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for pydicom 3.0. This requires Pyhton >3.10.
+
+### Removed
+
+- Support for Python 3.9.
+- Support for pydicom <3.
+
+### Changed
+
+- Unpinned requirement for numpy to support numpy 2.
+
 ## [0.14.2] - 2024-07-01
 
 ### Fixed
