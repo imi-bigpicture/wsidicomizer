@@ -24,7 +24,7 @@ class ISyntaxMetadata(WsiDicomizerMetadata):
     def __init__(self, slide: ISyntax):
         icc_profile = slide.read_icc_profile()
         if icc_profile is not None:
-            optical_path = OpticalPath(icc_profile=icc_profile)
+            optical_path = OpticalPath(icc_profile=icc_profile.tobytes())
             optical_paths = [optical_path]
         else:
             optical_paths = None
