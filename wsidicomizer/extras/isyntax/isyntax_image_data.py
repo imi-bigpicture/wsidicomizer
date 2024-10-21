@@ -23,8 +23,9 @@ from PIL.Image import Image
 from pydicom.uid import UID, JPEGBaseline8Bit
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from isyntax import ISyntax
 from wsidicomizer.image_data import DicomizerImageData
@@ -110,6 +111,10 @@ class ISyntaxLevelImageData(DicomizerImageData):
     @property
     def blank_color(self) -> Union[int, Tuple[int, int, int]]:
         return (255, 255, 255)
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        return ImageCoordinateSystem(PointMm(0, 0), 0)
 
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
@@ -292,6 +297,10 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
     @property
     def pyramid_index(self) -> int:
         return 0
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        return ImageCoordinateSystem(PointMm(0, 0), 0)
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if z not in self.focal_planes or path not in self.optical_paths:
