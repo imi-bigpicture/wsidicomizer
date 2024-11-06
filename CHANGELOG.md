@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Parsing of aquisition datetime for czi-files with zone designation with Python <3.11.
+
 ## [0.15.0] - 2024-10-21
 
 ### Added

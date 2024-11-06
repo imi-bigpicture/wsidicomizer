@@ -14,6 +14,7 @@
 
 """Metadata for czi file."""
 
+import re
 from datetime import datetime
 from functools import cached_property
 from typing import List, Optional, Sequence, Tuple, Type, TypeVar
@@ -56,7 +57,12 @@ class CziMetadata(WsiDicomizerMetadata):
             str,
             nested=["Metadata", "Information", "Image"],
         )
-        return datetime.fromisoformat(value)
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            # Remove timezone and keep only microseconds for Python <3.11 compatibility
+            value = re.split(r"Z|[-|+]\d{2}.\d{2}$", value)[0][:26]
+            return datetime.fromisoformat(value)
 
     @property
     def scanner_model(self) -> Optional[str]:
