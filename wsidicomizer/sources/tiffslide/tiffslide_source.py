@@ -38,7 +38,7 @@ class TiffSlideSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int = 512,
+        tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
@@ -63,14 +63,6 @@ class TiffSlideSource(DicomizerSource):
         self._tiffslide.close()
 
     @property
-    def has_label(self) -> bool:
-        return "label" in self._tiffslide.associated_images
-
-    @property
-    def has_overview(self) -> bool:
-        return "macro" in self._tiffslide.associated_images
-
-    @property
     def base_metadata(self) -> WsiMetadata:
         return self._base_metadata
 
@@ -84,7 +76,9 @@ class TiffSlideSource(DicomizerSource):
         format = TiffSlide.detect_format(filepath)
         return format is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(
+        self, level_index: int
+    ) -> Optional[DicomizerImageData]:
         return TiffSlideLevelImageData(
             self._tiffslide,
             self.metadata.image,
@@ -93,12 +87,22 @@ class TiffSlideSource(DicomizerSource):
             self._encoder,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData:
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            TiffSlideAssociatedImageType.LABEL.value
+            not in self._tiffslide.associated_images
+        ):
+            return None
         return TiffSlideAssociatedImageData(
             self._tiffslide, TiffSlideAssociatedImageType.LABEL, self._encoder
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData:
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            TiffSlideAssociatedImageType.MACRO.value
+            not in self._tiffslide.associated_images
+        ):
+            return None
         return TiffSlideAssociatedImageData(
             self._tiffslide, TiffSlideAssociatedImageType.MACRO, self._encoder
         )

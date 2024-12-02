@@ -25,7 +25,7 @@ import numpy as np
 from czifile import CziFile, DirectoryEntryDV
 from PIL import Image as Pillow
 from PIL.Image import Image
-from pydicom.uid import UID as Uid
+from pydicom.uid import UID
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -46,7 +46,7 @@ class CziImageData(DicomizerImageData):
     def __init__(
         self,
         czi: CziFile,
-        tile_size: int,
+        tile_size: Optional[int],
         encoder: Encoder,
         czi_metadata: CziMetadata,
         merged_metadata: ImageMetadata,
@@ -75,6 +75,8 @@ class CziImageData(DicomizerImageData):
         self._czi._fh.lock = True
         self._dtype = self._czi.dtype
         super().__init__(encoder)
+        if tile_size is None:
+            tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
@@ -90,7 +92,7 @@ class CziImageData(DicomizerImageData):
         return 0
 
     @property
-    def transfer_syntax(self) -> Uid:
+    def transfer_syntax(self) -> UID:
         return self.encoder.transfer_syntax
 
     @cached_property
