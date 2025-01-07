@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2025-01-07
+
 ### Fixed
 
+- Update of wsidicom dependency to 0.22.0 to fix openslide compatibility.
 - Parsing of aquisition datetime for czi-files with zone designation with Python <3.11.
 
 ## [0.15.0] - 2024-10-21
@@ -273,7 +276,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.1..HEAD
+[0.15.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..0.15.1
 [0.15.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.2..0.15.0
 [0.14.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..0.14.2
 [0.14.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.0..0.14.1
