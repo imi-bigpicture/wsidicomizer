@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reading correct image size in pyramid series in Bioformats reader.
+- Skip non-dyadic pyramid series in Bioformats reader.
+
 ## [0.15.1] - 2025-01-07
 
 ### Fixed
