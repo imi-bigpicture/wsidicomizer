@@ -14,6 +14,7 @@
 
 """Reader for bioformat supported files."""
 
+import math
 import os
 from contextlib import contextmanager
 from functools import cached_property, lru_cache
@@ -169,18 +170,6 @@ class BioformatsReader:
         """
         self._reader_pool = ReaderPool(filepath, max_readers, cache_path)
 
-        with self._reader_pool.get_reader() as reader:
-            # self.print_debug(reader)
-            self._resolution_counts = [
-                self._get_resolution_count(reader, image_index)
-                for image_index in range(self.images_count)
-            ]
-
-            self._resolution_scales = {
-                image_index: self._get_resolution_scales(reader, image_index)
-                for image_index in range(self.images_count)
-            }
-
     @staticmethod
     def is_supported(filepath: Path) -> bool:
         try:
@@ -190,27 +179,6 @@ class BioformatsReader:
         except Exception:
             return False
         return True
-
-    @staticmethod
-    def _get_resolution_count(reader: Memoizer, image_index: int) -> int:
-        reader.setSeries(image_index)
-        return reader.getResolutionCount()
-
-    @staticmethod
-    def _get_resolution_scale(reader: Memoizer, resolution_index: int, base_width: int):
-        reader.setResolution(resolution_index)
-        width = reader.getSizeX()
-        return int(round(base_width / width))
-
-    @classmethod
-    def _get_resolution_scales(cls, reader: Memoizer, image_index: int) -> List[int]:
-        reader.setSeries(image_index)
-        reader.setResolution(0)
-        base_width = reader.getSizeX()
-        return [
-            cls._get_resolution_scale(reader, resolution_index, base_width)
-            for resolution_index in range(reader.getResolutionCount())
-        ]
 
     @property
     def filepath(self) -> Path:
@@ -225,12 +193,11 @@ class BioformatsReader:
 
     @property
     def images_count(self) -> int:
+        """Return number of images in file."""
         return len(self.metadata.images)
 
-    def resolution_count(self, image_index: int) -> int:
-        return self._resolution_counts[image_index]
-
     def image_name(self, image_index: int) -> Optional[str]:
+        """Return name of image."""
         return self.metadata.images[image_index].name
 
     @lru_cache
@@ -271,9 +238,12 @@ class BioformatsReader:
     @lru_cache
     def size(self, image_index: int, resolution_index: int = 0) -> Size:
         """Return the image size for image in file."""
-        pixels = self.metadata.images[image_index].pixels
-        scale = self._resolution_scales[image_index][resolution_index]
-        return Size(int(pixels.size_x), int(pixels.size_y)) // scale
+        with self._reader_pool.get_reader() as reader:
+            reader.setSeries(image_index)
+            reader.setResolution(resolution_index)
+            width = reader.getSizeX()
+            height = reader.getSizeY()
+            return Size(int(width), int(height))
 
     @lru_cache
     def pixel_spacing(
@@ -283,7 +253,7 @@ class BioformatsReader:
         pixels = self.metadata.images[image_index].pixels
         if pixels.physical_size_x is None or pixels.physical_size_y is None:
             return None
-        scale = self._resolution_scales[image_index][resolution_index]
+        scale = self._resolution_scales(image_index)[resolution_index]
         return (
             SizeMm(float(pixels.physical_size_x), float(pixels.physical_size_y))
             * scale
@@ -292,9 +262,45 @@ class BioformatsReader:
 
     @lru_cache
     def is_interleaved(self, image_index: int) -> bool:
+        """Return true if image data is interleaved."""
         interleaved = self.metadata.images[image_index].pixels.interleaved
         assert interleaved is not None
         return interleaved
+
+    @lru_cache
+    def pyramid_levels(self, image_index: int) -> Dict[int, int]:
+        """Return dictionary of dyadic scaling as key and resolution index as value
+        for resolutions in image."""
+        TOLERANCE = 1e-2
+        return {
+            round(math.log2(scale)): index
+            for index, scale in enumerate(self._resolution_scales(image_index))
+            if math.isclose(
+                2 ** round(math.log2(scale)), round(scale), rel_tol=TOLERANCE
+            )
+        }
+
+    @lru_cache
+    def _resolution_scales(self, image_index: int) -> List[float]:
+        """Return resolution scales for image as resolution width divided by image width."""
+        with self._reader_pool.get_reader() as reader:
+            reader.setSeries(image_index)
+            reader.setResolution(0)
+            base_width = reader.getSizeX()
+            return [
+                self._get_resolution_scale(reader, resolution_index, base_width)
+                for resolution_index in range(reader.getResolutionCount())
+            ]
+
+    @staticmethod
+    def _get_resolution_scale(
+        reader: Memoizer, resolution_index: int, base_width: int
+    ) -> float:
+        """Return resolution scale for resolution as rounded int of resolution width
+        divided by base widht."""
+        reader.setResolution(resolution_index)
+        width = reader.getSizeX()
+        return base_width / width
 
     @contextmanager
     def read_image(
@@ -325,17 +331,22 @@ class BioformatsReader:
             Generator[np.ndarray, None, None]
 
         """
-        raw_data = memoryview(
-            self._read(
-                image_index,
-                resolution_index,
-                index,
-                region.start.x,
-                region.start.y,
-                region.size.width,
-                region.size.height,
+        try:
+            raw_data = memoryview(
+                self._read(
+                    image_index,
+                    resolution_index,
+                    index,
+                    region.start.x,
+                    region.start.y,
+                    region.size.width,
+                    region.size.height,
+                )
             )
-        )
+        except Exception as exception:
+            raise Exception(
+                f"Failed to read image data from image {image_index}, resolution {resolution_index}, index {index} at region {region.box}."
+            ) from exception
         try:
             data: np.ndarray = np.frombuffer(raw_data, self.dtype(image_index))
             if self.is_interleaved(image_index):
@@ -386,16 +397,6 @@ class BioformatsReader:
 
     def _read_metadata(self) -> str:
         """Read metadata from file."""
-        service_factory = ServiceFactory()
-        metadata_service = service_factory.getInstance(OMEXMLService)
-        metadata_store = metadata_service.createOMEXMLMetadata()
-
         with self._reader_pool.get_reader() as reader:
-            reader.close()
-            reader.setFlattenedResolutions(False)
-            reader.setOriginalMetadataPopulated(True)
-            reader.setMetadataStore(metadata_store)
-            reader.setId(str(self._reader_pool.filepath))
-            metadata = str(metadata_store.dumpXML())
-
-        return metadata
+            metadata_store = reader.getMetadataStore()
+            return str(metadata_store.dumpXML())

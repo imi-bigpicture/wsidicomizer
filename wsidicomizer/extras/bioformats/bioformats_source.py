@@ -72,7 +72,7 @@ class BioformatsSource(DicomizerSource):
     @property
     def pyramid_levels(self) -> List[int]:
         """Return pyramid levels (scalings) for file."""
-        return list(range(self._reader.resolution_count(self._pyramid_image_index)))
+        return list(self._reader.pyramid_levels(self._pyramid_image_index).keys())
 
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
@@ -112,7 +112,7 @@ class BioformatsSource(DicomizerSource):
             self._tile_size,
             self._encoder,
             self._pyramid_image_index,
-            level_index,
+            self._reader.pyramid_levels(self._pyramid_image_index)[level_index],
         )
 
     def _create_label_image_data(self) -> DicomizerImageData:
