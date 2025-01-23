@@ -272,12 +272,13 @@ class BioformatsReader:
         """Return dictionary of dyadic scaling as key and resolution index as value
         for resolutions in image."""
         TOLERANCE = 1e-2
+        float_pyramid_levels = (
+            math.log2(scale) for scale in self._resolution_scales(image_index)
+        )
         return {
-            round(math.log2(scale)): index
-            for index, scale in enumerate(self._resolution_scales(image_index))
-            if math.isclose(
-                2 ** round(math.log2(scale)), round(scale), rel_tol=TOLERANCE
-            )
+            round(float_level): resolution_index
+            for resolution_index, float_level in enumerate(float_pyramid_levels)
+            if math.isclose(float_level, round(float_level), abs_tol=TOLERANCE)
         }
 
     @lru_cache
