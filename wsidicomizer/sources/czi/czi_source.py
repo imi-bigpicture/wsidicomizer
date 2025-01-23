@@ -15,7 +15,7 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Optional
 
 from czifile import CziFile
 from wsidicom.codec import Encoder
@@ -60,8 +60,8 @@ class CziSource(DicomizerSource):
         return False
 
     @property
-    def pyramid_levels(self) -> List[int]:
-        return [0]
+    def pyramid_levels(self) -> Dict[int, int]:
+        return {0: 0}
 
     @property
     def base_metadata(self) -> CziMetadata:

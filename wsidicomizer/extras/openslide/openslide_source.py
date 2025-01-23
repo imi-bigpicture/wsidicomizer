@@ -16,7 +16,7 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Optional
 
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
@@ -71,7 +71,7 @@ class OpenSlideSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> List[int]:
+    def pyramid_levels(self) -> Dict[int, int]:
         return self._pyramid_levels
 
     @staticmethod
@@ -99,8 +99,9 @@ class OpenSlideSource(DicomizerSource):
         )
 
     @staticmethod
-    def _get_pyramid_levels(slide: OpenSlide) -> List[int]:
+    def _get_pyramid_levels(slide: OpenSlide) -> Dict[int, int]:
         """Return list of pyramid levels present in openslide slide."""
-        return [
-            int(math.log2(int(downsample))) for downsample in slide.level_downsamples
-        ]
+        return {
+            int(math.log2(int(downsample))): index
+            for index, downsample in enumerate(slide.level_downsamples)
+        }

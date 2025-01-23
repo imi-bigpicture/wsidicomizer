@@ -15,7 +15,7 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
@@ -70,9 +70,9 @@ class BioformatsSource(DicomizerSource):
         return BioformatsImageData.detect_format(filepath)
 
     @property
-    def pyramid_levels(self) -> List[int]:
+    def pyramid_levels(self) -> Dict[int, int]:
         """Return pyramid levels (scalings) for file."""
-        return list(self._reader.pyramid_levels(self._pyramid_image_index).keys())
+        return self._reader.pyramid_levels(self._pyramid_image_index)
 
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
