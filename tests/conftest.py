@@ -157,31 +157,18 @@ test_parameters = {
             "image_coordinate_system": {"x": 2.3061675, "y": 20.79015},
             "icc_profile": False,
             "read_region": [
-                # OpenSlide produces different results across platforms
-                # {
-                #     "location": {
-                #         "x": 50,
-                #         "y": 100
-                #     },
-                #     "level": 6,
-                #     "size": {
-                #         "width": 500,
-                #         "height": 500
-                #     },
-                #     "md5": "fe29e76f5904d65253d8eb742b244789"
-                # },
-                # {
-                #     "location": {
-                #         "x": 400,
-                #         "y": 500
-                #     },
-                #     "level": 4,
-                #     "size": {
-                #         "width": 500,
-                #         "height": 500
-                #     },
-                #     "md5": "4f4c904ed9257e385fc8f0818337d9e7"
-                # }
+                {
+                    "location": {"x": 50, "y": 100},
+                    "level": 6,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "fe29e76f5904d65253d8eb742b244789",
+                },
+                {
+                    "location": {"x": 400, "y": 500},
+                    "level": 4,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "4f4c904ed9257e385fc8f0818337d9e7",
+                },
             ],
             "read_region_openslide": [
                 {
