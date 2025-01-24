@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import os
+import platform
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -446,6 +447,7 @@ test_parameters = {
             ],
             "read_thumbnail": [],
             "read_region_openslide": [],
+            "skip_hash_test_platforms": ["Darwin"],
         }
     },
 }
@@ -504,6 +506,8 @@ def wsi_files(testdata_dir: Path):
             for file in file_format_parameters
         }
         for file_format, file_format_parameters in test_parameters.items()
+        if platform.system()
+        not in file_format_parameters.get("skip_hash_test_platforms", [])
     }
 
 
