@@ -17,7 +17,7 @@
 
 import math
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Optional
 
 from tiffslide import TiffSlide
 from wsidicom.codec import Encoder
@@ -46,10 +46,10 @@ class TiffSlideSource(DicomizerSource):
     ) -> None:
         self._tiffslide = TiffSlide(filepath, **source_args)
         self._base_metadata = TiffSlideMetadata(self._tiffslide)
-        self._pyramid_levels = [
-            int(round(math.log2(downsample)))
-            for downsample in self._tiffslide.level_downsamples
-        ]
+        self._pyramid_levels = {
+            int(round(math.log2(downsample))): index
+            for index, downsample in enumerate(self._tiffslide.level_downsamples)
+        }
         super().__init__(
             filepath,
             encoder,
@@ -75,7 +75,7 @@ class TiffSlideSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> List[int]:
+    def pyramid_levels(self) -> Dict[int, int]:
         return self._pyramid_levels
 
     @staticmethod

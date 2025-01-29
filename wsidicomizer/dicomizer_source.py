@@ -18,7 +18,7 @@ files."""
 from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from pydicom import config
 from wsidicom import ImageData
@@ -75,8 +75,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def pyramid_levels(self) -> List[int]:
-        """Return pyramid levels (scalings) for file."""
+    def pyramid_levels(self) -> Dict[int, int]:
+        """Dictionary of pyramid levels (scalings) as key and level index in file as
+        value for levels in file."""
         raise NotImplementedError()
 
     @property
@@ -130,9 +131,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             self._create_instance(
                 self._create_level_image_data(level_index),
                 ImageType.VOLUME,
-                level_index,
+                pyramid_index,
             )
-            for level_index in range(len(self.pyramid_levels))
+            for pyramid_index, level_index in self.pyramid_levels.items()
         ]
 
     @cached_property

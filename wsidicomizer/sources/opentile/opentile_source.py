@@ -15,7 +15,7 @@
 """Source for reading opentile compatible file."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Optional
 
 from opentile import OpenTile
 from wsidicom.codec import Encoder
@@ -72,8 +72,10 @@ class OpenTileSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> List[int]:
-        return [level.pyramid_index for level in self._tiler.levels]
+    def pyramid_levels(self) -> Dict[int, int]:
+        return {
+            level.pyramid_index: index for index, level in enumerate(self._tiler.levels)
+        }
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:
