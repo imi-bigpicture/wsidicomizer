@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2025-01-29
+
 ### Added
 
 - Support for reading isyntax files using pyisyntax.
@@ -15,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reading correct image size in pyramid series in Bioformats reader.
 - Skip non-dyadic pyramid series in Bioformats reader.
+- Missing values in `LossyImageCompressionRatio` and `LossyImageCompressionMethod` when converting without re-encoding.
+- Pin zarr to <3.0 to fix import exception.
 
 ## [0.15.1] - 2025-01-07
 
@@ -285,7 +289,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.1..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..HEAD
+[0.16.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.16.0
 [0.15.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..0.15.1
 [0.15.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.2..0.15.0
 [0.14.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..0.14.2

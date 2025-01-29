@@ -103,6 +103,10 @@ class CziImageData(DicomizerImageData):
     def pixel_spacing(self) -> SizeMm:
         return self._pixel_spacing
 
+    @property
+    def thread_safe(self) -> bool:
+        return True
+
     @cached_property
     def image_size(self) -> Size:
         """The pixel size of the image."""

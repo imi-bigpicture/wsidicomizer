@@ -86,6 +86,10 @@ class TiffSlideImageData(DicomizerImageData):
     def blank_color(self) -> Union[int, Tuple[int, int, int]]:
         return self._blank_color
 
+    @property
+    def thread_safe(self) -> bool:
+        return True
+
     def _get_blank_color(
         self, photometric_interpretation: str
     ) -> Union[int, Tuple[int, int, int]]:
