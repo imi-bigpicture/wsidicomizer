@@ -32,7 +32,7 @@ class CziSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int = 512,
+        tile_size: Optional[int] = None,
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
@@ -83,8 +83,8 @@ class CziSource(DicomizerSource):
             self.metadata.image,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData:
-        raise NotImplementedError("Czi does not support labels.")
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+        return None
 
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        raise NotImplementedError("Czi does not support overviews.")
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+        return None

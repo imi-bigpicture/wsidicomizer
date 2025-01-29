@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import os
+import platform
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -136,13 +137,20 @@ class TestWsiDicomizerConvert:
             wsi.read_tile(0, (0, 0), z=1.0)
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "region", "lowest_included_level"],
+        [
+            "file_format",
+            "file",
+            "region",
+            "lowest_included_level",
+            "skip_hash_test_platforms",
+        ],
         [
             (
                 file_format,
                 file,
                 region,
                 file_parameters["lowest_included_pyramid_level"],
+                file_parameters.get("skip_hash_test_platforms", []),
             )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
@@ -156,9 +164,12 @@ class TestWsiDicomizerConvert:
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
+        skip_hash_test_platforms: List[str],
         wsi: WsiDicom,
     ):
         # Arrange
+        if platform.system() in skip_hash_test_platforms:
+            pytest.skip(f"Skipping hash test for {platform.system()}.")
         level = region["level"] - lowest_included_level
 
         # Act
@@ -174,9 +185,14 @@ class TestWsiDicomizerConvert:
         ), f"{file_format}: {file} lowest level {lowest_included_level} {region}"
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "thumbnail"],
+        ["file_format", "file", "thumbnail", "skip_hash_test_platforms"],
         [
-            (file_format, file, thumbnail)
+            (
+                file_format,
+                file,
+                thumbnail,
+                file_parameters.get("skip_hash_test_platforms", []),
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
@@ -184,9 +200,16 @@ class TestWsiDicomizerConvert:
         scope="module",
     )
     def test_read_thumbnail_from_converted_file_should_match_hash(
-        self, file_format: str, file: str, thumbnail: Dict[str, Any], wsi: WsiDicom
+        self,
+        file_format: str,
+        file: str,
+        thumbnail: Dict[str, Any],
+        wsi: WsiDicom,
+        skip_hash_test_platforms: List[str],
     ):
         # Arrange
+        if platform.system() in skip_hash_test_platforms:
+            pytest.skip(f"Skipping hash test for {platform.system()}.")
 
         # Act
         im = wsi.read_thumbnail(
@@ -199,17 +222,25 @@ class TestWsiDicomizerConvert:
         ), f"{file_format}: {file} {thumbnail}"
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "region", "lowest_included_level"],
+        [
+            "file_format",
+            "file",
+            "region",
+            "lowest_included_level",
+            "skip_hash_test_platforms",
+        ],
         [
             (
                 file_format,
                 file,
                 region,
                 file_parameters["lowest_included_pyramid_level"],
+                file_parameters.get("skip_hash_test_platforms", []),
             )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for region in file_parameters["read_region_openslide"]
+            if file_parameters["openslide"]
         ],
         scope="module",
     )
@@ -219,10 +250,13 @@ class TestWsiDicomizerConvert:
         file: str,
         region: Dict[str, Any],
         lowest_included_level: int,
+        skip_hash_test_platforms: List[str],
         wsi_file: Path,
         wsi: WsiDicom,
     ):
         # Arrange
+        if platform.system() in skip_hash_test_platforms:
+            pytest.skip(f"Skipping hash test for {platform.system()}.")
         level = region["level"] - lowest_included_level
         with OpenSlide(wsi_file) as openslide_wsi:
             scale: float = openslide_wsi.level_downsamples[region["level"]]
@@ -269,10 +303,11 @@ class TestWsiDicomizerConvert:
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
             for thumbnail in file_parameters["read_thumbnail"]
+            if file_parameters["openslide"]
         ],
         scope="module",
     )
-    def test_read_thumbnail_from_converted_file_should_almost_match_thumbnail(
+    def test_read_thumbnail_from_converted_file_should_almost_match_openslide_thumbnail(
         self,
         file_format: str,
         file: str,
@@ -324,6 +359,7 @@ class TestWsiDicomizerConvert:
             (file_format, file)
             for file_format, format_files in test_parameters.items()
             for file in format_files.keys()
+            if format_files[file]["convert"]
         ],
         scope="module",
     )

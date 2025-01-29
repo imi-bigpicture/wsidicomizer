@@ -60,14 +60,6 @@ class OpenTileSource(DicomizerSource):
         self._tiler.close()
 
     @property
-    def has_label(self) -> bool:
-        return len(self._tiler.labels) > 0
-
-    @property
-    def has_overview(self) -> bool:
-        return len(self._tiler.overviews) > 0
-
-    @property
     def base_metadata(self) -> OpenTileMetadata:
         return self._base_metadata
 
@@ -92,14 +84,16 @@ class OpenTileSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData:
-        label = self._tiler.labels[0]
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+        if len(self._tiler.labels) == 0:
+            return None
         return OpenTileAssociatedImageData(
-            label, self._encoder, self._force_transcoding
+            self._tiler.labels[0], self._encoder, self._force_transcoding
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        overview = self._tiler.overviews[0]
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+        if len(self._tiler.overviews) == 0:
+            return None
         return OpenTileAssociatedImageData(
-            overview, self._encoder, self._force_transcoding
+            self._tiler.overviews[0], self._encoder, self._force_transcoding
         )

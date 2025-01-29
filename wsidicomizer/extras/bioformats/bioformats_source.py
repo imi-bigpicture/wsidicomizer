@@ -56,14 +56,6 @@ class BioformatsSource(DicomizerSource):
             include_confidential,
         )
 
-    @property
-    def has_label(self) -> bool:
-        return self._label_image_index is not None
-
-    @property
-    def has_overview(self) -> bool:
-        return self._overview_image_index is not None
-
     @staticmethod
     def is_supported(filepath: Path) -> bool:
         """Return True if file in filepath is supported by Bio-Formats."""
@@ -115,14 +107,16 @@ class BioformatsSource(DicomizerSource):
             self._reader.pyramid_levels(self._pyramid_image_index)[level_index],
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData:
-        assert self._label_image_index is not None
+    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+        if self._label_image_index is None:
+            return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._label_image_index, 0
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData:
-        assert self._overview_image_index is not None
+    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+        if self._overview_image_index is None:
+            return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._overview_image_index, 0
         )

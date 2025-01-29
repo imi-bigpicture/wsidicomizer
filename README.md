@@ -14,7 +14,7 @@
 - Aperio svs (lossless)
 - Hamamatsu ndpi (lossless)
 - Philips tiff (lossless)
-- Zeiss czi (lossy, only base level)
+- Zeiss czi (lossy)
 - Optional: Formats supported by Bioformats (lossy)
 
 With the `openslide` extra the following formats are also supported:
@@ -27,6 +27,10 @@ With the `openslide` extra the following formats are also supported:
 - Hamamatsu vms, vmu (lossy)
 
 The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/6.12.0/supported-formats.html).
+
+The `isyntax` extra enables lossy single-thread support for isynax files.
+
+For czi and isyntax only the base level is read from file. To produce a conversion with full levels, use `add_missing_levels` in the `save()` method.
 
 ## Installation
 
