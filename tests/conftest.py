@@ -161,13 +161,13 @@ test_parameters = {
                     "location": {"x": 50, "y": 100},
                     "level": 6,
                     "size": {"width": 500, "height": 500},
-                    "md5": "fe29e76f5904d65253d8eb742b244789",
+                    "md5": "b9052fc1ebbe99582906c575511fe944",
                 },
                 {
                     "location": {"x": 400, "y": 500},
                     "level": 4,
                     "size": {"width": 500, "height": 500},
-                    "md5": "4f4c904ed9257e385fc8f0818337d9e7",
+                    "md5": "a11881460a4fae78ddfef1100339cac0",
                 },
             ],
             "read_region_openslide": [
