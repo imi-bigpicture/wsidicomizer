@@ -506,8 +506,6 @@ def wsi_files(testdata_dir: Path):
             for file in file_format_parameters
         }
         for file_format, file_format_parameters in test_parameters.items()
-        if platform.system()
-        not in file_format_parameters.get("skip_hash_test_platforms", [])
     }
 
 
@@ -520,8 +518,6 @@ def converted(wsi_files: Dict[str, Dict[str, Path]]):
             if wsi_files[file_format][file].exists() and file_parameters["convert"]
         }
         for file_format, file_format_parameters in test_parameters.items()
-        if platform.system()
-        not in file_format_parameters.get("skip_hash_test_platforms", [])
     }
     yield converted_folders
     for file_format in converted_folders.values():
