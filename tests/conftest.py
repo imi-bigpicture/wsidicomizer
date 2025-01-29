@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import os
-import platform
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
