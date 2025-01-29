@@ -14,7 +14,7 @@
 
 """Metadata for isyntax file."""
 
-from wsidicom.metadata.optical_path import OpticalPath
+from wsidicom.metadata import Label, OpticalPath
 
 from isyntax import ISyntax
 from wsidicomizer.metadata import WsiDicomizerMetadata
@@ -28,4 +28,7 @@ class ISyntaxMetadata(WsiDicomizerMetadata):
             optical_paths = [optical_path]
         else:
             optical_paths = None
-        super().__init__(optical_paths=optical_paths)
+
+        if slide.barcode != "":
+            label = Label(slide.barcode)
+        super().__init__(optical_paths=optical_paths, label=label)
