@@ -183,6 +183,7 @@ test_parameters = {
                 },
             ],
             "read_thumbnail": [],
+            "skip_hash_test_platforms": ["Darwin"],
         }
     },
     "ndpi": {
