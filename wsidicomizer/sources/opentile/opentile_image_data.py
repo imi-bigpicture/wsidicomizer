@@ -14,14 +14,14 @@
 
 """Image data for opentile compatible file."""
 
-from typing import Iterable, Iterator, List, Optional
+from typing import Iterable, Iterator, List, Optional, Tuple
 
 from opentile.tiff_image import TiffImage
 from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.codec import Encoder
+from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
@@ -141,6 +141,22 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def thread_safe(self) -> bool:
         return True
+
+    @property
+    def lossy_compression(
+        self,
+    ) -> Optional[List[Tuple[LossyCompressionIsoStandard, float]]]:
+        """Return lossy compression method and compression ratio if lossy compressed."""
+        iso = LossyCompressionIsoStandard.transfer_syntax_to_iso(self.transfer_syntax)
+        if iso is None:
+            return None
+        uncompressed_size = (
+            self.image_size.area * self.samples_per_pixel * self.bits // 8
+        )
+        compressed_size = self._tiff_image.compressed_size
+        compression_ratio = round(compressed_size / uncompressed_size, 2)
+        return [(iso, compression_ratio)]
+
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.

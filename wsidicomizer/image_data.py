@@ -16,11 +16,13 @@
 files."""
 
 from abc import ABCMeta, abstractmethod
+from typing import List, Optional, Tuple
 
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
 from wsidicom import ImageData
+from wsidicom.codec import LossyCompressionIsoStandard
 from wsidicom.geometry import PointMm, Size
 from wsidicom.metadata import ImageCoordinateSystem
 
@@ -49,9 +51,11 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
         return self.encoder.bits
 
     @property
-    def lossy_compressed(self) -> bool:
-        # TODO: This should be set from encoder and base file.
-        return True
+    def lossy_compression(
+        self,
+    ) -> Optional[List[Tuple[LossyCompressionIsoStandard, float]]]:
+        """Return None as image compression is for most format not known."""
+        return None
 
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
