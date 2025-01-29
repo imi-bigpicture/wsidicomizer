@@ -94,6 +94,10 @@ class BioformatsImageData(DicomizerImageData):
         data."""
         return self.encoder.photometric_interpretation
 
+    @property
+    def thread_safe(self) -> bool:
+        return True
+
     def _get_tile(
         self, tile_point: Point, z: float, path: str
     ) -> ContextManager[np.ndarray]:

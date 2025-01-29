@@ -138,6 +138,9 @@ class OpenTileImageData(DicomizerImageData):
     def samples_per_pixel(self) -> int:
         return self._tiff_image.samples_per_pixel
 
+    @property
+    def thread_safe(self) -> bool:
+        return True
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.

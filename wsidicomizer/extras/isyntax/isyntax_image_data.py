@@ -116,6 +116,10 @@ class ISyntaxLevelImageData(DicomizerImageData):
     def image_coordinate_system(self) -> ImageCoordinateSystem:
         return ImageCoordinateSystem(PointMm(0, 0), 0)
 
+    @property
+    def thread_safe(selt) -> bool:
+        return False
+
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
         ISyntax object.
@@ -301,6 +305,10 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
         return ImageCoordinateSystem(PointMm(0, 0), 0)
+
+    @property
+    def thread_safe(self) -> bool:
+        return True
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if z not in self.focal_planes or path not in self.optical_paths:
