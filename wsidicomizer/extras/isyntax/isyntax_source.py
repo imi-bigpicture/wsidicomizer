@@ -104,5 +104,8 @@ class ISyntaxSource(DicomizerSource):
             overview.tobytes(), self._encoder, self._force_transcoding
         )
 
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        return None
+
     def close(self) -> None:
         return self._slide.close()

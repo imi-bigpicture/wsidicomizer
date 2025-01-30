@@ -95,6 +95,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         """Return image data instance for overview."""
         raise NotImplementedError()
 
+    @abstractmethod
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        """Return image data instance for thumbnail."""
+        raise NotImplementedError()
+
     @cached_property
     def metadata(self) -> WsiDicomizerMetadata:
         return self.base_metadata.merge(
@@ -137,6 +142,13 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         if overview is None:
             return []
         return [self._create_instance(overview, ImageType.OVERVIEW)]
+
+    @cached_property
+    def thumbnail_instances(self) -> List[WsiInstance]:
+        thumbnail = self._create_thumbnail_image_data()
+        if thumbnail is None:
+            return []
+        return [self._create_instance(thumbnail, ImageType.THUMBNAIL)]
 
     @property
     def annotation_instances(self) -> List[AnnotationInstance]:

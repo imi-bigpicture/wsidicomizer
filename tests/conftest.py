@@ -71,6 +71,7 @@ test_parameters = {
                     "md5": "b27df8f554f6bdd4d4fa42d67eeebe6e",
                 }
             ],
+            "embedded_thumbnail": True,
         },
         "svs1/input.svs": {
             "convert": True,
@@ -114,6 +115,7 @@ test_parameters = {
                     "md5": "379210d2aee83bb590aa2a4223707ac1",
                 }
             ],
+            "embedded_thumbnail": True,
         },
     },
     "czi": {
@@ -142,6 +144,7 @@ test_parameters = {
             ],
             "read_region_openslide": [],
             "read_thumbnail": [],
+            "embedded_thumbnail": False,
         }
     },
     "mirax": {
@@ -184,6 +187,7 @@ test_parameters = {
             ],
             "read_thumbnail": [],
             "skip_hash_test_platforms": ["Darwin"],
+            "embedded_thumbnail": True,
         }
     },
     "ndpi": {
@@ -234,6 +238,7 @@ test_parameters = {
                     "md5": "ea87500dc544f45c6f600811138dad23",
                 }
             ],
+            "embedded_thumbnail": False,
         },
         "ndpi1/input.ndpi": {
             "convert": True,
@@ -277,6 +282,7 @@ test_parameters = {
                     "md5": "995791915459762ac1c251fc8351b4f6",
                 }
             ],
+            "embedded_thumbnail": False,
         },
         # "ndpi2/input.ndpi": {
         #     "convert": True,
@@ -401,6 +407,7 @@ test_parameters = {
                     "md5": "922ab1407d79de6b117bc561625f1a49",
                 }
             ],
+            "embedded_thumbnail": False,
         }
     },
     "isyntax": {
@@ -435,6 +442,7 @@ test_parameters = {
             "read_thumbnail": [],
             "read_region_openslide": [],
             "skip_hash_test_platforms": ["Darwin"],
+            "embedded_thumbnail": False,
         }
     },
 }
@@ -512,7 +520,7 @@ def converted(wsi_files: Dict[str, Dict[str, Path]]):
             try:
                 converted_folder.cleanup()
             except Exception as exception:
-                raise Exception("Failed to cleanup", converted_folder) from exception
+                raise Exception("Failed to cleanup", file_format) from exception
 
 
 @pytest.fixture(scope="module")

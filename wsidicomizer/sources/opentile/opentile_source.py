@@ -26,6 +26,7 @@ from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
     OpenTileLevelImageData,
+    OpenTileThumbnailImageData,
 )
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 
@@ -96,4 +97,14 @@ class OpenTileSource(DicomizerSource):
             return None
         return OpenTileAssociatedImageData(
             self._tiler.overviews[0], self._encoder, self._force_transcoding
+        )
+
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        if len(self._tiler.thumbnails) == 0:
+            return None
+        return OpenTileThumbnailImageData(
+            self._tiler.thumbnails[0],
+            self.metadata.image,
+            self._encoder,
+            self._force_transcoding,
         )
