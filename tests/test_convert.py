@@ -25,6 +25,7 @@ from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from PIL import Image, ImageChops, ImageStat
 from wsidicom import WsiDicom
+from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -334,9 +335,14 @@ class TestWsiDicomizerConvert:
             assert band_rms < 4, f"{file_format}: {file} {thumbnail}"
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "photometric_interpretation"],
+        ["file_format", "file", "native_photometric_interpretation", "is_converted"],
         [
-            (file_format, file, file_parameters["photometric_interpretation"])
+            (
+                file_format,
+                file,
+                file_parameters["photometric_interpretation"],
+                file_parameters["convert"],
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ],
@@ -344,16 +350,25 @@ class TestWsiDicomizerConvert:
     )
     def test_photometric_interpretation(
         self,
-        photometric_interpretation: str,
+        encoder: Encoder,
+        native_photometric_interpretation: str,
+        is_converted: bool,
         wsi: WsiDicom,
     ):
         # Arrange
+        expected_photometric_interpretation = (
+            encoder.photometric_interpretation
+            if is_converted
+            else native_photometric_interpretation
+        )
 
         # Act
         image_data = wsi.pyramids[0].base_level.default_instance.image_data
 
         # Assert
-        assert image_data.photometric_interpretation == photometric_interpretation
+        assert (
+            image_data.photometric_interpretation == expected_photometric_interpretation
+        )
 
     @pytest.mark.parametrize(
         ["file_format", "file"],

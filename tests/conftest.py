@@ -21,7 +21,7 @@ from typing import Any, Dict
 import pytest
 from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
-from wsidicom.codec.encoder import Jpeg2kEncoder, Jpeg2kSettings
+from wsidicom.codec.encoder import Encoder, Jpeg2kEncoder, Jpeg2kSettings
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
@@ -469,7 +469,7 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
         return "YBR_ICT"
 
 
-def convert_wsi(file_path: Path, file_parameters: Dict[str, Any]):
+def convert_wsi(file_path: Path, file_parameters: Dict[str, Any], encoder: Encoder):
     include_levels = file_parameters["include_levels"]
     tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
     tempdir = TemporaryDirectory()
@@ -478,7 +478,7 @@ def convert_wsi(file_path: Path, file_parameters: Dict[str, Any]):
         output_path=tempdir.name,
         tile_size=tile_size,
         include_levels=include_levels,
-        encoding=Jpeg2kTestEncoder(),
+        encoding=encoder,
     )
     return tempdir
 
@@ -505,10 +505,15 @@ def wsi_files(testdata_dir: Path):
 
 
 @pytest.fixture(scope="module")
-def converted(wsi_files: Dict[str, Dict[str, Path]]):
+def encoder():
+    yield Jpeg2kTestEncoder()
+
+
+@pytest.fixture(scope="module")
+def converted(wsi_files: Dict[str, Dict[str, Path]], encoder: Encoder):
     converted_folders = {
         file_format: {
-            file: convert_wsi(wsi_files[file_format][file], file_parameters)
+            file: convert_wsi(wsi_files[file_format][file], file_parameters, encoder)
             for file, file_parameters in file_format_parameters.items()
             if wsi_files[file_format][file].exists() and file_parameters["convert"]
         }
