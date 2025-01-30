@@ -213,6 +213,7 @@ class WsiDicomizer(WsiDicom):
                 include_overviews=include_overview,
                 add_missing_levels=add_missing_levels,
                 label=label,
+                transcoding=encoding,
             )
 
         return [str(filepath) for filepath in created_files]
@@ -236,7 +237,9 @@ class WsiDicomizer(WsiDicom):
         return selected_source
 
     @staticmethod
-    def _select_encoder(encoding: Optional[Union[Encoder, EncodingSettings]] = None):
+    def _select_encoder(
+        encoding: Optional[Union[Encoder, EncodingSettings]] = None
+    ) -> Encoder:
         """Return encoder from encoding."""
         if encoding is None:
             encoding = JpegSettings()
