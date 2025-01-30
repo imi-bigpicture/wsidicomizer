@@ -1017,27 +1017,25 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.14.0"
+version = "0.15.0"
 description = "Read tiles from wsi-TIFF files"
 optional = false
-python-versions = "^3.9"
-files = []
-develop = true
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "opentile-0.15.0-py3-none-any.whl", hash = "sha256:419a986f3ce8c1eab0364ccb17329de946bbbba7677d64ae1cadacecf8ea7bed"},
+    {file = "opentile-0.15.0.tar.gz", hash = "sha256:1f98d5c54558b2876d52fc84eb9c368ecbadaf54daa22af4bd4e663f10acdb59"},
+]
 
 [package.dependencies]
-defusedxml = "^0.7.1"
-fsspec = "^2024.2.0"
+defusedxml = ">=0.7.1,<0.8.0"
+fsspec = ">=2024.2.0,<2025.0.0"
 imagecodecs = ">=2022.12.24"
 numpy = ">=1.22.0"
-ome-types = "^0.5.0"
-Pillow = "^10.1.0"
-PyTurboJPEG = "^1.7.3"
+ome-types = ">=0.5.0,<0.6.0"
+Pillow = ">=10.1.0,<11.0.0"
+PyTurboJPEG = ">=1.7.3,<2.0.0"
 tifffile = ">=2022.5.4"
-universal-pathlib = "^0.2.1"
-
-[package.source]
-type = "directory"
-url = "../opentile"
+universal-pathlib = ">=0.2.1,<0.3.0"
 
 [[package]]
 name = "packaging"
@@ -1731,31 +1729,29 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.23.0"
+version = "0.24.0"
 description = "Tools for handling DICOM based whole scan images"
 optional = false
-python-versions = "^3.10"
-files = []
-develop = true
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "wsidicom-0.24.0-py3-none-any.whl", hash = "sha256:6a0096cc502997f276aa2da0188ee5dadd4731244622fd1a0b87f91bf27bf548"},
+    {file = "wsidicom-0.24.0.tar.gz", hash = "sha256:4e09cd5fca7d7bba079ee81462424715674b127cfd3bdacfe04290f44df8bc64"},
+]
 
 [package.dependencies]
-dicomweb-client = "^0.59.2"
-fsspec = "^2024.2.0"
-marshmallow = "^3.20.1"
+dicomweb-client = ">=0.59.2,<0.60.0"
+fsspec = ">=2024.2.0,<2025.0.0"
+marshmallow = ">=3.20.1,<4.0.0"
 numpy = ">=1.22.0"
 Pillow = ">=9.1.1"
 pydicom = ">=3.0.0"
-universal-pathlib = "^0.2.1"
+universal-pathlib = ">=0.2.1,<0.3.0"
 
 [package.extras]
-imagecodecs = ["imagecodecs (>=2024.1.1,<2025.0.0,!=2024.9.22)"]
+imagecodecs = ["imagecodecs (>=2024.1.1,!=2024.9.22,<2025.0.0)"]
 pyjpegls = ["pyjpegls (>=1.2.0,<2.0.0)"]
 pylibjpeg-openjpeg = ["pylibjpeg-openjpeg (>=2.1.1,<3.0.0)"]
 pylibjpeg-rle = ["pylibjpeg-rle (>=1.3.0,<2.0.0)"]
-
-[package.source]
-type = "directory"
-url = "../wsidicom"
 
 [[package]]
 name = "xsdata"
@@ -1807,4 +1803,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d0bf8f76b3ae538370cb88662fc3bcc4cedd4eda5852e2227e998bda5f935349"
+content-hash = "efe877febf847a15b3a1c14db1eec5dffb97d68d319115e96de9099dad8a8f97"
