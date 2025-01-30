@@ -213,7 +213,8 @@ class TestWsiDicomizerConvert:
 
         # Act
         im = wsi.read_thumbnail(
-            (thumbnail["size"]["width"], thumbnail["size"]["height"])
+            (thumbnail["size"]["width"], thumbnail["size"]["height"]),
+            force_generate=True,
         )
 
         # Assert
@@ -323,7 +324,8 @@ class TestWsiDicomizerConvert:
 
         # Act
         im = wsi.read_thumbnail(
-            (thumbnail["size"]["width"], thumbnail["size"]["height"])
+            (thumbnail["size"]["width"], thumbnail["size"]["height"]),
+            force_generate=True,
         )
 
         # Assert
@@ -453,3 +455,21 @@ class TestWsiDicomizerConvert:
 
         # Arrange
         assert icc_profile is not None
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_thumbnail"],
+        [
+            (file_format, file, file_parameters["embedded_thumbnail"])
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_embedded_thumbnail(self, wsi: WsiDicom, expected_thumbnail: bool):
+        # Arrange
+
+        # Act
+        has_thumbnail_instances = len(wsi.pyramid.thumbnails) > 0
+
+        # Assert
+        assert has_thumbnail_instances == expected_thumbnail

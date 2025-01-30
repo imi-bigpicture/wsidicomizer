@@ -88,3 +88,6 @@ class CziSource(DicomizerSource):
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
         return None
+
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        return None

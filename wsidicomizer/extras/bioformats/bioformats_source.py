@@ -121,5 +121,9 @@ class BioformatsSource(DicomizerSource):
             self._reader, self._tile_size, self._encoder, self._overview_image_index, 0
         )
 
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        # TODO support reading thumbnails from bioformats
+        return None
+
     def close(self) -> None:
         return self._reader.close()

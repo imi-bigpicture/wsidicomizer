@@ -106,3 +106,13 @@ class TiffSlideSource(DicomizerSource):
         return TiffSlideAssociatedImageData(
             self._tiffslide, TiffSlideAssociatedImageType.MACRO, self._encoder
         )
+
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            TiffSlideAssociatedImageType.THUMBNAIL.value
+            not in self._tiffslide.associated_images
+        ):
+            return None
+        return TiffSlideAssociatedImageData(
+            self._tiffslide, TiffSlideAssociatedImageType.THUMBNAIL, self._encoder
+        )

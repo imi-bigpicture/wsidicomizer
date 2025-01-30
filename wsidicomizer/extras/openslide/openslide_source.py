@@ -27,6 +27,7 @@ from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideAssociatedImageData,
     OpenSlideAssociatedImageType,
     OpenSlideLevelImageData,
+    OpenSlideThumbnailImageData,
 )
 from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
 from wsidicomizer.image_data import DicomizerImageData
@@ -98,6 +99,16 @@ class OpenSlideSource(DicomizerSource):
             return None
         return OpenSlideAssociatedImageData(
             self._slide, OpenSlideAssociatedImageType.MACRO, self._encoder
+        )
+
+    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+        if (
+            OpenSlideAssociatedImageType.THUMBNAIL.value
+            not in self._slide.associated_images
+        ):
+            return None
+        return OpenSlideThumbnailImageData(
+            self._slide, self.metadata.image, self._encoder
         )
 
     @staticmethod

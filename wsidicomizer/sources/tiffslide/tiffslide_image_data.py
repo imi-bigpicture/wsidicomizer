@@ -44,6 +44,7 @@ from wsidicomizer.image_data import DicomizerImageData
 class TiffSlideAssociatedImageType(Enum):
     LABEL = "label"
     MACRO = "macro"
+    THUMBNAIL = "thumbnail"
 
 
 class TiffSlideImageData(DicomizerImageData):
@@ -94,7 +95,7 @@ class TiffSlideImageData(DicomizerImageData):
         self, photometric_interpretation: str
     ) -> Union[int, Tuple[int, int, int]]:
         """Return color to use blank tiles. Parses background color from
-        openslide if present.
+        tiffslide if present.
 
         Parameters
         ----------
@@ -176,6 +177,31 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
         return self._decoded_image
 
 
+class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
+    def __init__(
+        self, tiff_slide: TiffSlide, image_metadata: ImageMetadata, encoder: Encoder
+    ):
+        """Wraps a TiffSlide thumbnail to ImageData.
+
+        Parameters
+        ----------
+        tiff_slide: TiffSlide
+            TiffSlide object to wrap.
+        image_metadata: ImageMetadata
+            Image metadata for image.
+        encoded: Encoder
+            Encoder to use.
+        """
+        super().__init__(tiff_slide, TiffSlideAssociatedImageData.THUMBNAIL, encoder)
+        self._image_coordinate_system = image_metadata.image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
+
+
 class TiffSlideLevelImageData(TiffSlideImageData):
     def __init__(
         self,
@@ -192,6 +218,8 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         ----------
         tiff_slide: TiffSlide
             TiffSlide object to wrap.
+        image_metadata: ImageMetadata
+            Image metadata for image.
         level_index: int
             Level in TiffSlide object to wrap
         tile_size: int

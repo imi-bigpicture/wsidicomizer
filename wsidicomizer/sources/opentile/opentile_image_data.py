@@ -271,6 +271,32 @@ class OpenTileLevelImageData(OpenTileImageData):
         return self._pixel_spacing
 
 
+class OpenTileThumbnailImageData(OpenTileImageData):
+    def __init__(
+        self,
+        tiff_image: TiffImage,
+        merged_metadata: ImageMetadata,
+        encoder: Encoder,
+        force_transcoding: bool = False,
+    ):
+        super().__init__(tiff_image, encoder, force_transcoding)
+        if self._tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        else:
+            self._pixel_spacing = None
+        self._image_coordinate_system = merged_metadata.image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
+
+    @property
+    def pixel_spacing(self) -> Optional[SizeMm]:
+        return self._pixel_spacing
+
+
 class OpenTileAssociatedImageData(OpenTileImageData):
     def __init__(
         self,

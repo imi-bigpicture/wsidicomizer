@@ -56,6 +56,7 @@ to the Openslide C API and are thus not likely to change that often.
 class OpenSlideAssociatedImageType(Enum):
     LABEL = "label"
     MACRO = "macro"
+    THUMBNAIL = "thumbnail"
 
 
 class OpenSlideImageData(DicomizerImageData):
@@ -191,6 +192,30 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         return self._decoded_image
 
 
+class OpenSlideThumbnailImageData(OpenSlideAssociatedImageData):
+    def __init__(
+        self, open_slide: OpenSlide, image_metadata: ImageMetadata, encoder: Encoder
+    ):
+        """Wraps a OpenSlide thumbnail to ImageData.
+
+        Parameters
+        ----------
+        open_slide: OpenSlide
+            OpenSlide object to wrap.
+
+        encoded: Encoder
+            Encoder to use.
+        """
+        super().__init__(open_slide, OpenSlideAssociatedImageType.THUMBNAIL, encoder)
+        self._image_coordinate_system = image_metadata.image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> ImageCoordinateSystem:
+        if self._image_coordinate_system is None:
+            return super().image_coordinate_system
+        return self._image_coordinate_system
+
+
 class OpenSlideLevelImageData(OpenSlideImageData):
     def __init__(
         self,
@@ -206,6 +231,8 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         ----------
         open_slide: OpenSlide
             OpenSlide object to wrap.
+        image_metadata: ImageMetadata
+            Image metadata for image.
         level_index: int
             Level in OpenSlide object to wrap
         tile_size: int
