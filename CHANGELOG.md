@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Setting of `LossyImageCompression`, `LossyImageCompressionRatio`, and `LossyImageCompressionMethod` when image data requires transcoding.
+- Correct `LossyImageCompressionRatio` for `OpenTileImageData`.
+
 ## [0.16.0] - 2025-01-29
 
 ### Added

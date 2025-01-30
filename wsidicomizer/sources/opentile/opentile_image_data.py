@@ -154,8 +154,15 @@ class OpenTileImageData(DicomizerImageData):
             self.image_size.area * self.samples_per_pixel * self.bits // 8
         )
         compressed_size = self._tiff_image.compressed_size
-        compression_ratio = round(compressed_size / uncompressed_size, 2)
+        compression_ratio = round(uncompressed_size / compressed_size, 2)
         return [(iso, compression_ratio)]
+
+    @property
+    def transcoder(self) -> Optional[Encoder]:
+        """Only return encoder if transcoding is used."""
+        if self._needs_transcoding:
+            return self.encoder
+        return None
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if

@@ -97,23 +97,8 @@ class WsiDicomizer(WsiDicom):
         """
         if not isinstance(filepath, Path):
             filepath = Path(filepath)
-
-        selected_source = None
-        if preferred_source is None:
-            selected_source = next(
-                (source for source in loaded_sources if source.is_supported(filepath)),
-                None,
-            )
-        elif preferred_source.is_supported(filepath):
-            selected_source = preferred_source
-        if selected_source is None:
-            raise NotImplementedError(f"{filepath} is not supported")
-        if encoding is None:
-            encoding = JpegSettings()
-        if isinstance(encoding, EncodingSettings):
-            encoder = Encoder.create_for_settings(encoding)
-        else:
-            encoder = encoding
+        selected_source = cls._select_source(filepath, preferred_source)
+        encoder = cls._select_encoder(encoding)
 
         source = selected_source(
             filepath,
@@ -228,6 +213,38 @@ class WsiDicomizer(WsiDicom):
                 include_overviews=include_overview,
                 add_missing_levels=add_missing_levels,
                 label=label,
+                transcoding=encoding,
             )
 
         return [str(filepath) for filepath in created_files]
+
+    @staticmethod
+    def _select_source(
+        filepath: Path,
+        preferred_source: Optional[Type[DicomizerSource]] = None,
+    ) -> Type[DicomizerSource]:
+        """Return source that supports file in filepath."""
+        selected_source = None
+        if preferred_source is None:
+            selected_source = next(
+                (source for source in loaded_sources if source.is_supported(filepath)),
+                None,
+            )
+        elif preferred_source.is_supported(filepath):
+            selected_source = preferred_source
+        if selected_source is None:
+            raise NotImplementedError(f"{filepath} is not supported")
+        return selected_source
+
+    @staticmethod
+    def _select_encoder(
+        encoding: Optional[Union[Encoder, EncodingSettings]] = None
+    ) -> Encoder:
+        """Return encoder from encoding."""
+        if encoding is None:
+            encoding = JpegSettings()
+        if isinstance(encoding, EncodingSettings):
+            encoder = Encoder.create_for_settings(encoding)
+        else:
+            encoder = encoding
+        return encoder
