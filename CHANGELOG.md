@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2025-01-30
+
+### Added
+
+- Conversion of thumbnail images.
+
 ### Fixed
 
 - Setting of `LossyImageCompression`, `LossyImageCompressionRatio`, and `LossyImageCompressionMethod` when image data requires transcoding.
@@ -294,8 +300,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..HEAD
-[0.16.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.16.0
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..HEAD
+[0.17.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.17.0
+[0.16.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.1..0.16.0
 [0.15.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..0.15.1
 [0.15.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.2..0.15.0
 [0.14.2]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.14.1..0.14.2
