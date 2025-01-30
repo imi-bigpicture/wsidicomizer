@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
 from wsidicom import ImageData
-from wsidicom.codec import LossyCompressionIsoStandard
+from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import PointMm, Size
 from wsidicom.metadata import ImageCoordinateSystem
 
@@ -56,6 +56,11 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     ) -> Optional[List[Tuple[LossyCompressionIsoStandard, float]]]:
         """Return None as image compression is for most format not known."""
         return None
+
+    @property
+    def transcoder(self) -> Optional[Encoder]:
+        """Return encoder as for most format transcoding is used."""
+        return self.encoder
 
     def _encode(self, image_data: np.ndarray) -> bytes:
         """Return image data encoded in jpeg using set quality and subsample
