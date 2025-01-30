@@ -100,7 +100,6 @@ class OpenTileSource(DicomizerSource):
         )
 
     def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
-        print(self._tiler.thumbnails)
         if len(self._tiler.thumbnails) == 0:
             return None
         return OpenTileThumbnailImageData(
