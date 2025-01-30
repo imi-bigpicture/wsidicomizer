@@ -1017,13 +1017,13 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.14.0"
+version = "0.15.0"
 description = "Read tiles from wsi-TIFF files"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "opentile-0.14.0-py3-none-any.whl", hash = "sha256:b205caf2c71d1cc7975f84c07b4919c3f1aa6545970ea311cf35fdaa5e90d6cb"},
-    {file = "opentile-0.14.0.tar.gz", hash = "sha256:fc5f10f7cb5b8e64a2a42c58390781ac55570e2c940c0dc542bcc207a36d4808"},
+    {file = "opentile-0.15.0-py3-none-any.whl", hash = "sha256:419a986f3ce8c1eab0364ccb17329de946bbbba7677d64ae1cadacecf8ea7bed"},
+    {file = "opentile-0.15.0.tar.gz", hash = "sha256:1f98d5c54558b2876d52fc84eb9c368ecbadaf54daa22af4bd4e663f10acdb59"},
 ]
 
 [package.dependencies]
@@ -1729,13 +1729,13 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.23.0"
+version = "0.24.0"
 description = "Tools for handling DICOM based whole scan images"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "wsidicom-0.23.0-py3-none-any.whl", hash = "sha256:e5c3fa9d354f56a653d69a679d4efdbe152dea2d071e71ae24fb38d2d903f66d"},
-    {file = "wsidicom-0.23.0.tar.gz", hash = "sha256:3eb33becb4c82821cb3127e6e92ed933eab8cf0e25c5955ab426febeda5bacd2"},
+    {file = "wsidicom-0.24.0-py3-none-any.whl", hash = "sha256:6a0096cc502997f276aa2da0188ee5dadd4731244622fd1a0b87f91bf27bf548"},
+    {file = "wsidicom-0.24.0.tar.gz", hash = "sha256:4e09cd5fca7d7bba079ee81462424715674b127cfd3bdacfe04290f44df8bc64"},
 ]
 
 [package.dependencies]
@@ -1803,4 +1803,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "785b3a19fed13992780966d3270bba6e00928156dd2584bca085985201d34868"
+content-hash = "efe877febf847a15b3a1c14db1eec5dffb97d68d319115e96de9099dad8a8f97"
