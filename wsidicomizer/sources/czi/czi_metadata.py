@@ -167,7 +167,7 @@ class CziMetadata(WsiDicomizerMetadata):
             start_z = start * z_scale
             end_z = (start + increment * size_z) * z_scale
             step_z = increment * z_scale
-            return list(np.arange(start_z, end_z, step_z))
+            return list(np.arange(start_z, end_z, step_z))  # type: ignore
         except ValueError:
             return [0.0]
 

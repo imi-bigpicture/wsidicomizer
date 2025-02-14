@@ -18,9 +18,9 @@ files."""
 from abc import ABCMeta, abstractmethod
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
-from pydicom import config
+from pydicom import Dataset, config
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
@@ -31,7 +31,7 @@ from wsidicom.source import Source
 
 from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -53,6 +53,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
     ) -> None:
         self._filepath = filepath
         self._encoder = encoder
@@ -60,6 +61,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._user_metadata = metadata
         self._default_metadata = default_metadata
         self._include_confidential = include_confidential
+        self._metadata_post_processor = metadata_post_processor
 
     @staticmethod
     @abstractmethod
@@ -181,6 +183,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
             metadata
         )
+        if isinstance(self._metadata_post_processor, Dataset):
+            dataset.update(self._metadata_post_processor)
+        elif callable(self._metadata_post_processor):
+            dataset = self._metadata_post_processor(dataset, metadata)
         return WsiDataset(dataset)
 
     @staticmethod
