@@ -507,7 +507,6 @@ class TestWsiDicomizerConvert:
         given_patient_age = "042Y"
         dataset = Dataset()
         dataset.PatientAge = given_patient_age
-        print(dataset)
 
         # Act
         with WsiDicomizer.open(wsi_file, metadata_post_processor=dataset) as wsi:
