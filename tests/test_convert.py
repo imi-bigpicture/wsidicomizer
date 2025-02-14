@@ -484,7 +484,9 @@ class TestWsiDicomizerConvert:
         # Arrange
 
         # Act
-        has_thumbnail_instances = wsi.pyramid.thumbnails is not None
+        has_thumbnail_instances = (
+            wsi.pyramid.thumbnails is not None and len(wsi.pyramid.thumbnails) > 0
+        )
 
         # Assert
         assert has_thumbnail_instances == expected_thumbnail
