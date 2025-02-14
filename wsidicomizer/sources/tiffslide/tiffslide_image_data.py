@@ -192,7 +192,7 @@ class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
         encoded: Encoder
             Encoder to use.
         """
-        super().__init__(tiff_slide, TiffSlideAssociatedImageData.THUMBNAIL, encoder)
+        super().__init__(tiff_slide, TiffSlideAssociatedImageType.THUMBNAIL, encoder)
         self._image_coordinate_system = image_metadata.image_coordinate_system
 
     @property
