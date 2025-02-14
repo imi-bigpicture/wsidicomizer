@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image
+from pydicom import Dataset
 from pydicom.uid import UID, generate_uid
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
@@ -30,6 +31,7 @@ from wsidicom.file import OffsetTableType
 from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
 
 # List of supported Dicomizers in prioritization order.
@@ -65,6 +67,7 @@ class WsiDicomizer(WsiDicom):
         default_metadata: Optional[WsiMetadata] = None,
         tile_size: Optional[int] = 512,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
         preferred_source: Optional[Type[DicomizerSource]] = None,
         **source_args,
@@ -83,6 +86,8 @@ class WsiDicomizer(WsiDicom):
             Tile size to use if not defined by file.
         include_confidential: bool = True
             Include confidential metadata.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
         preferred_source: Optional[Type[DicomizerSource]] = None
@@ -107,6 +112,7 @@ class WsiDicomizer(WsiDicom):
             metadata,
             default_metadata,
             include_confidential,
+            metadata_post_processor,
             **source_args,
         )
         return cls(source, True)
@@ -125,6 +131,7 @@ class WsiDicomizer(WsiDicom):
         include_label: bool = True,
         include_overview: bool = True,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         label: Optional[Union[Image, str, Path]] = None,
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
@@ -164,6 +171,8 @@ class WsiDicomizer(WsiDicom):
             Include confidential metadata.
         label: Optional[Union[Image, str, Path]] = None,
             Optional label image to use instead of label found in file.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
         workers: Optional[int] = None,
             Maximum number of thread workers to use.
         chunk_size: Optional[int] = None,
@@ -190,6 +199,7 @@ class WsiDicomizer(WsiDicom):
             default_metadata,
             tile_size,
             include_confidential,
+            metadata_post_processor,
             encoding,
             preferred_source,
             **source_args,

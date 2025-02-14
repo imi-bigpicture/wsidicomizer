@@ -15,8 +15,9 @@
 """Source for reading libisyntax compatible file."""
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
+from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.metadata import WsiMetadata
 
@@ -28,7 +29,7 @@ from wsidicomizer.extras.isyntax.isyntax_image_data import (
 )
 from wsidicomizer.extras.isyntax.isyntax_metadata import ISyntaxMetadata
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 
 
 class ISyntaxSource(DicomizerSource):
@@ -40,6 +41,7 @@ class ISyntaxSource(DicomizerSource):
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         force_transcoding: bool = False,
         cache: int = 2048,
     ) -> None:
@@ -50,7 +52,22 @@ class ISyntaxSource(DicomizerSource):
         filepath: Path
             Path to the file.
         encoder: Encoder
-            Encoder to use. Pyramid is always re-encoded using the encoder."""
+            Encoder to use. Pyramid is always re-encoded using the encoder.
+        tile_size: Optional[int] = None,
+            Tile size to use. If None, the default tile size is used.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
+        include_confidential: bool = True
+            Include confidential metadata.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
+        force_transcoding: bool = False
+            If to force transcoding of label and overview images.
+        cache: int = 2048
+            Cache size to use for ISyntax.
+        """
         self._slide = ISyntax.open(filepath, cache)
         self._force_transcoding = force_transcoding
         self._base_metadata = ISyntaxMetadata(self._slide)
@@ -61,6 +78,7 @@ class ISyntaxSource(DicomizerSource):
             metadata,
             default_metadata,
             include_confidential,
+            metadata_post_processor,
         )
 
     @staticmethod

@@ -15,8 +15,9 @@
 """Source using bioformats."""
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
+from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -24,7 +25,7 @@ from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 
 
 class BioformatsSource(DicomizerSource):
@@ -36,9 +37,33 @@ class BioformatsSource(DicomizerSource):
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         readers: Optional[int] = None,
         cache_path: Optional[str] = None,
     ) -> None:
+        """Create a new BioformatsSource.
+
+        Parameters
+        ----------
+        filepath: Path
+            Path to the file.
+        encoder: Encoder
+            Encoder to use. Pyramid is always re-encoded using the encoder.
+        tile_size: Optional[int] = None,
+            Tile size to use. If None, the default tile size is used.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
+        include_confidential: bool = True
+            Include confidential metadata.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
+        readers: Optional[int] = None
+            Number of readers to use.
+        cache_path: Optional[str] = None
+            Path to cache directory.
+        """
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
         self._reader = BioformatsReader(Path(filepath), readers, cache_path)
@@ -54,6 +79,7 @@ class BioformatsSource(DicomizerSource):
             metadata,
             default_metadata,
             include_confidential,
+            metadata_post_processor,
         )
 
     @staticmethod

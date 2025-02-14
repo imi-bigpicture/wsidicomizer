@@ -55,6 +55,25 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         include_confidential: bool = True,
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
     ) -> None:
+        """Create a new DicomizerSource.
+
+        Parameters
+        ----------
+        filepath: Path
+            Path to the file.
+        encoder: Encoder
+            Encoder to use. Pyramid is always re-encoded using the encoder.
+        tile_size: Optional[int]
+            Tile size to use. If None, the default tile size is used.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
+        include_confidential: bool = True
+            Include confidential metadata.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
+        """
         self._filepath = filepath
         self._encoder = encoder
         self._tile_size = tile_size

@@ -14,9 +14,10 @@
 
 """Base model for metadata."""
 from dataclasses import Field, fields, is_dataclass, replace
-from typing import Any, Optional, Sequence, Type, TypeVar
+from typing import Any, Callable, Optional, Sequence, Type, TypeVar
 
 from PIL import ImageCms
+from pydicom import Dataset
 from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
@@ -243,3 +244,6 @@ class WsiDicomizerMetadata(WsiMetadata):
     @staticmethod
     def _create_default_icc_profile() -> bytes:
         return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+
+
+MetadataPostProcessor = Callable[[Dataset, WsiMetadata], Dataset]
