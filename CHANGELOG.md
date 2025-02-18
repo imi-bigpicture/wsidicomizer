@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2025-02-18
+
+### Added
+
+- `metadata_post_processor` parameter to  `open()` and `convert()` methods of `WsiDicomizer` to enable additional metadata processing.
+
+### Changed
+
+- Default bioformats version from bsd-6.12.0 to bsd-9.0.1.
+
+### Fixed
+
+- Typo in `__init__()` of `TiffSlideThumbnailImageData`.
+
 ## [0.17.0] - 2025-01-30
 
 ### Added
@@ -300,7 +314,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.18.0..HEAD
+[0.18.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..0.19.0
 [0.17.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.17.0
 [0.16.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.1..0.16.0
 [0.15.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..0.15.1
