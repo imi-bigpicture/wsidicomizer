@@ -378,7 +378,7 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         if self._detect_blank_tile(region_data):
             return None
 
-        convert_argb_to_rgba(region_data.view(ctypes.c_uint32))
+        convert_argb_to_rgba(region_data.view(ctypes.c_uint32))  # type: ignore
 
         image = Pillow.fromarray(region_data)
         no_alpha = Pillow.new("RGB", image.size, self.blank_color)

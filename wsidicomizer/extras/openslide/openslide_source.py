@@ -16,8 +16,9 @@
 
 import math
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
+from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -31,6 +32,7 @@ from wsidicomizer.extras.openslide.openslide_image_data import (
 )
 from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
 from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.metadata import MetadataPostProcessor
 
 
 class OpenSlideSource(DicomizerSource):
@@ -42,7 +44,27 @@ class OpenSlideSource(DicomizerSource):
         metadata: Optional[WsiMetadata] = None,
         default_metadata: Optional[WsiMetadata] = None,
         include_confidential: bool = True,
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
     ) -> None:
+        """Create a new OpenSlideSource.
+
+        Parameters
+        ----------
+        filepath: Path
+            Path to the file.
+        encoder: Encoder
+            Encoder to use. Pyramid is always re-encoded using the encoder.
+        tile_size: Optional[int] = None,
+            Tile size to use. If None, the default tile size is used.
+        metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will overload metadata from source image file.
+        default_metadata: Optional[WsiMetadata] = None
+            User-specified metadata that will be used as default values.
+        include_confidential: bool = True
+            Include confidential metadata.
+        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
+            Optional metadata post processing by update from dataset or callback.
+        """
         self._slide = OpenSlide(filepath)
 
         self._pyramid_levels = self._get_pyramid_levels(self._slide)
@@ -54,6 +76,7 @@ class OpenSlideSource(DicomizerSource):
             metadata,
             default_metadata,
             include_confidential,
+            metadata_post_processor,
         )
 
     def close(self) -> None:

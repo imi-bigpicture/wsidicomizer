@@ -24,11 +24,13 @@ import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from PIL import Image, ImageChops, ImageStat
+from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_X,
@@ -484,7 +486,55 @@ class TestWsiDicomizerConvert:
         # Arrange
 
         # Act
-        has_thumbnail_instances = len(wsi.pyramid.thumbnails) > 0
+        has_thumbnail_instances = (
+            wsi.pyramid.thumbnails is not None and len(wsi.pyramid.thumbnails) > 0
+        )
 
         # Assert
         assert has_thumbnail_instances == expected_thumbnail
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file in format_files.keys()
+        ],
+        scope="module",
+    )
+    def test_metadata_post_processor_with_dataset(self, wsi_file: Path):
+        # Arrange
+        given_patient_age = "042Y"
+        dataset = Dataset()
+        dataset.PatientAge = given_patient_age
+
+        # Act
+        with WsiDicomizer.open(wsi_file, metadata_post_processor=dataset) as wsi:
+            patient_age = wsi.pyramid.datasets[0].PatientAge
+
+        # Assert
+        assert patient_age == given_patient_age
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (file_format, file)
+            for file_format, format_files in test_parameters.items()
+            for file in format_files.keys()
+        ],
+        scope="module",
+    )
+    def test_metadata_post_processor_with_callback(self, wsi_file: Path):
+        # Arrange
+        given_patient_age = "042Y"
+
+        def callback(dataset: Dataset, metadata: WsiMetadata) -> Dataset:
+            dataset.PatientAge = given_patient_age
+            return dataset
+
+        # Act
+        with WsiDicomizer.open(wsi_file, metadata_post_processor=callback) as wsi:
+            patient_age = wsi.pyramid.datasets[0].PatientAge
+
+        # Assert
+        assert patient_age == given_patient_age

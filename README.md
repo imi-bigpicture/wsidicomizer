@@ -26,7 +26,7 @@ With the `openslide` extra the following formats are also supported:
 - Ventana bif, tif (lossy)
 - Hamamatsu vms, vmu (lossy)
 
-The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/6.12.0/supported-formats.html).
+The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/8.0.1/supported-formats.html).
 
 The `isyntax` extra enables lossy single-thread support for isynax files.
 
@@ -202,6 +202,82 @@ region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
 
+## Metadata handling
+
+The `open()` and `convert()` methods of `WsiDicomizer` takes three parameters that are important for inserting additional metadata into the DICOM dataset of the converted image:
+
+- `metadata`
+- `default_metadata`
+- `metadata_post_processor`
+
+### Metadata merging
+
+When creating the DICOM dataset, the metadata provided in the `metadata` and `default_metadata` parameters are merged with metadata that is parsed from the source image file, with the following descending preference:
+
+1. Metadata from the `metadata` parameter
+2. Metadata from the source image
+3. Metadata from the `default_metadata` parameter
+
+For example:
+
+- `equipment` in the `metadata`-parameter metadata will override the `equipment` metadata from the source image (if present).
+- `optical_paths` in the `default_metadata`-parameter metadata will be overriden by any `optical_paths` present in the `metadata` parameter metadata or source image metadata.
+
+Note that merging is also performed on nested metadata, e.g. `focus_method` in an `Image` can be merged from the different sources.
+
+### Metadata post processing
+
+After the metadata merge a pydicom `Dataset` is created from the result. Additional post processing can be performed using the `metadata_post_processor` parameter. This can be another `Dataset`, in which case the merged dataset is updated with (i.e. overwritten by) the provided dataset:
+
+```python
+from pydicom import Dataset
+
+dataset = Dataset()
+dataset.PatientAge = "042Y"
+
+WsiDicomizer.convert(
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata_post_processor=dataset
+)
+```
+
+For more complex processing a callback function that takes the merged `Dataset` and `WsiMetadata` as parameters and returns an updated `Dataset` can be used:
+
+```python
+from pydicom import Dataset
+from wsidicom.metadata import WsiMetadata
+
+def metadata_post_processor(dataset: Dataset, metadata: WsiMetadata) -> Dataset:
+    dataset.PatientAge = "042Y"
+    return dataset
+
+WsiDicomizer.convert(
+    filepath=path_to_wsi_file,
+    output_path=path_to_output_folder,
+    metadata_post_processor=metadata_post_processor
+)
+```
+
+### JSON metadata
+
+WsiDicom provides methods for serializing and deserialising metadata to and from JSON. This is useful for example for providing metadata when performing conversion using the cli. As there is not yet any documentation on the JSON schema, the simplest way to produce metadata in the JSON-format is to first construct it in Python and then calling the provided serializer:
+
+```python
+import json
+from wsidicom.metadata.schema.json import WsiMetadataJsonSchema
+metadata = WsiDicomizerMetadata(
+    study=study,
+    series=series,
+    patient=patient,
+    equipment=equipment,
+    slide=slide,
+    label=label,
+)
+with open('metadata.json', 'w') as f:
+    json.dump(WsiMetadataJsonSchema().dump(metadata), f, indent=4)
+```
+
 ## Openslide support
 
 ### Installation
@@ -212,8 +288,13 @@ Support for reading images using Openslide c library can optionally be enabled b
 pip install wsidicomizer[openslide]
 ```
 
-The OpenSlide extra requires the OpenSlide library to be installed separately. Instructions for how to install OpenSlide is available on <https://openslide.org/download/>
-For Windows, you need also need add OpenSlide's bin-folder to the environment variable 'Path'
+The OpenSlide extra requires the OpenSlide library to be installed separately. This can be done through pip:
+
+```sh
+pip install openslide-bin
+```
+
+Alternative instructions for how to install OpenSlide is available on <https://openslide.org/download/>
 
 ## Bioformats support
 
@@ -240,7 +321,7 @@ Due to the need to start a JVM, the `bioformats` module is not imported when usi
 
 ### Bioformats version
 
-The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v6.12.0/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:6.12.0`.
+The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v8.0.1/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:8.0.1`.
 
 ## Limitations
 
