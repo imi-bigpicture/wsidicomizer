@@ -36,7 +36,7 @@ Set version of bioformats jar to use with the environmental variable
 "BIOFORMATS_VERSION". Note the bioformats jar either has a BSD or GPL-2
 license.
 """
-bioformats_version = os.getenv("BIOFORMATS_VERSION", "bsd:6.12.0")
+bioformats_version = os.getenv("BIOFORMATS_VERSION", "bsd:8.0.1")
 scyjava.config.endpoints.append(f"ome:formats-{bioformats_version}")
 
 if not scyjava.jvm_started():
