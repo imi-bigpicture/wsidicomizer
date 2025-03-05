@@ -23,5 +23,7 @@ from wsidicomizer.metadata import WsiDicomizerMetadata
 class ISyntaxMetadata(WsiDicomizerMetadata):
     def __init__(self, slide: ISyntax):
         if slide.barcode != "":
-            label = Label(slide.barcode)
+            label = Label(barcode=slide.barcode)
+        else:
+            label = None
         super().__init__(label=label)

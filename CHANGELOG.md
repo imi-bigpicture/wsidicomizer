@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Barcode from iSyntax source used as `BarcodeValue` instead of `LabelText`.
+
+### Fixed
+
+- Non-assigned variable error when no barcode from iSyntax source.
+
 ## [0.18.0] - 2025-02-18
 
 ### Added
