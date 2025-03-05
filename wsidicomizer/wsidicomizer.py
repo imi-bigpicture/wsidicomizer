@@ -248,7 +248,7 @@ class WsiDicomizer(WsiDicom):
 
     @staticmethod
     def _select_encoder(
-        encoding: Optional[Union[Encoder, EncodingSettings]] = None
+        encoding: Optional[Union[Encoder, EncodingSettings]] = None,
     ) -> Encoder:
         """Return encoder from encoding."""
         if encoding is None:
