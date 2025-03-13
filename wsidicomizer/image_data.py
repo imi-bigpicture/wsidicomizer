@@ -16,15 +16,15 @@
 files."""
 
 from abc import ABCMeta, abstractmethod
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
 from wsidicom import ImageData
-from wsidicom.codec import Encoder, LossyCompressionIsoStandard
+from wsidicom.codec import Encoder
 from wsidicom.geometry import PointMm, Size
-from wsidicom.metadata import ImageCoordinateSystem
+from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 
 class DicomizerImageData(ImageData, metaclass=ABCMeta):
@@ -53,7 +53,7 @@ class DicomizerImageData(ImageData, metaclass=ABCMeta):
     @property
     def lossy_compression(
         self,
-    ) -> Optional[List[Tuple[LossyCompressionIsoStandard, float]]]:
+    ) -> Optional[List[LossyCompression]]:
         """Return None as image compression is for most format not known."""
         return None
 

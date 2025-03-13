@@ -14,7 +14,7 @@
 
 """Image data for opentile compatible file."""
 
-from typing import Iterable, Iterator, List, Optional, Tuple
+from typing import Iterable, Iterator, List, Optional
 
 from opentile.tiff_image import TiffImage
 from PIL import Image as Pillow
@@ -24,7 +24,7 @@ from tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import ImageCoordinateSystem
+from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 from wsidicomizer.image_data import DicomizerImageData
 
@@ -145,7 +145,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def lossy_compression(
         self,
-    ) -> Optional[List[Tuple[LossyCompressionIsoStandard, float]]]:
+    ) -> Optional[List[LossyCompression]]:
         """Return lossy compression method and compression ratio if lossy compressed."""
         iso = LossyCompressionIsoStandard.transfer_syntax_to_iso(self.transfer_syntax)
         if iso is None:
@@ -155,7 +155,7 @@ class OpenTileImageData(DicomizerImageData):
         )
         compressed_size = self._tiff_image.compressed_size
         compression_ratio = round(uncompressed_size / compressed_size, 2)
-        return [(iso, compression_ratio)]
+        return [LossyCompression(iso, compression_ratio)]
 
     @property
     def transcoder(self) -> Optional[Encoder]:
