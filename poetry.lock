@@ -377,13 +377,14 @@ toml = ["tomli"]
 
 [[package]]
 name = "czifile"
-version = "2019.7.2"
-description = "Read Carl Zeiss(r) Image (CZI) files"
+version = "2019.7.2.1"
+description = "Read Carl Zeiss Image (CZI) files"
 optional = false
 python-versions = ">=2.7"
 files = [
-    {file = "czifile-2019.7.2-py2.py3-none-any.whl", hash = "sha256:561ba0312e5b9c95db784768d7c81803f62bc323eab42bd5812586ce6dc58db8"},
-    {file = "czifile-2019.7.2.tar.gz", hash = "sha256:04c0e6bed3b24d1bf42bc2cf899a5a08986641379305ce88600fd1c710486436"},
+    {file = "czifile-2019.7.2.1-py2-none-any.whl", hash = "sha256:f75a3787896befcb0fd415c8cb9acea1f64007b05e264a6581c99b767758198c"},
+    {file = "czifile-2019.7.2.1-py3-none-any.whl", hash = "sha256:41906b5bcce27d089c1c54f366f4f52e93b262d7d8d157622418f096a23b89a1"},
+    {file = "czifile-2019.7.2.1.tar.gz", hash = "sha256:6169aa681dd8af0d25e8e731e83393140cb960097d2a641dd145e8349bd2e965"},
 ]
 
 [package.dependencies]
@@ -1029,13 +1030,13 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.15.0"
+version = "0.15.1"
 description = "Read tiles from wsi-TIFF files"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "opentile-0.15.0-py3-none-any.whl", hash = "sha256:419a986f3ce8c1eab0364ccb17329de946bbbba7677d64ae1cadacecf8ea7bed"},
-    {file = "opentile-0.15.0.tar.gz", hash = "sha256:1f98d5c54558b2876d52fc84eb9c368ecbadaf54daa22af4bd4e663f10acdb59"},
+    {file = "opentile-0.15.1-py3-none-any.whl", hash = "sha256:5778591c2c628763dcba94d44c17e5a210f143bfa646a46cdb5f2c3299691b2c"},
+    {file = "opentile-0.15.1.tar.gz", hash = "sha256:cb793a095ccd809a82bc9396f91f34f797db0323d0d767cd6f9ff12169412162"},
 ]
 
 [package.dependencies]
@@ -1446,13 +1447,13 @@ dev = ["conda-lock", "pytest", "pytest-mock", "ruff (==0.2.1)", "tox (>=4.0)", "
 
 [[package]]
 name = "pytest"
-version = "8.3.4"
+version = "8.3.5"
 description = "pytest: simple powerful testing with Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest-8.3.4-py3-none-any.whl", hash = "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6"},
-    {file = "pytest-8.3.4.tar.gz", hash = "sha256:965370d062bce11e73868e0335abac31b4d3de0e82f4007408d242b4f8610761"},
+    {file = "pytest-8.3.5-py3-none-any.whl", hash = "sha256:c69214aa47deac29fad6c2a4f590b9c4a9fdb16a403176fe154b79c0b4d4d820"},
+    {file = "pytest-8.3.5.tar.gz", hash = "sha256:f4efe70cc14e511565ac476b57c279e12a855b11f48f212af1080ef2263d3845"},
 ]
 
 [package.dependencies]
@@ -1561,13 +1562,13 @@ files = [
 
 [[package]]
 name = "tifffile"
-version = "2025.1.10"
+version = "2025.2.18"
 description = "Read and write TIFF files"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "tifffile-2025.1.10-py3-none-any.whl", hash = "sha256:ed24cf4c99fb13b4f5fb29f8a0d5605e60558c950bccbdca2a6470732a27cfb3"},
-    {file = "tifffile-2025.1.10.tar.gz", hash = "sha256:baaf0a3b87bf7ec375fa1537503353f70497eabe1bdde590f2e41cc0346e612f"},
+    {file = "tifffile-2025.2.18-py3-none-any.whl", hash = "sha256:54b36c4d5e5b8d8920134413edfe5a7cfb1c7617bb50cddf7e2772edb7149043"},
+    {file = "tifffile-2025.2.18.tar.gz", hash = "sha256:8d731789e691b468746c1615d989bc550ac93cf753e9210865222e90a5a95d11"},
 ]
 
 [package.dependencies]
@@ -1583,22 +1584,22 @@ zarr = ["fsspec", "zarr (<3)"]
 
 [[package]]
 name = "tiffslide"
-version = "2.4.0"
+version = "2.5.0"
 description = "tifffile-based drop-in replacement for openslide-python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "tiffslide-2.4.0-py3-none-any.whl", hash = "sha256:f12964dd6356abc970efda6697fd4791147139dac9efc11ea008eec6883db35c"},
-    {file = "tiffslide-2.4.0.tar.gz", hash = "sha256:630bc36215e950dd9df279ded147cf129570f2040c7e3363cdf6845414da9672"},
+    {file = "tiffslide-2.5.0-py3-none-any.whl", hash = "sha256:2f78a19fa1ab3cfad198b847842807bd52478802ec827b64c6dcafc8eb7851a5"},
+    {file = "tiffslide-2.5.0.tar.gz", hash = "sha256:4977651babb37c1732674e2ff59f1019d929dc698c4f975f21fab3f3ac109a95"},
 ]
 
 [package.dependencies]
-fsspec = "<2022.11.0 || >2022.11.0,<2023.1.0 || >2023.1.0"
+fsspec = ">=2023.3.0"
 imagecodecs = "*"
-pillow = "*"
-tifffile = ">=2021.6.14"
-typing-extensions = ">=4.0"
-zarr = ">=2.11.0"
+pillow = ">=9.1.0"
+tifffile = ">=2023.7.4"
+typing_extensions = ">=4.0"
+zarr = ">=2.16.0,<3.0"
 
 [package.extras]
 dev = ["black", "mypy", "pre-commit", "pytest (>=6)", "pytest-benchmark", "pytest-cov"]
@@ -1734,13 +1735,13 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.24.0"
+version = "0.25.0"
 description = "Tools for handling DICOM based whole scan images"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "wsidicom-0.24.0-py3-none-any.whl", hash = "sha256:6a0096cc502997f276aa2da0188ee5dadd4731244622fd1a0b87f91bf27bf548"},
-    {file = "wsidicom-0.24.0.tar.gz", hash = "sha256:4e09cd5fca7d7bba079ee81462424715674b127cfd3bdacfe04290f44df8bc64"},
+    {file = "wsidicom-0.25.0-py3-none-any.whl", hash = "sha256:c0347b33c8d0c787497106cf83a063fe2d6102e1689bb02fdc07fc22a7e0222b"},
+    {file = "wsidicom-0.25.0.tar.gz", hash = "sha256:30225901a0dce55c6fbd6ffa02cf50c978bddc467c0bab0a5299cdef0c9c9fde"},
 ]
 
 [package.dependencies]
@@ -1808,4 +1809,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "53f37af96b775cd3a09c72d4d4f1cb58a7e6c48ff1f9f106833bad836d3724f5"
+content-hash = "707ef65a3023346235f5cb3234f2bf134e49ed7e60a4c8bf13454434f1bba48c"

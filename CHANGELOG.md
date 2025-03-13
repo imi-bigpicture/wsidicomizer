@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2025-03-13
+
 ### Changed
 
 - Barcode from iSyntax source used as `BarcodeValue` instead of `LabelText`.
@@ -14,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Non-assigned variable error when no barcode from iSyntax source.
+- Pixel spacing parsing for some tiff formats.
 
 ## [0.18.0] - 2025-02-18
 
@@ -322,8 +325,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.18.0..HEAD
-[0.18.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..0.19.0
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.19.0..HEAD
+[0.19.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.18.0..0.19.0
+[0.18.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..0.18.0
 [0.17.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.17.0
 [0.16.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.1..0.16.0
 [0.15.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.15.0..0.15.1
