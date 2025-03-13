@@ -14,6 +14,8 @@
 
 """Metadata for isyntax file."""
 
+import logging
+
 from wsidicom.metadata import Label
 
 from isyntax import ISyntax
@@ -22,8 +24,12 @@ from wsidicomizer.metadata import WsiDicomizerMetadata
 
 class ISyntaxMetadata(WsiDicomizerMetadata):
     def __init__(self, slide: ISyntax):
-        if slide.barcode != "":
-            label = Label(barcode=slide.barcode)
-        else:
+        try:
+            if slide.barcode != "":
+                label = Label(barcode=slide.barcode)
+            else:
+                label = None
+        except UnicodeDecodeError:
+            logging.warning("Failed to decode barcode", exc_info=True)
             label = None
         super().__init__(label=label)
