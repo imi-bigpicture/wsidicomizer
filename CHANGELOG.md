@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.19.1] - 2025-03-29
+## [0.20.0] - 2025-03-29
+
+### Added
+
+- Paramter `include_thumbnail` to `save()`.
 
 ### Fixed
 
@@ -331,8 +335,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.19.1..HEAD
-[0.19.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.19.0..0.19.1
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.20.0..HEAD
+[0.20.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.19.0..0.20.0
 [0.19.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.18.0..0.19.0
 [0.18.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..0.18.0
 [0.17.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.16.0..0.17.0
