@@ -83,13 +83,9 @@ class CziImageData(DicomizerImageData):
         self._block_locks: Dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
-            raise ValueError("Could not determine pixel spacing for czi image.")
+            raise ValueError("Could not determine pixel spacing for czi level image.")
         self._pixel_spacing = self._merged_metadata.pixel_spacing
         self._image_coordinate_system = merged_metadata.image_coordinate_system
-
-    @property
-    def pyramid_index(self) -> int:
-        return 0
 
     @property
     def transfer_syntax(self) -> UID:

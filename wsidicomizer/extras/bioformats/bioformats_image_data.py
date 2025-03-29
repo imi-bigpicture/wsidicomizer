@@ -52,11 +52,6 @@ class BioformatsImageData(DicomizerImageData):
         return self._image_region
 
     @property
-    def pyramid_index(self) -> int:
-        """Return pyramid level for image data."""
-        return 0
-
-    @property
     def files(self) -> List[Path]:
         return [Path(self._image_reader.filepath)]
 

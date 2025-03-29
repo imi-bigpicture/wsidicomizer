@@ -17,7 +17,7 @@ import platform
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 import numpy as np
 import pytest
@@ -538,3 +538,56 @@ class TestWsiDicomizerConvert:
 
         # Assert
         assert patient_age == given_patient_age
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_pixel_spacings"],
+        [
+            (
+                file_format,
+                file,
+                [
+                    SizeMm.from_tuple(spacing)
+                    for spacing in file_parameters["pixel_spacings"]
+                ],
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_pixel_spacings(
+        self, wsi: WsiDicom, expected_pixel_spacings: Iterable[SizeMm]
+    ):
+        # Arrange
+
+        # Act
+        pixel_spacings = [level.pixel_spacing for level in wsi.pyramids[0].levels]
+
+        # Assert
+        assert expected_pixel_spacings == pixel_spacings
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_thumbnail_pixel_spacing"],
+        [
+            (
+                file_format,
+                file,
+                SizeMm.from_tuple(file_parameters["thumbnail_pixel_spacing"]),
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+            if file_parameters["thumbnail_pixel_spacing"] is not None
+        ],
+        scope="module",
+    )
+    def test_thumbnail_pixel_spacing(
+        self, wsi: WsiDicom, expected_thumbnail_pixel_spacing: SizeMm
+    ):
+        # Arrange
+        assert wsi.pyramids[0].thumbnails is not None
+
+        # Act
+        pixel_spacing = wsi.pyramids[0].thumbnails[0].pixel_spacing
+
+        # Assert
+        assert expected_thumbnail_pixel_spacing == pixel_spacing

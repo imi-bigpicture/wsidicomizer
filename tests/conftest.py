@@ -72,6 +72,12 @@ test_parameters = {
                 }
             ],
             "embedded_thumbnail": True,
+            "pixel_spacings": [
+                (0.000499, 0.000499),
+                (0.001996, 0.001996),
+                (0.007984, 0.007984),
+            ],
+            "thumbnail_pixel_spacing": (0.022416015625, 0.022416015625),
         },
         "svs1/input.svs": {
             "convert": True,
@@ -116,6 +122,12 @@ test_parameters = {
                 }
             ],
             "embedded_thumbnail": True,
+            "pixel_spacings": [
+                (0.0004944, 0.0004944),
+                (0.00197772410677, 0.00197772410677),
+                (0.00791288275862, 0.00791288275862),
+            ],
+            "thumbnail_pixel_spacing": (0.0230818171875, 0.0230818171875),
         },
     },
     "czi": {
@@ -145,6 +157,8 @@ test_parameters = {
             "read_region_openslide": [],
             "read_thumbnail": [],
             "embedded_thumbnail": False,
+            "pixel_spacings": [(0.00021999999999999998, 0.00021999999999999998)],
+            "thumbnail_pixel_spacing": None,
         }
     },
     "mirax": {
@@ -188,6 +202,8 @@ test_parameters = {
             "read_thumbnail": [],
             "skip_hash_test_platforms": ["Darwin"],
             "embedded_thumbnail": True,
+            "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
+            "thumbnail_pixel_spacing": (0.02974039812646, 0.02974039812646),
         }
     },
     "ndpi": {
@@ -239,6 +255,11 @@ test_parameters = {
                 }
             ],
             "embedded_thumbnail": False,
+            "pixel_spacings": [
+                (0.00730460189920, 0.00728332119446),
+                (0.02923976608187, 0.02915451895044),
+            ],
+            "thumbnail_pixel_spacing": None,
         },
         "ndpi1/input.ndpi": {
             "convert": True,
@@ -283,6 +304,11 @@ test_parameters = {
                 }
             ],
             "embedded_thumbnail": False,
+            "pixel_spacings": [
+                (0.00361663652803, 0.00361663652803),
+                (0.01447178002894, 0.01447178002894),
+            ],
+            "thumbnail_pixel_spacing": None,
         },
         # "ndpi2/input.ndpi": {
         #     "convert": True,
@@ -408,6 +434,8 @@ test_parameters = {
                 }
             ],
             "embedded_thumbnail": False,
+            "pixel_spacings": [(0.004, 0.004), (0.008, 0.008), (0.016, 0.016)],
+            "thumbnail_pixel_spacing": None,
         }
     },
     "isyntax": {
@@ -443,6 +471,8 @@ test_parameters = {
             "read_region_openslide": [],
             "skip_hash_test_platforms": ["Darwin"],
             "embedded_thumbnail": False,
+            "pixel_spacings": [(0.00025, 0.00025)],
+            "thumbnail_pixel_spacing": None,
         }
     },
 }

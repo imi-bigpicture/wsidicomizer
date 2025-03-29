@@ -14,7 +14,6 @@
 
 """Image data for tiffslide compatible file."""
 
-import math
 import re
 from enum import Enum
 from typing import List, Optional, Tuple, Union
@@ -161,11 +160,6 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
         """Size of the pixels in mm/pixel."""
         return None
 
-    @property
-    def pyramid_index(self) -> int:
-        """The pyramidal index in relation to the base layer."""
-        return 0
-
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
@@ -194,12 +188,29 @@ class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
         """
         super().__init__(tiff_slide, TiffSlideAssociatedImageType.THUMBNAIL, encoder)
         self._image_coordinate_system = image_metadata.image_coordinate_system
+        downsample = (
+            SizeMm.from_tuple(self._slide.level_dimensions[0]).width
+            / self._image_size.width
+        )
+        if image_metadata.pixel_spacing is None:
+            raise ValueError(
+                "Could not determine pixel spacing for tiffslide thumbnail image."
+            )
+        self._pixel_spacing = SizeMm(
+            image_metadata.pixel_spacing.width * downsample,
+            image_metadata.pixel_spacing.height * downsample,
+        )
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
         if self._image_coordinate_system is None:
             return super().image_coordinate_system
         return self._image_coordinate_system
+
+    @property
+    def pixel_spacing(self) -> SizeMm:
+        """Size of the pixels in mm/pixel."""
+        return self._pixel_spacing
 
 
 class TiffSlideLevelImageData(TiffSlideImageData):
@@ -236,9 +247,10 @@ class TiffSlideLevelImageData(TiffSlideImageData):
             self._slide.level_dimensions[self._level_index]
         )
         self._downsample = self._slide.level_downsamples[self._level_index]
-        self._pyramid_index = int(round(math.log2(self.downsample)))
         if image_metadata.pixel_spacing is None:
-            raise ValueError("Could not determine pixel spacing for tiffslide image.")
+            raise ValueError(
+                "Could not determine pixel spacing for tiffslide level image."
+            )
         self._pixel_spacing = SizeMm(
             image_metadata.pixel_spacing.width * self.downsample,
             image_metadata.pixel_spacing.height * self.downsample,
@@ -286,11 +298,6 @@ class TiffSlideLevelImageData(TiffSlideImageData):
     def downsample(self) -> float:
         """Downsample facator for level."""
         return self._downsample
-
-    @property
-    def pyramid_index(self) -> int:
-        """The pyramidal index in relation to the base layer."""
-        return self._pyramid_index
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:

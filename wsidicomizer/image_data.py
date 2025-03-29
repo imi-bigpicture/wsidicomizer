@@ -15,7 +15,6 @@
 """Module containing a base ImageData implementation suitable for use with non-DICOM
 files."""
 
-from abc import ABCMeta, abstractmethod
 from typing import List, Optional
 
 import numpy as np
@@ -27,19 +26,13 @@ from wsidicom.geometry import PointMm, Size
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 
-class DicomizerImageData(ImageData, metaclass=ABCMeta):
+class DicomizerImageData(ImageData):
     """
-    Metaclass for Dicomizer image data. Subclasses should implement all the abstract
-    methods and properties in the base ImageData-class, and the pyramid_index property.
+    Base class for Dicomizer image data. Subclasses should implement all the abstract
+    methods and properties in the base ImageData-class.
     """
 
     _default_z = None
-
-    @property
-    @abstractmethod
-    def pyramid_index(self) -> int:
-        """Should return pyramid level for image data."""
-        raise NotImplementedError()
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:

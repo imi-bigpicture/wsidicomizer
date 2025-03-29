@@ -130,6 +130,7 @@ class WsiDicomizer(WsiDicom):
         include_levels: Optional[Sequence[int]] = None,
         include_label: bool = True,
         include_overview: bool = True,
+        include_thumbnail: bool = True,
         include_confidential: bool = True,
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         label: Optional[Union[Image, str, Path]] = None,
@@ -167,6 +168,8 @@ class WsiDicomizer(WsiDicom):
             Include label(s), default true.
         include_overwiew: bool = True
             Include overview(s), default true.
+        include_thumbnail: bool = True
+            Include thumbnail(s), default true.
         include_confidential: bool = True
             Include confidential metadata.
         label: Optional[Union[Image, str, Path]] = None,

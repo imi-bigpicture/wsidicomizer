@@ -16,7 +16,12 @@
 
 from typing import Iterable, Iterator, List, Optional
 
-from opentile.tiff_image import TiffImage
+from opentile.tiff_image import (
+    AssociatedTiffImage,
+    LevelTiffImage,
+    ThumbnailTiffImage,
+    TiffImage,
+)
 from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
@@ -108,11 +113,6 @@ class OpenTileImageData(DicomizerImageData):
         """Return suggested minimum chunk size for optimal performance with
         get_encoeded_tiles()."""
         return self._tiff_image.suggested_minimum_chunk_size
-
-    @property
-    def pyramid_index(self) -> int:
-        """The pyramidal index in relation to the base layer."""
-        return self._tiff_image.pyramid_index
 
     @property
     def photometric_interpretation(self) -> str:
@@ -246,7 +246,7 @@ class OpenTileImageData(DicomizerImageData):
 class OpenTileLevelImageData(OpenTileImageData):
     def __init__(
         self,
-        tiff_image: TiffImage,
+        tiff_image: LevelTiffImage,
         image_metadata: ImageMetadata,
         merged_metadata: ImageMetadata,
         encoder: Encoder,
@@ -258,13 +258,10 @@ class OpenTileLevelImageData(OpenTileImageData):
             and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
         ):
             # Override pixel spacing
-            self._pixel_spacing = merged_metadata.pixel_spacing * int(
-                2**self._tiff_image.pyramid_index
-            )
-        elif self._tiff_image.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+            self._pixel_spacing = merged_metadata.pixel_spacing * tiff_image.scale
+
         else:
-            raise ValueError("Could not determine pixel spacing for tiff image.")
+            self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
         self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
@@ -281,16 +278,22 @@ class OpenTileLevelImageData(OpenTileImageData):
 class OpenTileThumbnailImageData(OpenTileImageData):
     def __init__(
         self,
-        tiff_image: TiffImage,
+        tiff_image: ThumbnailTiffImage,
+        image_metadata: ImageMetadata,
         merged_metadata: ImageMetadata,
         encoder: Encoder,
         force_transcoding: bool = False,
     ):
         super().__init__(tiff_image, encoder, force_transcoding)
-        if self._tiff_image.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        if (
+            merged_metadata.pixel_spacing is not None
+            and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
+        ):
+            # Override pixel spacing
+            self._pixel_spacing = merged_metadata.pixel_spacing * tiff_image.scale
+
         else:
-            self._pixel_spacing = None
+            self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
         self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
@@ -300,20 +303,20 @@ class OpenTileThumbnailImageData(OpenTileImageData):
         return self._image_coordinate_system
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
+    def pixel_spacing(self) -> SizeMm:
         return self._pixel_spacing
 
 
 class OpenTileAssociatedImageData(OpenTileImageData):
     def __init__(
         self,
-        tiff_image: TiffImage,
+        tiff_image: AssociatedTiffImage,
         encoder: Encoder,
         force_transcoding: bool = False,
     ):
         super().__init__(tiff_image, encoder, force_transcoding)
-        if self._tiff_image.pixel_spacing is not None:
-            self._pixel_spacing = SizeMm(*self._tiff_image.pixel_spacing.to_tuple())
+        if tiff_image.pixel_spacing is not None:
+            self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
         else:
             self._pixel_spacing = None
 

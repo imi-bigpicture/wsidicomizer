@@ -84,10 +84,6 @@ class ISyntaxLevelImageData(DicomizerImageData):
         return self._slide_level.scale
 
     @property
-    def pyramid_index(self) -> int:
-        return self._level
-
-    @property
     def transfer_syntax(self) -> UID:
         """The uid of the transfer syntax of the image."""
         return self.encoder.transfer_syntax
@@ -297,10 +293,6 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
     @property
     def optical_paths(self) -> List[str]:
         return ["0"]
-
-    @property
-    def pyramid_index(self) -> int:
-        return 0
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
