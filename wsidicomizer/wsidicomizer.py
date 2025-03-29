@@ -224,6 +224,7 @@ class WsiDicomizer(WsiDicom):
                 include_levels=include_levels,
                 include_labels=include_label,
                 include_overviews=include_overview,
+                include_thumbnails=include_thumbnail,
                 add_missing_levels=add_missing_levels,
                 label=label,
                 transcoding=encoding,
