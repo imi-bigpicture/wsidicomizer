@@ -175,6 +175,10 @@ class OpenSlideAssociatedImageData(OpenSlideImageData):
         # TODO figure out pixel spacing for label and overview in openslide.
         return None
 
+    @property
+    def imaged_size(self) -> Optional[SizeMm]:
+        return None
+
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
@@ -214,6 +218,9 @@ class OpenSlideThumbnailImageData(OpenSlideAssociatedImageData):
             image_metadata.pixel_spacing.width * downsample,
             image_metadata.pixel_spacing.height * downsample,
         )
+        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+            self._slide.dimensions
+        )
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
@@ -223,8 +230,11 @@ class OpenSlideThumbnailImageData(OpenSlideAssociatedImageData):
 
     @property
     def pixel_spacing(self) -> SizeMm:
-        """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
+
+    @property
+    def imaged_size(self) -> SizeMm:
+        return self._imaged_size
 
 
 class OpenSlideLevelImageData(OpenSlideImageData):
@@ -292,6 +302,9 @@ class OpenSlideLevelImageData(OpenSlideImageData):
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
         self._image_coordinate_system = image_metadata.image_coordinate_system
+        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+            self._slide.dimensions
+        )
 
     @property
     def image_size(self) -> Size:
@@ -307,6 +320,11 @@ class OpenSlideLevelImageData(OpenSlideImageData):
     def pixel_spacing(self) -> SizeMm:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
+
+    @property
+    def imaged_size(self) -> SizeMm:
+        """Return the imaged size of the volume."""
+        return self._imaged_size
 
     @property
     def downsample(self) -> float:

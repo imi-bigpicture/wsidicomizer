@@ -14,7 +14,7 @@
 
 """Image data for opentile compatible file."""
 
-from typing import Iterable, Iterator, List, Optional
+from typing import Iterable, Iterator, List, Optional, Union
 
 from opentile.tiff_image import (
     AssociatedTiffImage,
@@ -246,10 +246,11 @@ class OpenTileImageData(DicomizerImageData):
 class OpenTileLevelImageData(OpenTileImageData):
     def __init__(
         self,
-        tiff_image: LevelTiffImage,
+        tiff_image: Union[LevelTiffImage, ThumbnailTiffImage],
         image_metadata: ImageMetadata,
         merged_metadata: ImageMetadata,
         encoder: Encoder,
+        imaged_size: SizeMm,
         force_transcoding: bool = False,
     ):
         super().__init__(tiff_image, encoder, force_transcoding)
@@ -258,10 +259,18 @@ class OpenTileLevelImageData(OpenTileImageData):
             and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
         ):
             # Override pixel spacing
-            self._pixel_spacing = merged_metadata.pixel_spacing * tiff_image.scale
+            override_pixel_spacing = merged_metadata.pixel_spacing
+            self._pixel_spacing = override_pixel_spacing * tiff_image.scale
+            scaling = override_pixel_spacing / SizeMm(
+                *tiff_image.pixel_spacing.to_tuple()
+            )
+            self._imaged_size = SizeMm(
+                scaling.width * imaged_size.width, scaling.height * imaged_size.height
+            )
 
         else:
             self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
+            self._imaged_size = imaged_size
         self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
@@ -274,37 +283,9 @@ class OpenTileLevelImageData(OpenTileImageData):
     def pixel_spacing(self) -> SizeMm:
         return self._pixel_spacing
 
-
-class OpenTileThumbnailImageData(OpenTileImageData):
-    def __init__(
-        self,
-        tiff_image: ThumbnailTiffImage,
-        image_metadata: ImageMetadata,
-        merged_metadata: ImageMetadata,
-        encoder: Encoder,
-        force_transcoding: bool = False,
-    ):
-        super().__init__(tiff_image, encoder, force_transcoding)
-        if (
-            merged_metadata.pixel_spacing is not None
-            and merged_metadata.pixel_spacing != image_metadata.pixel_spacing
-        ):
-            # Override pixel spacing
-            self._pixel_spacing = merged_metadata.pixel_spacing * tiff_image.scale
-
-        else:
-            self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
-        self._image_coordinate_system = merged_metadata.image_coordinate_system
-
     @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
-        return self._image_coordinate_system
-
-    @property
-    def pixel_spacing(self) -> SizeMm:
-        return self._pixel_spacing
+    def imaged_size(self) -> SizeMm:
+        return self._imaged_size
 
 
 class OpenTileAssociatedImageData(OpenTileImageData):
@@ -324,3 +305,11 @@ class OpenTileAssociatedImageData(OpenTileImageData):
     def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
+
+    @property
+    def imaged_size(self) -> Optional[SizeMm]:
+        """Size of the image in mm."""
+        if self._pixel_spacing is None:
+            return None
+        return self._pixel_spacing * self.image_size
+

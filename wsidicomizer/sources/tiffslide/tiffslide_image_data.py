@@ -160,6 +160,10 @@ class TiffSlideAssociatedImageData(TiffSlideImageData):
         """Size of the pixels in mm/pixel."""
         return None
 
+    @property
+    def imaged_size(self) -> Optional[Size]:
+        return None
+
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
@@ -200,6 +204,9 @@ class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
             image_metadata.pixel_spacing.width * downsample,
             image_metadata.pixel_spacing.height * downsample,
         )
+        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+            self._slide.dimensions
+        )
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
@@ -211,6 +218,10 @@ class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
     def pixel_spacing(self) -> SizeMm:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
+
+    @property
+    def imaged_size(self) -> SizeMm:
+        return self._imaged_size
 
 
 class TiffSlideLevelImageData(TiffSlideImageData):
@@ -278,6 +289,9 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         self._blank_decoded_frame = None
         self._blank_decoded_frame_size = None
         self._image_coordinate_system = image_metadata.image_coordinate_system
+        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+            self._slide.dimensions
+        )
 
     @property
     def image_size(self) -> Size:
@@ -293,6 +307,10 @@ class TiffSlideLevelImageData(TiffSlideImageData):
     def pixel_spacing(self) -> SizeMm:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
+
+    @property
+    def imaged_size(self) -> SizeMm:
+        return self._imaged_size
 
     @property
     def downsample(self) -> float:

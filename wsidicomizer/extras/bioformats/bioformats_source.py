@@ -14,6 +14,7 @@
 
 """Source using bioformats."""
 
+from functools import cached_property
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Union
 
@@ -131,6 +132,7 @@ class BioformatsSource(DicomizerSource):
             self._encoder,
             self._pyramid_image_index,
             self._reader.pyramid_levels(self._pyramid_image_index)[level_index],
+            self._volume_imaged_size,
         )
 
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:
@@ -153,3 +155,14 @@ class BioformatsSource(DicomizerSource):
 
     def close(self) -> None:
         return self._reader.close()
+
+    @cached_property
+    def _volume_imaged_size(self):
+        """Return the imaged size of the volume."""
+        base_level_pizel_spacing = self._reader.pixel_spacing(
+            self._pyramid_image_index, 0
+        )
+        if base_level_pizel_spacing is None:
+            return None
+        base_level_size = self._reader.size(self._pyramid_image_index, 0)
+        return base_level_pizel_spacing * base_level_size

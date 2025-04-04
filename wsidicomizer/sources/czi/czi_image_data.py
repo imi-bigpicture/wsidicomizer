@@ -100,6 +100,10 @@ class CziImageData(DicomizerImageData):
         return self._pixel_spacing
 
     @property
+    def imaged_size(self) -> SizeMm:
+        return self._pixel_spacing * self.image_size
+
+    @property
     def thread_safe(self) -> bool:
         return True
 

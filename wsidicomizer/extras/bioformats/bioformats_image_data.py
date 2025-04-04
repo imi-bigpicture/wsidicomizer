@@ -37,6 +37,7 @@ class BioformatsImageData(DicomizerImageData):
         encoder: Encoder,
         image_index: int,
         resolution_index: int,
+        imaged_size: Optional[SizeMm] = None,
     ) -> None:
         super().__init__(encoder)
         if tile_size is None:
@@ -46,6 +47,7 @@ class BioformatsImageData(DicomizerImageData):
         self._image_index = image_index
         self._resolution_index = resolution_index
         self._image_region = Region(Point(0, 0), self.image_size)
+        self._imaged_size = imaged_size
 
     @property
     def image_region(self) -> Region:
@@ -77,6 +79,10 @@ class BioformatsImageData(DicomizerImageData):
         return self._image_reader.pixel_spacing(
             self._image_index, self._resolution_index
         )
+
+    @property
+    def imaged_size(self) -> Optional[SizeMm]:
+        return self._imaged_size
 
     @property
     def samples_per_pixel(self) -> int:

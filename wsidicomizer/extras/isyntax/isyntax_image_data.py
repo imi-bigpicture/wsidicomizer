@@ -80,6 +80,10 @@ class ISyntaxLevelImageData(DicomizerImageData):
         return self._pixel_spacing
 
     @property
+    def imaged_size(self) -> SizeMm:
+        return self.pixel_spacing * self.image_size
+
+    @property
     def downsample(self) -> float:
         return self._slide_level.scale
 
@@ -280,6 +284,10 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
 
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:
+        return None
+
+    @property
+    def imaged_size(self) -> Optional[SizeMm]:
         return None
 
     @property

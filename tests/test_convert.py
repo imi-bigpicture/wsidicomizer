@@ -584,10 +584,43 @@ class TestWsiDicomizerConvert:
         self, wsi: WsiDicom, expected_thumbnail_pixel_spacing: SizeMm
     ):
         # Arrange
-        assert wsi.pyramids[0].thumbnails is not None
+        assert (
+            wsi.pyramids[0].thumbnails is not None
+            and len(wsi.pyramids[0].thumbnails) > 0
+        )
 
         # Act
         pixel_spacing = wsi.pyramids[0].thumbnails[0].pixel_spacing
 
         # Assert
         assert expected_thumbnail_pixel_spacing == pixel_spacing
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_imaged_size"],
+        [
+            (
+                file_format,
+                file,
+                SizeMm.from_tuple(file_parameters["imaged_size"]),
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_imaged_size(self, wsi: WsiDicom, expected_imaged_size: SizeMm):
+        # Arrange
+
+        # Act
+        imaged_sizes = [
+            level.default_instance.image_data.imaged_size
+            for level in wsi.pyramid.levels
+        ]
+        if wsi.pyramid.thumbnails is not None and len(wsi.pyramid.thumbnails) > 0:
+            imaged_sizes.append(
+                wsi.pyramid.thumbnails[0].default_instance.image_data.imaged_size
+            )
+
+        # Assert
+        for imaged_size in imaged_sizes:
+            assert imaged_size == expected_imaged_size

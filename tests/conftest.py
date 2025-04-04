@@ -78,6 +78,7 @@ test_parameters = {
                 (0.007984, 0.007984),
             ],
             "thumbnail_pixel_spacing": (0.022416015625, 0.022416015625),
+            "imaged_size": (22.954000473022461, 16.42408561706543),
         },
         "svs1/input.svs": {
             "convert": True,
@@ -128,6 +129,7 @@ test_parameters = {
                 (0.00791288275862, 0.00791288275862),
             ],
             "thumbnail_pixel_spacing": (0.0230818171875, 0.0230818171875),
+            "imaged_size": (23.635780334472656, 17.396451950073242),
         },
     },
     "czi": {
@@ -159,6 +161,7 @@ test_parameters = {
             "embedded_thumbnail": False,
             "pixel_spacings": [(0.00021999999999999998, 0.00021999999999999998)],
             "thumbnail_pixel_spacing": None,
+            "imaged_size": (15.28164, 11.896279999999999),
         }
     },
     "mirax": {
@@ -204,6 +207,7 @@ test_parameters = {
             "embedded_thumbnail": True,
             "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
             "thumbnail_pixel_spacing": (0.02974039812646, 0.02974039812646),
+            "imaged_size": (25.398300170898438, 51.31182098388672),
         }
     },
     "ndpi": {
@@ -260,6 +264,7 @@ test_parameters = {
                 (0.02923976608187, 0.02915451895044),
             ],
             "thumbnail_pixel_spacing": None,
+            "imaged_size": (23.368324279785156, 17.357906341552734),
         },
         "ndpi1/input.ndpi": {
             "convert": True,
@@ -309,6 +314,7 @@ test_parameters = {
                 (0.01447178002894, 0.01447178002894),
             ],
             "thumbnail_pixel_spacing": None,
+            "imaged_size": (28.697086334228516, 19.497819900512695),
         },
         # "ndpi2/input.ndpi": {
         #     "convert": True,
@@ -436,6 +442,7 @@ test_parameters = {
             "embedded_thumbnail": False,
             "pixel_spacings": [(0.004, 0.004), (0.008, 0.008), (0.016, 0.016)],
             "thumbnail_pixel_spacing": None,
+            "imaged_size": (18.944000244140625, 23.552000045776367),
         }
     },
     "isyntax": {
@@ -473,6 +480,7 @@ test_parameters = {
             "embedded_thumbnail": False,
             "pixel_spacings": [(0.00025, 0.00025)],
             "thumbnail_pixel_spacing": None,
+            "imaged_size": (9.3455, 18.305500000000002),
         }
     },
 }

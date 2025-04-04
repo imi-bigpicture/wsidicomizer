@@ -14,12 +14,14 @@
 
 """Source for reading opentile compatible file."""
 
+from functools import cached_property
 from pathlib import Path
 from typing import Dict, Optional, Union
 
 from opentile import OpenTile
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.geometry import Size, SizeMm
 from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -28,7 +30,6 @@ from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
     OpenTileLevelImageData,
-    OpenTileThumbnailImageData,
 )
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 
@@ -101,12 +102,12 @@ class OpenTileSource(DicomizerSource):
         return OpenTile.detect_format(filepath) is not None
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
-        level = self._tiler.levels[level_index]
         return OpenTileLevelImageData(
-            level,
+            self._tiler.levels[level_index],
             self.base_metadata.image,
             self.metadata.image,
             self._encoder,
+            self._volume_imaged_size,
             self._force_transcoding,
         )
 
@@ -128,10 +129,19 @@ class OpenTileSource(DicomizerSource):
 
         if len(self._tiler.thumbnails) == 0:
             return None
-        return OpenTileThumbnailImageData(
+        return OpenTileLevelImageData(
             self._tiler.thumbnails[0],
-            self.metadata.image,
+            self.base_metadata.image,
             self.metadata.image,
             self._encoder,
+            self._volume_imaged_size,
             self._force_transcoding,
+        )
+
+    @cached_property
+    def _volume_imaged_size(self):
+        """Return the imaged size of the volume."""
+        base_level = self._tiler.levels[0]
+        return SizeMm(*base_level.pixel_spacing.to_tuple()) * Size(
+            *base_level.image_size.to_tuple()
         )
