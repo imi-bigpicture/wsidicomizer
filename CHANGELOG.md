@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2025-04-25
+
+### Changed
+
+- `TotalPixelMatrixOriginSequence` changed to (0, 0) for `OpenTile`-source as previous parsing of image offset was not correct.
+
+### Fixed
+
+- `ImagedVolumeWidth` and `ImagedVolumeHeight` are now equal across levels.
+
 ## [0.20.0] - 2025-03-29
 
 ### Added
@@ -335,7 +345,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.20.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.21.0..HEAD
+[0.21.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.20.0..0.21.0
 [0.20.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.19.0..0.20.0
 [0.19.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.18.0..0.19.0
 [0.18.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.17.0..0.18.0
