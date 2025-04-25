@@ -312,4 +312,3 @@ class OpenTileAssociatedImageData(OpenTileImageData):
         if self._pixel_spacing is None:
             return None
         return self._pixel_spacing * self.image_size
-
