@@ -17,8 +17,7 @@
 from typing import Optional
 
 from opentile import Metadata
-from wsidicom.geometry import PointMm
-from wsidicom.metadata import Equipment, Image, ImageCoordinateSystem, OpticalPath
+from wsidicom.metadata import Equipment, Image, OpticalPath
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
@@ -31,16 +30,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             metadata.scanner_serial_number,
             metadata.scanner_software_versions,
         )
-        image_coordinate_system = None
-        if metadata.image_offset is not None:
-            image_coordinate_system = ImageCoordinateSystem(
-                origin=PointMm(metadata.image_offset[0], metadata.image_offset[1]),
-                rotation=0,
-            )
-        image = Image(
-            metadata.aquisition_datetime,
-            image_coordinate_system=image_coordinate_system,
-        )
+        image = Image(metadata.aquisition_datetime)
         if icc_profile is not None:
             optical_path = OpticalPath(icc_profile=icc_profile)
             optical_paths = [optical_path]

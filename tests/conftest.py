@@ -35,7 +35,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 25.691574, "y": 23.449873},
+            "image_coordinate_system": {"x": 0, "y": 0},
             "icc_profile": True,
             "read_region": [
                 {
@@ -86,7 +86,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 18.34152, "y": 22.716894},
+            "image_coordinate_system": {"x": 0, "y": 0},
             "icc_profile": True,
             "read_region": [
                 {

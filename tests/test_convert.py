@@ -28,7 +28,7 @@ from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import SizeMm
+from wsidicom.geometry import PointMm, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import WsiMetadata
 
@@ -406,7 +406,14 @@ class TestWsiDicomizerConvert:
     @pytest.mark.parametrize(
         ["file_format", "file", "expected_image_coordinate_system"],
         [
-            (file_format, file, file_parameters["image_coordinate_system"])
+            (
+                file_format,
+                file,
+                PointMm(
+                    file_parameters["image_coordinate_system"]["x"],
+                    file_parameters["image_coordinate_system"]["y"],
+                ),
+            )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ],
@@ -414,20 +421,24 @@ class TestWsiDicomizerConvert:
     )
     def test_image_coordinate_system(
         self,
-        expected_image_coordinate_system: Dict[str, float],
+        expected_image_coordinate_system: PointMm,
         wsi: WsiDicom,
     ):
         # Arrange
 
         # Act
-        image_coordinate_system = wsi.pyramids[
-            0
-        ].base_level.default_instance.image_data.image_coordinate_system
+        image_coordinate_systems = [
+            level.image_coordinate_system for level in wsi.pyramid
+        ]
+        if wsi.pyramid.thumbnails is not None and len(wsi.pyramid.thumbnails) > 0:
+            image_coordinate_systems.append(
+                wsi.pyramid.thumbnails[0].image_coordinate_system
+            )
 
         # Arrange
-        assert image_coordinate_system is not None
-        assert image_coordinate_system.origin.x == expected_image_coordinate_system["x"]
-        assert image_coordinate_system.origin.y == expected_image_coordinate_system["y"]
+        for image_coordinate_system in image_coordinate_systems:
+            assert image_coordinate_system is not None
+            assert image_coordinate_system.origin == expected_image_coordinate_system
 
     @pytest.mark.parametrize(
         ["file_format", "file"],
