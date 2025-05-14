@@ -71,7 +71,7 @@ test_parameters = {
                     "md5": "b27df8f554f6bdd4d4fa42d67eeebe6e",
                 }
             ],
-            "embedded_thumbnail": True,
+            "embedded_thumbnail_size": (1024, 732),
             "pixel_spacings": [
                 (0.000499, 0.000499),
                 (0.001996, 0.001996),
@@ -122,7 +122,7 @@ test_parameters = {
                     "md5": "379210d2aee83bb590aa2a4223707ac1",
                 }
             ],
-            "embedded_thumbnail": True,
+            "embedded_thumbnail_size": (1024, 753),
             "pixel_spacings": [
                 (0.0004944, 0.0004944),
                 (0.00197772410677, 0.00197772410677),
@@ -158,7 +158,7 @@ test_parameters = {
             ],
             "read_region_openslide": [],
             "read_thumbnail": [],
-            "embedded_thumbnail": False,
+            "embedded_thumbnail_size": None,
             "pixel_spacings": [(0.00021999999999999998, 0.00021999999999999998)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (15.28164, 11.896279999999999),
@@ -204,7 +204,7 @@ test_parameters = {
             ],
             "read_thumbnail": [],
             "skip_hash_test_platforms": ["Darwin"],
-            "embedded_thumbnail": True,
+            "embedded_thumbnail_size": (534, 742),
             "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
             "thumbnail_pixel_spacing": (0.02974039812646, 0.02974039812646),
             "imaged_size": (25.398300170898438, 51.31182098388672),
@@ -258,7 +258,7 @@ test_parameters = {
                     "md5": "ea87500dc544f45c6f600811138dad23",
                 }
             ],
-            "embedded_thumbnail": False,
+            "embedded_thumbnail_size": None,
             "pixel_spacings": [
                 (0.00730460189920, 0.00728332119446),
                 (0.02923976608187, 0.02915451895044),
@@ -308,7 +308,7 @@ test_parameters = {
                     "md5": "995791915459762ac1c251fc8351b4f6",
                 }
             ],
-            "embedded_thumbnail": False,
+            "embedded_thumbnail_size": None,
             "pixel_spacings": [
                 (0.00361663652803, 0.00361663652803),
                 (0.01447178002894, 0.01447178002894),
@@ -439,7 +439,7 @@ test_parameters = {
                     "md5": "922ab1407d79de6b117bc561625f1a49",
                 }
             ],
-            "embedded_thumbnail": False,
+            "embedded_thumbnail_size": None,
             "pixel_spacings": [(0.004, 0.004), (0.008, 0.008), (0.016, 0.016)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (18.944000244140625, 23.552000045776367),
@@ -477,7 +477,7 @@ test_parameters = {
             "read_thumbnail": [],
             "read_region_openslide": [],
             "skip_hash_test_platforms": ["Darwin"],
-            "embedded_thumbnail": False,
+            "embedded_thumbnail_size": None,
             "pixel_spacings": [(0.00025, 0.00025)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (9.3455, 18.305500000000002),

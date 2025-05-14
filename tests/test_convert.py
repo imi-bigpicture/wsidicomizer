@@ -17,7 +17,7 @@ import platform
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 import pytest
@@ -28,7 +28,7 @@ from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import PointMm, SizeMm
+from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import WsiMetadata
 
@@ -485,15 +485,15 @@ class TestWsiDicomizerConvert:
         assert icc_profile is not None
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_thumbnail"],
+        ["file_format", "file", "embedded_thumbnail"],
         [
-            (file_format, file, file_parameters["embedded_thumbnail"])
+            (file_format, file, file_parameters["embedded_thumbnail_size"] is not None)
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
         ],
         scope="module",
     )
-    def test_embedded_thumbnail(self, wsi: WsiDicom, expected_thumbnail: bool):
+    def test_embedded_thumbnail(self, wsi: WsiDicom, embedded_thumbnail: bool):
         # Arrange
 
         # Act
@@ -502,7 +502,28 @@ class TestWsiDicomizerConvert:
         )
 
         # Assert
-        assert has_thumbnail_instances == expected_thumbnail
+        assert has_thumbnail_instances == embedded_thumbnail
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "embedded_thumbnail_size"],
+        [
+            (file_format, file, file_parameters["embedded_thumbnail_size"])
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+            if file_parameters["embedded_thumbnail_size"] is not None
+        ],
+        scope="module",
+    )
+    def test_embedded_thumbnail_size(
+        self, wsi: WsiDicom, embedded_thumbnail_size: Tuple[int, int]
+    ):
+        # Arrange
+        assert wsi.pyramid.thumbnails is not None
+        # Act
+        thumnail = wsi.pyramid.thumbnails[0]
+
+        # Assert
+        assert thumnail.size == Size.from_tuple(embedded_thumbnail_size)
 
     @pytest.mark.parametrize(
         ["file_format", "file"],
