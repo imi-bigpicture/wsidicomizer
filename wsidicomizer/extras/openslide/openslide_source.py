@@ -1,4 +1,4 @@
-#    Copyright 2021, 2022, 2023 SECTRA AB
+#    Copyright 2021, 2022, 2023, 2025 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,28 +14,40 @@
 
 """Source for reading openslide compatible file."""
 
-import math
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.metadata.wsi import WsiMetadata
 
-from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.extras.openslide.openslide import OpenSlide
-from wsidicomizer.extras.openslide.openslide_image_data import (
-    OpenSlideAssociatedImageData,
-    OpenSlideAssociatedImageType,
-    OpenSlideLevelImageData,
-    OpenSlideThumbnailImageData,
+from wsidicomizer.extras.openslide.openslide import (
+    PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH,
+    PROPERTY_NAME_BOUNDS_X,
+    PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_MPP_X,
+    PROPERTY_NAME_MPP_Y,
+    PROPERTY_NAME_OBJECTIVE_POWER,
+    PROPERTY_NAME_VENDOR,
+    OpenSlide,
 )
-from wsidicomizer.extras.openslide.openslide_metadata import OpenSlideMetadata
+from wsidicomizer.extras.openslide.openslide_image_data import (
+    OpenSlideLevelImageData,
+)
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
+from wsidicomizer.sources.openslide_like import (
+    OpenSlideLikeProperties,
+    OpenSlideLikeSource,
+)
+from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
+    OpenSlideLikeMetadata,
+)
 
 
-class OpenSlideSource(DicomizerSource):
+class OpenSlideSource(OpenSlideLikeSource):
     def __init__(
         self,
         filepath: Path,
@@ -66,11 +78,24 @@ class OpenSlideSource(DicomizerSource):
             Optional metadata post processing by update from dataset or callback.
         """
         self._slide = OpenSlide(filepath)
-
-        self._pyramid_levels = self._get_pyramid_levels(self._slide)
-        self._base_metadata = OpenSlideMetadata(self._slide)
+        properties = OpenSlideLikeProperties(
+            background_color=self._slide.properties.get(PROPERTY_NAME_BACKGROUND_COLOR),
+            bounds_x=self._slide.properties.get(PROPERTY_NAME_BOUNDS_X),
+            bounds_y=self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y),
+            bounds_width=self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
+            bounds_height=self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
+            objective_power=self._slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER),
+            vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
+            mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
+            mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
+        )
         super().__init__(
             filepath,
+            properties,
+            self._slide.level_downsamples,
+            self._slide.level_dimensions,
+            self._slide.associated_images,
+            OpenSlideLikeMetadata(properties, self._slide.color_profile),
             encoder,
             tile_size,
             metadata,
@@ -82,14 +107,6 @@ class OpenSlideSource(DicomizerSource):
     def close(self) -> None:
         return self._slide.close()
 
-    @property
-    def base_metadata(self) -> WsiMetadata:
-        return self._base_metadata
-
-    @property
-    def pyramid_levels(self) -> Dict[int, int]:
-        return self._pyramid_levels
-
     @staticmethod
     def is_supported(filepath: Path) -> bool:
         """Return True if file in filepath is supported by OpenSlide."""
@@ -98,46 +115,11 @@ class OpenSlideSource(DicomizerSource):
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenSlideLevelImageData(
             self._slide,
+            self._blank_color,
+            self._base_level_offset,
+            self._base_level_size,
             self.metadata.image,
             level_index,
             self._tile_size,
             self._encoder,
         )
-
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            OpenSlideAssociatedImageType.LABEL.value
-            not in self._slide.associated_images
-        ):
-            return None
-        return OpenSlideAssociatedImageData(
-            self._slide, OpenSlideAssociatedImageType.LABEL, self._encoder
-        )
-
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            OpenSlideAssociatedImageType.MACRO.value
-            not in self._slide.associated_images
-        ):
-            return None
-        return OpenSlideAssociatedImageData(
-            self._slide, OpenSlideAssociatedImageType.MACRO, self._encoder
-        )
-
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            OpenSlideAssociatedImageType.THUMBNAIL.value
-            not in self._slide.associated_images
-        ):
-            return None
-        return OpenSlideThumbnailImageData(
-            self._slide, self.metadata.image, self._encoder
-        )
-
-    @staticmethod
-    def _get_pyramid_levels(slide: OpenSlide) -> Dict[int, int]:
-        """Return list of pyramid levels present in openslide slide."""
-        return {
-            int(math.log2(int(downsample))): index
-            for index, downsample in enumerate(slide.level_downsamples)
-        }

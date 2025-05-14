@@ -1,4 +1,4 @@
-#    Copyright 2023 SECTRA AB
+#    Copyright 2023, 2025 SECTRA AB
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,226 +14,33 @@
 
 """Image data for tiffslide compatible file."""
 
-import re
-from enum import Enum
-from typing import List, Optional, Tuple, Union
+
+from typing import Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
-from pydicom.uid import UID
 from tiffslide import TiffSlide
-from tiffslide.tiffslide import (
-    PROPERTY_NAME_BACKGROUND_COLOR,
-    PROPERTY_NAME_BOUNDS_HEIGHT,
-    PROPERTY_NAME_BOUNDS_WIDTH,
-    PROPERTY_NAME_BOUNDS_X,
-    PROPERTY_NAME_BOUNDS_Y,
-)
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
-from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import ImageCoordinateSystem
 
-from wsidicomizer.config import settings
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
 
 
-class TiffSlideAssociatedImageType(Enum):
-    LABEL = "label"
-    MACRO = "macro"
-    THUMBNAIL = "thumbnail"
-
-
-class TiffSlideImageData(DicomizerImageData):
-    def __init__(self, tiff_slide: TiffSlide, encoder: Encoder):
-        """Wraps a TiffSlide image to ImageData.
-
-        Parameters
-        ----------
-        tiff_slide: TiffSlide
-            TiffSlide object to wrap.
-        encoded: Encoder
-            Encoder to use.
-        """
-        super().__init__(encoder)
-        self._slide = tiff_slide
-        self._blank_color = self._get_blank_color(self.photometric_interpretation)
-
-    @property
-    def transfer_syntax(self) -> UID:
-        """The uid of the transfer syntax of the image."""
-        return self.encoder.transfer_syntax
-
-    @property
-    def photometric_interpretation(self) -> str:
-        return self.encoder.photometric_interpretation
-
-    @property
-    def samples_per_pixel(self) -> int:
-        return 3
-
-    @property
-    def focal_planes(self) -> List[float]:
-        return [0.0]
-
-    @property
-    def optical_paths(self) -> List[str]:
-        return ["0"]
-
-    @property
-    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
-        return self._blank_color
-
-    @property
-    def thread_safe(self) -> bool:
-        return True
-
-    def _get_blank_color(
-        self, photometric_interpretation: str
-    ) -> Union[int, Tuple[int, int, int]]:
-        """Return color to use blank tiles. Parses background color from
-        tiffslide if present.
-
-        Parameters
-        ----------
-        photometric_interpretation: str
-            The photomoetric interpretation of the dataset
-
-        Returns
-        ----------
-        Union[int, Tuple[int, int, int]]
-            Grayscale or RGB color.
-
-        """
-        slide_background_color_string = self._slide.properties.get(
-            PROPERTY_NAME_BACKGROUND_COLOR
-        )
-        if slide_background_color_string is not None:
-            rgb = re.findall(r"([0-9a-fA-F]{2})", slide_background_color_string)
-            if len(rgb) == 3:
-                return (int(rgb[0], 16), int(rgb[1], 16), int(rgb[2], 16))
-        return super()._get_blank_color(photometric_interpretation)
-
-
-class TiffSlideAssociatedImageData(TiffSlideImageData):
+class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
     def __init__(
         self,
         tiff_slide: TiffSlide,
-        image_type: TiffSlideAssociatedImageType,
-        encoder: Encoder,
-    ):
-        """Wraps a TiffSlide associated image (label or overview) to ImageData.
-
-        Parameters
-        ----------
-        tiff_slide: TiffSlide
-            TiffSlide object to wrap.
-        image_type: TiffSlideAssociatedImageType
-            Type of image to wrap.
-        encoded: Encoder
-            Encoder to use.
-        """
-        super().__init__(tiff_slide, encoder)
-        self._image_type = image_type
-        if image_type.value not in self._slide.associated_images:
-            raise ValueError(f"{image_type.value} not in {self._slide}")
-
-        image = self._slide.associated_images[image_type.value]
-        self._image_size = Size.from_tuple(image.size)
-        self._decoded_image = image
-        self._encoded_image = self.encoder.encode(np.asarray(image))
-
-    @property
-    def image_size(self) -> Size:
-        """The pixel size of the image."""
-        return self._image_size
-
-    @property
-    def tile_size(self) -> Size:
-        """The pixel tile size of the image."""
-        return self.image_size
-
-    @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
-        """Size of the pixels in mm/pixel."""
-        return None
-
-    @property
-    def imaged_size(self) -> Optional[Size]:
-        return None
-
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
-        if tile != Point(0, 0):
-            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
-        return self._encoded_image
-
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
-        if tile != Point(0, 0):
-            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
-        return self._decoded_image
-
-
-class TiffSlideThumbnailImageData(TiffSlideAssociatedImageData):
-    def __init__(
-        self, tiff_slide: TiffSlide, image_metadata: ImageMetadata, encoder: Encoder
-    ):
-        """Wraps a TiffSlide thumbnail to ImageData.
-
-        Parameters
-        ----------
-        tiff_slide: TiffSlide
-            TiffSlide object to wrap.
-        image_metadata: ImageMetadata
-            Image metadata for image.
-        encoded: Encoder
-            Encoder to use.
-        """
-        super().__init__(tiff_slide, TiffSlideAssociatedImageType.THUMBNAIL, encoder)
-        self._image_coordinate_system = image_metadata.image_coordinate_system
-        downsample = (
-            SizeMm.from_tuple(self._slide.level_dimensions[0]).width
-            / self._image_size.width
-        )
-        if image_metadata.pixel_spacing is None:
-            raise ValueError(
-                "Could not determine pixel spacing for tiffslide thumbnail image."
-            )
-        self._pixel_spacing = SizeMm(
-            image_metadata.pixel_spacing.width * downsample,
-            image_metadata.pixel_spacing.height * downsample,
-        )
-        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-            self._slide.dimensions
-        )
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
-        return self._image_coordinate_system
-
-    @property
-    def pixel_spacing(self) -> SizeMm:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
-    def imaged_size(self) -> SizeMm:
-        return self._imaged_size
-
-
-class TiffSlideLevelImageData(TiffSlideImageData):
-    def __init__(
-        self,
-        tiff_slide: TiffSlide,
+        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        offset: Optional[Point],
+        size: Optional[Size],
         image_metadata: ImageMetadata,
         level_index: int,
         tile_size: Optional[int],
         encoder: Encoder,
     ):
-        super().__init__(tiff_slide, encoder)
         """Wraps a TiffSlide level to ImageData.
 
         Parameters
@@ -249,79 +56,18 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         encoded: Encoder
             Encoder to use.
         """
-        if tile_size is None:
-            tile_size = settings.default_tile_size
-        self._tile_size = Size(tile_size, tile_size)
+        super().__init__(
+            blank_color,
+            offset,
+            size,
+            tiff_slide.level_dimensions,
+            tiff_slide.level_downsamples,
+            image_metadata,
+            level_index,
+            tile_size,
+            encoder,
+        )
         self._slide = tiff_slide
-        self._level_index = level_index
-        self._image_size = Size.from_tuple(
-            self._slide.level_dimensions[self._level_index]
-        )
-        self._downsample = self._slide.level_downsamples[self._level_index]
-        if image_metadata.pixel_spacing is None:
-            raise ValueError(
-                "Could not determine pixel spacing for tiffslide level image."
-            )
-        self._pixel_spacing = SizeMm(
-            image_metadata.pixel_spacing.width * self.downsample,
-            image_metadata.pixel_spacing.height * self.downsample,
-        )
-
-        bounds_x = self._slide.properties.get(PROPERTY_NAME_BOUNDS_X)
-        bounds_y = self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y)
-        bounds_w = self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH)
-        bounds_h = self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT)
-        if bounds_x is not None and bounds_y is not None:
-            self._offset = Point(int(bounds_x), int(bounds_y))
-        else:
-            self._offset = Point(0, 0)
-        if bounds_w is not None and bounds_h is not None:
-            self._image_size = Size(int(bounds_w), int(bounds_h)) // int(
-                round(self.downsample)
-            )
-        else:
-            self._image_size = Size.from_tuple(
-                self._slide.level_dimensions[self._level_index]
-            )
-
-        self._blank_encoded_frame = bytes()
-        self._blank_encoded_frame_size = None
-        self._blank_decoded_frame = None
-        self._blank_decoded_frame_size = None
-        self._image_coordinate_system = image_metadata.image_coordinate_system
-        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-            self._slide.dimensions
-        )
-
-    @property
-    def image_size(self) -> Size:
-        """The pixel size of the image."""
-        return self._image_size
-
-    @property
-    def tile_size(self) -> Size:
-        """The pixel tile size of the image."""
-        return self._tile_size
-
-    @property
-    def pixel_spacing(self) -> SizeMm:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
-    def imaged_size(self) -> SizeMm:
-        return self._imaged_size
-
-    @property
-    def downsample(self) -> float:
-        """Downsample facator for level."""
-        return self._downsample
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
-        return self._image_coordinate_system
 
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
@@ -368,7 +114,7 @@ class TiffSlideLevelImageData(TiffSlideImageData):
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError("Negative size not allowed")
 
-        location_in_base_level = region.start * self.downsample + self._offset
+        location_in_base_level = region.start * self._downsample + self._offset
 
         region_data = self._slide.read_region(
             location_in_base_level.to_tuple(),

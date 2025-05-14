@@ -1,4 +1,4 @@
-#    Copyright 2023 SECTRA AB
+#    Copyright 2023, 2025 SECTRA AB
 
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,27 +15,41 @@
 
 """Source for reading tiffslide compatible file."""
 
-import math
+
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from pydicom import Dataset
 from tiffslide import TiffSlide
+from tiffslide.tiffslide import (
+    PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH,
+    PROPERTY_NAME_BOUNDS_X,
+    PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_MPP_X,
+    PROPERTY_NAME_MPP_Y,
+    PROPERTY_NAME_OBJECTIVE_POWER,
+    PROPERTY_NAME_VENDOR,
+)
 from wsidicom.codec import Encoder
 from wsidicom.metadata import WsiMetadata
 
-from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
+from wsidicomizer.sources.openslide_like import (
+    OpenSlideLikeProperties,
+    OpenSlideLikeSource,
+)
+from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
+    OpenSlideLikeMetadata,
+)
 from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
-    TiffSlideAssociatedImageData,
-    TiffSlideAssociatedImageType,
     TiffSlideLevelImageData,
 )
-from wsidicomizer.sources.tiffslide.tiffslide_metadata import TiffSlideMetadata
 
 
-class TiffSlideSource(DicomizerSource):
+class TiffSlideSource(OpenSlideLikeSource):
     def __init__(
         self,
         filepath: Path,
@@ -68,13 +82,29 @@ class TiffSlideSource(DicomizerSource):
 
         """
         self._tiffslide = TiffSlide(filepath, **source_args)
-        self._base_metadata = TiffSlideMetadata(self._tiffslide)
-        self._pyramid_levels = {
-            int(round(math.log2(downsample))): index
-            for index, downsample in enumerate(self._tiffslide.level_downsamples)
-        }
+        properties = OpenSlideLikeProperties(
+            background_color=self._tiffslide.properties.get(
+                PROPERTY_NAME_BACKGROUND_COLOR
+            ),
+            bounds_x=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_X),
+            bounds_y=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_Y),
+            bounds_height=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
+            bounds_width=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
+            objective_power=self._tiffslide.properties.get(
+                PROPERTY_NAME_OBJECTIVE_POWER
+            ),
+            vendor=self._tiffslide.properties.get(PROPERTY_NAME_VENDOR),
+            mpp_x=self._tiffslide.properties.get(PROPERTY_NAME_MPP_X),
+            mpp_y=self._tiffslide.properties.get(PROPERTY_NAME_MPP_Y),
+        )
+
         super().__init__(
             filepath,
+            properties,
+            self._tiffslide.level_downsamples,
+            self._tiffslide.level_dimensions,
+            self._tiffslide.associated_images,
+            OpenSlideLikeMetadata(properties, self._tiffslide.color_profile),
             encoder,
             tile_size,
             metadata,
@@ -85,14 +115,6 @@ class TiffSlideSource(DicomizerSource):
 
     def close(self):
         self._tiffslide.close()
-
-    @property
-    def base_metadata(self) -> WsiMetadata:
-        return self._base_metadata
-
-    @property
-    def pyramid_levels(self) -> Dict[int, int]:
-        return self._pyramid_levels
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:
@@ -105,38 +127,11 @@ class TiffSlideSource(DicomizerSource):
     ) -> Optional[DicomizerImageData]:
         return TiffSlideLevelImageData(
             self._tiffslide,
+            self._blank_color,
+            self._base_level_offset,
+            self._base_level_size,
             self.metadata.image,
             level_index,
             self._tile_size,
             self._encoder,
-        )
-
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            TiffSlideAssociatedImageType.LABEL.value
-            not in self._tiffslide.associated_images
-        ):
-            return None
-        return TiffSlideAssociatedImageData(
-            self._tiffslide, TiffSlideAssociatedImageType.LABEL, self._encoder
-        )
-
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            TiffSlideAssociatedImageType.MACRO.value
-            not in self._tiffslide.associated_images
-        ):
-            return None
-        return TiffSlideAssociatedImageData(
-            self._tiffslide, TiffSlideAssociatedImageType.MACRO, self._encoder
-        )
-
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
-        if (
-            TiffSlideAssociatedImageType.THUMBNAIL.value
-            not in self._tiffslide.associated_images
-        ):
-            return None
-        return TiffSlideAssociatedImageData(
-            self._tiffslide, TiffSlideAssociatedImageType.THUMBNAIL, self._encoder
         )
