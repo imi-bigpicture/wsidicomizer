@@ -137,7 +137,7 @@ class TestWsiDicomizerConvert:
 
         # Act & Assert
         with pytest.raises(WsiDicomNotFoundError):
-            wsi.read_tile(0, (0, 0), z=1.0)
+            wsi.read_tile(0, (0, 0), z=9999.0)
 
     @pytest.mark.parametrize(
         [
@@ -180,6 +180,7 @@ class TestWsiDicomizerConvert:
             (region["location"]["x"], region["location"]["y"]),
             level,
             (region["size"]["width"], region["size"]["height"]),
+            z=region.get("z", None),
         )
 
         # Assert
@@ -287,6 +288,7 @@ class TestWsiDicomizerConvert:
             (region["location"]["x"], region["location"]["y"]),
             level,
             (region["size"]["width"], region["size"]["height"]),
+            z=0,
         )
 
         # Assert
@@ -656,3 +658,25 @@ class TestWsiDicomizerConvert:
         # Assert
         for imaged_size in imaged_sizes:
             assert imaged_size == expected_imaged_size
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "expected_focal_planes"],
+        [
+            (
+                file_format,
+                file,
+                file_parameters["focal_planes"],
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_focal_planes(self, wsi: WsiDicom, expected_focal_planes: List[float]):
+        # Arrange
+
+        # Act
+        focal_planes = wsi.pyramid.base_level.focal_planes
+
+        # Assert
+        assert set(focal_planes) == set(expected_focal_planes)

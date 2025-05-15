@@ -15,7 +15,7 @@
 """Source for reading libisyntax compatible file."""
 
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Tuple, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
@@ -94,8 +94,8 @@ class ISyntaxSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[int, int]:
-        return {0: 0}
+    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+        return {(0, 0.0, "0"): 0}
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return ISyntaxLevelImageData(

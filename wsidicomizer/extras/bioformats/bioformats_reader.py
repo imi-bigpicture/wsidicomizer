@@ -22,7 +22,7 @@ from pathlib import Path
 from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
 from threading import Lock
-from typing import Dict, Generator, List, Optional, Type, Union
+from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
 import jpype.imports  # Needed for loci import to work # noqa
 import numpy as np
@@ -268,15 +268,18 @@ class BioformatsReader:
         return interleaved
 
     @lru_cache
-    def pyramid_levels(self, image_index: int) -> Dict[int, int]:
-        """Return dictionary of dyadic scaling as key and resolution index as value
-        for resolutions in image."""
+    def pyramid_levels(self, image_index: int) -> Dict[Tuple[int, float, str], int]:
+        """Return dictionary of dyadic scaling, focal plane, and optical path as key
+        and resolution index as value for resolutions in image.
+
+        Focal planes and optical paths are not implemented.
+        """
         TOLERANCE = 1e-2
         float_pyramid_levels = (
             math.log2(scale) for scale in self._resolution_scales(image_index)
         )
         return {
-            round(float_level): resolution_index
+            (round(float_level), 0.0, "0"): resolution_index
             for resolution_index, float_level in enumerate(float_pyramid_levels)
             if math.isclose(float_level, round(float_level), abs_tol=TOLERANCE)
         }

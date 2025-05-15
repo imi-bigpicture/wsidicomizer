@@ -15,7 +15,7 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Tuple, Union
 
 from czifile import CziFile
 from pydicom import Dataset
@@ -83,8 +83,8 @@ class CziSource(DicomizerSource):
         return False
 
     @property
-    def pyramid_levels(self) -> Dict[int, int]:
-        return {0: 0}
+    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+        return {(0, 0.0, "0"): 0}
 
     @property
     def base_metadata(self) -> CziMetadata:

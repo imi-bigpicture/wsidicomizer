@@ -1039,13 +1039,13 @@ Pillow = "*"
 
 [[package]]
 name = "opentile"
-version = "0.17.0"
+version = "0.18.0"
 description = "Read tiles from wsi-TIFF files"
 optional = false
 python-versions = "<4.0,>=3.9"
 files = [
-    {file = "opentile-0.17.0-py3-none-any.whl", hash = "sha256:b1fab79c0254ee03322e9c8d6c455867ea730f63d0738853203e24886e5131d1"},
-    {file = "opentile-0.17.0.tar.gz", hash = "sha256:6d80f1c693e350eebd9164061e0ee428dbc5365a585264ca50e1ff42a49762e9"},
+    {file = "opentile-0.18.0-py3-none-any.whl", hash = "sha256:934f0a7b5908137091c0708eb49142da15941c9c64b504983fc1171e5df7ce34"},
+    {file = "opentile-0.18.0.tar.gz", hash = "sha256:36f69a21e39f538aa11ad3dd9c2acc1cf5ba161560473879256c2189a04a2c3f"},
 ]
 
 [package.dependencies]
@@ -1196,18 +1196,18 @@ type = ["mypy (>=1.14.1)"]
 
 [[package]]
 name = "pluggy"
-version = "1.5.0"
+version = "1.6.0"
 description = "plugin and hook calling mechanisms for python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669"},
-    {file = "pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1"},
+    {file = "pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746"},
+    {file = "pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3"},
 ]
 
 [package.extras]
 dev = ["pre-commit", "tox"]
-testing = ["pytest", "pytest-benchmark"]
+testing = ["coverage", "pytest", "pytest-benchmark"]
 
 [[package]]
 name = "progressbar2"
@@ -1793,13 +1793,13 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [[package]]
 name = "wsidicom"
-version = "0.27.0"
+version = "0.27.1"
 description = "Tools for handling DICOM based whole scan images"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "wsidicom-0.27.0-py3-none-any.whl", hash = "sha256:58b4a8e1e5dc48f1fb99ef7fe1c1dc7f7b258140ba427a863bff5b74f35d7590"},
-    {file = "wsidicom-0.27.0.tar.gz", hash = "sha256:185043ec8058b09b59bfd4a8d50339fe8a83c0d4a68a0e412694ab26fa11901e"},
+    {file = "wsidicom-0.27.1-py3-none-any.whl", hash = "sha256:351d053b8a8be3dcbe404bf4b331e2c4c07348bad1aaeb9f93275df541e87668"},
+    {file = "wsidicom-0.27.1.tar.gz", hash = "sha256:1b48d8c6608b769981e63c0fdc157647ec656df26e9101319b4ebfccfeaa80ec"},
 ]
 
 [package.dependencies]
@@ -1867,4 +1867,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2729a7764c13e2527a2b3c8810a604ef27112bb27d574f4fa20e89c7105ea15d"
+content-hash = "e75dedb411c54b25597ed111edbd2cfadc69ebeeb27e38d96a6ff0631fc406cb"

@@ -89,8 +89,7 @@ class BioformatsSource(DicomizerSource):
         return BioformatsImageData.detect_format(filepath)
 
     @property
-    def pyramid_levels(self) -> Dict[int, int]:
-        """Return pyramid levels (scalings) for file."""
+    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
         return self._reader.pyramid_levels(self._pyramid_image_index)
 
     @property
@@ -131,7 +130,9 @@ class BioformatsSource(DicomizerSource):
             self._tile_size,
             self._encoder,
             self._pyramid_image_index,
-            self._reader.pyramid_levels(self._pyramid_image_index)[level_index],
+            self._reader.pyramid_levels(self._pyramid_image_index)[
+                level_index, 0.0, ""
+            ],
             self._volume_imaged_size,
         )
 

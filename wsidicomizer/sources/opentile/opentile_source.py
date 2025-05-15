@@ -16,7 +16,7 @@
 
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Tuple, Union
 
 from opentile import OpenTile
 from pydicom import Dataset
@@ -91,9 +91,10 @@ class OpenTileSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[int, int]:
+    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
         return {
-            level.pyramid_index: index for index, level in enumerate(self._tiler.levels)
+            (level.pyramid_index, level.focal_plane, level.optical_path): index
+            for index, level in enumerate(self._tiler.levels)
         }
 
     @staticmethod

@@ -97,7 +97,7 @@ class OpenSlideLikeSource(DicomizerSource):
         self._level_dimensions = level_dimensions
         self._associated_images = associated_images
         self._pyramid_levels = {
-            int(round(math.log2(downsample))): index
+            (int(round(math.log2(downsample))), 0.0, "0"): index
             for index, downsample in enumerate(level_downsamples)
         }
 
@@ -120,7 +120,7 @@ class OpenSlideLikeSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[int, int]:
+    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
         return self._pyramid_levels
 
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:

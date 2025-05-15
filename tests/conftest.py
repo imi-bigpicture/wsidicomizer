@@ -62,7 +62,6 @@ test_parameters = {
                     "location": {"x": 16400, "y": 21200},
                     "level": 0,
                     "size": {"width": 200, "height": 200},
-                    "md5": "51cc84bd6c1c71a7a7c3e736b3bd3970",
                 }
             ],
             "read_thumbnail": [
@@ -79,6 +78,7 @@ test_parameters = {
             ],
             "thumbnail_pixel_spacing": (0.022416015625, 0.022416015625),
             "imaged_size": (22.954000473022461, 16.42408561706543),
+            "focal_planes": [0.0],
         },
         "svs1/input.svs": {
             "convert": True,
@@ -113,7 +113,6 @@ test_parameters = {
                     "location": {"x": 8000, "y": 8000},
                     "level": 0,
                     "size": {"width": 200, "height": 200},
-                    "md5": "51cc84bd6c1c71a7a7c3e736b3bd3970",
                 },
             ],
             "read_thumbnail": [
@@ -130,6 +129,47 @@ test_parameters = {
             ],
             "thumbnail_pixel_spacing": (0.0230818171875, 0.0230818171875),
             "imaged_size": (23.635780334472656, 17.396451950073242),
+            "focal_planes": [0.0],
+        },
+        "zstack1/zstack1.svs": {
+            "convert": True,
+            "openslide": False,
+            "include_levels": [0, 1],
+            "lowest_included_pyramid_level": 0,
+            "photometric_interpretation": "RGB",
+            "image_coordinate_system": {"x": 0, "y": 0},
+            "icc_profile": True,
+            "read_region": [
+                {
+                    "location": {"x": 400, "y": 400},
+                    "level": 2,
+                    "z": 0,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "ad7816bc826597787fb65a29cb2fe087",
+                },
+                {
+                    "location": {"x": 400, "y": 400},
+                    "level": 2,
+                    "z": 0.9,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "e76a5e0f969dd188a7d2c9421de391a8",
+                },
+            ],
+            "read_region_openslide": [],
+            "read_thumbnail": [
+                {
+                    "size": {"width": 512, "height": 512},
+                    "md5": "a9b7865911ba2436e5a3eecae09ef5ad",
+                }
+            ],
+            "embedded_thumbnail_size": (926, 768),
+            "pixel_spacings": [
+                (0.0005039, 0.0005039),
+                (0.00201620735235, 0.00201620735235),
+            ],
+            "thumbnail_pixel_spacing": (0.00541937375810, 0.00541937375810),
+            "imaged_size": (5.018340110778809, 4.158686637878418),
+            "focal_planes": [0.0, 0.9, 1.8, 2.7, 3.6, 4.5, 5.4],
         },
     },
     "czi": {
@@ -162,6 +202,7 @@ test_parameters = {
             "pixel_spacings": [(0.00021999999999999998, 0.00021999999999999998)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (15.28164, 11.896279999999999),
+            "focal_planes": [0.0],
         }
     },
     "mirax": {
@@ -208,6 +249,7 @@ test_parameters = {
             "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
             "thumbnail_pixel_spacing": (0.02974039812646, 0.02974039812646),
             "imaged_size": (25.398300170898438, 51.31182098388672),
+            "focal_planes": [0.0],
         }
     },
     "ndpi": {
@@ -265,6 +307,7 @@ test_parameters = {
             ],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (23.368324279785156, 17.357906341552734),
+            "focal_planes": [0.0],
         },
         "ndpi1/input.ndpi": {
             "convert": True,
@@ -315,77 +358,94 @@ test_parameters = {
             ],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (28.697086334228516, 19.497819900512695),
+            "focal_planes": [0.0],
         },
-        # "ndpi2/input.ndpi": {
-        #     "convert": True,
-        #     "include_levels": [4, 6],
-        #     "lowest_included_pyramid_level": 4,
-        #     "tile_size": 1024,
-        #     "photometric_interpretation": "YBR_FULL_422",
-        #     "image_coordinate_system": {
-        #         "x": 0.0,
-        #         "y": 0.0
-        #     },
-        #     "read_region": [
-        #         {
-        #             "location": {
-        #                 "x": 3000,
-        #                 "y": 3000
-        #             },
-        #             "level": 4,
-        #             "size": {
-        #                 "width": 500,
-        #                 "height": 500
-        #             },
-        #             "md5": "fee89f955ed08550391b59cdff4a7aef"
-        #         },
-        #         {
-        #             "location": {
-        #                 "x": 1000,
-        #                 "y": 1000
-        #             },
-        #             "level": 6,
-        #             "size": {
-        #                 "width": 500,
-        #                 "height": 500
-        #             },
-        #             "md5": "59afbe85473f23038e97ee40213862b4"
-        #         }
-        #     ],
-        #     "read_region_openslide": [
-        #         {
-        #             "location": {
-        #                 "x": 3000,
-        #                 "y": 3000
-        #             },
-        #             "level": 4,
-        #             "size": {
-        #                 "width": 500,
-        #                 "height": 500
-        #             },
-        #         },
-        #         {
-        #             "location": {
-        #                 "x": 1000,
-        #                 "y": 1000
-        #             },
-        #             "level": 6,
-        #             "size": {
-        #                 "width": 500,
-        #                 "height": 500
-        #             },
-        #         }
-        #     ],
-        #     "read_thumbnail": [
-        #         {
-        #             "size": {
-        #                 "width": 512,
-        #                 "height": 512
-        #             },
-        #             "md5": "701961c4afcf42d545e30ad8346fc8f4"
-        #         }
-        #     ]
-        # }
+        "ndpi2/input.ndpi": {
+            "convert": True,
+            "openslide": True,
+            "include_levels": [4, 6],
+            "lowest_included_pyramid_level": 4,
+            "tile_size": 1024,
+            "photometric_interpretation": "YBR_FULL_422",
+            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
+            "read_region": [
+                {
+                    "location": {"x": 1000, "y": 1000},
+                    "level": 6,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "59afbe85473f23038e97ee40213862b4",
+                },
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {"x": 1000, "y": 1000},
+                    "level": 6,
+                    "size": {"width": 500, "height": 500},
+                },
+            ],
+            "read_thumbnail": [
+                {
+                    "size": {"width": 512, "height": 512},
+                    "md5": "701961c4afcf42d545e30ad8346fc8f4",
+                }
+            ],
+            "embedded_thumbnail_size": None,
+            "pixel_spacings": [
+                (0.00362844702467, 0.00362844702467),
+                (0.01451378809869, 0.01451378809869),
+            ],
+            "thumbnail_pixel_spacing": None,
+            "imaged_size": (36.21491622924805, 23.563446044921875),
+            "focal_planes": [0.0],
+        },
+        "zstack1/zstack1.ndpi": {
+            "convert": True,
+            "openslide": True,
+            "include_levels": [2, 3],
+            "lowest_included_pyramid_level": 4,
+            "tile_size": 1024,
+            "photometric_interpretation": "YBR_FULL_422",
+            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "icc_profile": False,
+            "read_region": [
+                {
+                    "location": {"x": 200, "y": 200},
+                    "level": 6,
+                    "z": 0,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "ee318f6a456c957dc5c02a5688e22a4b",
+                },
+                {
+                    "location": {"x": 200, "y": 200},
+                    "level": 6,
+                    "z": 1.2,
+                    "size": {"width": 500, "height": 500},
+                    "md5": "45fca1a626e6a13cf700ef4e92afbd88",
+                },
+            ],
+            "read_region_openslide": [
+                {
+                    "location": {"x": 200, "y": 200},
+                    "level": 6,
+                    "size": {"width": 500, "height": 500},
+                }
+            ],
+            "read_thumbnail": [
+                {
+                    "size": {"width": 512, "height": 512},
+                    "md5": "7b3ef58e844e078afdba060330aa3d6f",
+                }
+            ],
+            "embedded_thumbnail_size": None,
+            "pixel_spacings": [
+                (0.00361663652803, 0.00361663652803),
+                (0.01447178002894, 0.01447178002894),
+            ],
+            "thumbnail_pixel_spacing": None,
+            "imaged_size": (20.36567497253418, 18.97710609436035),
+            "focal_planes": [-3.6, -2.4, -1.2, 0.0, 1.2, 2.4, 3.6],
+        },
     },
     "philips_tiff": {
         "philips1/input.tif": {
@@ -443,6 +503,7 @@ test_parameters = {
             "pixel_spacings": [(0.004, 0.004), (0.008, 0.008), (0.016, 0.016)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (18.944000244140625, 23.552000045776367),
+            "focal_planes": [0.0],
         }
     },
     "isyntax": {
@@ -481,6 +542,7 @@ test_parameters = {
             "pixel_spacings": [(0.00025, 0.00025)],
             "thumbnail_pixel_spacing": None,
             "imaged_size": (9.3455, 18.305500000000002),
+            "focal_planes": [0.0],
         }
     },
 }

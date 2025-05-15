@@ -14,6 +14,7 @@
 
 """Image data for opentile compatible file."""
 
+import dataclasses
 from typing import Iterable, Iterator, List, Optional, Union
 
 from opentile.tiff_image import (
@@ -271,12 +272,21 @@ class OpenTileLevelImageData(OpenTileImageData):
         else:
             self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
             self._imaged_size = imaged_size
-        self._image_coordinate_system = merged_metadata.image_coordinate_system
+        if merged_metadata.image_coordinate_system is not None:
+            self._image_coordinate_system = dataclasses.replace(
+                merged_metadata.image_coordinate_system,
+                z_offset=self._tiff_image.focal_plane,
+            )
+        else:
+            self._image_coordinate_system = None
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
         if self._image_coordinate_system is None:
-            return super().image_coordinate_system
+            return dataclasses.replace(
+                super().image_coordinate_system,
+                z_offset=self._tiff_image.focal_plane,
+            )
         return self._image_coordinate_system
 
     @property
@@ -286,6 +296,14 @@ class OpenTileLevelImageData(OpenTileImageData):
     @property
     def imaged_size(self) -> SizeMm:
         return self._imaged_size
+
+    @property
+    def focal_planes(self) -> List[float]:
+        return [self._tiff_image.focal_plane]
+
+    @property
+    def optical_paths(self) -> List[str]:
+        return [self._tiff_image.optical_path]
 
 
 class OpenTileAssociatedImageData(OpenTileImageData):
