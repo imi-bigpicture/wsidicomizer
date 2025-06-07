@@ -58,10 +58,6 @@ class ISyntaxLevelImageData(DicomizerImageData):
         else:
             self._tile_size = Size(tile_size, tile_size)
         self._level = level
-        self._blank_encoded_frame = bytes()
-        self._blank_encoded_frame_size = None
-        self._blank_decoded_frame = None
-        self._blank_decoded_frame_size = None
 
     @property
     def image_size(self) -> Size:

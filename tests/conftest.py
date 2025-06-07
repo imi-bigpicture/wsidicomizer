@@ -248,7 +248,7 @@ test_parameters = {
             "embedded_thumbnail_size": (534, 742),
             "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
             "thumbnail_pixel_spacing": (0.02974039812646, 0.02974039812646),
-            "imaged_size": (25.398300170898438, 51.31182098388672),
+            "imaged_size": (15.883237838745117, 22.080989837646484),
             "focal_planes": [0.0],
         }
     },

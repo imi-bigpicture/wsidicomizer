@@ -32,7 +32,10 @@ class DicomizerImageData(ImageData):
     methods and properties in the base ImageData-class.
     """
 
-    _default_z = None
+    _blank_encoded_frame: Optional[bytes] = None
+    _blank_encoded_frame_size: Optional[Size] = None
+    _blank_decoded_frame: Optional[Image] = None
+    _blank_decoded_frame_size: Optional[Size] = None
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
@@ -85,7 +88,7 @@ class DicomizerImageData(ImageData):
         bytes
             Encoded blank frame.
         """
-        if self._blank_encoded_frame_size != size:
+        if self._blank_encoded_frame is None or self._blank_encoded_frame_size != size:
             frame = np.full(
                 size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
             )

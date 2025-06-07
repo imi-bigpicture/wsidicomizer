@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2025-06-07
+
+### Fixed
+
+- Incorrect imaged size for openslide like levels.
+- Update `tiffslide` to 2.5.1 to avoid incompatibility with zarr 3.
+
 ## [0.22.0] - 2025-05-15
 
 ### Added
@@ -361,7 +368,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.1..HEAD
+[0.22.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.0..0.22.1
 [0.22.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.21.1..0.22.0
 [0.21.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.21.0..0.21.1
 [0.21.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.20.0..0.21.0

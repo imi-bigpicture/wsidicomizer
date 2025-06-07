@@ -159,19 +159,31 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
             image_metadata.pixel_spacing.width * downsample,
             image_metadata.pixel_spacing.height * downsample,
         )
-        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-            base_level_dimensions
-        )
+
         if offset is not None:
-            offset = Point(round(offset.x / downsample), round(offset.y / downsample))
+            crop_offset = Point(
+                round(offset.x / downsample), round(offset.y / downsample)
+            )
         else:
-            offset = Point(0, 0)
+            crop_offset = Point(0, 0)
         if size is not None:
-            size = Size(round(size.width / downsample), round(size.height / downsample))
+            crop_size = Size(
+                round(size.width / downsample), round(size.height / downsample)
+            )
+            self._imaged_size = image_metadata.pixel_spacing * size
         else:
-            size = Size.from_tuple(image.size) - offset
+            crop_size = Size.from_tuple(image.size) - crop_offset
+            self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+                base_level_dimensions
+            )
+
         cropped = image.crop(
-            (offset.x, offset.y, offset.x + size.width, offset.y + size.height)
+            (
+                crop_offset.x,
+                crop_offset.y,
+                crop_offset.x + crop_size.width,
+                crop_offset.y + crop_size.height,
+            )
         )
         super().__init__(
             cropped,
@@ -216,7 +228,6 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
             tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._level_index = level_index
-        self._image_size = Size.from_tuple(level_dimensions[self._level_index])
         self._downsample = level_downsamples[self._level_index]
         if image_metadata.pixel_spacing is None:
             raise ValueError(
@@ -231,17 +242,14 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
 
         if size is not None:
             self._image_size = size // int(round(self._downsample))
+            self._imaged_size = image_metadata.pixel_spacing * size
         else:
             self._image_size = Size.from_tuple(level_dimensions[self._level_index])
+            self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
+                level_dimensions[0]
+            )
 
-        self._blank_encoded_frame = bytes()
-        self._blank_encoded_frame_size = None
-        self._blank_decoded_frame = None
-        self._blank_decoded_frame_size = None
         self._image_coordinate_system = image_metadata.image_coordinate_system
-        self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-            level_dimensions[0]
-        )
 
     @property
     def image_size(self) -> Size:

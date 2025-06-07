@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import math
 import os
 import platform
 from hashlib import md5
@@ -656,6 +657,7 @@ class TestWsiDicomizerConvert:
             )
 
         # Assert
+        print(imaged_sizes)
         for imaged_size in imaged_sizes:
             assert imaged_size == expected_imaged_size
 
@@ -680,3 +682,46 @@ class TestWsiDicomizerConvert:
 
         # Assert
         assert set(focal_planes) == set(expected_focal_planes)
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"],
+        [
+            (
+                file_format,
+                file,
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, _ in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_imaged_size_compared_to_pixel_spacing(self, wsi: WsiDicom):
+        # Arrange
+        expected_pixel_spacings = [
+            SizeMm(
+                level.default_instance.mm_size.width
+                / level.default_instance.size.width,
+                level.default_instance.mm_size.height
+                / level.default_instance.size.height,
+            )
+            for level in wsi.levels
+            if level.default_instance.mm_size is not None
+        ]
+
+        # Act
+        pixel_sizes = [
+            level.default_instance.image_data.pixel_spacing
+            for level in wsi.pyramid.levels
+            if level.default_instance.image_data.pixel_spacing is not None
+        ]
+
+        # Assert
+        for expected_pixel_spacing, pixel_size in zip(
+            expected_pixel_spacings, pixel_sizes
+        ):
+            assert math.isclose(
+                expected_pixel_spacing.width, pixel_size.width, rel_tol=1.5e-3
+            ), f"Width mismatch: {expected_pixel_spacing.width} != {pixel_size.width}"
+            assert math.isclose(
+                expected_pixel_spacing.height, pixel_size.height, rel_tol=1.5e-3
+            ), f"Height mismatch: {expected_pixel_spacing.height} != {pixel_size.height}"
