@@ -12,7 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from typing import Optional
+
 import pytest
+from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
     Image,
@@ -138,3 +141,107 @@ class TestWsiDicomizerMetadata:
         assert (
             merged.optical_paths[1].icc_profile == default.optical_paths[0].icc_profile
         )
+
+    @pytest.mark.parametrize(
+        [
+            "base_frame_of_reference_uid",
+            "user_frame_of_reference_uid",
+            "default_frame_of_reference_uid",
+        ],
+        [
+            (UID("1.2.3"), UID("4.5.6"), UID("7.8.9")),
+            (UID("1.2.3"), UID("4.5.6"), None),
+            (UID("1.2.3"), None, UID("7.8.9")),
+            (None, UID("4.5.6"), UID("7.8.9")),
+            (UID("1.2.3"), None, None),
+            (None, UID("4.5.6"), None),
+            (None, None, UID("7.8.9")),
+            (None, None, None),
+        ],
+    )
+    def test_merge_frame_of_reference_uid(
+        self,
+        base_frame_of_reference_uid: Optional[UID],
+        user_frame_of_reference_uid: Optional[UID],
+        default_frame_of_reference_uid: Optional[UID],
+    ):
+        # Arrange
+        base = WsiDicomizerMetadata(frame_of_reference_uid=base_frame_of_reference_uid)
+        user = WsiDicomizerMetadata(frame_of_reference_uid=user_frame_of_reference_uid)
+        default = WsiDicomizerMetadata(
+            frame_of_reference_uid=default_frame_of_reference_uid
+        )
+        if user_frame_of_reference_uid:
+            expected_frame_of_reference_uid = user_frame_of_reference_uid
+        elif base_frame_of_reference_uid:
+            expected_frame_of_reference_uid = base_frame_of_reference_uid
+        elif default_frame_of_reference_uid:
+            expected_frame_of_reference_uid = default_frame_of_reference_uid
+        else:
+            expected_frame_of_reference_uid = None
+
+        # Act
+        merged = base.merge(user, default, True)
+
+        # Assert
+        assert merged.frame_of_reference_uid == expected_frame_of_reference_uid
+
+    @pytest.mark.parametrize(
+        [
+            "base_dimension_organization_uid",
+            "user_dimension_organization_uid",
+            "default_dimension_organization_uid",
+        ],
+        [
+            (UID("1.2.3"), UID("4.5.6"), UID("7.8.9")),
+            (UID("1.2.3"), UID("4.5.6"), None),
+            (UID("1.2.3"), None, UID("7.8.9")),
+            (None, UID("4.5.6"), UID("7.8.9")),
+            (UID("1.2.3"), None, None),
+            (None, UID("4.5.6"), None),
+            (None, None, UID("7.8.9")),
+            (None, None, None),
+        ],
+    )
+    def test_merge_dimension_organization_uids(
+        self,
+        base_dimension_organization_uid: Optional[UID],
+        user_dimension_organization_uid: Optional[UID],
+        default_dimension_organization_uid: Optional[UID],
+    ):
+        # Arrange
+        base = WsiDicomizerMetadata(
+            dimension_organization_uids=(
+                [base_dimension_organization_uid]
+                if base_dimension_organization_uid
+                else None
+            )
+        )
+        user = WsiDicomizerMetadata(
+            dimension_organization_uids=(
+                [user_dimension_organization_uid]
+                if user_dimension_organization_uid
+                else None
+            )
+        )
+        default = WsiDicomizerMetadata(
+            dimension_organization_uids=(
+                [default_dimension_organization_uid]
+                if default_dimension_organization_uid
+                else None
+            )
+        )
+        if user_dimension_organization_uid:
+            expected_dimension_organization_uid = [user_dimension_organization_uid]
+        elif base_dimension_organization_uid:
+            expected_dimension_organization_uid = [base_dimension_organization_uid]
+        elif default_dimension_organization_uid:
+            expected_dimension_organization_uid = [default_dimension_organization_uid]
+        else:
+            expected_dimension_organization_uid = None
+
+        # Act
+        merged = base.merge(user, default, True)
+
+        # Assert
+        assert merged.dimension_organization_uids == expected_dimension_organization_uid
