@@ -79,6 +79,13 @@ class WsiDicomizerMetadata(WsiMetadata):
             user = WsiDicomizerMetadata()
         if default is None:
             default = WsiDicomizerMetadata()
+
+        frame_of_reference_uid = base.frame_of_reference_uid
+        if user.frame_of_reference_uid is not None:
+            frame_of_reference_uid = user.frame_of_reference_uid
+        if frame_of_reference_uid is None:
+            frame_of_reference_uid = default.frame_of_reference_uid
+
         return WsiDicomizerMetadata(
             study=self._merge(Study, base.study, user.study, default.study),
             series=self._merge(Series, base.series, user.series, default.series),
@@ -95,6 +102,7 @@ class WsiDicomizerMetadata(WsiMetadata):
             slide=self._merge(Slide, base.slide, user.slide, default.slide),
             label=self._merge(Label, base.label, user.label, default.label),
             image=self._merge(Image, base.image, user.image, default.image),
+            frame_of_reference_uid=frame_of_reference_uid,
         )
 
     def _remove_confidential(self) -> "WsiDicomizerMetadata":
