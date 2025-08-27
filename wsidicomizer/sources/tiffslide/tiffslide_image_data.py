@@ -15,6 +15,7 @@
 """Image data for tiffslide compatible file."""
 
 
+from functools import cached_property
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -68,6 +69,13 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             encoder,
         )
         self._slide = tiff_slide
+
+    @cached_property
+    def samples_per_pixel(self) -> int:
+        axes = self._slide.properties["tiffslide.series-axes"]
+        if axes == "YX":
+            return 1
+        return 3
 
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
@@ -124,7 +132,8 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         )
         if self._detect_blank_tile(region_data):
             return None
-
+        if self.samples_per_pixel == 1:
+            region_data = region_data.squeeze(2)
         return region_data
 
     def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:

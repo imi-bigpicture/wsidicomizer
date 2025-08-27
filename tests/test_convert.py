@@ -657,7 +657,6 @@ class TestWsiDicomizerConvert:
             )
 
         # Assert
-        print(imaged_sizes)
         for imaged_size in imaged_sizes:
             assert imaged_size == expected_imaged_size
 

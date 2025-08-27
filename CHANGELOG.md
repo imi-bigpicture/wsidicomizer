@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed missing inclusion of `FrameOfReferenceUID` and `DimensionOrganizationSequence`/`DimensionOrganizationUID` when specified in metadata.
+- Remove color dimensions when reading grayscale image data from `TiffSlideLevelImageData`.
 
 ## [0.22.1] - 2025-06-07
 
