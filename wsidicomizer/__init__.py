@@ -12,8 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from wsidicomizer.wsidicomizer import WsiDicomizer
+from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
 __version__ = "0.22.1"
 
-__all__ = ["WsiDicomizer"]
+__all__ = ["WsiDicomizer", "SourceIdentifier"]

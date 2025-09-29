@@ -131,7 +131,7 @@ class BioformatsSource(DicomizerSource):
             self._encoder,
             self._pyramid_image_index,
             self._reader.pyramid_levels(self._pyramid_image_index)[
-                level_index, 0.0, ""
+                level_index, 0.0, "0"
             ],
             self._volume_imaged_size,
         )

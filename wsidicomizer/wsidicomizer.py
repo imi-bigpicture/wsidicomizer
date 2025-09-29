@@ -18,8 +18,9 @@ like DICOM instances, enabling viewing and saving.
 """
 
 import os
+from enum import Enum
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Type, Union
+from typing import Callable, Dict, List, Optional, Sequence, Type, Union
 
 from PIL.Image import Image
 from pydicom import Dataset
@@ -34,26 +35,14 @@ from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
 
-# List of supported Dicomizers in prioritization order.
-loaded_sources: List[Type[DicomizerSource]] = [
-    OpenTileSource,
-    TiffSlideSource,
-    CziSource,
-]
 
-try:
-    from wsidicomizer.extras.isyntax import ISyntaxSource
-
-    loaded_sources.append(ISyntaxSource)
-except ImportError:
-    pass
-
-try:
-    from wsidicomizer.extras.openslide import OpenSlideSource
-
-    loaded_sources.append(OpenSlideSource)
-except ImportError:
-    pass
+class SourceIdentifier(Enum):
+    OPENTILE = "opentile"
+    TIFFSLIDE = "tiffslide"
+    OPENSLIDE = "openslide"
+    CZI = "czi"
+    ISYNTAX = "isyntax"
+    BIOFORMATS = "bioformats"
 
 
 class WsiDicomizer(WsiDicom):
@@ -69,7 +58,9 @@ class WsiDicomizer(WsiDicom):
         include_confidential: bool = True,
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-        preferred_source: Optional[Type[DicomizerSource]] = None,
+        preferred_source: Optional[
+            Union[Type[DicomizerSource], SourceIdentifier]
+        ] = None,
         **source_args,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
@@ -90,7 +81,7 @@ class WsiDicomizer(WsiDicom):
             Optional metadata post processing by update from dataset or callback.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
-        preferred_source: Optional[Type[DicomizerSource]] = None
+        preferred_source: Optional[Union[Type[DicomizerSource], SourceIdentifier]] = None
             Optional override source to use.
         **source_args
             Optional keyword args to pass to source.
@@ -138,7 +129,9 @@ class WsiDicomizer(WsiDicom):
         chunk_size: Optional[int] = None,
         encoding: Optional[Union[Encoder, EncodingSettings]] = None,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
-        preferred_source: Optional[Type[DicomizerSource]] = None,
+        preferred_source: Optional[
+            Union[Type[DicomizerSource], SourceIdentifier]
+        ] = None,
         **source_args,
     ) -> List[str]:
         """Convert data in file to DICOM files in output path. Created
@@ -186,7 +179,7 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
-        preferred_source: Optional[Type[DicomizerSource]] = None
+        preferred_source: Optional[Union[Type[DicomizerSource], SourceIdentifier]] = None
             Optional override source to use.
         **source_args
             Optional keyword args to pass to source.
@@ -235,13 +228,48 @@ class WsiDicomizer(WsiDicom):
     @staticmethod
     def _select_source(
         filepath: Path,
-        preferred_source: Optional[Type[DicomizerSource]] = None,
+        preferred_source: Optional[
+            Union[Type[DicomizerSource], SourceIdentifier]
+        ] = None,
     ) -> Type[DicomizerSource]:
         """Return source that supports file in filepath."""
+        # List of supported sources in prioritization order.
+        loaded_sources: Dict[SourceIdentifier, Type[DicomizerSource]] = {
+            SourceIdentifier.OPENTILE: OpenTileSource,
+            SourceIdentifier.TIFFSLIDE: TiffSlideSource,
+            SourceIdentifier.CZI: CziSource,
+        }
+        try:
+            from wsidicomizer.extras.isyntax import ISyntaxSource
+
+            loaded_sources[SourceIdentifier.ISYNTAX] = ISyntaxSource
+        except ImportError:
+            pass
+
+        try:
+            from wsidicomizer.extras.openslide import OpenSlideSource
+
+            loaded_sources[SourceIdentifier.OPENSLIDE] = OpenSlideSource
+        except ImportError:
+            pass
+        if isinstance(preferred_source, SourceIdentifier):
+            if preferred_source == SourceIdentifier.BIOFORMATS:
+                # Only load if requested as it requires java runtime.
+                try:
+                    from wsidicomizer.extras.bioformats import BioformatsSource
+
+                except ImportError:
+                    pass
+                loaded_sources[SourceIdentifier.BIOFORMATS] = BioformatsSource
+            preferred_source = loaded_sources[preferred_source]
         selected_source = None
         if preferred_source is None:
             selected_source = next(
-                (source for source in loaded_sources if source.is_supported(filepath)),
+                (
+                    source
+                    for source in loaded_sources.values()
+                    if source.is_supported(filepath)
+                ),
                 None,
             )
         elif preferred_source.is_supported(filepath):

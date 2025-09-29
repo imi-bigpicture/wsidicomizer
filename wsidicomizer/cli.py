@@ -12,230 +12,237 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import argparse
 import os
+from enum import Enum
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Tuple
 
-from wsidicom.codec import Jpeg2kSettings, JpegSettings, Settings, Subsampling
+import click
+from wsidicom.codec.settings import (
+    HTJpeg2000Settings,
+    Jpeg2kSettings,
+    JpegSettings,
+    JpegXlSettings,
+    Subsampling,
+)
+from wsidicom.file import OffsetTableType
 from wsidicom.metadata.schema.json.wsi import WsiMetadataJsonSchema
 from wsidicom.metadata.wsi import WsiMetadata
 
-from wsidicomizer.wsidicomizer import WsiDicomizer
+from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
 
-class WsiDicomizerCli:
-    def __init__(self):
-        self._parser = argparse.ArgumentParser(
-            description=("Convert compatible wsi file to DICOM")
-        )
-
-        self._parser.add_argument(
-            "-i", "--input", type=Path, required=True, help="Path to input wsi file."
-        )
-        self._parser.add_argument(
-            "-o",
-            "--output",
-            type=Path,
-            help=(
-                "Path to output folder. Folder will be created and must not "
-                "exist. If not specified a folder named after the input file "
-                "is created in the same path."
-            ),
-        )
-        self._parser.add_argument(
-            "-t",
-            "--tile-size",
-            type=int,
-            default=512,
-            help=(
-                "Tile size (same for width and height). Required for ndpi and "
-                "openslide formats E.g. 512"
-            ),
-        )
-        self._parser.add_argument(
-            "-m",
-            "--metadata",
-            type=Path,
-            help=(
-                "Path to json metadata that will override metadata from source image "
-                "file."
-            ),
-        )
-        self._parser.add_argument(
-            "-d",
-            "--default-metadata",
-            type=Path,
-            help=("Path to json metadata that will be used as default values."),
-        )
-        self._parser.add_argument(
-            "-l",
-            "--levels",
-            type=int,
-            nargs="+",
-            help=(
-                "Pyramid levels to include, if not all. E.g. 0 1 for base and "
-                "first pyramid layer. "
-            ),
-        )
-        self._parser.add_argument(
-            "--add-missing-levels",
-            action="store_true",
-            help="If to add missing dyadic levels up to the single tile level.",
-        )
-        self._parser.add_argument(
-            "--label",
-            type=Path,
-            help="Optional label image to use instead of label found in file.",
-        )
-        self._parser.add_argument(
-            "--no-label", action="store_true", help="If not to include label"
-        )
-        self._parser.add_argument(
-            "--no-overview", action="store_true", help="If not to include overview"
-        )
-        self._parser.add_argument(
-            "--no-confidential",
-            action="store_true",
-            help="If not to include confidential metadata",
-        )
-        self._parser.add_argument(
-            "-w",
-            "--workers",
-            type=int,
-            default=os.cpu_count(),
-            help="Number of worker threads to use",
-        )
-        self._parser.add_argument(
-            "--chunk-size",
-            type=int,
-            default=100,
-            help="Number of tiles to give each worker at a time",
-        )
-        self._parser.add_argument(
-            "--format",
-            type=str,
-            default="jpeg",
-            help="Encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'.",
-        )
-        self._parser.add_argument(
-            "--quality",
-            type=float,
-            default=90,
-            help=(
-                "Quality to use if re-encoding. It is recommended to not use > 95 for "
-                "jpeg. Use < 1 or > 1000 for lossless jpeg2000."
-            ),
-        )
-        self._parser.add_argument(
-            "--subsampling",
-            type=str,
-            default="420",
-            help=(
-                "Subsampling option if using jpeg for re-encoding. Use '444' "
-                "for no subsampling, '422' for 2x1 subsampling, and '420' for "
-                "2x2 subsampling."
-            ),
-        )
-        self._parser.add_argument(
-            "--offset-table",
-            type=str,
-            default="bot",
-            help=(
-                "Offset table to use, 'bot' basic offset table, 'eot' "
-                "extended offset table, 'None' - no offset table."
-            ),
-        )
-
-    def cli(self):
-        args = self._parser.parse_args()
-        if not args.metadata:
-            metadata = None
-        else:
-            metadata = self._load_metadata(args.metadata)
-        if not args.default_metadata:
-            default_metadata = None
-        else:
-            default_metadata = self._load_metadata(args.default_metadata)
-        if not args.levels:
-            levels = None
-        else:
-            levels = args.levels
-        encoding_format = args.format
-        if encoding_format == "jpeg":
-            subsampling = Subsampling.from_string(args.subsampling)
-            encoding_settings = JpegSettings(
-                quality=args.quality, subsampling=subsampling
-            )
-        elif encoding_format == "jpeg2000":
-            encoding_settings = Jpeg2kSettings(levels=[args.quality])
-        else:
-            encoding_settings = None
-        self.convert(
-            filepath=args.input,
-            output_path=args.output,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            tile_size=args.tile_size,
-            add_missing_levels=args.add_missing_levels,
-            include_levels=levels,
-            include_label=not args.no_label,
-            include_overview=not args.no_overview,
-            include_confidential=not args.no_confidential,
-            workers=args.workers,
-            chunk_size=args.chunk_size,
-            encoding_settings=encoding_settings,
-            offset_table=args.offset_table,
-            label=args.label,
-        )
-
-    def convert(
-        self,
-        filepath: Path,
-        output_path: Path,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
-        tile_size: int = 512,
-        add_missing_levels: bool = False,
-        include_levels: Optional[Sequence[int]] = None,
-        include_label: bool = True,
-        include_overview: bool = True,
-        include_confidential: bool = True,
-        workers: Optional[int] = None,
-        chunk_size: Optional[int] = None,
-        encoding_settings: Optional[Settings] = None,
-        offset_table: str = "bot",
-        label: Optional[Path] = None,
-    ):
-        WsiDicomizer.convert(
-            filepath=filepath,
-            output_path=output_path,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            tile_size=tile_size,
-            add_missing_levels=add_missing_levels,
-            include_levels=include_levels,
-            include_label=include_label,
-            include_overview=include_overview,
-            include_confidential=include_confidential,
-            workers=workers,
-            chunk_size=chunk_size,
-            encoding=encoding_settings,
-            offset_table=offset_table,
-            label=label,
-        )
-
-    @staticmethod
-    def _load_metadata(filepath: Path) -> WsiMetadata:
-        with open(filepath) as json_file:
-            metadata = WsiMetadataJsonSchema().loads(json_file.read())
-            assert isinstance(metadata, WsiMetadata)
-            return metadata
+class CliEncodingsOptions(Enum):
+    JPEG = "jpeg"
+    JPEG2000 = "jpeg2000"
+    HTJPEG2000 = "htjpeg2000"
+    JPEGXL = "jpegxl"
 
 
-def main():
-    cli = WsiDicomizerCli()
-    cli.cli()
+@click.command()
+@click.option(
+    "-i",
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, path_type=Path),
+    required=True,
+    help="Path to input wsi file.",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(path_type=Path),
+    help=(
+        "Path to output folder. Folder will be created and must not "
+        "exist. If not specified a folder named after the input file "
+        "is created in the same path."
+    ),
+)
+@click.option(
+    "-t",
+    "--tile-size",
+    type=int,
+    default=512,
+    help=(
+        "Tile size (same for width and height). Required for ndpi and "
+        "openslide formats."
+    ),
+)
+@click.option(
+    "-m",
+    "--metadata",
+    type=click.Path(exists=True, path_type=Path),
+    help=("Path to json metadata that will override metadata from source image file."),
+)
+@click.option(
+    "-d",
+    "--default-metadata",
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to json metadata that will be used as default values.",
+)
+@click.option(
+    "-l",
+    "--levels",
+    type=int,
+    multiple=True,
+    help=(
+        "Pyramid levels to include, if not all. E.g. 0 1 for base and "
+        "first pyramid layer. Can be specified multiple times."
+    ),
+)
+@click.option(
+    "--add-missing-levels",
+    is_flag=True,
+    help="If to add missing dyadic levels up to the single tile level.",
+)
+@click.option(
+    "--label",
+    type=click.Path(exists=True, path_type=Path),
+    help="Optional label image to use instead of label found in file.",
+)
+@click.option("--no-label", is_flag=True, help="If not to include label")
+@click.option("--no-overview", is_flag=True, help="If not to include overview")
+@click.option(
+    "--no-confidential", is_flag=True, help="If not to include confidential metadata"
+)
+@click.option(
+    "-w",
+    "--workers",
+    type=int,
+    default=os.cpu_count(),
+    help="Number of worker threads to use",
+)
+@click.option(
+    "--chunk-size",
+    type=int,
+    default=100,
+    help="Number of tiles to give each worker at a time",
+)
+@click.option(
+    "--format",
+    "encoding_format",
+    type=click.Choice(CliEncodingsOptions, case_sensitive=False),
+    default=CliEncodingsOptions.JPEG,
+    help="Encoding format to use if re-encoding.",
+)
+@click.option(
+    "--quality",
+    type=float,
+    default=None,
+    help=(
+        "Quality to use if re-encoding. It is not recommended to use > 95 for "
+        "jpeg. Use < 1 or > 1000 for lossless jpeg2000."
+    ),
+)
+@click.option(
+    "--subsampling",
+    type=click.Choice(Subsampling, case_sensitive=False),
+    default=None,
+    help=(
+        "Subsampling option if using jpeg for re-encoding. Use '444' "
+        "for no subsampling, '422' for 2x1 subsampling, and '420' for "
+        "2x2 subsampling."
+    ),
+)
+@click.option(
+    "--offset-table",
+    type=click.Choice(
+        [OffsetTableType.BASIC, OffsetTableType.EXTENDED, OffsetTableType.EMPTY],
+        case_sensitive=False,
+    ),
+    default=OffsetTableType.BASIC,
+    help=("Offset table to use."),
+)
+@click.option(
+    "--source",
+    type=click.Choice(SourceIdentifier, case_sensitive=False),
+    default=None,
+    help=(
+        "Source library to use for reading the input file. If not specified, "
+        "the library will be chosen based on file type."
+    ),
+)
+def main(
+    input_path: Path,
+    output_path: Optional[Path],
+    tile_size: int,
+    metadata: Optional[Path],
+    default_metadata: Optional[Path],
+    levels: Tuple[int, ...],
+    add_missing_levels: bool,
+    label: Optional[Path],
+    no_label: bool,
+    no_overview: bool,
+    no_confidential: bool,
+    workers: int,
+    chunk_size: int,
+    encoding_format: CliEncodingsOptions,
+    quality: Optional[float],
+    subsampling: Optional[str],
+    offset_table: OffsetTableType,
+    source: Optional[SourceIdentifier] = None,
+):
+    """Convert compatible wsi file to DICOM. The cli only supports a subset of the functionality
+    of the WsiDicomizer class. For more advanced usage, use the class directly."""
+
+    # Load metadata if provided
+    loaded_metadata = None
+    if metadata:
+        loaded_metadata = _load_metadata(metadata)
+
+    loaded_default_metadata = None
+    if default_metadata:
+        loaded_default_metadata = _load_metadata(default_metadata)
+
+    # Convert levels tuple to list or None
+    include_levels = list(levels) if levels else None
+
+    # Create encoding settings
+    encoding_settings = None
+    if encoding_format == CliEncodingsOptions.JPEG:
+        subsampling_enum = (
+            Subsampling.from_string(subsampling)
+            if subsampling is not None
+            else Subsampling.R420
+        )
+        encoding_settings = JpegSettings(
+            quality=int(quality) if quality else 80, subsampling=subsampling_enum
+        )
+    elif encoding_format == CliEncodingsOptions.JPEG2000:
+        encoding_settings = Jpeg2kSettings(levels=[int(quality) if quality else 80])
+    elif encoding_format == CliEncodingsOptions.HTJPEG2000:
+        encoding_settings = HTJpeg2000Settings(levels=[int(quality) if quality else 80])
+    elif encoding_format == CliEncodingsOptions.JPEGXL:
+        encoding_settings = JpegXlSettings(level=int(quality) if quality else 90)
+    else:
+        raise ValueError(f"Unsupported encoding format {encoding_format}")
+
+    WsiDicomizer.convert(
+        filepath=input_path,
+        output_path=output_path,
+        metadata=loaded_metadata,
+        default_metadata=loaded_default_metadata,
+        tile_size=tile_size,
+        add_missing_levels=add_missing_levels,
+        include_levels=include_levels,
+        include_label=not no_label,
+        include_overview=not no_overview,
+        include_confidential=not no_confidential,
+        workers=workers,
+        chunk_size=chunk_size,
+        encoding=encoding_settings,
+        offset_table=offset_table,
+        label=label,
+        preferred_source=source,
+    )
+
+
+def _load_metadata(filepath: Path) -> WsiMetadata:
+    with open(filepath) as json_file:
+        metadata = WsiMetadataJsonSchema().loads(json_file.read())
+        assert isinstance(metadata, WsiMetadata)
+        return metadata
 
 
 if __name__ == "__main__":

@@ -14,6 +14,6 @@
 
 """Module containing dicomizer source for reading files with bioformats."""
 
-from wsidicomizer.extras.bioformats.bioformats_dicomizer import BioformatsDicomizer
+from wsidicomizer.extras.bioformats.bioformats_source import BioformatsSource
 
-__all__ = ["BioformatsDicomizer"]
+__all__ = ["BioformatsSource"]

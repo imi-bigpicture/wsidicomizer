@@ -62,34 +62,51 @@ Please note that this is an early release and the API is not frozen yet. Functio
 wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 ```
 
-### Arguments
+### Options
 
-~~~~
--i, --input, path to input wsi file
--o, --output, path to output folder
--t, --tile-size, required depending on input format
--m, --metadata, optional path to json file defining metadata
--d, --default-metadata, optional path to json file defining default metadata
--l, --levels, optional levels to include
--w, --workers, number of threads to use
---label, optional label image to use instead of label found in file
---no-label, if not to include label image
---no-overview, if not to include overview image
---no-confidential, if to not include confidential metadata
---chunk-size, number of tiles to give each worker at a time
---format, encoding format to use if re-encoding. 'jpeg' or 'jpeg2000'
---quality, quality to use if re-encoding.
---subsampling, subsampling option to use if re-encoding.
---offset-table, offset table to use, 'bot', 'eot', or 'None'
-~~~~
-
-### Flags
-
-~~~~
---no-label, do not include label(s)
---no-overview, do not include overview(s)
---no-confidential, do not include confidential metadata from image
-~~~~
+```console
+  -i, --input PATH                Path to input wsi file.  [required]
+  -o, --output PATH               Path to output folder. Folder will be
+                                  created and must not exist. If not specified
+                                  a folder named after the input file is
+                                  created in the same path.
+  -t, --tile-size INTEGER         Tile size (same for width and height).
+                                  Required for ndpi and openslide formats.
+  -m, --metadata PATH             Path to json metadata that will override
+                                  metadata from source image file.
+  -d, --default-metadata PATH     Path to json metadata that will be used as
+                                  default values.
+  -l, --levels INTEGER            Pyramid levels to include, if not all. E.g.
+                                  0 1 for base and first pyramid layer. Can be
+                                  specified multiple times.
+  --add-missing-levels            If to add missing dyadic levels up to the
+                                  single tile level.
+  --label PATH                    Optional label image to use instead of label
+                                  found in file.
+  --no-label                      If not to include label
+  --no-overview                   If not to include overview
+  --no-confidential               If not to include confidential metadata
+  -w, --workers INTEGER           Number of worker threads to use
+  --chunk-size INTEGER            Number of tiles to give each worker at a
+                                  time
+  --format [jpeg|jpeg2000|htjpeg2000|jpegxl]
+                                  Encoding format to use if re-encoding.
+  --quality FLOAT                 Quality to use if re-encoding. It is not
+                                  recommended to use > 95 for jpeg. Use < 1 or
+                                  > 1000 for lossless jpeg2000.
+  --subsampling [r444|r422|r420|r411|r440]
+                                  Subsampling option if using jpeg for re-
+                                  encoding. Use '444' for no subsampling,
+                                  '422' for 2x1 subsampling, and '420' for 2x2
+                                  subsampling.
+  --offset-table [basic|extended|empty]
+                                  Offset table to use.
+  --source [opentile|tiffslide|openslide|czi|isyntax|bioformats]
+                                  Source library to use for reading the input
+                                  file. If not specified, the library will be
+                                  chosen based on file type.
+  --help                          Show this message and exit.
+```
 
 Using the no-confidential-flag properties according to [DICOM Basic Confidentiality Profile](https://dicom.nema.org/medical/dicom/current/output/html/part15.html#table_E.1-1) are not included in the output file. Properties otherwise included are currently:
 
@@ -306,7 +323,7 @@ Support for reading images using Bioformats java library can optionally be enabl
 pip install wsidicomizer[bioformats]
 ```
 
-The `bioformats` extra enables usage of the `bioformats` module and the `bioformats_wsidicomizer`-cli command. The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
+The `bioformats` extra enables usage of the `bioformats` module.The required Bioformats java library (jar-file) is downloaded automatically when the module is imported using [scyjava](https://github.com/scijava/scyjava).
 
 ### Using
 
@@ -317,15 +334,22 @@ import scyjava
 scyjava.shutdown_jvm()
 ```
 
-Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class, instead the `BioformatsDicomizer`-class should be used. Similarly, the Bioformats support is only available in the `bioformats_wsidicomizer`-cli command.
+Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class unless `SourceIdentifier.BIOFORMATS` is used as preferred_source:
+
+```python
+from wsidicomizer import SouceIdentifier, WsiDicomizer
+
+with WsiDicomizer('input file', preferred_source=SourceIdentifier.BIOFORMASTS) as wsi:
+    ...
+```
 
 ### Bioformats version
 
-The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v8.0.1/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:8.0.1`.
+The Bioformats java library is available in two versions, one with BSD and one with GPL2 license, and can read several [WSI formats](https://bio-formats.readthedocs.io/en/v8.3.0/supported-formats.html). However, most formats are only available in the GPL2 version. Due to the licensing incompatibility between Apache 2.0 and GPL2, *wsidicomizer* is distributed with a default setting of using the BSD licensed library. The loaded Biformats version can be changed by the user by setting the `BIOFORMATS_VERSION` environmental variable from the default value `bsd:8.3.0`.
 
 ## Limitations
 
-Files with z-stacks or multiple focal paths are currently not supported.
+Files with z-stacks or multiple focal paths are currently fully not supported.
 
 ## Other DICOM python tools
 
