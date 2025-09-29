@@ -24,6 +24,7 @@ from pydicom.uid import UID, JPEGBaseline8Bit
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
+from wsidicom.instance import ImageType
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
@@ -35,7 +36,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
     def __init__(
         self,
         isyntax: ISyntax,
-        merged_metadata: ImageMetadata,
+        image_metadata: ImageMetadata,
         tile_size: Optional[int],
         encoder: Encoder,
         level: int,
@@ -45,11 +46,11 @@ class ISyntaxLevelImageData(DicomizerImageData):
         self._slide_level = isyntax.wsi.get_level(level)
         pixel_spacing = SizeMm(self._slide_level.mpp_x, self._slide_level.mpp_y) / 1000
         if (
-            merged_metadata.pixel_spacing is not None
-            and merged_metadata.pixel_spacing != pixel_spacing
+            image_metadata.pixel_spacing is not None
+            and image_metadata.pixel_spacing != pixel_spacing
         ):
             # Override pixel spacing
-            self._pixel_spacing = merged_metadata.pixel_spacing
+            self._pixel_spacing = image_metadata.pixel_spacing
         else:
             self._pixel_spacing = pixel_spacing
         self._file_tile_size = Size(self._slide.tile_width, self._slide.tile_height)
@@ -58,6 +59,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
         else:
             self._tile_size = Size(tile_size, tile_size)
         self._level = level
+        self._image_coordinate_system = image_metadata.image_coordinate_system
 
     @property
     def image_size(self) -> Size:
@@ -110,10 +112,12 @@ class ISyntaxLevelImageData(DicomizerImageData):
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
-        return ImageCoordinateSystem(PointMm(0, 0), 0)
+        if self._image_coordinate_system is not None:
+            return self._image_coordinate_system
+        return ImageCoordinateSystem(origin=PointMm(25, 50), rotation=180)
 
     @property
-    def thread_safe(selt) -> bool:
+    def thread_safe(self) -> bool:
         return False
 
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
@@ -244,8 +248,12 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
         self,
         frame: bytes,
         encoder: Encoder,
+        image_type: ImageType,
+        image_metadata: Optional[ImageMetadata] = None,
         force_transcoding: bool = False,
     ):
+        if image_type not in (ImageType.LABEL, ImageType.OVERVIEW):
+            raise ValueError("image_type must be LABEL or OVERVIEW")
         super().__init__(encoder)
         self._frame = frame
         self._force_transcoding = force_transcoding
@@ -253,6 +261,8 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
             self._transfer_syntax = self._encoder.transfer_syntax
         else:
             self._transfer_syntax = JPEGBaseline8Bit
+        self._image_metadata = image_metadata
+        self._image_type = image_type
 
     @property
     def transfer_syntax(self) -> UID:
@@ -280,10 +290,14 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
 
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:
-        return None
+        if self._image_metadata is None:
+            return None
+        return self._image_metadata.pixel_spacing
 
     @property
     def imaged_size(self) -> Optional[SizeMm]:
+        if self.pixel_spacing is not None:
+            return self.pixel_spacing * self.image_size
         return None
 
     @property
@@ -300,7 +314,15 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:
-        return ImageCoordinateSystem(PointMm(0, 0), 0)
+        if (
+            self._image_metadata is not None
+            and self._image_metadata.image_coordinate_system is not None
+        ):
+            return self._image_metadata.image_coordinate_system
+        if self._image_type == ImageType.LABEL:
+            return ImageCoordinateSystem(origin=PointMm(25, 75), rotation=180)
+        else:
+            return ImageCoordinateSystem(origin=PointMm(25, 50), rotation=180)
 
     @property
     def thread_safe(self) -> bool:

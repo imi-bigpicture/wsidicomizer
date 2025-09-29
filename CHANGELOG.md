@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Metadata model updated to match `WsiDicom`. `image` and `optical_paths` moved to new `Pyramid` model.
+
 ### Fixed
 
 - Fixed missing inclusion of `FrameOfReferenceUID` and `DimensionOrganizationSequence`/`DimensionOrganizationUID` when specified in metadata.

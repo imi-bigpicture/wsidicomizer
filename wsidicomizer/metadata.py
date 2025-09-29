@@ -16,7 +16,6 @@
 from dataclasses import Field, fields, is_dataclass, replace
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar
 
-from PIL import ImageCms
 from pydicom import Dataset
 from pydicom.uid import UID
 from wsidicom.metadata import (
@@ -24,7 +23,9 @@ from wsidicom.metadata import (
     Image,
     Label,
     OpticalPath,
+    Overview,
     Patient,
+    Pyramid,
     Series,
     Slide,
     Study,
@@ -32,6 +33,7 @@ from wsidicom.metadata import (
 )
 
 ModelType = TypeVar("ModelType")
+ModuleWithImage = TypeVar("ModuleWithImage", Pyramid, Label, Overview)
 
 
 class WsiDicomizerMetadata(WsiMetadata):
@@ -43,10 +45,10 @@ class WsiDicomizerMetadata(WsiMetadata):
         series: Optional[Series] = None,
         patient: Optional[Patient] = None,
         equipment: Optional[Equipment] = None,
-        optical_paths: Optional[Sequence[OpticalPath]] = None,
+        pyramid: Optional[Pyramid] = None,
         slide: Optional[Slide] = None,
         label: Optional[Label] = None,
-        image: Optional[Image] = None,
+        overview: Optional[Overview] = None,
         frame_of_reference_uid: Optional[UID] = None,
         dimension_organization_uids: Optional[Sequence[UID]] = None,
     ):
@@ -55,10 +57,10 @@ class WsiDicomizerMetadata(WsiMetadata):
             series if series is not None else Series(),
             patient if patient is not None else Patient(),
             equipment if equipment is not None else Equipment(),
-            optical_paths if optical_paths is not None else [],
             slide if slide is not None else Slide(),
+            pyramid if pyramid is not None else Pyramid(Image(), []),
             label if label is not None else Label(),
-            image if image is not None else Image(),
+            overview,
             frame_of_reference_uid,
             dimension_organization_uids,
         )
@@ -90,7 +92,26 @@ class WsiDicomizerMetadata(WsiMetadata):
             dimension_organization_uids = user.dimension_organization_uids
         if dimension_organization_uids is None:
             dimension_organization_uids = default.dimension_organization_uids
-
+        # label = self._merge_module_with_image(
+        #     Label, base.label, user.label, default.label
+        # )
+        #     overview = self._merge_module_with_image(
+        #         Overview, base.overview, user.overview, default.overview
+        #     )
+        # if ensure_label:
+        #     if label is None:
+        #         label = Label(image=Image(), optical_paths=[])
+        #     elif label.image is None:
+        #         label = replace(label, image=Image())
+        #     elif label.optical_paths is None:
+        #         label = replace(label, optical_paths=[])
+        # if ensure_overview:
+        #     if overview is None:
+        #         overview = Overview(image=Image(), optical_paths=[])
+        #     if overview.image is None:
+        #         overview = replace(overview, image=Image())
+        #     elif overview.optical_paths is None:
+        #         overview = replace(overview, optical_paths=[])
         return WsiDicomizerMetadata(
             study=self._merge(Study, base.study, user.study, default.study),
             series=self._merge(Series, base.series, user.series, default.series),
@@ -98,15 +119,16 @@ class WsiDicomizerMetadata(WsiMetadata):
             equipment=self._merge(
                 Equipment, base.equipment, user.equipment, default.equipment
             ),
-            optical_paths=self._merge_list(
-                OpticalPath,
-                base.optical_paths,
-                user.optical_paths,
-                default.optical_paths,
-            ),
             slide=self._merge(Slide, base.slide, user.slide, default.slide),
-            label=self._merge(Label, base.label, user.label, default.label),
-            image=self._merge(Image, base.image, user.image, default.image),
+            pyramid=self._merge_module_with_image(
+                Pyramid, base.pyramid, user.pyramid, default.pyramid
+            ),
+            label=self._merge_module_with_image(
+                Label, base.label, user.label, default.label
+            ),
+            overview=self._merge_module_with_image(
+                Overview, base.overview, user.overview, default.overview
+            ),
             frame_of_reference_uid=frame_of_reference_uid,
             dimension_organization_uids=dimension_organization_uids,
         )
@@ -117,10 +139,10 @@ class WsiDicomizerMetadata(WsiMetadata):
             series=None,
             patient=self.patient.remove_confidential() if self.patient else None,
             equipment=self.equipment.remove_confidential() if self.equipment else None,
-            optical_paths=self.optical_paths,
             slide=None,
+            pyramid=self.pyramid.remove_confidential() if self.pyramid else None,
             label=self.label.remove_confidential() if self.label else None,
-            image=self.image.remove_confidential() if self.image else None,
+            overview=self.overview.remove_confidential() if self.overview else None,
             frame_of_reference_uid=None,
             dimension_organization_uids=None,
         )
@@ -229,35 +251,43 @@ class WsiDicomizerMetadata(WsiMetadata):
             value = cls._merge(type(value), base_value, user_value, default_value)
         return value
 
-    def insert_default_icc_profile(self) -> WsiMetadata:
-        if len(self.optical_paths) == 0:
-            # No optical paths defined, add one with icc profile
-            optical_paths = [
-                OpticalPath(icc_profile=self._create_default_icc_profile())
-            ]
-        else:
-            # Optical paths defined, add icc profile if missing
-            optical_paths = [
-                (
-                    replace(
-                        optical_path,
-                        icc_profile=self._create_default_icc_profile(),
-                    )
-                    if optical_path.icc_profile is None
-                    else optical_path
-                )
-                for optical_path in self.optical_paths
-            ]
-        return replace(
-            self,
-            optical_paths=optical_paths,
-            frame_of_reference_uid=self.default_frame_of_reference_uid,
-            dimension_organization_uids=self.default_dimension_organization_uids,
+    @classmethod
+    def _merge_module_with_image(
+        cls,
+        model_class: Type[ModuleWithImage],
+        base: Optional[ModuleWithImage],
+        user: Optional[ModuleWithImage],
+        default: Optional[ModuleWithImage],
+    ) -> Optional[ModuleWithImage]:
+        not_none = [model for model in [user, base, default] if model is not None]
+        if len(not_none) == 0:
+            return None
+        assert is_dataclass(model_class)
+        attributes = {
+            field.name: cls._select_value(field, base, user, default)
+            for field in fields(model_class)
+            if field.name != "optical_paths"
+        }
+        attributes["optical_paths"] = cls._merge_list(
+            OpticalPath,
+            (
+                base.optical_paths
+                if base is not None and base.optical_paths is not None
+                else []
+            ),
+            (
+                user.optical_paths
+                if user is not None and user.optical_paths is not None
+                else []
+            ),
+            (
+                default.optical_paths
+                if default is not None and default.optical_paths is not None
+                else []
+            ),
         )
 
-    @staticmethod
-    def _create_default_icc_profile() -> bytes:
-        return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+        return model_class(**attributes)
 
 
 MetadataPostProcessor = Callable[[Dataset, WsiMetadata], Dataset]

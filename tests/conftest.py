@@ -513,7 +513,7 @@ test_parameters = {
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 25, "y": 50},
             "icc_profile": False,
             "read_region": [
                 {

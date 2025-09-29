@@ -56,6 +56,7 @@ from wsidicom.metadata import (
     PatientDeIdentification,
     PatientSex,
     Processing,
+    Pyramid,
     Sample,
     SampleLocalization,
     Series,
@@ -120,7 +121,7 @@ def image(
 
 @pytest.fixture()
 def label():
-    yield Label("text", "barcode", True, True, False)
+    yield Label("text", "barcode", contains_phi=True)
 
 
 @pytest.fixture()
@@ -378,23 +379,26 @@ def study():
 
 
 @pytest.fixture()
+def pyramid(image: Image, optical_path: OpticalPath):
+    yield Pyramid(image=image, optical_paths=[optical_path])
+
+
+@pytest.fixture()
 def wsi_metadata(
     study: Study,
     series: Series,
     patient: Patient,
     equipment: Equipment,
-    optical_path: OpticalPath,
+    pyramid: Pyramid,
     slide: Slide,
     label: Label,
-    image: Image,
 ):
     yield WsiMetadata(
         study=study,
         series=series,
         patient=patient,
         equipment=equipment,
-        optical_paths=[optical_path],
+        pyramid=pyramid,
         slide=slide,
         label=label,
-        image=image,
     )

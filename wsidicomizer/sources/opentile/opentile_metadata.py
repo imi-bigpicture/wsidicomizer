@@ -17,13 +17,19 @@
 from typing import Optional
 
 from opentile import Metadata
-from wsidicom.metadata import Equipment, Image, OpticalPath
+from wsidicom.metadata import Equipment, Image, Label, OpticalPath, Overview, Pyramid
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
 class OpenTileMetadata(WsiDicomizerMetadata):
-    def __init__(self, metadata: Metadata, icc_profile: Optional[bytes] = None):
+    def __init__(
+        self,
+        metadata: Metadata,
+        has_label: bool,
+        has_overview: bool,
+        icc_profile: Optional[bytes] = None,
+    ):
         equipment = Equipment(
             metadata.scanner_manufacturer,
             metadata.scanner_model,
@@ -35,5 +41,19 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             optical_path = OpticalPath(icc_profile=icc_profile)
             optical_paths = [optical_path]
         else:
-            optical_paths = None
-        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
+            optical_paths = []
+        pyramid = Pyramid(image=image, optical_paths=optical_paths)
+        if has_label:
+            label = Label(image=Image(metadata.aquisition_datetime), optical_paths=[])
+        else:
+            label = None
+        if has_overview:
+            overview = Overview(
+                image=Image(metadata.aquisition_datetime),
+                optical_paths=[],
+            )
+        else:
+            overview = None
+        super().__init__(
+            equipment=equipment, pyramid=pyramid, label=label, overview=overview
+        )

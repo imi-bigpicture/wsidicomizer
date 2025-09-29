@@ -26,6 +26,7 @@ from wsidicom.metadata import (
     ImageCoordinateSystem,
     Objectives,
     OpticalPath,
+    Pyramid,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
@@ -94,5 +95,6 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             optical_path = OpticalPath(icc_profile=color_profile.tobytes())
             optical_paths = [optical_path]
         else:
-            optical_paths = None
-        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
+            optical_paths = []
+        pyramid = Pyramid(image=image, optical_paths=optical_paths)
+        super().__init__(equipment=equipment, pyramid=pyramid)

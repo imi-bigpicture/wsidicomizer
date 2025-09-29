@@ -124,7 +124,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     @cached_property
     def metadata(self) -> WsiDicomizerMetadata:
         return self.base_metadata.merge(
-            self.user_metadata, self.default_metadata, self._include_confidential
+            self.user_metadata,
+            self.default_metadata,
+            self._include_confidential,
         )
 
     @property
@@ -196,20 +198,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def _create_dataset(
         self, image_type: ImageType, photometric_interpretation: str
     ) -> WsiDataset:
-        if (
+        require_icc_profile = (
             settings.insert_icc_profile_if_missing
             and not photometric_interpretation.startswith("MONOCHROME")
-        ):
-            metadata = self.metadata.insert_default_icc_profile()
-        else:
-            metadata = self.metadata
-        dataset = WsiMetadataDicomSchema(context={"image_type": image_type}).dump(
-            metadata
+        )
+        dataset = WsiMetadataDicomSchema().dump(
+            self.metadata, image_type, require_icc_profile
         )
         if isinstance(self._metadata_post_processor, Dataset):
             dataset.update(self._metadata_post_processor)
         elif callable(self._metadata_post_processor):
-            dataset = self._metadata_post_processor(dataset, metadata)
+            dataset = self._metadata_post_processor(dataset, self.metadata)
         return WsiDataset(dataset)
 
     @staticmethod

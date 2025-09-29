@@ -18,8 +18,10 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-wsidicom = "^0.27.1"
-opentile = "^0.18.0"
+# wsidicom = "^0.27.1"
+wsidicom = { path = "../wsidicom", develop = true }
+# opentile = "^0.18.0"
+opentile = { path = "../opentile", develop = true }
 numpy = ">=1.22.0"
 pydicom = ">=3.0.0"
 czifile = "^2019.7.2"

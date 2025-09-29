@@ -31,7 +31,7 @@ from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import Pyramid, WsiMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_X,
@@ -95,6 +95,7 @@ class TestWsiDicomizerConvert:
                 "(0048,021E)",
                 "(0048,021F)",
             ],
+            "Multi-frame Functional Groups": ["(0028,9110)", "(0040,0710)"],
             # Validator flags Series Number as unexpected due to error in DICOM 2024a
             "Root": ["(0020,0011)"],
         }
@@ -407,7 +408,7 @@ class TestWsiDicomizerConvert:
         assert np.array_equal(np.array(new_label), np.array(label))
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_image_coordinate_system"],
+        ["file_format", "file", "expected_image_coordinate_system_origin"],
         [
             (
                 file_format,
@@ -424,7 +425,7 @@ class TestWsiDicomizerConvert:
     )
     def test_image_coordinate_system(
         self,
-        expected_image_coordinate_system: PointMm,
+        expected_image_coordinate_system_origin: PointMm,
         wsi: WsiDicom,
     ):
         # Arrange
@@ -441,7 +442,10 @@ class TestWsiDicomizerConvert:
         # Arrange
         for image_coordinate_system in image_coordinate_systems:
             assert image_coordinate_system is not None
-            assert image_coordinate_system.origin == expected_image_coordinate_system
+            assert (
+                image_coordinate_system.origin
+                == expected_image_coordinate_system_origin
+            )
 
     @pytest.mark.parametrize(
         ["file_format", "file"],
@@ -456,7 +460,7 @@ class TestWsiDicomizerConvert:
         # Arrange
         given_pixel_spacing = SizeMm(47, 47)
         metadata = WsiDicomizerMetadata(
-            image=ImageMetadata(pixel_spacing=given_pixel_spacing)
+            pyramid=Pyramid(ImageMetadata(pixel_spacing=given_pixel_spacing), [])
         )
 
         # Act

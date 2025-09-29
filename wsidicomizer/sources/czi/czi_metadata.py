@@ -23,7 +23,7 @@ from xml.etree import ElementTree
 import numpy as np
 from czifile import CziFile
 from wsidicom.geometry import SizeMm
-from wsidicom.metadata import Equipment, Image, Objectives, OpticalPath
+from wsidicom.metadata import Equipment, Image, Objectives, OpticalPath, Pyramid
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
@@ -47,7 +47,8 @@ class CziMetadata(WsiDicomizerMetadata):
         optical_paths = [
             OpticalPath("0", objective=Objectives(objective_power=self.magnification))
         ]
-        super().__init__(equipment=equipment, image=image, optical_paths=optical_paths)
+        pyramid = Pyramid(image=image, optical_paths=optical_paths)
+        super().__init__(equipment=equipment, pyramid=pyramid)
 
     @property
     def aquisition_datetime(self) -> Optional[datetime]:

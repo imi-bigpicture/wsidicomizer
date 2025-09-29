@@ -69,7 +69,10 @@ class OpenTileSource(DicomizerSource):
         """
         self._tiler = OpenTile.open(filepath, tile_size)
         self._base_metadata = OpenTileMetadata(
-            self._tiler.metadata, self._tiler.icc_profile
+            self._tiler.metadata,
+            self.has_label,
+            self.has_overview,
+            self._tiler.icc_profile,
         )
 
         self._force_transcoding = force_transcoding
@@ -97,6 +100,14 @@ class OpenTileSource(DicomizerSource):
             for index, level in enumerate(self._tiler.levels)
         }
 
+    @property
+    def has_label(self) -> bool:
+        return len(self._tiler.labels) > 0
+
+    @property
+    def has_overview(self) -> bool:
+        return len(self._tiler.overviews) > 0
+
     @staticmethod
     def is_supported(filepath: Path) -> bool:
         """Return True if file in filepath is supported by OpenTile."""
@@ -105,22 +116,22 @@ class OpenTileSource(DicomizerSource):
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenTileLevelImageData(
             self._tiler.levels[level_index],
-            self.base_metadata.image,
-            self.metadata.image,
+            self.base_metadata.pyramid.image,
+            self.metadata.pyramid.image,
             self._encoder,
             self._volume_imaged_size,
             self._force_transcoding,
         )
 
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:
-        if len(self._tiler.labels) == 0:
+        if not self.has_label:
             return None
         return OpenTileAssociatedImageData(
             self._tiler.labels[0], self._encoder, self._force_transcoding
         )
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
-        if len(self._tiler.overviews) == 0:
+        if not self.has_overview:
             return None
         return OpenTileAssociatedImageData(
             self._tiler.overviews[0], self._encoder, self._force_transcoding
@@ -132,8 +143,8 @@ class OpenTileSource(DicomizerSource):
             return None
         return OpenTileLevelImageData(
             self._tiler.thumbnails[0],
-            self.base_metadata.image,
-            self.metadata.image,
+            self.base_metadata.pyramid.image,
+            self.metadata.pyramid.image,
             self._encoder,
             self._volume_imaged_size,
             self._force_transcoding,

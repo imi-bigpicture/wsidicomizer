@@ -118,7 +118,7 @@ class OpenSlideSource(OpenSlideLikeSource):
             self._blank_color,
             self._base_level_offset,
             self._base_level_size,
-            self.metadata.image,
+            self.metadata.pyramid.image,
             level_index,
             self._tile_size,
             self._encoder,

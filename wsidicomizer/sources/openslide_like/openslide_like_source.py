@@ -157,7 +157,7 @@ class OpenSlideLikeSource(DicomizerSource):
             self._base_level_offset,
             self._base_level_size,
             self._level_dimensions,
-            self.metadata.image,
+            self.metadata.pyramid.image,
             self._encoder,
         )
 

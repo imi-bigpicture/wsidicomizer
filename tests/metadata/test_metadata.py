@@ -22,6 +22,7 @@ from wsidicom.metadata import (
     Label,
     OpticalPath,
     Patient,
+    Pyramid,
     Series,
     Slide,
     Study,
@@ -82,36 +83,44 @@ class TestWsiDicomizerMetadata:
             series=series,
             patient=Patient(),
             equipment=base_equipment,
-            optical_paths=[
-                OpticalPath(identifier="base 1"),
-                OpticalPath(identifier="base 2"),
-            ],
+            pyramid=Pyramid(
+                image=Image(),
+                optical_paths=[
+                    OpticalPath(identifier="base 1"),
+                    OpticalPath(identifier="base 2"),
+                ],
+            ),
             slide=Slide(),
             label=Label(),
-            image=Image(),
         )
         user = WsiMetadata(
             study=study,
             series=Series(),
             patient=Patient(),
             equipment=user_equipment,
-            optical_paths=[
-                OpticalPath(description="user 1"),
-                OpticalPath(description="user 2"),
-            ],
+            pyramid=Pyramid(
+                image=Image(),
+                optical_paths=[
+                    OpticalPath(description="user 1"),
+                    OpticalPath(description="user 2"),
+                ],
+            ),
             slide=Slide(),
             label=Label(),
-            image=Image(),
         )
         default = WsiMetadata(
             study=study,
             series=Series(),
             patient=patient,
             equipment=default_equipment,
-            optical_paths=[OpticalPath(icc_profile=icc_profile)],
+            pyramid=Pyramid(
+                image=Image(),
+                optical_paths=[
+                    OpticalPath(icc_profile=icc_profile),
+                ],
+            ),
             slide=Slide(),
             label=Label(),
-            image=Image(),
         )
 
         # Act
@@ -130,16 +139,30 @@ class TestWsiDicomizerMetadata:
         assert merged.study == study
         assert merged.series == series
         assert merged.patient == patient
-        assert len(merged.optical_paths) == len(base.optical_paths)
-        assert merged.optical_paths[0].identifier == base.optical_paths[0].identifier
-        assert merged.optical_paths[0].description == user.optical_paths[0].description
+        assert len(merged.pyramid.optical_paths) == len(base.pyramid.optical_paths)
         assert (
-            merged.optical_paths[0].icc_profile == default.optical_paths[0].icc_profile
+            merged.pyramid.optical_paths[0].identifier
+            == base.pyramid.optical_paths[0].identifier
         )
-        assert merged.optical_paths[1].identifier == base.optical_paths[1].identifier
-        assert merged.optical_paths[1].description == user.optical_paths[1].description
         assert (
-            merged.optical_paths[1].icc_profile == default.optical_paths[0].icc_profile
+            merged.pyramid.optical_paths[0].description
+            == user.pyramid.optical_paths[0].description
+        )
+        assert (
+            merged.pyramid.optical_paths[0].icc_profile
+            == default.pyramid.optical_paths[0].icc_profile
+        )
+        assert (
+            merged.pyramid.optical_paths[1].identifier
+            == base.pyramid.optical_paths[1].identifier
+        )
+        assert (
+            merged.pyramid.optical_paths[1].description
+            == user.pyramid.optical_paths[1].description
+        )
+        assert (
+            merged.pyramid.optical_paths[1].icc_profile
+            == default.pyramid.optical_paths[0].icc_profile
         )
 
     @pytest.mark.parametrize(

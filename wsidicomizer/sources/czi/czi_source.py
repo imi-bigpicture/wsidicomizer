@@ -75,14 +75,6 @@ class CziSource(DicomizerSource):
         return self._czi.close()
 
     @property
-    def has_label(self) -> bool:
-        return False
-
-    @property
-    def has_overview(self) -> bool:
-        return False
-
-    @property
     def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 
@@ -103,7 +95,7 @@ class CziSource(DicomizerSource):
             self._tile_size,
             self._encoder,
             self.base_metadata,
-            self.metadata.image,
+            self.metadata.pyramid.image,
         )
 
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:

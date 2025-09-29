@@ -19,6 +19,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.instance import ImageType
 from wsidicom.metadata import WsiMetadata
 
 from isyntax import ISyntax
@@ -100,7 +101,7 @@ class ISyntaxSource(DicomizerSource):
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return ISyntaxLevelImageData(
             self._slide,
-            self.metadata.image,
+            self.metadata.pyramid.image,
             self._tile_size,
             self._encoder,
             level_index,
@@ -111,7 +112,11 @@ class ISyntaxSource(DicomizerSource):
         if label is None:
             return None
         return ISyntaxAssociatedImageImageData(
-            label.tobytes(), self._encoder, self._force_transcoding
+            label.tobytes(),
+            self._encoder,
+            ImageType.LABEL,
+            self.metadata.label.image,
+            self._force_transcoding,
         )
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
@@ -119,7 +124,11 @@ class ISyntaxSource(DicomizerSource):
         if overview is None:
             return None
         return ISyntaxAssociatedImageImageData(
-            overview.tobytes(), self._encoder, self._force_transcoding
+            overview.tobytes(),
+            self._encoder,
+            ImageType.OVERVIEW,
+            self.metadata.overview.image if self.metadata.overview else None,
+            self._force_transcoding,
         )
 
     def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
