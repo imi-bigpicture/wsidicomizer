@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.1] - 2025-09-30
+
+### Fixed
+
+- Default orientation for isyntax label images.
+
 ## [0.23.0] - 2025-09-29
 
 ### Added
@@ -387,7 +393,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.1..HEAD
+[0.23.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.0..0.23.1
 [0.23.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.1..0.23.0
 [0.22.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.0..0.22.1
 [0.22.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.21.1..0.22.0

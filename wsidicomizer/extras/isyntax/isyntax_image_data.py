@@ -320,7 +320,7 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
         ):
             return self._image_metadata.image_coordinate_system
         if self._image_type == ImageType.LABEL:
-            return ImageCoordinateSystem(origin=PointMm(25, 75), rotation=180)
+            return ImageCoordinateSystem(origin=PointMm(0, 50), rotation=0)
         else:
             return ImageCoordinateSystem(origin=PointMm(25, 50), rotation=180)
 

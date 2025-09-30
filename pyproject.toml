@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wsidicomizer"
-version = "0.23.0"
+version = "0.23.1"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = ["Erik O Gabrielsson <erik.o.gabrielsson@sectra.com>"]
 license = "Apache-2.0"
@@ -18,7 +18,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-wsidicom = "^0.28.0"
+wsidicom = "^0.28.1"
 opentile = "^0.19.0"
 numpy = ">=1.22.0"
 pydicom = ">=3.0.0"
