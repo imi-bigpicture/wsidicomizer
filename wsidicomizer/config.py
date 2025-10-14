@@ -23,6 +23,7 @@ class Settings:
         self._default_tile_size = 512
         self._czi_block_cache_size = 8
         self._insert_icc_profile_if_missing = True
+        self._fallback_to_blank_tile_on_error
 
     @property
     def default_tile_size(self) -> int:
@@ -51,6 +52,16 @@ class Settings:
     @insert_icc_profile_if_missing.setter
     def insert_icc_profile_if_missing(self, value: bool) -> None:
         self._insert_icc_profile_if_missing = value
+
+    @property
+    def fallback_to_blank_tile_on_error(self) -> bool:
+        """Whether to fallback to a blank tile if an error occurs when reading a tile
+        from the source file."""
+        return self._fallback_to_blank_tile_on_error
+
+    @fallback_to_blank_tile_on_error.setter
+    def fallback_to_blank_tile_on_error(self, value: bool) -> None:
+        self._fallback_to_blank_tile_on_error = value
 
 
 settings = Settings()

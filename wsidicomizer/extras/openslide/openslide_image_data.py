@@ -26,6 +26,7 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
 
+from wsidicomizer.config import settings
 from wsidicomizer.extras.openslide.openslide import (
     OpenSlide,
     _read_region,
@@ -140,16 +141,20 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         region_data = np.empty(
             region.size.to_tuple() + (CHANNELS,), dtype=ctypes.c_uint8
         )
-
-        _read_region(
-            self._osr,
-            region_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
-            location_in_base_level.x,
-            location_in_base_level.y,
-            self._level_index,
-            region.size.width,
-            region.size.height,
-        )
+        try:
+            _read_region(
+                self._osr,
+                region_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+                location_in_base_level.x,
+                location_in_base_level.y,
+                self._level_index,
+                region.size.width,
+                region.size.height,
+            )
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return None
+            raise
         region_data.shape = (region.size.height, region.size.width, CHANNELS)
         if self._detect_blank_tile(region_data):
             return None

@@ -29,6 +29,7 @@ from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
 from isyntax import ISyntax
+from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -165,14 +166,18 @@ class ISyntaxLevelImageData(DicomizerImageData):
         """
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError("Negative size not allowed")
-
-        region_data = self._slide.read_region(
-            region.start.x,
-            region.start.y,
-            region.size.width,
-            region.size.height,
-            self._level,
-        )[:, :, :3]
+        try:
+            region_data = self._slide.read_region(
+                region.start.x,
+                region.start.y,
+                region.size.width,
+                region.size.height,
+                self._level,
+            )[:, :, :3]
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return None
+            raise
         if self._detect_blank_tile(region_data):
             return None
         return region_data
@@ -182,18 +187,23 @@ class ISyntaxLevelImageData(DicomizerImageData):
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-        if self._tile_size == self.file_tile_size:
-            tile = self._slide.read_tile(tile_point.x, tile_point.y, self._level)[
-                :, :, :3
-            ]
-        else:
-            tile = self._slide.read_region(
-                tile_point.x * self._tile_size.width,
-                tile_point.y * self._tile_size.height,
-                self._tile_size.width,
-                self._tile_size.height,
-                self._level,
-            )[:, :, :3]
+        try:
+            if self._tile_size == self.file_tile_size:
+                tile = self._slide.read_tile(tile_point.x, tile_point.y, self._level)[
+                    :, :, :3
+                ]
+            else:
+                tile = self._slide.read_region(
+                    tile_point.x * self._tile_size.width,
+                    tile_point.y * self._tile_size.height,
+                    self._tile_size.width,
+                    self._tile_size.height,
+                    self._level,
+                )[:, :, :3]
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return None
+            raise
         if self._detect_blank_tile(tile):
             return None
         return tile

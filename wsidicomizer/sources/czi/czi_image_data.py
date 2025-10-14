@@ -201,15 +201,25 @@ class CziImageData(DicomizerImageData):
         np.ndarray
             Tile as numpy array.
         """
-        # A blank tile to paste blocks into
-        image_data = self._create_blank_tile()
         if (tile_point, z, path) not in self.tile_directory:
             # Should not happen (get_decoded_tile() and get_enoded_tile()
             # should already have checked).
-            return image_data
+            return self._create_blank_tile()
 
-        # For each block covering the tile
-        for block in self.tile_directory[tile_point, z, path]:
+        try:
+            return self._read_blocks_into_tile(
+                tile_point, self.tile_directory[tile_point, z, path]
+            )
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return self._create_blank_tile()
+            raise
+
+    def _read_blocks_into_tile(self, tile_point: Point, blocks: List[CziBlock]):
+        """Read blocks and paste them into a tile."""
+        # A blank tile to paste blocks into
+        tile = self._create_blank_tile()
+        for block in blocks:
             # Start and end coordinates for block and tile
             block_end = block.start + block.size
             tile_start = tile_point * self.tile_size
@@ -230,14 +240,14 @@ class CziImageData(DicomizerImageData):
             # Reshape the block data to remove leading 1-indices.
             block_data.shape = self._size_to_numpy_shape(block.size)
             # Paste in block data into tile.
-            image_data[
+            tile[
                 block_start_in_tile.y : block_end_in_tile.y,
                 block_start_in_tile.x : block_end_in_tile.x,
             ] = block_data[
                 tile_start_in_block.y : tile_end_in_block.y,
                 tile_start_in_block.x : tile_end_in_block.x,
             ]
-        return image_data
+        return tile
 
     def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile.

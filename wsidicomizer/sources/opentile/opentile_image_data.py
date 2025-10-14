@@ -32,6 +32,7 @@ from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
+from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
 
 
@@ -185,10 +186,15 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError("Requested focal plane or optical path not available.")
-        if self.needs_transcoding:
-            decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
-            return self.encoder.encode(decoded_tile)
-        return self._tiff_image.get_tile(tile.to_tuple())
+        try:
+            if self.needs_transcoding:
+                decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
+                return self.encoder.encode(decoded_tile)
+            return self._tiff_image.get_tile(tile.to_tuple())
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return self.blank_encoded_tile
+            raise
 
     def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile.
@@ -209,7 +215,12 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Pillow.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
+        try:
+            return Pillow.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return self.blank_tile
+            raise
 
     def _get_encoded_tiles(
         self, tiles: Iterable[Point], z: float, path: str
@@ -217,10 +228,15 @@ class OpenTileImageData(DicomizerImageData):
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
         tiles_tuples = [tile.to_tuple() for tile in tiles]
-        if not self.needs_transcoding:
-            return self._tiff_image.get_tiles(tiles_tuples)
-        decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
-        return (self.encoder.encode(tile) for tile in decoded_tiles)
+        try:
+            if not self.needs_transcoding:
+                return self._tiff_image.get_tiles(tiles_tuples)
+            decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
+            return (self.encoder.encode(tile) for tile in decoded_tiles)
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return (self.blank_encoded_tile for _ in tiles)
+            raise
 
     def close(self) -> None:
         self._tiff_image.close()

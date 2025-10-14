@@ -27,6 +27,7 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
 
+from wsidicomizer.config import settings
 from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
 
 
@@ -123,13 +124,17 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             raise ValueError("Negative size not allowed")
 
         location_in_base_level = region.start * self._downsample + self._offset
-
-        region_data = self._slide.read_region(
-            location_in_base_level.to_tuple(),
-            self._level_index,
-            region.size.to_tuple(),
-            as_array=True,
-        )
+        try:
+            region_data = self._slide.read_region(
+                location_in_base_level.to_tuple(),
+                self._level_index,
+                region.size.to_tuple(),
+                as_array=True,
+            )
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return None
+            raise
         if self._detect_blank_tile(region_data):
             return None
         if self.samples_per_pixel == 1:

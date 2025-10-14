@@ -111,14 +111,24 @@ class BioformatsImageData(DicomizerImageData):
     def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
-        with self._get_tile(tile, z, path) as data:
-            return Pillow.fromarray(data)
+        try:
+            with self._get_tile(tile, z, path) as data:
+                return Pillow.fromarray(data)
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return self.blank_tile
+            raise
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,
         and optical path."""
-        with self._get_tile(tile, z, path) as data:
-            return self.encoder.encode(data)
+        try:
+            with self._get_tile(tile, z, path) as data:
+                return self.encoder.encode(data)
+        except Exception:
+            if settings.fallback_to_blank_tile_on_error:
+                return self.blank_encoded_tile
+            raise
 
     @staticmethod
     def detect_format(filepath: Path) -> bool:
