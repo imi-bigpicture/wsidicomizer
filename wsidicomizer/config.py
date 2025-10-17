@@ -23,7 +23,7 @@ class Settings:
         self._default_tile_size = 512
         self._czi_block_cache_size = 8
         self._insert_icc_profile_if_missing = True
-        self._fallback_to_blank_tile_on_error
+        self._fallback_to_blank_tile_on_error = False
 
     @property
     def default_tile_size(self) -> int:
