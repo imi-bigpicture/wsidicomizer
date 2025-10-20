@@ -95,6 +95,8 @@ class OpenTileSource(DicomizerSource):
         return {
             (level.pyramid_index, level.focal_plane, level.optical_path): index
             for index, level in enumerate(self._tiler.levels)
+            if (level.image_size.width >= self._tile_size and 
+                level.image_size.height >= self._tile_size)
         }
 
     @staticmethod
@@ -115,23 +117,49 @@ class OpenTileSource(DicomizerSource):
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:
         if len(self._tiler.labels) == 0:
             return None
+            
+        label = self._tiler.labels[0]
+        # Check if label image is too small compared to tile size
+        if (label.image_size.width < self._tile_size or 
+            label.image_size.height < self._tile_size):
+            # Skip label if it's smaller than tile size
+            return None
+            
         return OpenTileAssociatedImageData(
-            self._tiler.labels[0], self._encoder, self._force_transcoding
+            label, self._encoder, self._force_transcoding
         )
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
         if len(self._tiler.overviews) == 0:
             return None
+            
+        overview = self._tiler.overviews[0]
+        # Check if overview image is too small compared to tile size
+        if (overview.image_size.width < self._tile_size or 
+            overview.image_size.height < self._tile_size):
+            # Skip overview if it's smaller than tile size
+            return None
+            
         return OpenTileAssociatedImageData(
-            self._tiler.overviews[0], self._encoder, self._force_transcoding
+            overview, self._encoder, self._force_transcoding
         )
 
     def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
 
         if len(self._tiler.thumbnails) == 0:
             return None
+            
+        thumbnail = self._tiler.thumbnails[0]
+        
+        # Filter thumbnails smaller than tile size
+        from wsidicomizer.config import settings
+        actual_tile_size = self._tile_size or settings.default_tile_size
+        width, height = thumbnail.size
+        if width < actual_tile_size or height < actual_tile_size:
+            return None
+            
         return OpenTileLevelImageData(
-            self._tiler.thumbnails[0],
+            thumbnail,
             self.base_metadata.image,
             self.metadata.image,
             self._encoder,

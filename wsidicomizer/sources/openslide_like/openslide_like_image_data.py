@@ -124,13 +124,52 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
 
 
 class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):
+    def __init__(
+        self,
+        image: Image,
+        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        encoder: Encoder,
+        base_pixel_spacing: Optional[SizeMm] = None,
+        downsample_factor: Optional[float] = None,
+    ) -> None:
+        """Initialize associated image data.
+        
+        Parameters
+        ----------
+        image: Image
+            The associated image (label, overview, etc.)
+        blank_color: Optional[Union[int, Tuple[int, int, int]]]
+            Background color for the image
+        encoder: Encoder
+            Encoder for the image
+        base_pixel_spacing: Optional[SizeMm]
+            Pixel spacing from the base level of the WSI
+        downsample_factor: Optional[float]
+            Factor by which this associated image is downsampled from base level
+        """
+        super().__init__(image, blank_color, encoder)
+        
+        # Calculate actual pixel spacing if base information is available
+        if base_pixel_spacing is not None and downsample_factor is not None:
+            self._pixel_spacing = SizeMm(
+                base_pixel_spacing.width * downsample_factor,
+                base_pixel_spacing.height * downsample_factor,
+            )
+        else:
+            # Fallback to default spacing to ensure ImagedVolumeWidth/Height tags are generated
+            # Use 1.0 μm/pixel as a reasonable default for associated images
+            self._pixel_spacing = SizeMm(0.001, 0.001)
+
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
-        return None
+        return self._pixel_spacing
 
     @property
-    def imaged_size(self) -> Optional[Size]:
+    def imaged_size(self) -> Optional[SizeMm]:
+        """Size of the image in mm."""
+        if self._pixel_spacing is not None:
+            return self._pixel_spacing * self.image_size
         return None
 
 
