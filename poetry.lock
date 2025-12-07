@@ -1916,4 +1916,4 @@ openslide = ["openslide-python"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cffe9618c5e17ef26b214d0934fb21269663bd0738385d4875cf632a1efa8e1f"
+content-hash = "4459c0408edc6d5e6b4237f26fe50ad9e9d82fd89a111c063fa98b0d31c63d36"
