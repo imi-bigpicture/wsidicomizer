@@ -128,6 +128,7 @@ class WsiDicomizer(WsiDicom):
         workers: Optional[int] = None,
         chunk_size: Optional[int] = None,
         encoding: Optional[Union[Encoder, EncodingSettings]] = None,
+        force_transcoding: bool = False,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         preferred_source: Optional[
             Union[Type[DicomizerSource], SourceIdentifier]
@@ -176,6 +177,8 @@ class WsiDicomizer(WsiDicom):
             size also depends on minimun_chunk_size from image_data.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
+        force_transcoding: bool = False,
+            If to force transcoding images.
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
@@ -221,6 +224,7 @@ class WsiDicomizer(WsiDicom):
                 add_missing_levels=add_missing_levels,
                 label=label,
                 transcoding=encoding,
+                force_transcoding=force_transcoding,
             )
 
         return [str(filepath) for filepath in created_files]

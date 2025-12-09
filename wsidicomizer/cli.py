@@ -124,14 +124,14 @@ class CliEncodingsOptions(Enum):
     "encoding_format",
     type=click.Choice(CliEncodingsOptions, case_sensitive=False),
     default=CliEncodingsOptions.JPEG,
-    help="Encoding format to use if re-encoding.",
+    help="Encoding format to use if lossless conversion not possible or if forcing transcoding.",
 )
 @click.option(
     "--quality",
     type=float,
     default=None,
     help=(
-        "Quality to use if re-encoding. It is not recommended to use > 95 for "
+        "Quality to use for encoding. It is not recommended to use > 95 for "
         "jpeg. Use < 1 or > 1000 for lossless jpeg2000."
     ),
 )
@@ -140,10 +140,15 @@ class CliEncodingsOptions(Enum):
     type=click.Choice(Subsampling, case_sensitive=False),
     default=None,
     help=(
-        "Subsampling option if using jpeg for re-encoding. Use '444' "
+        "Subsampling option if using jpeg for encoding. Use '444' "
         "for no subsampling, '422' for 2x1 subsampling, and '420' for "
         "2x2 subsampling."
     ),
+)
+@click.option(
+    "--force-transcoding",
+    is_flag=True,
+    help="If to force transcoding even if lossless conversion possible.",
 )
 @click.option(
     "--offset-table",
@@ -177,11 +182,12 @@ def main(
     no_confidential: bool,
     workers: int,
     chunk_size: int,
-    encoding_format: CliEncodingsOptions,
+    encoding_format: Optional[CliEncodingsOptions],
     quality: Optional[float],
     subsampling: Optional[str],
+    force_transcoding: bool,
     offset_table: OffsetTableType,
-    source: Optional[SourceIdentifier] = None,
+    source: Optional[SourceIdentifier],
 ):
     """Convert compatible wsi file to DICOM. The cli only supports a subset of the functionality
     of the WsiDicomizer class. For more advanced usage, use the class directly."""
@@ -199,8 +205,9 @@ def main(
     include_levels = list(levels) if levels else None
 
     # Create encoding settings
-    encoding_settings = None
-    if encoding_format == CliEncodingsOptions.JPEG:
+    if encoding_format is None:
+        encoding_settings = None
+    elif encoding_format == CliEncodingsOptions.JPEG:
         subsampling_enum = (
             Subsampling.from_string(subsampling)
             if subsampling is not None
@@ -232,6 +239,7 @@ def main(
         workers=workers,
         chunk_size=chunk_size,
         encoding=encoding_settings,
+        force_transcoding=force_transcoding,
         offset_table=offset_table,
         label=label,
         preferred_source=source,
