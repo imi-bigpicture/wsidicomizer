@@ -23,7 +23,10 @@ from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
 from wsidicom.codec.encoder import Encoder, Jpeg2kEncoder, Jpeg2kSettings
 
+from wsidicomizer.config import settings
 from wsidicomizer.wsidicomizer import WsiDicomizer
+
+settings.fallback_to_blank_tile_on_error = True
 
 DEFAULT_TILE_SIZE = 512
 

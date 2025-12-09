@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2025-12-09
+
+### Added
+
+- Parameter `force_transcoding` to `convert()` to control if to force transcoding even if selected `encoding` has the same transfer syntax as the image data.
+
+### Fixed
+
+- Do not force unneeded transcoding when using cli.
+
 ## [0.23.1] - 2025-09-30
 
 ### Fixed
@@ -393,7 +403,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.1..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.24.0..HEAD
+[0.24.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.1..0.24.0
 [0.23.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.0..0.23.1
 [0.23.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.1..0.23.0
 [0.22.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.0..0.22.1
