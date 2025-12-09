@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Do not force unneeded transcoding when using cli.
 
+### Changed
+
+- Changed from poetry to uv.
+
 ## [0.23.1] - 2025-09-30
 
 ### Fixed
