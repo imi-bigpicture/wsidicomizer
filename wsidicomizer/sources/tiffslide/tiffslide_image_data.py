@@ -14,7 +14,6 @@
 
 """Image data for tiffslide compatible file."""
 
-
 from functools import cached_property
 from typing import Optional, Tuple, Union
 

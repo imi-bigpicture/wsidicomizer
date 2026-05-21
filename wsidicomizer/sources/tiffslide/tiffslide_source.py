@@ -15,7 +15,6 @@
 
 """Source for reading tiffslide compatible file."""
 
-
 from pathlib import Path
 from typing import Optional, Union
 

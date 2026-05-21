@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 """Base model for metadata."""
+
 from dataclasses import Field, fields, is_dataclass
 from typing import Any, Callable, Optional, Sequence, Type, TypeVar
 
