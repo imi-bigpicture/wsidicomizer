@@ -17,7 +17,7 @@
 import math
 import os
 from contextlib import contextmanager
-from functools import cached_property, lru_cache
+from functools import cached_property
 from pathlib import Path
 from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
@@ -29,6 +29,7 @@ import numpy as np
 import ome_types
 import scyjava
 from jpype.types import JArray
+from wsidicom.cache import lru_cached_method
 from wsidicom.geometry import Region, Size, SizeMm
 
 """
@@ -200,7 +201,7 @@ class BioformatsReader:
         """Return name of image."""
         return self.metadata.images[image_index].name
 
-    @lru_cache
+    @lru_cached_method()
     def dtype(self, image_index: int) -> np.dtype:
         """Return the numpy datatype for image in file."""
         NUMPY_DATA_TYPES: Dict[str, Type] = {
@@ -227,7 +228,7 @@ class BioformatsReader:
             raise ValueError(f"Unkown data type {data_type}")
         return numpy_data_type.newbyteorder(byte_order)
 
-    @lru_cache
+    @lru_cached_method()
     def samples_per_pixel(self, image_index: int) -> int:
         """Return the samples per pixel for image in file."""
         pixels = self.metadata.images[image_index].pixels
@@ -235,7 +236,7 @@ class BioformatsReader:
         assert samples_per_pixel is not None
         return int(samples_per_pixel)
 
-    @lru_cache
+    @lru_cached_method()
     def size(self, image_index: int, resolution_index: int = 0) -> Size:
         """Return the image size for image in file."""
         with self._reader_pool.get_reader() as reader:
@@ -245,7 +246,7 @@ class BioformatsReader:
             height = reader.getSizeY()
             return Size(int(width), int(height))
 
-    @lru_cache
+    @lru_cached_method()
     def pixel_spacing(
         self, image_index: int, resolution_index: int = 0
     ) -> Optional[SizeMm]:
@@ -260,14 +261,14 @@ class BioformatsReader:
             / 1000
         )
 
-    @lru_cache
+    @lru_cached_method()
     def is_interleaved(self, image_index: int) -> bool:
         """Return true if image data is interleaved."""
         interleaved = self.metadata.images[image_index].pixels.interleaved
         assert interleaved is not None
         return interleaved
 
-    @lru_cache
+    @lru_cached_method()
     def pyramid_levels(self, image_index: int) -> Dict[Tuple[int, float, str], int]:
         """Return dictionary of dyadic scaling, focal plane, and optical path as key
         and resolution index as value for resolutions in image.
@@ -284,7 +285,7 @@ class BioformatsReader:
             if math.isclose(float_level, round(float_level), abs_tol=TOLERANCE)
         }
 
-    @lru_cache
+    @lru_cached_method()
     def _resolution_scales(self, image_index: int) -> List[float]:
         """Return resolution scales for image as resolution width divided by image width."""
         with self._reader_pool.get_reader() as reader:

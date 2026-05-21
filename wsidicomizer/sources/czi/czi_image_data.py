@@ -16,7 +16,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass
-from functools import cached_property, lru_cache
+from functools import cached_property
 from pathlib import Path
 from threading import RLock
 from typing import Dict, List, Optional, Tuple
@@ -26,6 +26,7 @@ from czifile import CziFile, DirectoryEntryDV
 from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import UID
+from wsidicom.cache import lru_cached_method
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -317,7 +318,7 @@ class CziImageData(DicomizerImageData):
             dtype=np.dtype(self._czi.dtype),
         )
 
-    @lru_cache(settings.czi_block_cache_size)
+    @lru_cached_method(maxsize=lambda: settings.czi_block_cache_size)
     def _get_tile_data(self, block_index: int) -> np.ndarray:
         """Get decompressed tile data from czi file. Cache the tile data. To
         prevent multiple threads proceseing the same tile, use a lock for

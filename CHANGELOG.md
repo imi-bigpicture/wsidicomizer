@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Memory leak from `lru_cache` on instance methods in the bioformats and czi readers keeping every opened file alive for the lifetime of the process; these caches are now per-instance and released with the instance.
+
 ## [0.24.0] - 2025-12-09
 
 ### Added
