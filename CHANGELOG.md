@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [0.25.0] - 2026-05-22
+
+### Changed
 
 - Default image coordinate system (origin and rotation) for source files that do not specify image position, derived per WSI format. The image is placed at the matching corner of a standard slide.
 
@@ -415,7 +417,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.24.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.25.0..HEAD
+[0.25.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.24.0..0.25.0
 [0.24.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.1..0.24.0
 [0.23.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.23.0..0.23.1
 [0.23.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/0.22.1..0.23.0
