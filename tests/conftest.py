@@ -35,7 +35,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": True,
             "read_region": [
                 {
@@ -86,7 +86,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": True,
             "read_region": [
                 {
@@ -137,7 +137,7 @@ test_parameters = {
             "include_levels": [0, 1],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": True,
             "read_region": [
                 {
@@ -260,7 +260,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -316,7 +316,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -367,7 +367,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -406,7 +406,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -454,7 +454,7 @@ test_parameters = {
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {

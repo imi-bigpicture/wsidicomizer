@@ -30,6 +30,7 @@ from wsidicom.cache import lru_cached_method
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
@@ -87,6 +88,10 @@ class CziImageData(DicomizerImageData):
             raise ValueError("Could not determine pixel spacing for czi level image.")
         self._pixel_spacing = self._merged_metadata.pixel_spacing
         self._image_coordinate_system = merged_metadata.image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+        return self._image_coordinate_system
 
     @property
     def transfer_syntax(self) -> UID:
