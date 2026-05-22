@@ -281,12 +281,7 @@ class OpenTileLevelImageData(OpenTileImageData):
             self._image_coordinate_system = None
 
     @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return dataclasses.replace(
-                super().image_coordinate_system,
-                z_offset=self._tiff_image.focal_plane,
-            )
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
         return self._image_coordinate_system
 
     @property
@@ -312,12 +307,18 @@ class OpenTileAssociatedImageData(OpenTileImageData):
         tiff_image: AssociatedTiffImage,
         encoder: Encoder,
         force_transcoding: bool = False,
+        image_coordinate_system: Optional[ImageCoordinateSystem] = None,
     ):
         super().__init__(tiff_image, encoder, force_transcoding)
         if tiff_image.pixel_spacing is not None:
             self._pixel_spacing = SizeMm(*tiff_image.pixel_spacing.to_tuple())
         else:
             self._pixel_spacing = None
+        self._image_coordinate_system = image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+        return self._image_coordinate_system
 
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:

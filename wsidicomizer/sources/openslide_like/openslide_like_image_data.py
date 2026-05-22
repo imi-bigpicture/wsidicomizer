@@ -124,6 +124,20 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
 
 
 class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):
+    def __init__(
+        self,
+        image: Image,
+        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        encoder: Encoder,
+        image_coordinate_system: Optional[ImageCoordinateSystem] = None,
+    ) -> None:
+        super().__init__(image, blank_color, encoder)
+        self._image_coordinate_system = image_coordinate_system
+
+    @property
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+        return self._image_coordinate_system
+
     @property
     def pixel_spacing(self) -> Optional[SizeMm]:
         """Size of the pixels in mm/pixel."""
@@ -192,9 +206,7 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
         )
 
     @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
         return self._image_coordinate_system
 
     @property
@@ -271,7 +283,5 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
         return self._imaged_size
 
     @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
-        if self._image_coordinate_system is None:
-            return super().image_coordinate_system
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
         return self._image_coordinate_system

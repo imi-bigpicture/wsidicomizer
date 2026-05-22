@@ -22,7 +22,7 @@ from PIL import Image as Pillow
 from PIL.Image import Image
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
-from wsidicom.geometry import PointMm, Size
+from wsidicom.geometry import Size
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 
@@ -38,9 +38,9 @@ class DicomizerImageData(ImageData):
     _blank_decoded_frame_size: Optional[Size] = None
 
     @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem:
+    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
         """Return a default ImageCoordinateSystem."""
-        return ImageCoordinateSystem(PointMm(0, 0), 90)
+        return None
 
     @property
     def bits(self) -> int:

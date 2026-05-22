@@ -408,7 +408,12 @@ class TestWsiDicomizerConvert:
         assert np.array_equal(np.array(new_label), np.array(label))
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_image_coordinate_system_origin"],
+        [
+            "file_format",
+            "file",
+            "expected_image_coordinate_system_origin",
+            "expected_image_coordinate_system_rotation",
+        ],
         [
             (
                 file_format,
@@ -417,6 +422,7 @@ class TestWsiDicomizerConvert:
                     file_parameters["image_coordinate_system"]["x"],
                     file_parameters["image_coordinate_system"]["y"],
                 ),
+                file_parameters["image_coordinate_system"]["rotation"],
             )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
@@ -426,6 +432,7 @@ class TestWsiDicomizerConvert:
     def test_image_coordinate_system(
         self,
         expected_image_coordinate_system_origin: PointMm,
+        expected_image_coordinate_system_rotation: float,
         wsi: WsiDicom,
     ):
         # Arrange
@@ -445,6 +452,10 @@ class TestWsiDicomizerConvert:
             assert (
                 image_coordinate_system.origin
                 == expected_image_coordinate_system_origin
+            )
+            assert (
+                image_coordinate_system.rotation
+                == expected_image_coordinate_system_rotation
             )
 
     @pytest.mark.parametrize(

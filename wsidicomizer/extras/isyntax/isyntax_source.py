@@ -19,8 +19,7 @@ from typing import Dict, Optional, Tuple, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
-from wsidicom.instance import ImageType
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import ImageType, WsiMetadata
 
 from isyntax import ISyntax
 from wsidicomizer.dicomizer_source import DicomizerSource

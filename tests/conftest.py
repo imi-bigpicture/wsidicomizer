@@ -23,10 +23,7 @@ from pydicom.uid import JPEG2000, UID
 from wsidicom import WsiDicom
 from wsidicom.codec.encoder import Encoder, Jpeg2kEncoder, Jpeg2kSettings
 
-from wsidicomizer.config import settings
 from wsidicomizer.wsidicomizer import WsiDicomizer
-
-settings.fallback_to_blank_tile_on_error = True
 
 DEFAULT_TILE_SIZE = 512
 
@@ -38,7 +35,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0},
+            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
             "icc_profile": True,
             "read_region": [
                 {
@@ -89,7 +86,7 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0},
+            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
             "icc_profile": True,
             "read_region": [
                 {
@@ -140,7 +137,7 @@ test_parameters = {
             "include_levels": [0, 1],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
-            "image_coordinate_system": {"x": 0, "y": 0},
+            "image_coordinate_system": {"x": 0, "y": 0, "rotation": 0},
             "icc_profile": True,
             "read_region": [
                 {
@@ -183,7 +180,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -218,7 +215,7 @@ test_parameters = {
             "encode_format": "jpeg2000",
             "encode_quality": 0,
             "photometric_interpretation": "YBR_ICT",
-            "image_coordinate_system": {"x": 2.3061675, "y": 20.79015},
+            "image_coordinate_system": {"x": 2.3061675, "y": 20.79015, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -263,7 +260,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -319,7 +316,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -370,7 +367,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -409,7 +406,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -457,7 +454,7 @@ test_parameters = {
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 0.0, "y": 0.0},
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
                 {
@@ -516,7 +513,7 @@ test_parameters = {
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 25, "y": 50},
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {

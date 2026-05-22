@@ -26,6 +26,7 @@ from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Equipment, Image, Objectives, OpticalPath, Pyramid
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 ElementType = TypeVar("ElementType", str, int, float)
 
@@ -39,6 +40,9 @@ class CziMetadata(WsiDicomizerMetadata):
         image = Image(
             acquisition_datetime=self.aquisition_datetime,
             pixel_spacing=self.pixel_spacing,
+            image_coordinate_system=FormatCoordinateDefaults.from_wsi_format(
+                WsiFormat.CZI
+            ).level_coordinate_system(),
         )
         equipment = Equipment(
             model_name=self.scanner_model,

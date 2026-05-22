@@ -24,9 +24,8 @@ from pydicom.uid import UID, JPEGBaseline8Bit
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
-from wsidicom.instance import ImageType
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import ImageCoordinateSystem
+from wsidicom.metadata import ImageCoordinateSystem, ImageType
 
 from isyntax import ISyntax
 from wsidicomizer.image_data import DicomizerImageData

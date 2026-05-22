@@ -32,6 +32,7 @@ from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileLevelImageData,
 )
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
+from wsidicomizer.wsi_format import WsiFormat
 
 
 class OpenTileSource(DicomizerSource):
@@ -68,11 +69,14 @@ class OpenTileSource(DicomizerSource):
             If to force transcoding images.
         """
         self._tiler = OpenTile.open(filepath, tile_size)
+        # opentile's TiffFormat member names match WsiFormat member names.
+        self._wsi_format = WsiFormat[self._tiler.format.name]
         self._base_metadata = OpenTileMetadata(
             self._tiler.metadata,
             self.has_label,
             self.has_overview,
             self._tiler.icc_profile,
+            wsi_format=self._wsi_format,
         )
 
         self._force_transcoding = force_transcoding
@@ -126,15 +130,31 @@ class OpenTileSource(DicomizerSource):
     def _create_label_image_data(self) -> Optional[DicomizerImageData]:
         if not self.has_label:
             return None
+        label_image_coordinate_system = None
+        if self.metadata.label and self.metadata.label.image:
+            label_image_coordinate_system = (
+                self.metadata.label.image.image_coordinate_system
+            )
         return OpenTileAssociatedImageData(
-            self._tiler.labels[0], self._encoder, self._force_transcoding
+            self._tiler.labels[0],
+            self._encoder,
+            self._force_transcoding,
+            image_coordinate_system=label_image_coordinate_system,
         )
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
         if not self.has_overview:
             return None
+        overview_image_coordinate_system = None
+        if self.metadata.overview and self.metadata.overview.image:
+            overview_image_coordinate_system = (
+                self.metadata.overview.image.image_coordinate_system
+            )
         return OpenTileAssociatedImageData(
-            self._tiler.overviews[0], self._encoder, self._force_transcoding
+            self._tiler.overviews[0],
+            self._encoder,
+            self._force_transcoding,
+            image_coordinate_system=overview_image_coordinate_system,
         )
 
     def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:

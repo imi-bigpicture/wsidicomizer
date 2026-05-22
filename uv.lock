@@ -1519,7 +1519,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.29.1"
+version = "0.30.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1531,9 +1531,9 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/3a/f13be2cc1ec1a7a0d409888354737931a3e174cb28a96dd126daaed05027/wsidicom-0.29.1.tar.gz", hash = "sha256:c380a1e3e4ffa5dd6c688813ac9482a3a8748cac6e2a5587573ecfff954aa57e", size = 311821, upload-time = "2026-05-21T14:58:36.622Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c2/2b/ffcf96e36b51df266de08bacb591fd1d8cce09a2cfab6b92f4537847e770/wsidicom-0.30.0.tar.gz", hash = "sha256:011836eae7faffdae55b24ff657079650d1ee77461831c1b06ae1a2ba3962974", size = 312595, upload-time = "2026-05-22T10:19:04.717Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/8f/c6dac815cfb099f9170f58b3305d8a02dd362443116568b12949dbb2bcf4/wsidicom-0.29.1-py3-none-any.whl", hash = "sha256:3ab87efd54c9876a9fe8c0c6664afdf8382b46a8d0f3d51465cf0b89dc98f874", size = 243672, upload-time = "2026-05-21T14:58:34.935Z" },
+    { url = "https://files.pythonhosted.org/packages/72/58/a208543ab261e1e3c00734e8fce12b7fbfb6bad53de00364003f55367741/wsidicom-0.30.0-py3-none-any.whl", hash = "sha256:f6154d0bddf2656b55f287235dd75968d2da532297a08b54d44b55d6c57c04e3", size = 243307, upload-time = "2026-05-22T10:19:02.856Z" },
 ]
 
 [[package]]
@@ -1589,7 +1589,7 @@ requires-dist = [
     { name = "pyisyntax", marker = "extra == 'isyntax'", specifier = ">=0.1.2,<0.2.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=2.5.1,<3.0.0" },
-    { name = "wsidicom", specifier = ">=0.29.1,<0.30.0" },
+    { name = "wsidicom", specifier = ">=0.30.0,<0.31.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax"]
 

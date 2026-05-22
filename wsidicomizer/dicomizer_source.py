@@ -24,8 +24,8 @@ from pydicom import Dataset, config
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
-from wsidicom.instance import ImageType, WsiDataset, WsiInstance
-from wsidicom.metadata import WsiMetadata
+from wsidicom.instance import WsiDataset, WsiInstance
+from wsidicom.metadata import ImageType, WsiMetadata
 from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 

@@ -20,6 +20,7 @@ from opentile import Metadata
 from wsidicom.metadata import Equipment, Image, Label, OpticalPath, Overview, Pyramid
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 
 class OpenTileMetadata(WsiDicomizerMetadata):
@@ -29,6 +30,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
         has_label: bool,
         has_overview: bool,
         icc_profile: Optional[bytes] = None,
+        wsi_format: Optional[WsiFormat] = None,
     ):
         equipment = Equipment(
             metadata.scanner_manufacturer,
@@ -36,7 +38,16 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             metadata.scanner_serial_number,
             metadata.scanner_software_versions,
         )
-        image = Image(metadata.aquisition_datetime)
+        if wsi_format is not None:
+            defaults = FormatCoordinateDefaults.from_wsi_format(wsi_format)
+            image_coordinate_system = defaults.level_coordinate_system()
+        else:
+            defaults = None
+            image_coordinate_system = None
+        image = Image(
+            metadata.aquisition_datetime,
+            image_coordinate_system=image_coordinate_system,
+        )
         if icc_profile is not None:
             optical_path = OpticalPath(icc_profile=icc_profile)
             optical_paths = [optical_path]
@@ -44,12 +55,27 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             optical_paths = []
         pyramid = Pyramid(image=image, optical_paths=optical_paths)
         if has_label:
-            label = Label(image=Image(metadata.aquisition_datetime), optical_paths=[])
+            label_image_coordinate_system = (
+                defaults.label_coordinate_system() if defaults else None
+            )
+            label = Label(
+                image=Image(
+                    metadata.aquisition_datetime,
+                    image_coordinate_system=label_image_coordinate_system,
+                ),
+                optical_paths=[],
+            )
         else:
             label = None
         if has_overview:
+            overview_image_coordinate_system = (
+                defaults.overview_coordinate_system() if defaults else None
+            )
             overview = Overview(
-                image=Image(metadata.aquisition_datetime),
+                image=Image(
+                    metadata.aquisition_datetime,
+                    image_coordinate_system=overview_image_coordinate_system,
+                ),
                 optical_paths=[],
             )
         else:

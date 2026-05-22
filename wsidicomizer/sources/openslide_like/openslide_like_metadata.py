@@ -16,7 +16,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 from PIL.ImageCms import ImageCmsProfile
 from wsidicom.geometry import PointMm, SizeMm
@@ -24,12 +24,15 @@ from wsidicom.metadata import (
     Equipment,
     Image,
     ImageCoordinateSystem,
+    Label,
     Objectives,
     OpticalPath,
+    Overview,
     Pyramid,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 
 @dataclass
@@ -43,6 +46,20 @@ class OpenSlideLikeProperties:
     vendor: Optional[str] = None
     mpp_x: Optional[str] = None
     mpp_y: Optional[str] = None
+
+    @property
+    def wsi_format(self) -> Optional[WsiFormat]:
+        """Return the WsiFormat for the vendor, if recognised."""
+        if self.vendor is None:
+            return None
+        vendor_map: Dict[str, WsiFormat] = {
+            "aperio": WsiFormat.SVS,
+            "hamamatsu": WsiFormat.NDPI,
+            "mirax": WsiFormat.MIRAX,
+            "ventana": WsiFormat.VENTANA,
+            "philips": WsiFormat.PHILIPS_TIFF,
+        }
+        return vendor_map.get(self.vendor.lower())
 
 
 class OpenSlideLikeMetadata(WsiDicomizerMetadata):
@@ -73,6 +90,11 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             )
 
         # Get set image origin and size to bounds if available
+        wsi_format = properties.wsi_format
+        defaults = (
+            FormatCoordinateDefaults.from_wsi_format(wsi_format) if wsi_format else None
+        )
+        rotation = defaults.level_rotation if defaults else 0
         if (
             properties.bounds_x is not None
             and properties.bounds_y is not None
@@ -84,10 +106,13 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             )
             image_coordinate_system = ImageCoordinateSystem(
                 origin,
-                0,
+                rotation,
             )
         else:
-            image_coordinate_system = None
+            if defaults is not None:
+                image_coordinate_system = defaults.level_coordinate_system()
+            else:
+                image_coordinate_system = None
         image = Image(
             pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
         )
@@ -97,4 +122,23 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         else:
             optical_paths = []
         pyramid = Pyramid(image=image, optical_paths=optical_paths)
-        super().__init__(equipment=equipment, pyramid=pyramid)
+
+        label = None
+        overview = None
+        if defaults is not None:
+            label_image_coordinate_system = defaults.label_coordinate_system()
+            if label_image_coordinate_system is not None:
+                label = Label(
+                    image=Image(image_coordinate_system=label_image_coordinate_system)
+                )
+            overview_image_coordinate_system = defaults.overview_coordinate_system()
+            if overview_image_coordinate_system is not None:
+                overview = Overview(
+                    image=Image(
+                        image_coordinate_system=overview_image_coordinate_system
+                    ),
+                    optical_paths=[],
+                )
+        super().__init__(
+            equipment=equipment, pyramid=pyramid, label=label, overview=overview
+        )

@@ -240,12 +240,12 @@ class CziImageData(DicomizerImageData):
             ]
         return image_data
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -257,9 +257,9 @@ class CziImageData(DicomizerImageData):
         Image
             Tile as Image.
         """
-        if (tile, z, path) not in self.tile_directory:
+        if (tile_point, z, path) not in self.tile_directory:
             return self.blank_decoded_tile
-        return Pillow.fromarray(self._get_tile(tile, z, path))
+        return Pillow.fromarray(self._get_tile(tile_point, z, path))
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Tile is encoded as jpeg.

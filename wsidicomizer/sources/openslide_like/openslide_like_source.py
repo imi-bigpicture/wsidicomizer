@@ -127,10 +127,16 @@ class OpenSlideLikeSource(DicomizerSource):
         label_image = self._get_associated_image(OpenSlideLikeAssociatedImageType.LABEL)
         if label_image is None:
             return None
+        label_image_coordinate_system = None
+        if self.metadata.label and self.metadata.label.image:
+            label_image_coordinate_system = (
+                self.metadata.label.image.image_coordinate_system
+            )
         return OpenSlideLikeAssociatedImageData(
             label_image,
             self._blank_color,
             self._encoder,
+            image_coordinate_system=label_image_coordinate_system,
         )
 
     def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
@@ -139,10 +145,16 @@ class OpenSlideLikeSource(DicomizerSource):
         )
         if overview_image is None:
             return None
+        overview_image_coordinate_system = None
+        if self.metadata.overview and self.metadata.overview.image:
+            overview_image_coordinate_system = (
+                self.metadata.overview.image.image_coordinate_system
+            )
         return OpenSlideLikeAssociatedImageData(
             overview_image,
             self._blank_color,
             self._encoder,
+            image_coordinate_system=overview_image_coordinate_system,
         )
 
     def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
