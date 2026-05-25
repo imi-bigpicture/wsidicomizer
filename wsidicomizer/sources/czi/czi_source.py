@@ -15,7 +15,6 @@
 """Source for reading czi file."""
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
 
 from czifile import CziFile
 from pydicom import Dataset
@@ -34,11 +33,11 @@ class CziSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
     ) -> None:
         """Create a new CziSource.
 
@@ -75,7 +74,7 @@ class CziSource(DicomizerSource):
         return self._czi.close()
 
     @property
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 
     @property
@@ -98,11 +97,11 @@ class CziSource(DicomizerSource):
             self.metadata.pyramid.image,
         )
 
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         return None
 
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         return None
 
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
         return None

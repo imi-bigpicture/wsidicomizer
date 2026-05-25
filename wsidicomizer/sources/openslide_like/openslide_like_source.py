@@ -17,9 +17,9 @@
 
 import math
 import re
+from collections.abc import Mapping, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Sequence, Tuple, Union
 
 from PIL.Image import Image
 from pydicom import Dataset
@@ -52,15 +52,15 @@ class OpenSlideLikeSource(DicomizerSource):
         filepath: Path,
         properties: OpenSlideLikeProperties,
         level_downsamples: Sequence[float],
-        level_dimensions: Sequence[Tuple[int, int]],
+        level_dimensions: Sequence[tuple[int, int]],
         associated_images: Mapping[str, Image],
         base_metadata: OpenSlideLikeMetadata,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
     ) -> None:
         """Create a new OpenSlideLikeSource.
 
@@ -120,10 +120,10 @@ class OpenSlideLikeSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return self._pyramid_levels
 
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         label_image = self._get_associated_image(OpenSlideLikeAssociatedImageType.LABEL)
         if label_image is None:
             return None
@@ -139,7 +139,7 @@ class OpenSlideLikeSource(DicomizerSource):
             image_coordinate_system=label_image_coordinate_system,
         )
 
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         overview_image = self._get_associated_image(
             OpenSlideLikeAssociatedImageType.MACRO
         )
@@ -157,7 +157,7 @@ class OpenSlideLikeSource(DicomizerSource):
             image_coordinate_system=overview_image_coordinate_system,
         )
 
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
         label_image = self._get_associated_image(
             OpenSlideLikeAssociatedImageType.THUMBNAIL
         )
@@ -175,7 +175,7 @@ class OpenSlideLikeSource(DicomizerSource):
 
     def _get_associated_image(
         self, image_type: OpenSlideLikeAssociatedImageType
-    ) -> Optional[Image]:
+    ) -> Image | None:
         """Get image from associated images.
 
         Parameters
@@ -195,7 +195,7 @@ class OpenSlideLikeSource(DicomizerSource):
     @staticmethod
     def _get_blank_color(
         properties: OpenSlideLikeProperties,
-    ) -> Optional[Union[int, Tuple[int, int, int]]]:
+    ) -> int | tuple[int, int, int] | None:
         if properties.background_color is not None:
             rgb = re.findall(r"([0-9a-fA-F]{2})", properties.background_color)
             if len(rgb) == 3:
@@ -205,7 +205,7 @@ class OpenSlideLikeSource(DicomizerSource):
     @staticmethod
     def _get_offset_and_size(
         properties: OpenSlideLikeProperties,
-    ) -> Tuple[Optional[Point], Optional[Size]]:
+    ) -> tuple[Point | None, Size | None]:
         if properties.bounds_x is not None and properties.bounds_y is not None:
             offset = Point(int(properties.bounds_x), int(properties.bounds_y))
         else:

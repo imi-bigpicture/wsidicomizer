@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from threading import RLock
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from czifile import CziFile, DirectoryEntryDV
@@ -48,7 +47,7 @@ class CziImageData(DicomizerImageData):
     def __init__(
         self,
         czi: CziFile,
-        tile_size: Optional[int],
+        tile_size: int | None,
         encoder: Encoder,
         czi_metadata: CziMetadata,
         merged_metadata: ImageMetadata,
@@ -82,7 +81,7 @@ class CziImageData(DicomizerImageData):
         self._tile_size = Size(tile_size, tile_size)
         assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
-        self._block_locks: Dict[int, RLock] = defaultdict(RLock)
+        self._block_locks: dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
             raise ValueError("Could not determine pixel spacing for czi level image.")
@@ -90,7 +89,7 @@ class CziImageData(DicomizerImageData):
         self._image_coordinate_system = merged_metadata.image_coordinate_system
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
 
     @property
@@ -128,12 +127,12 @@ class CziImageData(DicomizerImageData):
         return self.image_size.ceil_div(self.tile_size)
 
     @cached_property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         """Focal planes available in the image defined in um."""
         return sorted(self._czi_metadata.focal_plane_mapping)
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         """Optical paths available in the image."""
         return self._czi_metadata.channel_mapping
 
@@ -151,7 +150,7 @@ class CziImageData(DicomizerImageData):
         return Point(self._get_start(axis="X"), self._get_start(axis="Y"))
 
     @cached_property
-    def tile_directory(self) -> Dict[Tuple[Point, float, str], List[CziBlock]]:
+    def tile_directory(self) -> dict[tuple[Point, float, str], list[CziBlock]]:
         """Return dict of block, block start, and block size by tile position,
         focal plane and optical path
 
@@ -161,7 +160,7 @@ class CziImageData(DicomizerImageData):
             Directory of tile point, focal plane and channel as key and
             list of block, block start, and block size as item.
         """
-        tile_directory: Dict[Tuple[Point, float, str], List[CziBlock]] = defaultdict(
+        tile_directory: dict[tuple[Point, float, str], list[CziBlock]] = defaultdict(
             list
         )
         assert isinstance(self._czi.filtered_subblock_directory, list)
@@ -183,11 +182,11 @@ class CziImageData(DicomizerImageData):
         return self._get_size(axis="0")
 
     @property
-    def block_directory(self) -> List[DirectoryEntryDV]:
+    def block_directory(self) -> list[DirectoryEntryDV]:
         return self._block_directory
 
     @staticmethod
-    def detect_format(filepath: Path) -> Optional[str]:
+    def detect_format(filepath: Path) -> str | None:
         try:
             with CziFile(filepath):
                 return "czi"
@@ -312,10 +311,7 @@ class CziImageData(DicomizerImageData):
         np.ndarray
             A blank tile as numpy array.
         """
-        if self.photometric_interpretation == "MONOCHROME2":
-            fill_value = 0
-        else:
-            fill_value = 1
+        fill_value = 0 if self.photometric_interpretation == "MONOCHROME2" else 1
         assert isinstance(self._czi.dtype, np.dtype)
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
@@ -347,7 +343,7 @@ class CziImageData(DicomizerImageData):
 
     def _get_block_dimensions(
         self, block: DirectoryEntryDV
-    ) -> Tuple[Point, Size, float, str]:
+    ) -> tuple[Point, Size, float, str]:
         """Return start coordinate and size for block relative to image
         origin and block focal plane and optical path.
 
@@ -362,10 +358,10 @@ class CziImageData(DicomizerImageData):
             Start point coordinate, size, focal plane and optical path for
             block.
         """
-        x_start: Optional[int] = None
-        x_size: Optional[int] = None
-        y_start: Optional[int] = None
-        y_size: Optional[int] = None
+        x_start: int | None = None
+        x_size: int | None = None
+        y_start: int | None = None
+        y_size: int | None = None
         z = 0.0
         c = "0"
 
@@ -386,7 +382,7 @@ class CziImageData(DicomizerImageData):
 
         return (Point(x_start, y_start) - self.pixel_origin, Size(x_size, y_size), z, c)
 
-    def _size_to_numpy_shape(self, size: Size) -> Tuple[int, ...]:
+    def _size_to_numpy_shape(self, size: Size) -> tuple[int, ...]:
         """Return a tuple for use with numpy.shape."""
         if self.samples_per_pixel == 1:
             return size.height, size.width

@@ -14,8 +14,8 @@
 
 """Image data read by bioformats."""
 
+from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import ContextManager, List, Optional
 
 import numpy as np
 from PIL import Image as Pillow
@@ -33,11 +33,11 @@ class BioformatsImageData(DicomizerImageData):
     def __init__(
         self,
         reader: BioformatsReader,
-        tile_size: Optional[int],
+        tile_size: int | None,
         encoder: Encoder,
         image_index: int,
         resolution_index: int,
-        imaged_size: Optional[SizeMm] = None,
+        imaged_size: SizeMm | None = None,
     ) -> None:
         super().__init__(encoder)
         if tile_size is None:
@@ -54,7 +54,7 @@ class BioformatsImageData(DicomizerImageData):
         return self._image_region
 
     @property
-    def files(self) -> List[Path]:
+    def files(self) -> list[Path]:
         return [Path(self._image_reader.filepath)]
 
     @property
@@ -74,14 +74,14 @@ class BioformatsImageData(DicomizerImageData):
         return self._tile_size
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
+    def pixel_spacing(self) -> SizeMm | None:
         """Return the size of the pixels in mm/pixel."""
         return self._image_reader.pixel_spacing(
             self._image_index, self._resolution_index
         )
 
     @property
-    def imaged_size(self) -> Optional[SizeMm]:
+    def imaged_size(self) -> SizeMm | None:
         return self._imaged_size
 
     @property
@@ -101,7 +101,7 @@ class BioformatsImageData(DicomizerImageData):
 
     def _get_tile(
         self, tile_point: Point, z: float, path: str
-    ) -> ContextManager[np.ndarray]:
+    ) -> AbstractContextManager[np.ndarray]:
         region = Region(tile_point * self.tile_size, self.tile_size)
         cropped_region = self.image_region.crop(region)
         return self._image_reader.read_image(

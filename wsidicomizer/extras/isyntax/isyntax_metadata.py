@@ -25,10 +25,7 @@ from wsidicomizer.metadata import WsiDicomizerMetadata
 class ISyntaxMetadata(WsiDicomizerMetadata):
     def __init__(self, slide: ISyntax):
         try:
-            if slide.barcode != "":
-                label = Label(barcode=slide.barcode)
-            else:
-                label = None
+            label = Label(barcode=slide.barcode) if slide.barcode != "" else None
         except UnicodeDecodeError:
             logging.warning("Failed to decode barcode", exc_info=True)
             label = None

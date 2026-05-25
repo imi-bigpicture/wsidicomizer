@@ -16,9 +16,9 @@
 files."""
 
 from abc import ABCMeta, abstractmethod
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from pydicom import Dataset, config
 from wsidicom import ImageData
@@ -49,11 +49,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
     ) -> None:
         """Create a new DicomizerSource.
 
@@ -96,7 +96,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         """Dictionary of pyramid level (scalings), focal plane, and optical path as key
         and level index in file as value for levels in file."""
         raise NotImplementedError()
@@ -107,17 +107,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         """Return image data instance for label."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         """Return image data instance for overview."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
         """Return image data instance for thumbnail."""
         raise NotImplementedError()
 
@@ -130,11 +130,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         )
 
     @property
-    def user_metadata(self) -> Optional[WsiMetadata]:
+    def user_metadata(self) -> WsiMetadata | None:
         return self._user_metadata
 
     @property
-    def default_metadata(self) -> Optional[WsiMetadata]:
+    def default_metadata(self) -> WsiMetadata | None:
         return self._default_metadata
 
     @property
@@ -142,7 +142,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return self.level_instances[0].dataset
 
     @cached_property
-    def level_instances(self) -> List[WsiInstance]:
+    def level_instances(self) -> list[WsiInstance]:
         return [
             self._create_instance(
                 self._create_level_image_data(level_index),
@@ -157,35 +157,35 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         ]
 
     @cached_property
-    def label_instances(self) -> List[WsiInstance]:
+    def label_instances(self) -> list[WsiInstance]:
         label = self._create_label_image_data()
         if label is None:
             return []
         return [self._create_instance(label, ImageType.LABEL)]
 
     @cached_property
-    def overview_instances(self) -> List[WsiInstance]:
+    def overview_instances(self) -> list[WsiInstance]:
         overview = self._create_overview_image_data()
         if overview is None:
             return []
         return [self._create_instance(overview, ImageType.OVERVIEW)]
 
     @cached_property
-    def thumbnail_instances(self) -> List[WsiInstance]:
+    def thumbnail_instances(self) -> list[WsiInstance]:
         thumbnail = self._create_thumbnail_image_data()
         if thumbnail is None:
             return []
         return [self._create_instance(thumbnail, ImageType.THUMBNAIL)]
 
     @property
-    def annotation_instances(self) -> List[AnnotationInstance]:
+    def annotation_instances(self) -> list[AnnotationInstance]:
         return []
 
     def _create_instance(
         self,
         image_data: ImageData,
         image_type: ImageType,
-        pyramid_index: Optional[int] = None,
+        pyramid_index: int | None = None,
     ) -> WsiInstance:
         """Create instance from image data."""
         dataset = self._create_dataset(
@@ -215,7 +215,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def _is_included_level(
         level: int,
         present_levels: Sequence[int],
-        include_indices: Optional[Sequence[int]] = None,
+        include_indices: Sequence[int] | None = None,
     ) -> bool:
         """Return true if pyramid level is in included levels.
 

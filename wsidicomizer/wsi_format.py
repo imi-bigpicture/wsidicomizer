@@ -16,7 +16,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional, Tuple
 
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
 
@@ -48,13 +47,13 @@ class FormatCoordinateDefaults:
     """
 
     level_rotation: float
-    label_rotation: Optional[float]
-    overview_rotation: Optional[float]
+    label_rotation: float | None
+    overview_rotation: float | None
 
     @classmethod
     def from_wsi_format(cls, wsi_format: WsiFormat) -> "FormatCoordinateDefaults":
         """Return the default coordinate system rotations for a WSI format."""
-        rotations: Dict[WsiFormat, Tuple[float, Optional[float], Optional[float]]] = {
+        rotations: dict[WsiFormat, tuple[float, float | None, float | None]] = {
             WsiFormat.SVS: (180.0, 180.0, 90.0),
             WsiFormat.NDPI: (180.0, 180.0, 180.0),
             WsiFormat.PHILIPS_TIFF: (180.0, 180.0, 180.0),
@@ -71,12 +70,12 @@ class FormatCoordinateDefaults:
     def level_coordinate_system(self) -> ImageCoordinateSystem:
         return ImageCoordinateSystem.default_for(self.level_rotation, ImageType.VOLUME)
 
-    def label_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def label_coordinate_system(self) -> ImageCoordinateSystem | None:
         if self.label_rotation is None:
             return None
         return ImageCoordinateSystem.default_for(self.label_rotation, ImageType.LABEL)
 
-    def overview_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def overview_coordinate_system(self) -> ImageCoordinateSystem | None:
         if self.overview_rotation is None:
             return None
         return ImageCoordinateSystem.default_for(

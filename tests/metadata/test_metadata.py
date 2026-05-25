@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from typing import Optional
 
 import pytest
 from pydicom.uid import UID
@@ -184,9 +183,9 @@ class TestWsiDicomizerMetadata:
     )
     def test_merge_frame_of_reference_uid(
         self,
-        base_frame_of_reference_uid: Optional[UID],
-        user_frame_of_reference_uid: Optional[UID],
-        default_frame_of_reference_uid: Optional[UID],
+        base_frame_of_reference_uid: UID | None,
+        user_frame_of_reference_uid: UID | None,
+        default_frame_of_reference_uid: UID | None,
     ):
         # Arrange
         base = WsiDicomizerMetadata(frame_of_reference_uid=base_frame_of_reference_uid)
@@ -228,9 +227,9 @@ class TestWsiDicomizerMetadata:
     )
     def test_merge_dimension_organization_uids(
         self,
-        base_dimension_organization_uid: Optional[UID],
-        user_dimension_organization_uid: Optional[UID],
-        default_dimension_organization_uid: Optional[UID],
+        base_dimension_organization_uid: UID | None,
+        user_dimension_organization_uid: UID | None,
+        default_dimension_organization_uid: UID | None,
     ):
         # Arrange
         base = WsiDicomizerMetadata(

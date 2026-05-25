@@ -16,7 +16,6 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 from PIL.ImageCms import ImageCmsProfile
 from wsidicom.geometry import PointMm, SizeMm
@@ -37,22 +36,22 @@ from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 @dataclass
 class OpenSlideLikeProperties:
-    background_color: Optional[str] = None
-    bounds_x: Optional[str] = None
-    bounds_y: Optional[str] = None
-    bounds_width: Optional[str] = None
-    bounds_height: Optional[str] = None
-    objective_power: Optional[str] = None
-    vendor: Optional[str] = None
-    mpp_x: Optional[str] = None
-    mpp_y: Optional[str] = None
+    background_color: str | None = None
+    bounds_x: str | None = None
+    bounds_y: str | None = None
+    bounds_width: str | None = None
+    bounds_height: str | None = None
+    objective_power: str | None = None
+    vendor: str | None = None
+    mpp_x: str | None = None
+    mpp_y: str | None = None
 
     @property
-    def wsi_format(self) -> Optional[WsiFormat]:
+    def wsi_format(self) -> WsiFormat | None:
         """Return the WsiFormat for the vendor, if recognised."""
         if self.vendor is None:
             return None
-        vendor_map: Dict[str, WsiFormat] = {
+        vendor_map: dict[str, WsiFormat] = {
             "aperio": WsiFormat.SVS,
             "hamamatsu": WsiFormat.NDPI,
             "mirax": WsiFormat.MIRAX,
@@ -66,7 +65,7 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
     def __init__(
         self,
         properties: OpenSlideLikeProperties,
-        color_profile: Optional[ImageCmsProfile],
+        color_profile: ImageCmsProfile | None,
     ):
         if properties.objective_power is not None:
             OpticalPath(

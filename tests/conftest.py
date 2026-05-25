@@ -16,7 +16,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydicom.uid import JPEG2000, UID
@@ -569,7 +569,7 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
         return "YBR_ICT"
 
 
-def convert_wsi(file_path: Path, file_parameters: Dict[str, Any], encoder: Encoder):
+def convert_wsi(file_path: Path, file_parameters: dict[str, Any], encoder: Encoder):
     include_levels = file_parameters["include_levels"]
     tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
     tempdir = TemporaryDirectory()
@@ -610,7 +610,7 @@ def encoder():
 
 
 @pytest.fixture(scope="module")
-def converted(wsi_files: Dict[str, Dict[str, Path]], encoder: Encoder):
+def converted(wsi_files: dict[str, dict[str, Path]], encoder: Encoder):
     converted_folders = {
         file_format: {
             file: convert_wsi(wsi_files[file_format][file], file_parameters, encoder)
@@ -630,10 +630,10 @@ def converted(wsi_files: Dict[str, Dict[str, Path]], encoder: Encoder):
 
 @pytest.fixture(scope="module")
 def wsis(
-    wsi_files: Dict[str, Dict[str, Path]],
-    converted: Dict[str, Dict[str, TemporaryDirectory]],
+    wsi_files: dict[str, dict[str, Path]],
+    converted: dict[str, dict[str, TemporaryDirectory]],
 ):
-    wsis: Dict[str, Dict[str, WsiDicom]] = defaultdict(dict)
+    wsis: dict[str, dict[str, WsiDicom]] = defaultdict(dict)
     for file_format, file_format_parameters in wsi_files.items():
         for file, file_path in file_format_parameters.items():
             if not file_path.exists():
@@ -651,7 +651,7 @@ def wsis(
 
 @pytest.fixture(scope="module")
 def converted_path(
-    converted: Dict[str, Dict[str, TemporaryDirectory]], file_format: str, file: str
+    converted: dict[str, dict[str, TemporaryDirectory]], file_format: str, file: str
 ):
     if file_format not in converted or file not in converted[file_format]:
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
@@ -660,7 +660,7 @@ def converted_path(
 
 @pytest.fixture(scope="module")
 def wsi(
-    wsis: Dict[str, Dict[str, WsiDicom]],
+    wsis: dict[str, dict[str, WsiDicom]],
     file_format: str,
     file: str,
 ):
@@ -671,7 +671,7 @@ def wsi(
 
 @pytest.fixture(scope="module")
 def wsi_file(
-    wsi_files: Dict[str, Dict[str, Path]],
+    wsi_files: dict[str, dict[str, Path]],
     file_format: str,
     file: str,
 ):

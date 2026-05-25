@@ -16,7 +16,6 @@
 """Source for reading tiffslide compatible file."""
 
 from pathlib import Path
-from typing import Optional, Union
 
 from pydicom import Dataset
 from tiffslide import TiffSlide
@@ -53,11 +52,11 @@ class TiffSlideSource(OpenSlideLikeSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         **source_args,
     ) -> None:
         """Create a new TiffSlideSource.
@@ -121,9 +120,7 @@ class TiffSlideSource(OpenSlideLikeSource):
         format = TiffSlide.detect_format(filepath)
         return format is not None
 
-    def _create_level_image_data(
-        self, level_index: int
-    ) -> Optional[DicomizerImageData]:
+    def _create_level_image_data(self, level_index: int) -> DicomizerImageData | None:
         return TiffSlideLevelImageData(
             self._tiffslide,
             self._blank_color,

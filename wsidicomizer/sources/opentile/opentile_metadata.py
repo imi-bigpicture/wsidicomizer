@@ -14,8 +14,6 @@
 
 """Metadata for opentile file."""
 
-from typing import Optional
-
 from opentile import Metadata
 from wsidicom.metadata import Equipment, Image, Label, OpticalPath, Overview, Pyramid
 
@@ -29,8 +27,8 @@ class OpenTileMetadata(WsiDicomizerMetadata):
         metadata: Metadata,
         has_label: bool,
         has_overview: bool,
-        icc_profile: Optional[bytes] = None,
-        wsi_format: Optional[WsiFormat] = None,
+        icc_profile: bytes | None = None,
+        wsi_format: WsiFormat | None = None,
     ):
         equipment = Equipment(
             metadata.scanner_manufacturer,

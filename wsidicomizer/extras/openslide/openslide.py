@@ -17,14 +17,13 @@
 import os
 from ctypes.util import find_library
 from pathlib import Path
-from typing import Optional
 
 # On windows, use find_library to find directory with openslide dll in
 # the Path environmental variable.
 openslide_libs = ["libopenslide-1", "libopenslide-0"]
 if os.name == "nt":
 
-    def find_openslide_lib(openslide_lib_name: str) -> Optional[Path]:
+    def find_openslide_lib(openslide_lib_name: str) -> Path | None:
         openslide_lib_path = find_library(openslide_lib_name)
         if openslide_lib_path is not None:
             return Path(openslide_lib_path)

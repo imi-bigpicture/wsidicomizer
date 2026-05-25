@@ -16,7 +16,6 @@
 
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
@@ -34,13 +33,13 @@ class BioformatsSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
-        readers: Optional[int] = None,
-        cache_path: Optional[str] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        readers: int | None = None,
+        cache_path: str | None = None,
     ) -> None:
         """Create a new BioformatsSource.
 
@@ -89,7 +88,7 @@ class BioformatsSource(DicomizerSource):
         return BioformatsImageData.detect_format(filepath)
 
     @property
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return self._reader.pyramid_levels(self._pyramid_image_index)
 
     @property
@@ -99,7 +98,7 @@ class BioformatsSource(DicomizerSource):
     @staticmethod
     def _get_image_indices(
         reader: BioformatsReader,
-    ) -> Tuple[int, Optional[int], Optional[int]]:
+    ) -> tuple[int, int | None, int | None]:
         image_indices = list(range(reader.images_count))
         overview_image_index = None
         label_image_index = None
@@ -136,21 +135,21 @@ class BioformatsSource(DicomizerSource):
             self._volume_imaged_size,
         )
 
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         if self._label_image_index is None:
             return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._label_image_index, 0
         )
 
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         if self._overview_image_index is None:
             return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._overview_image_index, 0
         )
 
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
         # TODO support reading thumbnails from bioformats
         return None
 

@@ -15,7 +15,6 @@
 """Image data for pyisintax compatible file."""
 
 from io import BytesIO
-from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image as Pillow
@@ -36,7 +35,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
         self,
         isyntax: ISyntax,
         image_metadata: ImageMetadata,
-        tile_size: Optional[int],
+        tile_size: int | None,
         encoder: Encoder,
         level: int,
     ):
@@ -98,15 +97,15 @@ class ISyntaxLevelImageData(DicomizerImageData):
         return self.encoder.samples_per_pixel
 
     @property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         return [0.0]
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         return ["0"]
 
     @property
-    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
+    def blank_color(self) -> int | tuple[int, int, int]:
         return (255, 255, 255)
 
     @property
@@ -148,7 +147,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
             return self._get_blank_decoded_frame(region.size)
         return Pillow.fromarray(image_data)
 
-    def _get_region(self, region: Region) -> Optional[np.ndarray]:
+    def _get_region(self, region: Region) -> np.ndarray | None:
         """Return Image read from region in ISyntax image. If image data for
         region is blank, None is returned.
 
@@ -176,7 +175,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
             return None
         return region_data
 
-    def _get_tile(self, tile_point: Point, z: float, path: str) -> Optional[np.ndarray]:
+    def _get_tile(self, tile_point: Point, z: float, path: str) -> np.ndarray | None:
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
@@ -248,7 +247,7 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
         frame: bytes,
         encoder: Encoder,
         image_type: ImageType,
-        image_metadata: Optional[ImageMetadata] = None,
+        image_metadata: ImageMetadata | None = None,
         force_transcoding: bool = False,
     ):
         if image_type not in (ImageType.LABEL, ImageType.OVERVIEW):
@@ -288,13 +287,13 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
         return self.image_size
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
+    def pixel_spacing(self) -> SizeMm | None:
         if self._image_metadata is None:
             return None
         return self._image_metadata.pixel_spacing
 
     @property
-    def imaged_size(self) -> Optional[SizeMm]:
+    def imaged_size(self) -> SizeMm | None:
         if self.pixel_spacing is not None:
             return self.pixel_spacing * self.image_size
         return None
@@ -304,11 +303,11 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
         return 3
 
     @property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         return [0.0]
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         return ["0"]
 
     @property

@@ -15,10 +15,11 @@
 import math
 import os
 import platform
+from collections.abc import Iterable
 from hashlib import md5
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any
 
 import numpy as np
 import pytest
@@ -77,7 +78,7 @@ class TestWsiDicomizerConvert:
         # Arrange
 
         # Act
-        result: Dict[str, Dict[str, Dict[str, List[str]]]] = validator.validate_dir(
+        result: dict[str, dict[str, dict[str, list[str]]]] = validator.validate_dir(
             converted_path.name
         )
 
@@ -100,7 +101,7 @@ class TestWsiDicomizerConvert:
             "Root": ["(0020,0011)"],
         }
         for module, module_errors in module_errors_to_ignore.items():
-            errors = errors_per_module.get(module, None)
+            errors = errors_per_module.get(module)
             if errors is not None:
                 for module_error in module_errors:
                     errors.pop(module_error, None)
@@ -114,7 +115,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
         ],
         scope="module",
     )
@@ -130,7 +131,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
         ],
         scope="module",
     )
@@ -167,9 +168,9 @@ class TestWsiDicomizerConvert:
         self,
         file_format: str,
         file: str,
-        region: Dict[str, Any],
+        region: dict[str, Any],
         lowest_included_level: int,
-        skip_hash_test_platforms: List[str],
+        skip_hash_test_platforms: list[str],
         wsi: WsiDicom,
     ):
         # Arrange
@@ -182,13 +183,13 @@ class TestWsiDicomizerConvert:
             (region["location"]["x"], region["location"]["y"]),
             level,
             (region["size"]["width"], region["size"]["height"]),
-            z=region.get("z", None),
+            z=region.get("z"),
         )
 
         # Assert
-        assert (
-            md5(im.tobytes()).hexdigest() == region["md5"]
-        ), f"{file_format}: {file} lowest level {lowest_included_level} {region}"
+        assert md5(im.tobytes()).hexdigest() == region["md5"], (
+            f"{file_format}: {file} lowest level {lowest_included_level} {region}"
+        )
 
     @pytest.mark.parametrize(
         ["file_format", "file", "thumbnail", "skip_hash_test_platforms"],
@@ -209,9 +210,9 @@ class TestWsiDicomizerConvert:
         self,
         file_format: str,
         file: str,
-        thumbnail: Dict[str, Any],
+        thumbnail: dict[str, Any],
         wsi: WsiDicom,
-        skip_hash_test_platforms: List[str],
+        skip_hash_test_platforms: list[str],
     ):
         # Arrange
         if platform.system() in skip_hash_test_platforms:
@@ -224,9 +225,9 @@ class TestWsiDicomizerConvert:
         )
 
         # Assert
-        assert (
-            md5(im.tobytes()).hexdigest() == thumbnail["md5"]
-        ), f"{file_format}: {file} {thumbnail}"
+        assert md5(im.tobytes()).hexdigest() == thumbnail["md5"], (
+            f"{file_format}: {file} {thumbnail}"
+        )
 
     @pytest.mark.parametrize(
         [
@@ -255,9 +256,9 @@ class TestWsiDicomizerConvert:
         self,
         file_format: str,
         file: str,
-        region: Dict[str, Any],
+        region: dict[str, Any],
         lowest_included_level: int,
-        skip_hash_test_platforms: List[str],
+        skip_hash_test_platforms: list[str],
         wsi_file: Path,
         wsi: WsiDicom,
     ):
@@ -319,7 +320,7 @@ class TestWsiDicomizerConvert:
         self,
         file_format: str,
         file: str,
-        thumbnail: Dict[str, Any],
+        thumbnail: dict[str, Any],
         wsi_file: Path,
         wsi: WsiDicom,
     ):
@@ -381,7 +382,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
             if format_files[file]["convert"]
         ],
         scope="module",
@@ -463,7 +464,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
         ],
         scope="module",
     )
@@ -533,7 +534,7 @@ class TestWsiDicomizerConvert:
         scope="module",
     )
     def test_embedded_thumbnail_size(
-        self, wsi: WsiDicom, embedded_thumbnail_size: Tuple[int, int]
+        self, wsi: WsiDicom, embedded_thumbnail_size: tuple[int, int]
     ):
         # Arrange
         assert wsi.pyramid.thumbnails is not None
@@ -548,7 +549,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
         ],
         scope="module",
     )
@@ -570,7 +571,7 @@ class TestWsiDicomizerConvert:
         [
             (file_format, file)
             for file_format, format_files in test_parameters.items()
-            for file in format_files.keys()
+            for file in format_files
         ],
         scope="module",
     )
@@ -688,7 +689,7 @@ class TestWsiDicomizerConvert:
         ],
         scope="module",
     )
-    def test_focal_planes(self, wsi: WsiDicom, expected_focal_planes: List[float]):
+    def test_focal_planes(self, wsi: WsiDicom, expected_focal_planes: list[float]):
         # Arrange
 
         # Act
@@ -731,11 +732,14 @@ class TestWsiDicomizerConvert:
 
         # Assert
         for expected_pixel_spacing, pixel_size in zip(
-            expected_pixel_spacings, pixel_sizes
+            expected_pixel_spacings, pixel_sizes, strict=False
         ):
             assert math.isclose(
                 expected_pixel_spacing.width, pixel_size.width, rel_tol=1.5e-3
             ), f"Width mismatch: {expected_pixel_spacing.width} != {pixel_size.width}"
             assert math.isclose(
                 expected_pixel_spacing.height, pixel_size.height, rel_tol=1.5e-3
-            ), f"Height mismatch: {expected_pixel_spacing.height} != {pixel_size.height}"
+            ), (
+                f"Height mismatch: {expected_pixel_spacing.height} "
+                f"!= {pixel_size.height}"
+            )

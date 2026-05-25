@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from typing import List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 from PIL import Image as Pillow
@@ -30,7 +30,7 @@ from wsidicomizer.image_data import DicomizerImageData
 class OpenSlideLikeImageData(DicomizerImageData):
     def __init__(
         self,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        blank_color: int | tuple[int, int, int] | None,
         encoder: Encoder,
     ):
         super().__init__(encoder)
@@ -51,15 +51,15 @@ class OpenSlideLikeImageData(DicomizerImageData):
         return 3
 
     @property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         return [0.0]
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         return ["0"]
 
     @property
-    def blank_color(self) -> Union[int, Tuple[int, int, int]]:
+    def blank_color(self) -> int | tuple[int, int, int]:
         return self._blank_color
 
     @property
@@ -88,7 +88,7 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
     def __init__(
         self,
         image: Image,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        blank_color: int | tuple[int, int, int] | None,
         encoder: Encoder,
     ) -> None:
         super().__init__(
@@ -127,24 +127,24 @@ class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):
     def __init__(
         self,
         image: Image,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
+        blank_color: int | tuple[int, int, int] | None,
         encoder: Encoder,
-        image_coordinate_system: Optional[ImageCoordinateSystem] = None,
+        image_coordinate_system: ImageCoordinateSystem | None = None,
     ) -> None:
         super().__init__(image, blank_color, encoder)
         self._image_coordinate_system = image_coordinate_system
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
+    def pixel_spacing(self) -> SizeMm | None:
         """Size of the pixels in mm/pixel."""
         return None
 
     @property
-    def imaged_size(self) -> Optional[Size]:
+    def imaged_size(self) -> Size | None:
         return None
 
 
@@ -152,10 +152,10 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
     def __init__(
         self,
         image: Image,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
-        offset: Optional[Point],
-        size: Optional[Size],
-        level_dimensions: Sequence[Tuple[int, int]],
+        blank_color: int | tuple[int, int, int] | None,
+        offset: Point | None,
+        size: Size | None,
+        level_dimensions: Sequence[tuple[int, int]],
         image_metadata: ImageMetadata,
         encoder: Encoder,
     ) -> None:
@@ -206,7 +206,7 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
         )
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
 
     @property
@@ -222,14 +222,14 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
 class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
     def __init__(
         self,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
-        offset: Optional[Point],
-        size: Optional[Size],
-        level_dimensions: Sequence[Tuple[int, int]],
+        blank_color: int | tuple[int, int, int] | None,
+        offset: Point | None,
+        size: Size | None,
+        level_dimensions: Sequence[tuple[int, int]],
         level_downsamples: Sequence[float],
         image_metadata: ImageMetadata,
         level_index: int,
-        tile_size: Optional[int],
+        tile_size: int | None,
         encoder: Encoder,
     ):
         super().__init__(
@@ -283,5 +283,5 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
         return self._imaged_size
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system

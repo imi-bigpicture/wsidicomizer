@@ -15,7 +15,7 @@
 """Image data for opentile compatible file."""
 
 import dataclasses
-from typing import Iterable, Iterator, List, Optional, Union
+from collections.abc import Iterable, Iterator
 
 from opentile.tiff_image import (
     AssociatedTiffImage,
@@ -100,12 +100,12 @@ class OpenTileImageData(DicomizerImageData):
         return self._tile_size
 
     @property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         """Focal planes available in the image defined in um."""
         return [self._tiff_image.focal_plane]
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         """Optical paths available in the image."""
         return [self._tiff_image.optical_path]
 
@@ -146,7 +146,7 @@ class OpenTileImageData(DicomizerImageData):
     @property
     def lossy_compression(
         self,
-    ) -> Optional[List[LossyCompression]]:
+    ) -> list[LossyCompression] | None:
         """Return lossy compression method and compression ratio if lossy compressed."""
         iso = LossyCompressionIsoStandard.transfer_syntax_to_iso(self.transfer_syntax)
         if iso is None:
@@ -159,7 +159,7 @@ class OpenTileImageData(DicomizerImageData):
         return [LossyCompression(iso, compression_ratio)]
 
     @property
-    def transcoder(self) -> Optional[Encoder]:
+    def transcoder(self) -> Encoder | None:
         """Only return encoder if transcoding is used."""
         if self._needs_transcoding:
             return self.encoder
@@ -247,7 +247,7 @@ class OpenTileImageData(DicomizerImageData):
 class OpenTileLevelImageData(OpenTileImageData):
     def __init__(
         self,
-        tiff_image: Union[LevelTiffImage, ThumbnailTiffImage],
+        tiff_image: LevelTiffImage | ThumbnailTiffImage,
         image_metadata: ImageMetadata,
         merged_metadata: ImageMetadata,
         encoder: Encoder,
@@ -281,7 +281,7 @@ class OpenTileLevelImageData(OpenTileImageData):
             self._image_coordinate_system = None
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
 
     @property
@@ -293,11 +293,11 @@ class OpenTileLevelImageData(OpenTileImageData):
         return self._imaged_size
 
     @property
-    def focal_planes(self) -> List[float]:
+    def focal_planes(self) -> list[float]:
         return [self._tiff_image.focal_plane]
 
     @property
-    def optical_paths(self) -> List[str]:
+    def optical_paths(self) -> list[str]:
         return [self._tiff_image.optical_path]
 
 
@@ -307,7 +307,7 @@ class OpenTileAssociatedImageData(OpenTileImageData):
         tiff_image: AssociatedTiffImage,
         encoder: Encoder,
         force_transcoding: bool = False,
-        image_coordinate_system: Optional[ImageCoordinateSystem] = None,
+        image_coordinate_system: ImageCoordinateSystem | None = None,
     ):
         super().__init__(tiff_image, encoder, force_transcoding)
         if tiff_image.pixel_spacing is not None:
@@ -317,16 +317,16 @@ class OpenTileAssociatedImageData(OpenTileImageData):
         self._image_coordinate_system = image_coordinate_system
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
 
     @property
-    def pixel_spacing(self) -> Optional[SizeMm]:
+    def pixel_spacing(self) -> SizeMm | None:
         """Size of the pixels in mm/pixel."""
         return self._pixel_spacing
 
     @property
-    def imaged_size(self) -> Optional[SizeMm]:
+    def imaged_size(self) -> SizeMm | None:
         """Size of the image in mm."""
         if self._pixel_spacing is None:
             return None

@@ -15,7 +15,6 @@
 """Source for reading libisyntax compatible file."""
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
@@ -37,11 +36,11 @@ class ISyntaxSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         force_transcoding: bool = False,
         cache: int = 2048,
     ) -> None:
@@ -94,7 +93,7 @@ class ISyntaxSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
@@ -106,7 +105,7 @@ class ISyntaxSource(DicomizerSource):
             level_index,
         )
 
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         label = self._slide.read_label_image_jpeg()
         if label is None:
             return None
@@ -118,7 +117,7 @@ class ISyntaxSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         overview = self._slide.read_macro_image_jpeg()
         if overview is None:
             return None
@@ -130,7 +129,7 @@ class ISyntaxSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
         return None
 
     def close(self) -> None:

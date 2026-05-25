@@ -16,13 +16,13 @@
 
 import math
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
 from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
 from threading import Lock
-from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
 import jpype.imports  # Needed for loci import to work # noqa
 import numpy as np
@@ -55,16 +55,13 @@ class ReaderPool:
     def __init__(
         self,
         filepath: Path,
-        max_readers: Optional[int] = None,
-        cache_path: Optional[Union[Path, str]] = None,
+        max_readers: int | None = None,
+        cache_path: Path | str | None = None,
     ):
         self._filepath = filepath
         if max_readers is None:
             cpu_count = os.cpu_count()
-            if cpu_count is not None:
-                max_readers = cpu_count
-            else:
-                max_readers = 1
+            max_readers = cpu_count if cpu_count is not None else 1
         self._max_readers = max_readers
         self._current_count = 0
         if cache_path is None:
@@ -153,8 +150,8 @@ class BioformatsReader:
     def __init__(
         self,
         filepath: Path,
-        max_readers: Optional[int] = None,
-        cache_path: Optional[Union[Path, str]] = None,
+        max_readers: int | None = None,
+        cache_path: Path | str | None = None,
     ):
         """Reader for image data and metadata from file using Bio-Formats api.
 
@@ -197,14 +194,14 @@ class BioformatsReader:
         """Return number of images in file."""
         return len(self.metadata.images)
 
-    def image_name(self, image_index: int) -> Optional[str]:
+    def image_name(self, image_index: int) -> str | None:
         """Return name of image."""
         return self.metadata.images[image_index].name
 
     @lru_cached_method()
     def dtype(self, image_index: int) -> np.dtype:
         """Return the numpy datatype for image in file."""
-        NUMPY_DATA_TYPES: Dict[str, Type] = {
+        NUMPY_DATA_TYPES: dict[str, type] = {
             "bit": np.bool_,
             "double-complex": np.cdouble,
             "complex": np.csingle,
@@ -217,15 +214,12 @@ class BioformatsReader:
             "uint32": np.uint32,
             "uint8": np.uint8,
         }
-        if self.metadata.images[image_index].pixels.big_endian:
-            byte_order = ">"
-        else:
-            byte_order = "<"
+        byte_order = ">" if self.metadata.images[image_index].pixels.big_endian else "<"
         data_type = self.metadata.images[image_index].pixels.type.value
         try:
             numpy_data_type = np.dtype(NUMPY_DATA_TYPES[data_type])
-        except KeyError:
-            raise ValueError(f"Unkown data type {data_type}")
+        except KeyError as exception:
+            raise ValueError(f"Unknown data type {data_type}") from exception
         return numpy_data_type.newbyteorder(byte_order)
 
     @lru_cached_method()
@@ -249,7 +243,7 @@ class BioformatsReader:
     @lru_cached_method()
     def pixel_spacing(
         self, image_index: int, resolution_index: int = 0
-    ) -> Optional[SizeMm]:
+    ) -> SizeMm | None:
         """Return the size of the pixels in mm/pixel for image in file."""
         pixels = self.metadata.images[image_index].pixels
         if pixels.physical_size_x is None or pixels.physical_size_y is None:
@@ -269,7 +263,7 @@ class BioformatsReader:
         return interleaved
 
     @lru_cached_method()
-    def pyramid_levels(self, image_index: int) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self, image_index: int) -> dict[tuple[int, float, str], int]:
         """Return dictionary of dyadic scaling, focal plane, and optical path as key
         and resolution index as value for resolutions in image.
 
@@ -286,8 +280,11 @@ class BioformatsReader:
         }
 
     @lru_cached_method()
-    def _resolution_scales(self, image_index: int) -> List[float]:
-        """Return resolution scales for image as resolution width divided by image width."""
+    def _resolution_scales(self, image_index: int) -> list[float]:
+        """Return resolution scales for image.
+
+        Scales are resolution width divided by image width.
+        """
         with self._reader_pool.get_reader() as reader:
             reader.setSeries(image_index)
             reader.setResolution(0)
@@ -313,7 +310,7 @@ class BioformatsReader:
         image_index: int,
         resolution_index: int,
         region: Region,
-        output_size: Optional[Size] = None,
+        output_size: Size | None = None,
         index: int = 0,
     ) -> Generator[np.ndarray, None, None]:
         """Read image data from file. Preferably used as a context manager.
@@ -350,7 +347,9 @@ class BioformatsReader:
             )
         except Exception as exception:
             raise Exception(
-                f"Failed to read image data from image {image_index}, resolution {resolution_index}, index {index} at region {region.box}."
+                f"Failed to read image data from image {image_index}, "
+                f"resolution {resolution_index}, index {index} "
+                f"at region {region.box}."
             ) from exception
         try:
             data: np.ndarray = np.frombuffer(raw_data, self.dtype(image_index))

@@ -15,7 +15,6 @@
 """Image data for tiffslide compatible file."""
 
 from functools import cached_property
-from typing import Optional, Tuple, Union
 
 import numpy as np
 from PIL import Image as Pillow
@@ -33,12 +32,12 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
     def __init__(
         self,
         tiff_slide: TiffSlide,
-        blank_color: Optional[Union[int, Tuple[int, int, int]]],
-        offset: Optional[Point],
-        size: Optional[Size],
+        blank_color: int | tuple[int, int, int] | None,
+        offset: Point | None,
+        size: Size | None,
         image_metadata: ImageMetadata,
         level_index: int,
-        tile_size: Optional[int],
+        tile_size: int | None,
         encoder: Encoder,
     ):
         """Wraps a TiffSlide level to ImageData.
@@ -103,7 +102,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             return self._get_blank_decoded_frame(region.size)
         return Pillow.fromarray(image_data)
 
-    def _get_region(self, region: Region) -> Optional[np.ndarray]:
+    def _get_region(self, region: Region) -> np.ndarray | None:
         """Return Image read from region in tiffslide image. If image data for
         region is blank, None is returned. Transparent pixels are made into
         background color
@@ -211,7 +210,6 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
         background = np.array(self.blank_color)
         corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
-        if np.all(data[corners_rgb] == background):
-            if np.all(data == background):
-                return True
-        return False
+        return bool(
+            np.all(data[corners_rgb] == background) and np.all(data == background)
+        )

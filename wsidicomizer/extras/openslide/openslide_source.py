@@ -15,7 +15,6 @@
 """Source for reading openslide compatible file."""
 
 from pathlib import Path
-from typing import Optional, Union
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
@@ -52,11 +51,11 @@ class OpenSlideSource(OpenSlideLikeSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: Optional[int] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        tile_size: int | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
     ) -> None:
         """Create a new OpenSlideSource.
 

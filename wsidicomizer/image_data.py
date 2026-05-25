@@ -15,8 +15,6 @@
 """Module containing a base ImageData implementation suitable for use with non-DICOM
 files."""
 
-from typing import List, Optional
-
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
@@ -32,13 +30,13 @@ class DicomizerImageData(ImageData):
     methods and properties in the base ImageData-class.
     """
 
-    _blank_encoded_frame: Optional[bytes] = None
-    _blank_encoded_frame_size: Optional[Size] = None
-    _blank_decoded_frame: Optional[Image] = None
-    _blank_decoded_frame_size: Optional[Size] = None
+    _blank_encoded_frame: bytes | None = None
+    _blank_encoded_frame_size: Size | None = None
+    _blank_decoded_frame: Image | None = None
+    _blank_decoded_frame_size: Size | None = None
 
     @property
-    def image_coordinate_system(self) -> Optional[ImageCoordinateSystem]:
+    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         """Return a default ImageCoordinateSystem."""
         return None
 
@@ -49,12 +47,12 @@ class DicomizerImageData(ImageData):
     @property
     def lossy_compression(
         self,
-    ) -> Optional[List[LossyCompression]]:
+    ) -> list[LossyCompression] | None:
         """Return None as image compression is for most format not known."""
         return None
 
     @property
-    def transcoder(self) -> Optional[Encoder]:
+    def transcoder(self) -> Encoder | None:
         """Return encoder as for most format transcoding is used."""
         return self.encoder
 
@@ -137,7 +135,6 @@ class DicomizerImageData(ImageData):
         CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
         background = np.array(self.blank_color)
         corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
-        if np.all(tile[corners_rgb] == background):
-            if np.all(tile == background):
-                return True
-        return False
+        return bool(
+            np.all(tile[corners_rgb] == background) and np.all(tile == background)
+        )

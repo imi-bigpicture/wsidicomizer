@@ -17,10 +17,12 @@ Main module containing the WsiDicomizer class that allows non-DICOM files to be 
 like DICOM instances, enabling viewing and saving.
 """
 
+import contextlib
 import os
+from collections.abc import Callable, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Sequence, Type, Union
+from typing import Union
 
 from PIL.Image import Image
 from pydicom import Dataset
@@ -51,16 +53,14 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def open(
         cls,
-        filepath: Union[str, Path],
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
-        tile_size: Optional[int] = 512,
+        filepath: str | Path,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
+        tile_size: int | None = 512,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
-        encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-        preferred_source: Optional[
-            Union[Type[DicomizerSource], SourceIdentifier]
-        ] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        encoding: EncodingSettings | Encoder | None = None,
+        preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         **source_args,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
@@ -81,7 +81,7 @@ class WsiDicomizer(WsiDicom):
             Optional metadata post processing by update from dataset or callback.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use if re-encoding.
-        preferred_source: Optional[Union[Type[DicomizerSource], SourceIdentifier]] = None
+        preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         **source_args
             Optional keyword args to pass to source.
@@ -111,30 +111,28 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def convert(
         cls,
-        filepath: Union[str, Path],
-        output_path: Optional[Union[str, Path]] = None,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
-        tile_size: Optional[int] = 512,
+        filepath: str | Path,
+        output_path: str | Path | None = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
+        tile_size: int | None = 512,
         uid_generator: Callable[..., UID] = generate_uid,
         add_missing_levels: bool = False,
-        include_levels: Optional[Sequence[int]] = None,
+        include_levels: Sequence[int] | None = None,
         include_label: bool = True,
         include_overview: bool = True,
         include_thumbnail: bool = True,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
-        label: Optional[Union[Image, str, Path]] = None,
-        workers: Optional[int] = None,
-        chunk_size: Optional[int] = None,
-        encoding: Optional[Union[Encoder, EncodingSettings]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        label: Image | str | Path | None = None,
+        workers: int | None = None,
+        chunk_size: int | None = None,
+        encoding: Encoder | EncodingSettings | None = None,
         force_transcoding: bool = False,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
-        preferred_source: Optional[
-            Union[Type[DicomizerSource], SourceIdentifier]
-        ] = None,
+        preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         **source_args,
-    ) -> List[str]:
+    ) -> list[str]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -182,7 +180,7 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
-        preferred_source: Optional[Union[Type[DicomizerSource], SourceIdentifier]] = None
+        preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         **source_args
             Optional keyword args to pass to source.
@@ -232,13 +230,11 @@ class WsiDicomizer(WsiDicom):
     @staticmethod
     def _select_source(
         filepath: Path,
-        preferred_source: Optional[
-            Union[Type[DicomizerSource], SourceIdentifier]
-        ] = None,
-    ) -> Type[DicomizerSource]:
+        preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
+    ) -> type[DicomizerSource]:
         """Return source that supports file in filepath."""
         # List of supported sources in prioritization order.
-        loaded_sources: Dict[SourceIdentifier, Type[DicomizerSource]] = {
+        loaded_sources: dict[SourceIdentifier, type[DicomizerSource]] = {
             SourceIdentifier.OPENTILE: OpenTileSource,
             SourceIdentifier.TIFFSLIDE: TiffSlideSource,
             SourceIdentifier.CZI: CziSource,
@@ -259,11 +255,9 @@ class WsiDicomizer(WsiDicom):
         if isinstance(preferred_source, SourceIdentifier):
             if preferred_source == SourceIdentifier.BIOFORMATS:
                 # Only load if requested as it requires java runtime.
-                try:
+                with contextlib.suppress(ImportError):
                     from wsidicomizer.extras.bioformats import BioformatsSource
 
-                except ImportError:
-                    pass
                 loaded_sources[SourceIdentifier.BIOFORMATS] = BioformatsSource
             preferred_source = loaded_sources[preferred_source]
         selected_source = None
@@ -284,7 +278,7 @@ class WsiDicomizer(WsiDicom):
 
     @staticmethod
     def _select_encoder(
-        encoding: Optional[Union[Encoder, EncodingSettings]] = None,
+        encoding: Encoder | EncodingSettings | None = None,
     ) -> Encoder:
         """Return encoder from encoding."""
         if encoding is None:

@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 import datetime
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
 
 import numpy as np
 import pytest
@@ -91,10 +91,10 @@ def versions():
 
 @pytest.fixture()
 def equipment(
-    manufacturer: Optional[str],
-    model_name: Optional[str],
-    serial_number: Optional[str],
-    versions: Optional[Sequence[str]],
+    manufacturer: str | None,
+    model_name: str | None,
+    serial_number: str | None,
+    versions: Sequence[str] | None,
 ):
     yield Equipment(
         manufacturer,
@@ -106,10 +106,10 @@ def equipment(
 
 @pytest.fixture()
 def image(
-    acquisition_datetime: Optional[datetime.datetime],
-    focus_method: Optional[FocusMethod],
-    extended_depth_of_field: Optional[ExtendedDepthOfField],
-    image_coordinate_system: Optional[ImageCoordinateSystem],
+    acquisition_datetime: datetime.datetime | None,
+    focus_method: FocusMethod | None,
+    extended_depth_of_field: ExtendedDepthOfField | None,
+    image_coordinate_system: ImageCoordinateSystem | None,
 ):
     yield Image(
         acquisition_datetime,
@@ -163,7 +163,7 @@ def lut():
 
 @pytest.fixture()
 def optical_path(
-    illumination: Union[IlluminationColorCode, float],
+    illumination: IlluminationColorCode | float,
     light_path_filter: LightPathFilter,
     image_path_filter: ImagePathFilter,
     objectives: Objectives,

@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import pytest
 from isyntax import ISyntax
@@ -27,7 +27,7 @@ class TestIsyntaxSource:
         "isyntax_test_data", [data for data in test_parameters["isyntax"].items()]
     )
     def test_metadata_read_label(
-        self, testdata_dir: Path, isyntax_test_data: Tuple[str, Dict[str, Any]]
+        self, testdata_dir: Path, isyntax_test_data: tuple[str, dict[str, Any]]
     ):
         # Arrange
         file_path = testdata_dir.joinpath("slides", "isyntax", isyntax_test_data[0])

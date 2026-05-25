@@ -16,7 +16,6 @@
 
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
 
 from opentile import OpenTile
 from pydicom import Dataset
@@ -41,10 +40,10 @@ class OpenTileSource(DicomizerSource):
         filepath: Path,
         encoder: Encoder,
         tile_size: int = 512,
-        metadata: Optional[WsiMetadata] = None,
-        default_metadata: Optional[WsiMetadata] = None,
+        metadata: WsiMetadata | None = None,
+        default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
-        metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None,
+        metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         force_transcoding: bool = False,
     ) -> None:
         """Create a new OpenTileSource.
@@ -98,7 +97,7 @@ class OpenTileSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> Dict[Tuple[int, float, str], int]:
+    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {
             (level.pyramid_index, level.focal_plane, level.optical_path): index
             for index, level in enumerate(self._tiler.levels)
@@ -127,7 +126,7 @@ class OpenTileSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_label_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_label_image_data(self) -> DicomizerImageData | None:
         if not self.has_label:
             return None
         label_image_coordinate_system = None
@@ -142,7 +141,7 @@ class OpenTileSource(DicomizerSource):
             image_coordinate_system=label_image_coordinate_system,
         )
 
-    def _create_overview_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_overview_image_data(self) -> DicomizerImageData | None:
         if not self.has_overview:
             return None
         overview_image_coordinate_system = None
@@ -157,7 +156,7 @@ class OpenTileSource(DicomizerSource):
             image_coordinate_system=overview_image_coordinate_system,
         )
 
-    def _create_thumbnail_image_data(self) -> Optional[DicomizerImageData]:
+    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
 
         if len(self._tiler.thumbnails) == 0:
             return None

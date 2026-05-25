@@ -14,8 +14,9 @@
 
 """Base model for metadata."""
 
+from collections.abc import Callable, Sequence
 from dataclasses import Field, fields, is_dataclass
-from typing import Any, Callable, Optional, Sequence, Type, TypeVar
+from typing import Any, TypeVar
 
 from pydicom import Dataset
 from pydicom.uid import UID
@@ -42,16 +43,16 @@ class WsiDicomizerMetadata(WsiMetadata):
 
     def __init__(
         self,
-        study: Optional[Study] = None,
-        series: Optional[Series] = None,
-        patient: Optional[Patient] = None,
-        equipment: Optional[Equipment] = None,
-        pyramid: Optional[Pyramid] = None,
-        slide: Optional[Slide] = None,
-        label: Optional[Label] = None,
-        overview: Optional[Overview] = None,
-        frame_of_reference_uid: Optional[UID] = None,
-        dimension_organization_uids: Optional[Sequence[UID]] = None,
+        study: Study | None = None,
+        series: Series | None = None,
+        patient: Patient | None = None,
+        equipment: Equipment | None = None,
+        pyramid: Pyramid | None = None,
+        slide: Slide | None = None,
+        label: Label | None = None,
+        overview: Overview | None = None,
+        frame_of_reference_uid: UID | None = None,
+        dimension_organization_uids: Sequence[UID] | None = None,
     ):
         super().__init__(
             study if study is not None else Study(),
@@ -68,14 +69,11 @@ class WsiDicomizerMetadata(WsiMetadata):
 
     def merge(
         self,
-        user: Optional[WsiMetadata],
-        default: Optional[WsiMetadata],
+        user: WsiMetadata | None,
+        default: WsiMetadata | None,
         include_confidential: bool,
     ) -> "WsiDicomizerMetadata":
-        if not include_confidential:
-            base = self._remove_confidential()
-        else:
-            base = self
+        base = self._remove_confidential() if not include_confidential else self
         if user is None and default is None:
             return self._merge_not_none(WsiDicomizerMetadata, base, None, None)
         if user is None:
@@ -151,7 +149,7 @@ class WsiDicomizerMetadata(WsiMetadata):
     @classmethod
     def _merge_list(
         cls,
-        model_class: Type[ModelType],
+        model_class: type[ModelType],
         base: Sequence[ModelType],
         user: Sequence[ModelType],
         default: Sequence[ModelType],
@@ -168,14 +166,14 @@ class WsiDicomizerMetadata(WsiMetadata):
         return [
             cls._merge_not_none(model_class, base_item, user_item, default_item)
             for base_item, user_item, default_item in zip(
-                base, user_expanded, default_expanded
+                base, user_expanded, default_expanded, strict=False
             )
         ]
 
     @staticmethod
     def _repeat_list(
         base: Sequence[ModelType], to_repeat: Sequence[ModelType]
-    ) -> Sequence[Optional[ModelType]]:
+    ) -> Sequence[ModelType | None]:
         if len(to_repeat) > 1 and len(to_repeat) != len(base):
             raise ValueError(
                 "List to repeat must have length 0, 1 or length of base. "
@@ -184,20 +182,17 @@ class WsiDicomizerMetadata(WsiMetadata):
             )
         if len(to_repeat) == len(base):
             return to_repeat
-        if len(to_repeat) == 0:
-            item_to_repeat = None
-        else:
-            item_to_repeat = to_repeat[0]
+        item_to_repeat = None if len(to_repeat) == 0 else to_repeat[0]
         return [item_to_repeat for _ in range(len(base))]
 
     @classmethod
     def _merge(
         cls,
-        model_class: Type[ModelType],
-        base: Optional[ModelType],
-        user: Optional[ModelType],
-        default: Optional[ModelType],
-    ) -> Optional[ModelType]:
+        model_class: type[ModelType],
+        base: ModelType | None,
+        user: ModelType | None,
+        default: ModelType | None,
+    ) -> ModelType | None:
         """Merge three models to a new model.
 
         - base - model from file.
@@ -220,10 +215,10 @@ class WsiDicomizerMetadata(WsiMetadata):
     @classmethod
     def _merge_not_none(
         cls,
-        model_class: Type[ModelType],
-        base: Optional[ModelType],
-        user: Optional[ModelType],
-        default: Optional[ModelType],
+        model_class: type[ModelType],
+        base: ModelType | None,
+        user: ModelType | None,
+        default: ModelType | None,
     ) -> ModelType:
         merged = cls._merge(model_class, base, user, default)
         assert merged is not None
@@ -233,9 +228,9 @@ class WsiDicomizerMetadata(WsiMetadata):
     def _select_value(
         cls,
         field: Field,
-        base: Optional[ModelType],
-        user: Optional[ModelType],
-        default: Optional[ModelType],
+        base: ModelType | None,
+        user: ModelType | None,
+        default: ModelType | None,
     ) -> Any:
         base_value = getattr(base, field.name, None)
         user_value = getattr(user, field.name, None)
@@ -255,11 +250,11 @@ class WsiDicomizerMetadata(WsiMetadata):
     @classmethod
     def _merge_module_with_image(
         cls,
-        model_class: Type[ModuleWithImage],
-        base: Optional[ModuleWithImage],
-        user: Optional[ModuleWithImage],
-        default: Optional[ModuleWithImage],
-    ) -> Optional[ModuleWithImage]:
+        model_class: type[ModuleWithImage],
+        base: ModuleWithImage | None,
+        user: ModuleWithImage | None,
+        default: ModuleWithImage | None,
+    ) -> ModuleWithImage | None:
         not_none = [model for model in [user, base, default] if model is not None]
         if len(not_none) == 0:
             return None

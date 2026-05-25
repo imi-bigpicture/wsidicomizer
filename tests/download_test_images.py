@@ -16,11 +16,11 @@ import os
 import zipfile
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
-FILES: Dict[str, Dict[str, Any]] = {
+FILES: dict[str, dict[str, Any]] = {
     "svs/CMU-1/CMU-1.svs": {
         "url": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1.svs",  # NOQA
         "md5": {"CMU-1.svs": "751b0b86a3c5ff4dfc8567cf24daaa85"},
@@ -72,7 +72,7 @@ DOWNLOAD_CHUNK_SIZE = 8192
 
 
 def download_file(url: str, filename: Path):
-    with requests.get(url, stream=True) as request:
+    with requests.get(url, stream=True, timeout=30) as request:
         request.raise_for_status()
         with open(filename, "wb") as file:
             for chunk in request.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):

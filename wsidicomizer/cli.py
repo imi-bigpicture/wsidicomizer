@@ -15,7 +15,6 @@
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Tuple
 
 import click
 from wsidicom.codec.settings import (
@@ -124,7 +123,10 @@ class CliEncodingsOptions(Enum):
     "encoding_format",
     type=click.Choice(CliEncodingsOptions, case_sensitive=False),
     default=CliEncodingsOptions.JPEG,
-    help="Encoding format to use if lossless conversion not possible or if forcing transcoding.",
+    help=(
+        "Encoding format to use if lossless conversion not possible or if "
+        "forcing transcoding."
+    ),
 )
 @click.option(
     "--quality",
@@ -170,27 +172,30 @@ class CliEncodingsOptions(Enum):
 )
 def main(
     input_path: Path,
-    output_path: Optional[Path],
+    output_path: Path | None,
     tile_size: int,
-    metadata: Optional[Path],
-    default_metadata: Optional[Path],
-    levels: Tuple[int, ...],
+    metadata: Path | None,
+    default_metadata: Path | None,
+    levels: tuple[int, ...],
     add_missing_levels: bool,
-    label: Optional[Path],
+    label: Path | None,
     no_label: bool,
     no_overview: bool,
     no_confidential: bool,
     workers: int,
     chunk_size: int,
-    encoding_format: Optional[CliEncodingsOptions],
-    quality: Optional[float],
-    subsampling: Optional[str],
+    encoding_format: CliEncodingsOptions | None,
+    quality: float | None,
+    subsampling: str | None,
     force_transcoding: bool,
     offset_table: OffsetTableType,
-    source: Optional[SourceIdentifier],
+    source: SourceIdentifier | None,
 ):
-    """Convert compatible wsi file to DICOM. The cli only supports a subset of the functionality
-    of the WsiDicomizer class. For more advanced usage, use the class directly."""
+    """Convert compatible wsi file to DICOM.
+
+    The cli only supports a subset of the functionality of the WsiDicomizer
+    class. For more advanced usage, use the class directly.
+    """
 
     # Load metadata if provided
     loaded_metadata = None
