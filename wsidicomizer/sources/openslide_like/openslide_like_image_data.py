@@ -117,8 +117,8 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
-        if tile != Point(0, 0):
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+        if tile_point != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
 
@@ -144,7 +144,7 @@ class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):
         return None
 
     @property
-    def imaged_size(self) -> Size | None:
+    def imaged_size(self) -> SizeMm | None:
         return None
 
 

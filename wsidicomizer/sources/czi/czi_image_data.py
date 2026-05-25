@@ -87,6 +87,10 @@ class CziImageData(DicomizerImageData):
             raise ValueError("Could not determine pixel spacing for czi level image.")
         self._pixel_spacing = self._merged_metadata.pixel_spacing
         self._image_coordinate_system = merged_metadata.image_coordinate_system
+        self._image_size = Size(self._get_size(axis="X"), self._get_size(axis="Y"))
+        self._tiled_size = self.image_size.ceil_div(self.tile_size)
+        self._focal_planes = sorted(self._czi_metadata.focal_plane_mapping)
+        self._samples_per_pixel = self._get_size(axis="0")
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem | None:
@@ -96,7 +100,7 @@ class CziImageData(DicomizerImageData):
     def transfer_syntax(self) -> UID:
         return self.encoder.transfer_syntax
 
-    @cached_property
+    @property
     def photometric_interpretation(self) -> str:
         return self.encoder.photometric_interpretation
 
@@ -112,24 +116,24 @@ class CziImageData(DicomizerImageData):
     def thread_safe(self) -> bool:
         return True
 
-    @cached_property
-    def image_size(self) -> Size:
+    @property
+    def image_size(self) -> Size:  # pyright: ignore[reportIncompatibleMethodOverride]
         """The pixel size of the image."""
-        return Size(self._get_size(axis="X"), self._get_size(axis="Y"))
+        return self._image_size
 
     @property
     def tile_size(self) -> Size:
         """The pixel tile size of the image."""
         return self._tile_size
 
-    @cached_property
-    def tiled_size(self) -> Size:
-        return self.image_size.ceil_div(self.tile_size)
+    @property
+    def tiled_size(self) -> Size:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return self._tiled_size
 
-    @cached_property
+    @property
     def focal_planes(self) -> list[float]:
         """Focal planes available in the image defined in um."""
-        return sorted(self._czi_metadata.focal_plane_mapping)
+        return self._focal_planes
 
     @property
     def optical_paths(self) -> list[str]:
@@ -138,11 +142,11 @@ class CziImageData(DicomizerImageData):
 
     @cached_property
     def blank_decoded_tile(self) -> Image:
-        return Pillow.fromarray(self._create_blank_tile())
+        return Pillow.fromarray(self._create_blank_tile_array())
 
     @cached_property
     def blank_encoded_tile(self) -> bytes:
-        return self.encoder.encode(self._create_blank_tile())
+        return self.encoder.encode(self._create_blank_tile_array())
 
     @cached_property
     def pixel_origin(self) -> Point:
@@ -177,9 +181,9 @@ class CziImageData(DicomizerImageData):
 
         return tile_directory
 
-    @cached_property
+    @property
     def samples_per_pixel(self) -> int:
-        return self._get_size(axis="0")
+        return self._samples_per_pixel
 
     @property
     def block_directory(self) -> list[DirectoryEntryDV]:
@@ -207,7 +211,7 @@ class CziImageData(DicomizerImageData):
             Tile as numpy array.
         """
         # A blank tile to paste blocks into
-        image_data = self._create_blank_tile()
+        image_data = self._create_blank_tile_array()
         if (tile_point, z, path) not in self.tile_directory:
             # Should not happen (get_decoded_tile() and get_enoded_tile()
             # should already have checked).
@@ -303,7 +307,7 @@ class CziImageData(DicomizerImageData):
             raise ValueError(f"Axis {axis} not found in axes {self._czi.axes}")
         return index
 
-    def _create_blank_tile(self) -> np.ndarray:
+    def _create_blank_tile_array(self) -> np.ndarray:
         """Return blank tile in numpy array.
 
         Returns
@@ -325,20 +329,21 @@ class CziImageData(DicomizerImageData):
         prevent multiple threads proceseing the same tile, use a lock for
         each block."""
         block_lock = self._block_locks[block_index]
+        acquired = False
         try:
             # Try to lock block.
-            aquired = block_lock.acquire(blocking=False)
-            if not aquired:
+            acquired = block_lock.acquire(blocking=False)
+            if not acquired:
                 # Another thread is already reading the block.
                 # Wait for lock and hopefully read from cache.
-                aquired = block_lock.acquire(blocking=True)
+                acquired = block_lock.acquire(blocking=True)
                 return self._get_tile_data(block_index)
             else:
                 # Read the block data.
                 block = self.block_directory[block_index]
                 return block.data_segment().data()
         finally:
-            if aquired:
+            if acquired:
                 block_lock.release()
 
     def _get_block_dimensions(

@@ -115,12 +115,12 @@ class TiffSlideSource(OpenSlideLikeSource):
         self._tiffslide.close()
 
     @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by TiffSlide."""
-        format = TiffSlide.detect_format(filepath)
+    def is_supported(path: Path) -> bool:
+        """Return True if file in path is supported by TiffSlide."""
+        format = TiffSlide.detect_format(path)
         return format is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData | None:
+    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return TiffSlideLevelImageData(
             self._tiffslide,
             self._blank_color,

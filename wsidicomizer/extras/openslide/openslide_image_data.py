@@ -157,13 +157,13 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         alpha_image = Pillow.fromarray(region_data)
         return self._remove_alpha(alpha_image)
 
-    def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
         encoded as jpeg.
 
         Parameters
         ----------
-        tile_point: Point
+        tile: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -179,10 +179,10 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-        tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
-        if tile is None:
+        decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
+        if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self.encoder.encode(np.asarray(tile))
+        return self.encoder.encode(np.asarray(decoded))
 
     def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile. Image mode is RGB.

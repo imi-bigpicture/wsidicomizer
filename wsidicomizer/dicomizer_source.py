@@ -142,7 +142,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return self.level_instances[0].dataset
 
     @cached_property
-    def level_instances(self) -> list[WsiInstance]:
+    def level_instances(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> list[WsiInstance]:
         return [
             self._create_instance(
                 self._create_level_image_data(level_index),
@@ -157,21 +159,27 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         ]
 
     @cached_property
-    def label_instances(self) -> list[WsiInstance]:
+    def label_instances(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> list[WsiInstance]:
         label = self._create_label_image_data()
         if label is None:
             return []
         return [self._create_instance(label, ImageType.LABEL)]
 
     @cached_property
-    def overview_instances(self) -> list[WsiInstance]:
+    def overview_instances(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> list[WsiInstance]:
         overview = self._create_overview_image_data()
         if overview is None:
             return []
         return [self._create_instance(overview, ImageType.OVERVIEW)]
 
     @cached_property
-    def thumbnail_instances(self) -> list[WsiInstance]:
+    def thumbnail_instances(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+    ) -> list[WsiInstance]:
         thumbnail = self._create_thumbnail_image_data()
         if thumbnail is None:
             return []

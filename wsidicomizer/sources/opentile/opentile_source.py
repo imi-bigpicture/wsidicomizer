@@ -112,9 +112,9 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by OpenTile."""
-        return OpenTile.detect_format(filepath) is not None
+    def is_supported(path: Path) -> bool:
+        """Return True if file in path is supported by OpenTile."""
+        return OpenTile.detect_format(path) is not None
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenTileLevelImageData(

@@ -14,8 +14,6 @@
 
 """Image data for tiffslide compatible file."""
 
-from functools import cached_property
-
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
@@ -67,13 +65,16 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             encoder,
         )
         self._slide = tiff_slide
-
-    @cached_property
-    def samples_per_pixel(self) -> int:
         axes = self._slide.properties["tiffslide.series-axes"]
         if axes == "YX":
-            return 1
-        return 3
+            self._samples_per_pixel = 1
+        else:
+            self._samples_per_pixel = 3
+
+    @property
+    def samples_per_pixel(self) -> int:
+        """Number of samples per pixel in the image."""
+        return self._samples_per_pixel
 
     def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
         """Overrides ImageData stitch_tiles() to read reagion directly from
@@ -134,13 +135,13 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             region_data = region_data.squeeze(2)
         return region_data
 
-    def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
         encoded as jpeg.
 
         Parameters
         ----------
-        tile_point: Point
+        tile: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -156,10 +157,10 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-        tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
-        if tile is None:
+        decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
+        if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self.encoder.encode(tile)
+        return self.encoder.encode(decoded)
 
     def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile. Image mode is RGB.

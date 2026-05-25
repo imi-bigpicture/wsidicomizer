@@ -108,10 +108,10 @@ class BioformatsImageData(DicomizerImageData):
             self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
-        with self._get_tile(tile, z, path) as data:
+        with self._get_tile(tile_point, z, path) as data:
             return Pillow.fromarray(data)
 
     def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:

@@ -29,7 +29,7 @@ from wsidicom.metadata import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
-from wsidicomizer.metadata import MetadataPostProcessor
+from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeAssociatedImageData,
     OpenSlideLikeProperties,
@@ -116,7 +116,7 @@ class OpenSlideLikeSource(DicomizerSource):
         )
 
     @property
-    def base_metadata(self) -> WsiMetadata:
+    def base_metadata(self) -> WsiDicomizerMetadata:
         return self._base_metadata
 
     @property

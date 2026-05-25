@@ -190,12 +190,12 @@ class OpenTileImageData(DicomizerImageData):
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
         ----------
-        tile: Point
+        tile_point: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -209,7 +209,9 @@ class OpenTileImageData(DicomizerImageData):
         """
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Pillow.fromarray(self._tiff_image.get_decoded_tile(tile.to_tuple()))
+        return Pillow.fromarray(
+            self._tiff_image.get_decoded_tile(tile_point.to_tuple())
+        )
 
     def _get_encoded_tiles(
         self, tiles: Iterable[Point], z: float, path: str

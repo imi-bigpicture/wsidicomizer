@@ -196,12 +196,12 @@ class ISyntaxLevelImageData(DicomizerImageData):
             return None
         return tile
 
-    def _get_encoded_tile(self, tile_point: Point, z: float, path: str) -> bytes:
+    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile.
 
         Parameters
         ----------
-        tile_point: Point
+        tile: Point
             Tile position to get.
         z: float
             Focal plane of tile to get.
@@ -213,10 +213,10 @@ class ISyntaxLevelImageData(DicomizerImageData):
         bytes
             Tile bytes.
         """
-        tile = self._get_tile(tile_point, z, path)
-        if tile is None:
+        decoded = self._get_tile(tile, z, path)
+        if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self.encoder.encode(tile)
+        return self.encoder.encode(decoded)
 
     def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
@@ -335,5 +335,5 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
             return self.encoder.encode(self.image)
         return self._frame
 
-    def _get_decoded_tile(self, tile: Point, z: float, path: str) -> Image:
+    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         return self.image

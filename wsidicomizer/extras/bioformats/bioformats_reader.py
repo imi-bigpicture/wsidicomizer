@@ -24,7 +24,7 @@ from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
 from threading import Lock
 
-import jpype.imports  # Needed for loci import to work # noqa
+import jpype.imports  # noqa: F401  # pyright: ignore[reportUnusedImport]
 import numpy as np
 import ome_types
 import scyjava
@@ -335,7 +335,7 @@ class BioformatsReader:
         """
         try:
             raw_data = memoryview(
-                self._read(
+                self._read(  # pyright: ignore[reportArgumentType]
                     image_index,
                     resolution_index,
                     index,

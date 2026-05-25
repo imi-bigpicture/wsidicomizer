@@ -83,9 +83,9 @@ class BioformatsSource(DicomizerSource):
         )
 
     @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by Bio-Formats."""
-        return BioformatsImageData.detect_format(filepath)
+    def is_supported(path: Path) -> bool:
+        """Return True if file in path is supported by Bio-Formats."""
+        return BioformatsImageData.detect_format(path)
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:

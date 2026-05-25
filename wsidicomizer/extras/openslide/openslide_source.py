@@ -107,9 +107,9 @@ class OpenSlideSource(OpenSlideLikeSource):
         return self._slide.close()
 
     @staticmethod
-    def is_supported(filepath: Path) -> bool:
-        """Return True if file in filepath is supported by OpenSlide."""
-        return OpenSlide.detect_format(str(filepath)) is not None
+    def is_supported(path: Path) -> bool:
+        """Return True if file in path is supported by OpenSlide."""
+        return OpenSlide.detect_format(str(path)) is not None
 
     def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
         return OpenSlideLevelImageData(

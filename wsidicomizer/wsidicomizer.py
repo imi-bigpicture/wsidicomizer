@@ -51,7 +51,7 @@ class WsiDicomizer(WsiDicom):
     """Interface for Dicomizing files."""
 
     @classmethod
-    def open(
+    def open(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         filepath: str | Path,
         metadata: WsiMetadata | None = None,
@@ -258,7 +258,7 @@ class WsiDicomizer(WsiDicom):
                 with contextlib.suppress(ImportError):
                     from wsidicomizer.extras.bioformats import BioformatsSource
 
-                loaded_sources[SourceIdentifier.BIOFORMATS] = BioformatsSource
+                    loaded_sources[SourceIdentifier.BIOFORMATS] = BioformatsSource
             preferred_source = loaded_sources[preferred_source]
         selected_source = None
         if preferred_source is None:
