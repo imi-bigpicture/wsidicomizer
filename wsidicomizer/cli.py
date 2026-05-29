@@ -64,8 +64,8 @@ class CliEncodingsOptions(Enum):
     type=int,
     default=512,
     help=(
-        "Tile size (same for width and height). Required for ndpi and "
-        "openslide formats."
+        "Output tile size (same for width and height). Has no effect on "
+        "sources that read native tiles (opentile non-NDPI, isyntax)."
     ),
 )
 @click.option(

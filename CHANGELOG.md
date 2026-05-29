@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Unexpected transcoding in `convert()` when `encoding` is specified without `force_transcoding=True`. The `encoding` argument is now used as the fallback encoder for images that cannot be passed through, not as a forced target format. Notably this means that bare CLI invocations now pass tiles through unchanged for sources whose native transfer syntax is DICOM-compatible. Use `force_transcoding=True` to re-encode all tiles to the specified encoding.
+- `OpenTileSource` now falls back to `settings.default_tile_size` when `tile_size=None`, matching the behavior of the other region-reading sources. Has no effect for non-NDPI files where the source tile size is always used.
+- Clarified `tile_size` documentation: the parameter has no effect on sources that read native tiles (`OpenTile` non-NDPI, `ISyntax`).
 
 ## [0.25.0] - 2026-05-22
 

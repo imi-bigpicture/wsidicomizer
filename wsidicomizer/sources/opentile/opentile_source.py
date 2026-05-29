@@ -23,6 +23,7 @@ from wsidicom.codec import Encoder
 from wsidicom.geometry import Size, SizeMm
 from wsidicom.metadata.wsi import WsiMetadata
 
+from wsidicomizer.config import settings
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
@@ -39,7 +40,7 @@ class OpenTileSource(DicomizerSource):
         self,
         filepath: Path,
         encoder: Encoder,
-        tile_size: int = 512,
+        tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
@@ -54,8 +55,10 @@ class OpenTileSource(DicomizerSource):
             Path to the file.
         encoder: Encoder
             Encoder to use. Pyramid is always re-encoded using the encoder.
-        tile_size: int = 512,
-            Preferred tile size to use, if not enforced by file.
+        tile_size: int | None = None
+            Preferred tile size to use, if not enforced by file. Falls back to
+            `settings.default_tile_size` if `None`. Only has effect for NDPI
+            files where it controls how stripes are subdivided.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
@@ -67,6 +70,8 @@ class OpenTileSource(DicomizerSource):
         force_transcoding: bool = False
             If to force transcoding images.
         """
+        if tile_size is None:
+            tile_size = settings.default_tile_size
         self._tiler = OpenTile.open(filepath, tile_size)
         # opentile's TiffFormat member names match WsiFormat member names.
         self._wsi_format = WsiFormat[self._tiler.format.name]

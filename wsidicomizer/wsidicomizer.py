@@ -74,7 +74,9 @@ class WsiDicomizer(WsiDicom):
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
         tile_size: Optional[int] = 512
-            Tile size to use if not defined by file.
+            Output tile size. Falls back to `settings.default_tile_size` if
+            `None`. Has no effect on sources that read native tiles
+            (`OpenTile` non-NDPI, `ISyntax`).
         include_confidential: bool = True
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
@@ -147,7 +149,9 @@ class WsiDicomizer(WsiDicom):
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
         tile_size: Optional[int] = 512
-            Tile size to use if not defined by file.
+            Output tile size. Falls back to `settings.default_tile_size` if
+            `None`. Has no effect on sources that read native tiles
+            (`OpenTile` non-NDPI, `ISyntax`).
         uid_generator: Callable[..., UID] = generate_uid
              Function that can generate unique identifiers.
         add_missing_levels: bool = False
