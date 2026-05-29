@@ -579,6 +579,7 @@ def convert_wsi(file_path: Path, file_parameters: dict[str, Any], encoder: Encod
         tile_size=tile_size,
         include_levels=include_levels,
         encoding=encoder,
+        force_transcoding=True,
     )
     return tempdir
 

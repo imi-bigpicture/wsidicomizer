@@ -80,7 +80,7 @@ class WsiDicomizer(WsiDicom):
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-            Encoding setting or encoder to use if re-encoding.
+            Encoding setting or encoder to use for transcoding.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         **source_args
@@ -174,9 +174,12 @@ class WsiDicomizer(WsiDicom):
             Chunk size (number of tiles) to process at a time. Actual chunk
             size also depends on minimun_chunk_size from image_data.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-            Encoding setting or encoder to use if re-encoding.
+            Encoding setting or encoder to use for images that cannot be passed
+            through, or for all images if `force_transcoding=True`.
         force_transcoding: bool = False,
-            If to force transcoding images.
+            If True, re-encode images using `encoding` even when the source
+            transfer syntax is DICOM-compatible. Has no effect if `encoding` is
+            None.
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
@@ -221,7 +224,7 @@ class WsiDicomizer(WsiDicom):
                 include_thumbnails=include_thumbnail,
                 add_missing_levels=add_missing_levels,
                 label=label,
-                transcoding=encoding,
+                transcoding=encoding if force_transcoding else None,
                 force_transcoding=force_transcoding,
             )
 
