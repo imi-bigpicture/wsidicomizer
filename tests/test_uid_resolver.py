@@ -30,7 +30,6 @@ from wsidicom.metadata.sample import SlideSample
 
 from wsidicomizer import MetadataUidResolver
 
-
 # Each entity of the metadata fixture is its own fixture, defaulting to an
 # unresolved value. The `empty_` prefix avoids shadowing the populated entity
 # fixtures elsewhere. A test overrides any of them by parametrizing the fixture
