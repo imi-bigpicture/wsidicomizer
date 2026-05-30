@@ -17,6 +17,7 @@ files."""
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Sequence
+from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
 
@@ -25,13 +26,20 @@ from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import WsiDataset, WsiInstance
-from wsidicom.metadata import ImageType, WsiMetadata
+from wsidicom.metadata import (
+    CallableUidGenerator,
+    ImageType,
+    UidGenerator,
+    WsiMetadata,
+)
+from wsidicom.metadata.sample import SlideSample
 from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
 from wsidicomizer.config import settings
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
+from wsidicomizer.uid_resolver import MetadataUidResolver
 
 config.enforce_valid_values = True
 config.future_behavior()
@@ -54,6 +62,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new DicomizerSource.
 
@@ -73,6 +82,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses
+            the default `CallableUidGenerator` backed by
+            `pydicom.generate_uid`.
         """
         self._filepath = filepath
         self._encoder = encoder
@@ -81,6 +94,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._default_metadata = default_metadata
         self._include_confidential = include_confidential
         self._metadata_post_processor = metadata_post_processor
+        self._uid_generator: UidGenerator = uid_generator or CallableUidGenerator()
 
     @staticmethod
     @abstractmethod
@@ -122,12 +136,36 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @cached_property
-    def metadata(self) -> WsiDicomizerMetadata:
-        return self.base_metadata.merge(
+    def metadata(self) -> WsiMetadata:
+        """Merged metadata from source file with user-specified and default metadata,
+        with added required content and resolved UIDs."""
+        merged = self.base_metadata.merge(
             self.user_metadata,
             self.default_metadata,
             self._include_confidential,
         )
+        merged = self._ensure_required_content(merged)
+        return MetadataUidResolver(self._uid_generator).resolve(merged)
+
+    @staticmethod
+    def _ensure_required_content(metadata: WsiMetadata) -> WsiMetadata:
+        """Populate Type-1 structural content the resolver does not synthesize.
+
+        Specifically `Slide.samples`: wsidicom's `SpecimenDescriptionSequence` is
+        Type 1 with VM >= 1, so at least one `SlideSample` must be present
+        before the metadata is dumped. The UID resolver then fills the
+        per-sample uid.
+        """
+        DEFAULT_SLIDE_SAMPLE_IDENTIFIER = "Unknown"
+
+        if metadata.slide.samples is not None and len(metadata.slide.samples) > 0:
+            return metadata
+        slide = replace(
+            metadata.slide,
+            samples=[SlideSample(identifier=DEFAULT_SLIDE_SAMPLE_IDENTIFIER)],
+        )
+        metadata = replace(metadata, slide=slide)
+        return metadata
 
     @property
     def user_metadata(self) -> WsiMetadata | None:

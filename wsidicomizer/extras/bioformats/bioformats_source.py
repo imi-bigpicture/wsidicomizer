@@ -19,6 +19,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -40,6 +41,7 @@ class BioformatsSource(DicomizerSource):
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         readers: int | None = None,
         cache_path: str | None = None,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new BioformatsSource.
 
@@ -80,6 +82,7 @@ class BioformatsSource(DicomizerSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     @staticmethod

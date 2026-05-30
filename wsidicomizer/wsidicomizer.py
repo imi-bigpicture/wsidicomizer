@@ -26,12 +26,12 @@ from typing import Union
 
 from PIL.Image import Image
 from pydicom import Dataset
-from pydicom.uid import UID, generate_uid
+from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.metadata import MetadataPostProcessor
@@ -61,6 +61,7 @@ class WsiDicomizer(WsiDicom):
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         encoding: EncodingSettings | Encoder | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
+        uid_generator: Callable[[], UID] | UidGenerator | None = None,
         **source_args,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
@@ -85,6 +86,8 @@ class WsiDicomizer(WsiDicom):
             Encoding setting or encoder to use for transcoding.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
+        uid_generator: Callable[[], UID] | UidGenerator | None = None
+            Generator used to populate UIDs on the metadata if not already set.
         **source_args
             Optional keyword args to pass to source.
 
@@ -95,6 +98,10 @@ class WsiDicomizer(WsiDicom):
         """
         if not isinstance(filepath, Path):
             filepath = Path(filepath)
+        if uid_generator is None:
+            uid_generator = CallableUidGenerator()
+        elif not isinstance(uid_generator, UidGenerator):
+            uid_generator = CallableUidGenerator(uid_generator)
         selected_source = cls._select_source(filepath, preferred_source)
         encoder = cls._select_encoder(encoding)
 
@@ -106,6 +113,7 @@ class WsiDicomizer(WsiDicom):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator=uid_generator,
             **source_args,
         )
         return cls(source, True)
@@ -118,7 +126,7 @@ class WsiDicomizer(WsiDicom):
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
-        uid_generator: Callable[..., UID] = generate_uid,
+        uid_generator: Callable[[], UID] | UidGenerator | None = None,
         add_missing_levels: bool = False,
         include_levels: Sequence[int] | None = None,
         include_label: bool = True,
@@ -152,8 +160,9 @@ class WsiDicomizer(WsiDicom):
             Output tile size. Falls back to `settings.default_tile_size` if
             `None`. Has no effect on sources that read native tiles
             (`OpenTile` non-NDPI, `ISyntax`).
-        uid_generator: Callable[..., UID] = generate_uid
-             Function that can generate unique identifiers.
+        uid_generator: Callable[[], UID] | UidGenerator | None = None
+            Generator used to populate UIDs on the metadata if not already set and to
+            generate UIDs for created instances.
         add_missing_levels: bool = False
             If to add missing dyadic levels up to the single tile level.
         include_levels: Optional[Sequence[int]] = None
@@ -162,7 +171,7 @@ class WsiDicomizer(WsiDicom):
             e.g. [-1, -2] includes the two highest levels.
         include_label: bool = True
             Include label(s), default true.
-        include_overwiew: bool = True
+        include_overview: bool = True
             Include overview(s), default true.
         include_thumbnail: bool = True
             Include thumbnail(s), default true.
@@ -197,6 +206,10 @@ class WsiDicomizer(WsiDicom):
         List[str]
             List of paths of created files.
         """
+        if uid_generator is None:
+            uid_generator = CallableUidGenerator()
+        elif not isinstance(uid_generator, UidGenerator):
+            uid_generator = CallableUidGenerator(uid_generator)
         with cls.open(
             filepath,
             metadata,
@@ -206,6 +219,7 @@ class WsiDicomizer(WsiDicom):
             metadata_post_processor,
             encoding,
             preferred_source,
+            uid_generator,
             **source_args,
         ) as wsi:
             if output_path is None:

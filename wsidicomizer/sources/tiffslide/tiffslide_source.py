@@ -31,7 +31,7 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_VENDOR,
 )
 from wsidicom.codec import Encoder
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.image_data import DicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
@@ -57,6 +57,7 @@ class TiffSlideSource(OpenSlideLikeSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        uid_generator: UidGenerator | None = None,
         **source_args,
     ) -> None:
         """Create a new TiffSlideSource.
@@ -109,6 +110,7 @@ class TiffSlideSource(OpenSlideLikeSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     def close(self):

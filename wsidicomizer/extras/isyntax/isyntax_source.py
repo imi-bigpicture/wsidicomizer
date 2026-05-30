@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
-from wsidicom.metadata import ImageType, WsiMetadata
+from wsidicom.metadata import ImageType, UidGenerator, WsiMetadata
 
 from isyntax import ISyntax
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -43,6 +43,7 @@ class ISyntaxSource(DicomizerSource):
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         force_transcoding: bool = False,
         cache: int = 2048,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new ISyntaxSource.
 
@@ -78,6 +79,7 @@ class ISyntaxSource(DicomizerSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     @staticmethod

@@ -25,7 +25,7 @@ from PIL.Image import Image
 from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
@@ -61,6 +61,7 @@ class OpenSlideLikeSource(DicomizerSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new OpenSlideLikeSource.
 
@@ -113,6 +114,7 @@ class OpenSlideLikeSource(DicomizerSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     @property

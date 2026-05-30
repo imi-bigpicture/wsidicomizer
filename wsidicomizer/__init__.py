@@ -12,8 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from wsidicomizer.uid_resolver import MetadataUidResolver
 from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
 __version__ = "0.25.0"
 
-__all__ = ["WsiDicomizer", "SourceIdentifier"]
+__all__ = ["MetadataUidResolver", "SourceIdentifier", "WsiDicomizer"]

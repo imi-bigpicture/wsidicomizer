@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Improved control of uid generation in `WsiDicomizer.open()` and `WsiDicomizer.convert()` by use of an user-supplied `UidGenerator` or `CallableUidGenerator`.
 
 ### Changed
 

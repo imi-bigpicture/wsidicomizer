@@ -19,7 +19,7 @@ from pathlib import Path
 from czifile import CziFile
 from pydicom import Dataset
 from wsidicom.codec import Encoder
-from wsidicom.metadata import WsiMetadata
+from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import DicomizerImageData
@@ -38,6 +38,7 @@ class CziSource(DicomizerSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new CziSource.
 
@@ -66,6 +67,7 @@ class CziSource(DicomizerSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
         self._czi = CziFile(filepath)
         self._base_metadata = CziMetadata(self._czi)

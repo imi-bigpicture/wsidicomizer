@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -56,6 +57,7 @@ class OpenSlideSource(OpenSlideLikeSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new OpenSlideSource.
 
@@ -101,6 +103,7 @@ class OpenSlideSource(OpenSlideLikeSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     def close(self) -> None:

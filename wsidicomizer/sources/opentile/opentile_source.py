@@ -21,6 +21,7 @@ from opentile import OpenTile
 from pydicom import Dataset
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Size, SizeMm
+from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.config import settings
@@ -46,6 +47,7 @@ class OpenTileSource(DicomizerSource):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         force_transcoding: bool = False,
+        uid_generator: UidGenerator | None = None,
     ) -> None:
         """Create a new OpenTileSource.
 
@@ -92,6 +94,7 @@ class OpenTileSource(DicomizerSource):
             default_metadata,
             include_confidential,
             metadata_post_processor,
+            uid_generator,
         )
 
     def close(self):
