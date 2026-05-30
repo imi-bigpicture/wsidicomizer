@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+### Changed
+
+- Updated the `tiffslide` requirement to `>=3.0.0` (migrates to zarr 3).
+- Updated the minimum Python version to `>=3.11` (required by tiffslide 3).
+- Updated the `czifile` requirement to `>=2019.7.2.3` (compatible with the newer tifffile required by tiffslide 3).
+- Moved `imagecodecs` from a required to an optional dependency, with the upper bound relaxed from `<2025.0.0` to unbounded.
+
 ### Fixed
 
 - Unexpected transcoding in `convert()` when `encoding` is specified without `force_transcoding=True`. The `encoding` argument is now used as the fallback encoder for images that cannot be passed through, not as a forced target format. Notably this means that bare CLI invocations now pass tiles through unchanged for sources whose native transfer syntax is DICOM-compatible. Use `force_transcoding=True` to re-encode all tiles to the specified encoding.
