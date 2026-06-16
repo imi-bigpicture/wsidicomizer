@@ -33,7 +33,7 @@ from tiffslide.tiffslide import (
 from wsidicom.codec import Encoder
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeProperties,
@@ -122,7 +122,7 @@ class TiffSlideSource(OpenSlideLikeSource):
         format = TiffSlide.detect_format(path)
         return format is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return TiffSlideLevelImageData(
             self._tiffslide,
             self._blank_color,

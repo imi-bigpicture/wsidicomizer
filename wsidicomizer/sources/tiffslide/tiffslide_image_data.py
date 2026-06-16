@@ -76,23 +76,22 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         """Number of samples per pixel in the image."""
         return self._samples_per_pixel
 
-    def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
-        """Overrides ImageData stitch_tiles() to read reagion directly from
-        tiffslide object.
+    def read_region(self, region: Region, z: float, path: str) -> Image:
+        """Read a pixel region directly from the tiffslide object.
 
         Parameters
         ----------
         region: Region
-             Pixel region to stitch to image
-        path: str
-            Optical path
+             Pixel region to read.
         z: float
-            Z coordinate
+            Z coordinate.
+        path: str
+            Optical path.
 
         Returns
-        ----------
+        -------
         Image
-            Stitched image
+            The region as a Pillow image.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
@@ -135,7 +134,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             region_data = region_data.squeeze(2)
         return region_data
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
         encoded as jpeg.
 
@@ -162,7 +161,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             return self._get_blank_encoded_frame(self.tile_size)
         return self.encoder.encode(decoded)
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile. Image mode is RGB.
 
         Parameters

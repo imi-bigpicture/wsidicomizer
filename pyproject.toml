@@ -45,8 +45,10 @@ dev = [
     "ruff>=0.15.14",
     "pyright>=1.1.409",
     "openslide-python>=1.3.0,<2.0.0",
+"openslide-bin>=4.0.0,<5.0.0",
     "coverage>=7.2.7,<8.0.0",
     "codespell>=2.2.5,<3.0.0",
+"decoy>=2.0.0,<3.0.0",
 ]
 
 [project.scripts]

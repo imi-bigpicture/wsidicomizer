@@ -12,19 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Module containing a base ImageData implementation suitable for use with non-DICOM
-files."""
+"""Base ImageData classes for non-DICOM source adapters."""
+
+from abc import abstractmethod
 
 import numpy as np
 from PIL import Image as Pillow
 from PIL.Image import Image
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
-from wsidicom.geometry import Size
+from wsidicom.geometry import Region, Size
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 
-class DicomizerImageData(ImageData):
+class BaseDicomizerImageData(ImageData):
     """
     Base class for Dicomizer image data. Subclasses should implement all the abstract
     methods and properties in the base ImageData-class.
@@ -138,3 +139,38 @@ class DicomizerImageData(ImageData):
         return bool(
             np.all(tile[corners_rgb] == background) and np.all(tile == background)
         )
+
+
+class PixelImageData(BaseDicomizerImageData):
+    """ImageData whose source can only produce decoded pixel data.
+
+    The underlying source returns decoded pixels — there are no
+    source-encoded bytes to pass through, so producing an encoded tile
+    requires re-encoding.
+
+    Concrete subclasses implement ``read_region`` either as a native call
+    (for pyramidal/tiled sources) or as an in-memory crop of a pre-decoded
+    image (for single-image label/overview/thumbnail sources). Pair with
+    ``PixelWsiInstance`` so reads route through ``read_region`` instead of
+    per-tile stitching.
+    """
+
+    @abstractmethod
+    def read_region(self, region: Region, z: float, path: str) -> Image:
+        """Read a pixel region from the source as a Pillow image.
+
+        Parameters
+        ----------
+        region: Region
+            Pixel region to read.
+        z: float
+            Z coordinate.
+        path: str
+            Optical path.
+
+        Returns
+        -------
+        Image
+            The region as a Pillow image.
+        """
+        raise NotImplementedError()

@@ -26,7 +26,7 @@ from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.config import settings
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
@@ -124,7 +124,7 @@ class OpenTileSource(DicomizerSource):
         """Return True if file in path is supported by OpenTile."""
         return OpenTile.detect_format(path) is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return OpenTileLevelImageData(
             self._tiler.levels[level_index],
             self.base_metadata.pyramid.image,
@@ -134,7 +134,7 @@ class OpenTileSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         if not self.has_label:
             return None
         label_image_coordinate_system = None
@@ -149,7 +149,7 @@ class OpenTileSource(DicomizerSource):
             image_coordinate_system=label_image_coordinate_system,
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         if not self.has_overview:
             return None
         overview_image_coordinate_system = None
@@ -164,7 +164,7 @@ class OpenTileSource(DicomizerSource):
             image_coordinate_system=overview_image_coordinate_system,
         )
 
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
 
         if len(self._tiler.thumbnails) == 0:
             return None

@@ -27,11 +27,14 @@ from wsidicomizer.extras.isyntax.isyntax_image_data import (
     ISyntaxLevelImageData,
 )
 from wsidicomizer.extras.isyntax.isyntax_metadata import ISyntaxMetadata
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
+from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 
 
 class ISyntaxSource(DicomizerSource):
+    _instance_cls = PixelWsiInstance
+
     def __init__(
         self,
         filepath: Path,
@@ -98,7 +101,7 @@ class ISyntaxSource(DicomizerSource):
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return ISyntaxLevelImageData(
             self._slide,
             self.metadata.pyramid.image,
@@ -107,7 +110,7 @@ class ISyntaxSource(DicomizerSource):
             level_index,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         label = self._slide.read_label_image_jpeg()
         if label is None:
             return None
@@ -119,7 +122,7 @@ class ISyntaxSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         overview = self._slide.read_macro_image_jpeg()
         if overview is None:
             return None
@@ -131,7 +134,7 @@ class ISyntaxSource(DicomizerSource):
             self._force_transcoding,
         )
 
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
         return None
 
     def close(self) -> None:
