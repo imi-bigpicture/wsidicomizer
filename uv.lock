@@ -765,7 +765,7 @@ wheels = [
 
 [[package]]
 name = "opentile"
-version = "0.21.0"
+version = "0.22.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -780,9 +780,9 @@ dependencies = [
     { name = "tifffile", version = "2026.5.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/21/ad/70149cc00bb623fbbe5ce77a7890bdf42b8cb6f5716050ded1631a5af7cf/opentile-0.21.0.tar.gz", hash = "sha256:9358596e839ebbf7f501a0bb4382c2738075470685047a9707cde027cd736230", size = 574503, upload-time = "2026-05-21T15:01:18.309Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/2a/1cc45a7913c12a3d451d176754f367832093eca660e050d6c869720d3ad3/opentile-0.22.0.tar.gz", hash = "sha256:0d851b3dea9938fe2f9de5b12953aa0e99c209a887050534f1009569b4b8ff69", size = 571424, upload-time = "2026-06-17T14:12:54.979Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/3a/a0fd007b0f84f58893e3d489c89b1461d6ae2422c0bd37075b7b8212f0c6/opentile-0.21.0-py3-none-any.whl", hash = "sha256:d828f65f28955bfeb4de519a5fcd31dd16e6d18d96b6f86f1ce5a145e7727fcc", size = 63501, upload-time = "2026-05-21T15:01:19.582Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/58/a8434c65222ff854b86457a527561dea5348473a366f0e5052df9cbfc059/opentile-0.22.0-py3-none-any.whl", hash = "sha256:b99536799cde7f6bfd6c4423bf4862d973dc6d1dbe6f43ec46b7e7669ca57d7c", size = 66060, upload-time = "2026-06-17T14:12:53.649Z" },
 ]
 
 [[package]]
@@ -1477,7 +1477,7 @@ wheels = [
 
 [[package]]
 name = "wsidicomizer"
-version = "0.26.0"
+version = "0.26.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1536,7 +1536,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.6.0" },
     { name = "openslide-python", marker = "extra == 'openslide'", specifier = ">=1.3.0,<2.0.0" },
-    { name = "opentile", specifier = ">=0.21.0,<0.22.0" },
+    { name = "opentile", specifier = ">=0.22.0,<0.23.0" },
     { name = "pydicom", specifier = ">=3.0.0" },
     { name = "pyisyntax", marker = "extra == 'isyntax'", specifier = ">=0.1.2,<0.2.0" },
     { name = "pyjpegls", marker = "extra == 'pyjpegls'", specifier = ">=1.2.0,<2.0.0" },

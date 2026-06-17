@@ -1,6 +1,6 @@
 [project]
 name = "wsidicomizer"
-version = "0.26.0"
+version = "0.26.1"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = [
     { name = "Erik O Gabrielsson", email = "erik.o.gabrielsson@sectra.com" }
@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "wsidicom>=0.31.0,<0.32.0",
-    "opentile>=0.21.0,<0.22.0",
+    "opentile>=0.22.0,<0.23.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",
     "czifile>=2019.7.2.3,<2020.0.0",
