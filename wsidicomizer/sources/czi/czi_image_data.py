@@ -32,7 +32,7 @@ from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.config import settings
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
 
@@ -43,7 +43,7 @@ class CziBlock:
     size: Size
 
 
-class CziImageData(DicomizerImageData):
+class CziImageData(BaseDicomizerImageData):
     def __init__(
         self,
         czi: CziFile,
@@ -248,7 +248,7 @@ class CziImageData(DicomizerImageData):
             ]
         return image_data
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -269,7 +269,7 @@ class CziImageData(DicomizerImageData):
             return self.blank_decoded_tile
         return Pillow.fromarray(self._get_tile(tile_point, z, path))
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Tile is encoded as jpeg.
 
         Parameters

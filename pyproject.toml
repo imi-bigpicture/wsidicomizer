@@ -1,6 +1,6 @@
 [project]
 name = "wsidicomizer"
-version = "0.25.0"
+version = "0.26.0"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = [
     { name = "Erik O Gabrielsson", email = "erik.o.gabrielsson@sectra.com" }
@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
-    "wsidicom>=0.30.0,<0.31.0",
+    "wsidicom>=0.31.0,<0.32.0",
     "opentile>=0.21.0,<0.22.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",
@@ -39,14 +39,16 @@ pylibjpeg-openjpeg = ["pylibjpeg-openjpeg>=2.1.1,<3.0.0"]
 [dependency-groups]
 dev = [
     "pytest>=8.1.0,<9.0.0",
-    "pytest-watch>=4.2.0,<5.0.0",
+    "pytest-testmon>=2.2.0",
+    "pytest-watcher>=0.6.3",
     "requests>=2.28.1,<3.0.0",
     "dicom-validator>=0.4.0,<0.5.0",
     "ruff>=0.15.14",
     "pyright>=1.1.409",
     "openslide-python>=1.3.0,<2.0.0",
-    "coverage>=7.2.7,<8.0.0",
+    "openslide-bin>=4.0.0,<5.0.0",
     "codespell>=2.2.5,<3.0.0",
+    "decoy>=2.0.0,<3.0.0",
 ]
 
 [project.scripts]

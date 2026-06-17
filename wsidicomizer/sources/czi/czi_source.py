@@ -22,7 +22,7 @@ from wsidicom.codec import Encoder
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
@@ -88,7 +88,7 @@ class CziSource(DicomizerSource):
         """Return True if file in path is supported by CziFile."""
         return CziImageData.detect_format(path) is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         if level_index != 0:
             raise NotImplementedError("Only base level is supported.")
         return CziImageData(
@@ -99,11 +99,11 @@ class CziSource(DicomizerSource):
             self.metadata.pyramid.image,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         return None
 
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         return None
 
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
         return None

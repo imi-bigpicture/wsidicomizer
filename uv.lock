@@ -323,6 +323,18 @@ wheels = [
 ]
 
 [[package]]
+name = "decoy"
+version = "2.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/1b/17035a255625e9dc82a3ac3e73b228016275996b85fd163b10ea448dc3b2/decoy-2.6.0.tar.gz", hash = "sha256:e65c875c8cfaed6ceff55df39d266e2967e90de3390c99d228ff94c6a2ba51d7", size = 39705, upload-time = "2026-04-30T20:25:03.051Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/2a/813d13054e67c5dfc492c2cf2e51a5571a1dd026714d7b8d4a20064cb19f/decoy-2.6.0-py3-none-any.whl", hash = "sha256:c2d333a2ee3632d5bae907eca4bf7c341c287589cc37ebdfad51038e9bdcf192", size = 52136, upload-time = "2026-04-30T20:25:01.415Z" },
+]
+
+[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -359,12 +371,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/ba/dd/160c7670dcba8081c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/77/e7ac701ad5ce4507d52ed5ace9f3c0c0129e6fbb29d108a0fd00362547c1/dicomweb_client-0.59.3-py3-none-any.whl", hash = "sha256:58ba2c9d4924ab3bc66d7a078b070b73562d321846f70f0050fb51d078897726", size = 61563, upload-time = "2024-10-22T01:26:23.109Z" },
 ]
-
-[[package]]
-name = "docopt"
-version = "0.6.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf578136ef2cc5dfb50baa1761b68c9da1fb1e4eed343c9/docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491", size = 25901, upload-time = "2014-06-16T11:18:57.406Z" }
 
 [[package]]
 name = "donfig"
@@ -720,6 +726,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/81/c6137d88691dd68a792652f10d6164f70256b7d1ab5877a45919b18a8f81/ome_types-0.5.3.tar.gz", hash = "sha256:f19a7e6021f798117d342a52629ce4137ab9a9bc45b7707abd7f26191a3899be", size = 122427, upload-time = "2024-11-21T02:08:09.127Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/81/264aca3b548d77554039abd29ed75e4bc57c1d4e2f1ba6a76c1d547ff4d2/ome_types-0.5.3-py3-none-any.whl", hash = "sha256:081d8e42bdacbbaf3de65dff3f4d73f809822c8ac6b422fd46c34fdd28a76ea8", size = 248395, upload-time = "2024-11-21T02:08:07.051Z" },
+]
+
+[[package]]
+name = "openslide-bin"
+version = "4.0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/5e/5859ac02e8d261654eec53ed10f2758232327f92248e533ff2a6352f752d/openslide_bin-4.0.1.1.tar.gz", hash = "sha256:3e88501b328650fda3aa5914584d968575e0e1045afc8d250c32e25a8437b3e1", size = 19747245, upload-time = "2026-06-08T05:07:45.695Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2d/5d/b14a6b724cef6183de7611c9b228767e92c4a5a7e9da37e272e2720d7cdb/openslide_bin-4.0.1.1-py3-none-macosx_11_0_universal2.whl", hash = "sha256:8a42565aeb0bba68389e23701854e224599744033f6b051d9ee282045e3609ab", size = 4884211, upload-time = "2026-06-08T05:07:38.637Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/6f/4c33b9ced9a587eda8613525cd68653a7ac694b5c3e4af4536d47fcc3546/openslide_bin-4.0.1.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:5003c09928d01ded6bb3bd623d75a44b33458e86bbbcdf5f55c5c234e5096510", size = 3873360, upload-time = "2026-06-08T05:07:40.899Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/3f/38c2b9502dfcf36b9e3712b4679fbc3b97101c2036a23d4213c17a3ea1bf/openslide_bin-4.0.1.1-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:8648c76a1db8deb862d7abd512518f548c697d24ba32066d18268cd2953b8c0c", size = 4011040, upload-time = "2026-06-08T05:07:42.326Z" },
+    { url = "https://files.pythonhosted.org/packages/30/fb/974c7d8758cd9fc17efacbdad0c9ebbc00d4cc0faa570c12627eec501ed2/openslide_bin-4.0.1.1-py3-none-win_amd64.whl", hash = "sha256:74bfc279aa68475b45d89eaf9b7e8455ae57ff8872137fbdb29c354d8ea0d891", size = 4013467, upload-time = "2026-06-08T05:07:43.95Z" },
 ]
 
 [[package]]
@@ -1157,16 +1175,29 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-watch"
-version = "4.2.0"
+name = "pytest-testmon"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama" },
-    { name = "docopt" },
+    { name = "coverage" },
     { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/1d/3e4230cc67cd6205bbe03c3527500c0ccaf7f0c78b436537eac71590ee4a/pytest_testmon-2.2.0.tar.gz", hash = "sha256:01f488e955ed0e0049777bee598bf1f647dd524e06f544c31a24e68f8d775a51", size = 23108, upload-time = "2025-12-01T07:30:24.76Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/55/ebb3c2f59fb089f08d00f764830d35780fc4e4c41dffcadafa3264682b65/pytest_testmon-2.2.0-py3-none-any.whl", hash = "sha256:2604ca44a54d61a2e830d9ce828b41a837075e4ebc1f81b148add8e90d34815b", size = 25199, upload-time = "2025-12-01T07:30:23.623Z" },
+]
+
+[[package]]
+name = "pytest-watcher"
+version = "0.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
     { name = "watchdog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/47/ab65fc1d682befc318c439940f81a0de1026048479f732e84fe714cd69c0/pytest-watch-4.2.0.tar.gz", hash = "sha256:06136f03d5b361718b8d0d234042f7b2f203910d8568f63df2f866b547b3d4b9", size = 16340, upload-time = "2018-05-20T19:52:16.194Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/d2/80606077b7fa8784417687f494ff801d7ab817d9a17fc94305811d5919bb/pytest_watcher-0.6.3.tar.gz", hash = "sha256:842dc904264df0ad2d5264153a66bb452fccfa46598cd6e0a5ef1d19afed9b13", size = 601878, upload-time = "2026-01-10T23:28:18.805Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/3f/172d73600ad2771774cda108efb813fc724fc345e5240a81a1085f1ade5d/pytest_watcher-0.6.3-py3-none-any.whl", hash = "sha256:83e7748c933087e8276edb6078663e6afa9926434b4fd8b85cf6b32b1d5bec89", size = 12431, upload-time = "2026-01-10T23:28:17.64Z" },
+]
 
 [[package]]
 name = "python-utils"
@@ -1427,7 +1458,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.30.0"
+version = "0.31.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1439,14 +1470,14 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/2b/ffcf96e36b51df266de08bacb591fd1d8cce09a2cfab6b92f4537847e770/wsidicom-0.30.0.tar.gz", hash = "sha256:011836eae7faffdae55b24ff657079650d1ee77461831c1b06ae1a2ba3962974", size = 312595, upload-time = "2026-05-22T10:19:04.717Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/30/e5bfd65af3ed83efe808567e5bd63a86a1ceea83c2c68f1e5f184f24ad48/wsidicom-0.31.0.tar.gz", hash = "sha256:3183b11434d70fa362a696720e6af6a6cae67f92566465a744ee07dc5ae9802b", size = 950754, upload-time = "2026-06-17T13:36:43.129Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/58/a208543ab261e1e3c00734e8fce12b7fbfb6bad53de00364003f55367741/wsidicom-0.30.0-py3-none-any.whl", hash = "sha256:f6154d0bddf2656b55f287235dd75968d2da532297a08b54d44b55d6c57c04e3", size = 243307, upload-time = "2026-05-22T10:19:02.856Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/19/93f97417ef60d0a6885e04f55e691d1c171e55b01b807cdb3049217f274a/wsidicom-0.31.0-py3-none-any.whl", hash = "sha256:4a4d7c4c8b5eabff6106f64e4e3f426197aac67dfb720e11a3ad1e199e8d3b0d", size = 278502, upload-time = "2026-06-17T13:36:41.564Z" },
 ]
 
 [[package]]
 name = "wsidicomizer"
-version = "0.25.0"
+version = "0.26.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1485,12 +1516,14 @@ pylibjpeg-rle = [
 [package.dev-dependencies]
 dev = [
     { name = "codespell" },
-    { name = "coverage" },
+    { name = "decoy" },
     { name = "dicom-validator" },
+    { name = "openslide-bin" },
     { name = "openslide-python" },
     { name = "pyright" },
     { name = "pytest" },
-    { name = "pytest-watch" },
+    { name = "pytest-testmon" },
+    { name = "pytest-watcher" },
     { name = "requests" },
     { name = "ruff" },
 ]
@@ -1511,19 +1544,21 @@ requires-dist = [
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=3.0.0,<4.0.0" },
-    { name = "wsidicom", specifier = ">=0.30.0,<0.31.0" },
+    { name = "wsidicom", specifier = ">=0.31.0,<0.32.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "codespell", specifier = ">=2.2.5,<3.0.0" },
-    { name = "coverage", specifier = ">=7.2.7,<8.0.0" },
+    { name = "decoy", specifier = ">=2.0.0,<3.0.0" },
     { name = "dicom-validator", specifier = ">=0.4.0,<0.5.0" },
+    { name = "openslide-bin", specifier = ">=4.0.0,<5.0.0" },
     { name = "openslide-python", specifier = ">=1.3.0,<2.0.0" },
     { name = "pyright", specifier = ">=1.1.409" },
     { name = "pytest", specifier = ">=8.1.0,<9.0.0" },
-    { name = "pytest-watch", specifier = ">=4.2.0,<5.0.0" },
+    { name = "pytest-testmon", specifier = ">=2.2.0" },
+    { name = "pytest-watcher", specifier = ">=0.6.3" },
     { name = "requests", specifier = ">=2.28.1,<3.0.0" },
     { name = "ruff", specifier = ">=0.15.14" },
 ]

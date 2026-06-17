@@ -27,10 +27,10 @@ from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
 
 from isyntax import ISyntax
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import PixelImageData
 
 
-class ISyntaxLevelImageData(DicomizerImageData):
+class ISyntaxLevelImageData(PixelImageData):
     def __init__(
         self,
         isyntax: ISyntax,
@@ -118,25 +118,22 @@ class ISyntaxLevelImageData(DicomizerImageData):
     def thread_safe(self) -> bool:
         return False
 
-    def stitch_tiles(self, region: Region, path: str, z: float, threads: int) -> Image:
-        """Overrides ImageData stitch_tiles() to read reagion directly from
-        ISyntax object.
+    def read_region(self, region: Region, z: float, path: str) -> Image:
+        """Read a pixel region directly from the ISyntax object.
 
         Parameters
         ----------
         region: Region
-             Pixel region to stitch to image
-        path: str
-            Optical path
+             Pixel region to read.
         z: float
-            Z coordinate
-        threads: int
-            Threads to use for stiching, not used in this implementation.
+            Z coordinate.
+        path: str
+            Optical path.
 
         Returns
-        ----------
+        -------
         Image
-            Stitched image
+            The region as a Pillow image.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
@@ -196,7 +193,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
             return None
         return tile
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile.
 
         Parameters
@@ -218,7 +215,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
             return self._get_blank_encoded_frame(self.tile_size)
         return self.encoder.encode(decoded)
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -241,7 +238,7 @@ class ISyntaxLevelImageData(DicomizerImageData):
         return Pillow.fromarray(tile)
 
 
-class ISyntaxAssociatedImageImageData(DicomizerImageData):
+class ISyntaxAssociatedImageImageData(PixelImageData):
     def __init__(
         self,
         frame: bytes,
@@ -326,7 +323,7 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
     def thread_safe(self) -> bool:
         return True
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if z not in self.focal_planes or path not in self.optical_paths:
             raise WsiDicomNotFoundError(
                 f"focal plane {z} or optical path {path}", str(self)
@@ -335,5 +332,8 @@ class ISyntaxAssociatedImageImageData(DicomizerImageData):
             return self.encoder.encode(self.image)
         return self._frame
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         return self.image
+
+    def read_region(self, region: Region, z: float, path: str) -> Image:
+        return self.image.crop(region.box)

@@ -36,7 +36,7 @@ from wsidicomizer.extras.openslide.openslide import (
 from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideLevelImageData,
 )
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeProperties,
@@ -114,7 +114,7 @@ class OpenSlideSource(OpenSlideLikeSource):
         """Return True if file in path is supported by OpenSlide."""
         return OpenSlide.detect_format(str(path)) is not None
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return OpenSlideLevelImageData(
             self._slide,
             self._blank_color,

@@ -19,15 +19,15 @@ from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom.codec import Encoder
-from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
 from wsidicomizer.config import settings
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import PixelImageData
 
 
-class OpenSlideLikeImageData(DicomizerImageData):
+class OpenSlideLikeImageData(PixelImageData):
     def __init__(
         self,
         blank_color: int | tuple[int, int, int] | None,
@@ -112,15 +112,18 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
         """The pixel tile size of the image."""
         return self._image_size
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         if tile != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         if tile_point != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded_image
+
+    def read_region(self, region: Region, z: float, path: str) -> Image:
+        return self._decoded_image.crop(region.box)
 
 
 class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):

@@ -32,10 +32,10 @@ from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 
 
-class OpenTileImageData(DicomizerImageData):
+class OpenTileImageData(BaseDicomizerImageData):
     def __init__(
         self,
         tiff_image: TiffImage,
@@ -165,7 +165,7 @@ class OpenTileImageData(DicomizerImageData):
             return self.encoder
         return None
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Returns transcoded tile if
         non-supported encoding.
 
@@ -190,7 +190,7 @@ class OpenTileImageData(DicomizerImageData):
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile.
 
         Parameters
@@ -213,7 +213,7 @@ class OpenTileImageData(DicomizerImageData):
             self._tiff_image.get_decoded_tile(tile_point.to_tuple())
         )
 
-    def _get_encoded_tiles(
+    def get_encoded_tiles(
         self, tiles: Iterable[Point], z: float, path: str
     ) -> Iterator[bytes]:
         if z not in self.focal_planes or path not in self.optical_paths:
@@ -223,9 +223,6 @@ class OpenTileImageData(DicomizerImageData):
             return self._tiff_image.get_tiles(tiles_tuples)
         decoded_tiles = self._tiff_image.get_decoded_tiles(tiles_tuples)
         return (self.encoder.encode(tile) for tile in decoded_tiles)
-
-    def close(self) -> None:
-        self._tiff_image.close()
 
     def is_supported_transfer_syntax(self) -> bool:
         """Return true if image data is encoded with Dicom-supported transfer

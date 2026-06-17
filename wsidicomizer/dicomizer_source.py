@@ -37,7 +37,7 @@ from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
 from wsidicomizer.config import settings
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 from wsidicomizer.uid_resolver import MetadataUidResolver
 
@@ -52,6 +52,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
      _create_overview_image_data() and the properties metadata, pyramid_levels.
      Subclasses can override the __init__().
     """
+
+    _instance_cls: type[WsiInstance] = WsiInstance
 
     def __init__(
         self,
@@ -116,22 +118,22 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         """Return image data instance for level."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         """Return image data instance for label."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         """Return image data instance for overview."""
         raise NotImplementedError()
 
     @abstractmethod
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
         """Return image data instance for thumbnail."""
         raise NotImplementedError()
 
@@ -233,11 +235,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         image_type: ImageType,
         pyramid_index: int | None = None,
     ) -> WsiInstance:
-        """Create instance from image data."""
+        """Create instance from image data using this source's ``_instance_cls``."""
         dataset = self._create_dataset(
             image_type, image_data.photometric_interpretation
         )
-        return WsiInstance.create_instance(
+        return self._instance_cls.create_instance(
             image_data, dataset, image_type, pyramid_index
         )
 

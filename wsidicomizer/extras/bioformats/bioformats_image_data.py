@@ -26,10 +26,10 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 
 from wsidicomizer.config import settings
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 
 
-class BioformatsImageData(DicomizerImageData):
+class BioformatsImageData(BaseDicomizerImageData):
     def __init__(
         self,
         reader: BioformatsReader,
@@ -108,13 +108,13 @@ class BioformatsImageData(DicomizerImageData):
             self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def _get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
         """Return Image for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile_point, z, path) as data:
             return Pillow.fromarray(data)
 
-    def _get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,
         and optical path."""
         with self._get_tile(tile, z, path) as data:

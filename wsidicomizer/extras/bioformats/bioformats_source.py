@@ -25,7 +25,7 @@ from wsidicom.metadata.wsi import WsiMetadata
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 
 
@@ -126,7 +126,7 @@ class BioformatsSource(DicomizerSource):
                 largest_image_width = image_width
         return pyramid_image_index, label_image_index, overview_image_index
 
-    def _create_level_image_data(self, level_index: int) -> DicomizerImageData:
+    def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return BioformatsImageData(
             self._reader,
             self._tile_size,
@@ -138,21 +138,21 @@ class BioformatsSource(DicomizerSource):
             self._volume_imaged_size,
         )
 
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         if self._label_image_index is None:
             return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._label_image_index, 0
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         if self._overview_image_index is None:
             return None
         return BioformatsImageData(
             self._reader, self._tile_size, self._encoder, self._overview_image_index, 0
         )
 
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
         # TODO support reading thumbnails from bioformats
         return None
 

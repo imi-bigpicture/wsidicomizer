@@ -28,8 +28,9 @@ from wsidicom.geometry import Point, Size
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.image_data import DicomizerImageData
+from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
+from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeAssociatedImageData,
     OpenSlideLikeProperties,
@@ -47,6 +48,8 @@ class OpenSlideLikeAssociatedImageType(Enum):
 
 
 class OpenSlideLikeSource(DicomizerSource):
+    _instance_cls = PixelWsiInstance
+
     def __init__(
         self,
         filepath: Path,
@@ -125,7 +128,7 @@ class OpenSlideLikeSource(DicomizerSource):
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return self._pyramid_levels
 
-    def _create_label_image_data(self) -> DicomizerImageData | None:
+    def _create_label_image_data(self) -> BaseDicomizerImageData | None:
         label_image = self._get_associated_image(OpenSlideLikeAssociatedImageType.LABEL)
         if label_image is None:
             return None
@@ -141,7 +144,7 @@ class OpenSlideLikeSource(DicomizerSource):
             image_coordinate_system=label_image_coordinate_system,
         )
 
-    def _create_overview_image_data(self) -> DicomizerImageData | None:
+    def _create_overview_image_data(self) -> BaseDicomizerImageData | None:
         overview_image = self._get_associated_image(
             OpenSlideLikeAssociatedImageType.MACRO
         )
@@ -159,7 +162,7 @@ class OpenSlideLikeSource(DicomizerSource):
             image_coordinate_system=overview_image_coordinate_system,
         )
 
-    def _create_thumbnail_image_data(self) -> DicomizerImageData | None:
+    def _create_thumbnail_image_data(self) -> BaseDicomizerImageData | None:
         label_image = self._get_associated_image(
             OpenSlideLikeAssociatedImageType.THUMBNAIL
         )

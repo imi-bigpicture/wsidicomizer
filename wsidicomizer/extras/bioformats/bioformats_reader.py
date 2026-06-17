@@ -16,13 +16,13 @@
 
 import math
 import os
+from collections import deque
 from collections.abc import Generator
 from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
-from queue import Empty, SimpleQueue
 from tempfile import TemporaryDirectory
-from threading import Lock
+from threading import Condition
 
 import jpype.imports  # noqa: F401  # pyright: ignore[reportUnusedImport]
 import numpy as np
@@ -51,27 +51,43 @@ from loci.formats import ImageReader, Memoizer  # type: ignore # noqa
 from loci.formats.services import OMEXMLService  # type: ignore # noqa
 
 
-class ReaderPool:
+class BioFormatsReaderPool:
+    """A pool of reusable Bio-Formats readers. Concurrent leases never share a reader;
+    `max_readers` caps how many may exist at once, so `max_readers=1` allows only
+    one at a time.
+    """
+
     def __init__(
         self,
-        filepath: Path,
+        path: Path,
         max_readers: int | None = None,
         cache_path: Path | str | None = None,
-    ):
-        self._filepath = filepath
-        if max_readers is None:
-            cpu_count = os.cpu_count()
-            max_readers = cpu_count if cpu_count is not None else 1
-        self._max_readers = max_readers
-        self._current_count = 0
+    ) -> None:
+        """Create a new BioFormatsReaderPool.
+
+        Parameters
+        ----------
+        path: Path
+            Path to file to open.
+        max_readers: int | None
+            Maximum number of readers that may exist concurrently. `None` (the
+            default) is unbounded (bounded in practice by the number of
+            concurrent callers).
+        cache_path: Path | str | None
+            Path to store cache file quicker opening of new readers. If `None`
+            a temporary directory will be used.
+        """
+        self._filepath = path
         if cache_path is None:
             self._tempdir = TemporaryDirectory()
             self._cache_path = Path(self._tempdir.name)
         else:
             self._tempdir = None
             self._cache_path = Path(cache_path)
-        self._queue: SimpleQueue[Memoizer] = SimpleQueue()
-        self._lock = Lock()
+        self._max_readers = max_readers
+        self._idle: deque[Memoizer] = deque()
+        self._count = 0
+        self._condition = Condition()
 
     @property
     def filepath(self) -> Path:
@@ -79,48 +95,12 @@ class ReaderPool:
 
     @contextmanager
     def get_reader(self) -> Generator[Memoizer, None, None]:
-        """Return a reader. Should be used as a context manager. Will block
-        if no reader is available."""
-        reader = self._get_reader()
+        """Lease a reader for the duration of the context, blocking if none is free."""
+        reader = self._acquire()
         try:
             yield reader
         finally:
-            self._return_reader(reader)
-
-    @property
-    def _is_full(self) -> bool:
-        return self._current_count == self._max_readers
-
-    @property
-    def _is_empty(self) -> bool:
-        return self._current_count == 0
-
-    def _increment(self):
-        if self._current_count < self._max_readers:
-            self._current_count += 1
-            return
-        raise ValueError("Current count should never be higher than max readers.")
-
-    def _decrement(self):
-        if self._current_count > 0:
-            self._current_count -= 1
-            return
-        raise ValueError("Current count should never be lower than 0.")
-
-    def _get_reader(self) -> Memoizer:
-        """Return a reader with no wait if one is available. Else if current
-        reader count is less than maximum reader count return a new reader.
-        Otherwise wait for an available readern."""
-        try:
-            return self._queue.get_nowait()
-        except Empty:
-            pass
-        with self._lock:
-            if not self._is_full:
-                self._increment()
-                return self._create_new_reader()
-
-        return self._queue.get(block=True, timeout=None)
+            self._release(reader)
 
     def _create_new_reader(self) -> Memoizer:
         """Return a new reader."""
@@ -131,17 +111,37 @@ class ReaderPool:
         reader.setId(str(self._filepath))
         return reader
 
-    def _return_reader(self, reader: Memoizer) -> None:
-        """Release a used reader."""
-        self._queue.put(reader)
+    def _acquire(self) -> Memoizer:
+        """Return an idle reader, create a new one if under the bound, else block
+        until a reader is released or discarded."""
+        with self._condition:
+            while not self._idle and not self._can_grow():
+                self._condition.wait()
+            if self._idle:
+                return self._idle.popleft()
+            self._count += 1
+            try:
+                return self._create_new_reader()
+            except BaseException:
+                self._count -= 1
+                self._condition.notify()
+                raise
+
+    def _release(self, reader: Memoizer) -> None:
+        """Return a reader to the idle set."""
+        with self._condition:
+            self._idle.append(reader)
+            self._condition.notify()
+
+    def _can_grow(self) -> bool:
+        return self._max_readers is None or self._count < self._max_readers
 
     def close(self) -> None:
-        """Close all readers and clean up cache directory if a temporary directory."""
-        with self._lock:
-            while not self._is_empty:
-                reader = self._queue.get()
-                reader.close()
-                self._decrement()
+        """Close all idle readers. Call only when no readers are in use."""
+        with self._condition:
+            while self._idle:
+                self._idle.popleft().close()
+            self._count = 0
             if self._tempdir is not None:
                 self._tempdir.cleanup()
 
@@ -166,7 +166,12 @@ class BioformatsReader:
             Path to store cache file quicker opening of new readers. If None
             a temporary directory will be used.
         """
-        self._reader_pool = ReaderPool(filepath, max_readers, cache_path)
+        if max_readers is None:
+            cpu_count = os.cpu_count()
+            max_readers = cpu_count if cpu_count is not None else 1
+        self._reader_pool = BioFormatsReaderPool(
+            path=filepath, max_readers=max_readers, cache_path=cache_path
+        )
 
     @staticmethod
     def is_supported(filepath: Path) -> bool:
