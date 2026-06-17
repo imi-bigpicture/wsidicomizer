@@ -373,12 +373,6 @@ wheels = [
 ]
 
 [[package]]
-name = "docopt"
-version = "0.6.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf578136ef2cc5dfb50baa1761b68c9da1fb1e4eed343c9/docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491", size = 25901, upload-time = "2014-06-16T11:18:57.406Z" }
-
-[[package]]
 name = "donfig"
 version = "0.8.1.post1"
 source = { registry = "https://pypi.org/simple" }
@@ -1181,16 +1175,29 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-watch"
-version = "4.2.0"
+name = "pytest-testmon"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama" },
-    { name = "docopt" },
+    { name = "coverage" },
     { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4d/1d/3e4230cc67cd6205bbe03c3527500c0ccaf7f0c78b436537eac71590ee4a/pytest_testmon-2.2.0.tar.gz", hash = "sha256:01f488e955ed0e0049777bee598bf1f647dd524e06f544c31a24e68f8d775a51", size = 23108, upload-time = "2025-12-01T07:30:24.76Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/55/ebb3c2f59fb089f08d00f764830d35780fc4e4c41dffcadafa3264682b65/pytest_testmon-2.2.0-py3-none-any.whl", hash = "sha256:2604ca44a54d61a2e830d9ce828b41a837075e4ebc1f81b148add8e90d34815b", size = 25199, upload-time = "2025-12-01T07:30:23.623Z" },
+]
+
+[[package]]
+name = "pytest-watcher"
+version = "0.6.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
     { name = "watchdog" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/36/47/ab65fc1d682befc318c439940f81a0de1026048479f732e84fe714cd69c0/pytest-watch-4.2.0.tar.gz", hash = "sha256:06136f03d5b361718b8d0d234042f7b2f203910d8568f63df2f866b547b3d4b9", size = 16340, upload-time = "2018-05-20T19:52:16.194Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/d2/80606077b7fa8784417687f494ff801d7ab817d9a17fc94305811d5919bb/pytest_watcher-0.6.3.tar.gz", hash = "sha256:842dc904264df0ad2d5264153a66bb452fccfa46598cd6e0a5ef1d19afed9b13", size = 601878, upload-time = "2026-01-10T23:28:18.805Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/3f/172d73600ad2771774cda108efb813fc724fc345e5240a81a1085f1ade5d/pytest_watcher-0.6.3-py3-none-any.whl", hash = "sha256:83e7748c933087e8276edb6078663e6afa9926434b4fd8b85cf6b32b1d5bec89", size = 12431, upload-time = "2026-01-10T23:28:17.64Z" },
+]
 
 [[package]]
 name = "python-utils"
@@ -1451,7 +1458,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.30.0"
+version = "0.31.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1463,14 +1470,14 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c2/2b/ffcf96e36b51df266de08bacb591fd1d8cce09a2cfab6b92f4537847e770/wsidicom-0.30.0.tar.gz", hash = "sha256:011836eae7faffdae55b24ff657079650d1ee77461831c1b06ae1a2ba3962974", size = 312595, upload-time = "2026-05-22T10:19:04.717Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/30/e5bfd65af3ed83efe808567e5bd63a86a1ceea83c2c68f1e5f184f24ad48/wsidicom-0.31.0.tar.gz", hash = "sha256:3183b11434d70fa362a696720e6af6a6cae67f92566465a744ee07dc5ae9802b", size = 950754, upload-time = "2026-06-17T13:36:43.129Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/72/58/a208543ab261e1e3c00734e8fce12b7fbfb6bad53de00364003f55367741/wsidicom-0.30.0-py3-none-any.whl", hash = "sha256:f6154d0bddf2656b55f287235dd75968d2da532297a08b54d44b55d6c57c04e3", size = 243307, upload-time = "2026-05-22T10:19:02.856Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/19/93f97417ef60d0a6885e04f55e691d1c171e55b01b807cdb3049217f274a/wsidicom-0.31.0-py3-none-any.whl", hash = "sha256:4a4d7c4c8b5eabff6106f64e4e3f426197aac67dfb720e11a3ad1e199e8d3b0d", size = 278502, upload-time = "2026-06-17T13:36:41.564Z" },
 ]
 
 [[package]]
 name = "wsidicomizer"
-version = "0.25.0"
+version = "0.26.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1509,14 +1516,14 @@ pylibjpeg-rle = [
 [package.dev-dependencies]
 dev = [
     { name = "codespell" },
-    { name = "coverage" },
-{ name = "decoy" },
+    { name = "decoy" },
     { name = "dicom-validator" },
-{ name = "openslide-bin" },
+    { name = "openslide-bin" },
     { name = "openslide-python" },
     { name = "pyright" },
     { name = "pytest" },
-    { name = "pytest-watch" },
+    { name = "pytest-testmon" },
+    { name = "pytest-watcher" },
     { name = "requests" },
     { name = "ruff" },
 ]
@@ -1537,21 +1544,21 @@ requires-dist = [
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=3.0.0,<4.0.0" },
-    { name = "wsidicom", specifier = ">=0.30.0,<0.31.0" },
+    { name = "wsidicom", specifier = ">=0.31.0,<0.32.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "codespell", specifier = ">=2.2.5,<3.0.0" },
-    { name = "coverage", specifier = ">=7.2.7,<8.0.0" },
-{ name = "decoy", specifier = ">=2.0.0,<3.0.0" },
+    { name = "decoy", specifier = ">=2.0.0,<3.0.0" },
     { name = "dicom-validator", specifier = ">=0.4.0,<0.5.0" },
-{ name = "openslide-bin", specifier = ">=4.0.0,<5.0.0" },
+    { name = "openslide-bin", specifier = ">=4.0.0,<5.0.0" },
     { name = "openslide-python", specifier = ">=1.3.0,<2.0.0" },
     { name = "pyright", specifier = ">=1.1.409" },
     { name = "pytest", specifier = ">=8.1.0,<9.0.0" },
-    { name = "pytest-watch", specifier = ">=4.2.0,<5.0.0" },
+    { name = "pytest-testmon", specifier = ">=2.2.0" },
+    { name = "pytest-watcher", specifier = ">=0.6.3" },
     { name = "requests", specifier = ">=2.28.1,<3.0.0" },
     { name = "ruff", specifier = ">=0.15.14" },
 ]
