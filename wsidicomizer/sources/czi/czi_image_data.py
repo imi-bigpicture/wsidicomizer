@@ -298,6 +298,25 @@ class CziImageData(BaseDicomizerImageData):
         index = block.dims.index(axis)
         return block.start[index], block.shape[index]
 
+    @classmethod
+    def detect_pixel_format(cls, czi: CziFile) -> tuple[int, np.dtype]:
+        """Return (samples_per_pixel, dtype) for a czi without building the
+        instance, so a source can pick a matching default encoder."""
+        directory = czi.filtered_subblock_directory
+        dtype = np.dtype(directory[0].dtype)
+        spans = [
+            span
+            for block in directory
+            if (span := cls._block_axis(block, "S")) is not None
+        ]
+        samples_per_pixel = (
+            1
+            if not spans
+            else max(start + size for start, size in spans)
+            - min(start for start, _ in spans)
+        )
+        return samples_per_pixel, dtype
+
     def _get_size(self, axis: str) -> int:
         """Full image size along axis, derived from the subblock directory."""
         spans = [

@@ -19,6 +19,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -33,7 +34,7 @@ class BioformatsSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -49,8 +50,9 @@ class BioformatsSource(DicomizerSource):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int] = None,
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None
@@ -97,6 +99,14 @@ class BioformatsSource(DicomizerSource):
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
         return WsiDicomizerMetadata()
+
+    @property
+    def _pixel_format(self) -> tuple[Channels, int]:
+        # Untested: no greyscale bioformats fixture in testdata. Wired for parity.
+        index = self._pyramid_image_index
+        return self._pixel_format_from(
+            self._reader.samples_per_pixel(index), self._reader.dtype(index)
+        )
 
     @staticmethod
     def _get_image_indices(

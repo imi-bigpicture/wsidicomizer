@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The default encoder now matches each source's pixel format instead of always being RGB JPEG. When `encoding`/`encoder` is `None` (the default), the source picks a fitting codec: RGB is unchanged (JPEG/YBR), 8-bit greyscale uses JPEG, and deeper greyscale uses JPEG 2000.
 - Updated the `czifile` requirement to `>=2026.3.12` (previously capped at `<2020.0.0`).
 - Updated the minimum Python version to `>=3.12` (required by czifile 2026).
 

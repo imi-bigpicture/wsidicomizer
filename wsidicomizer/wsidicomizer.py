@@ -29,6 +29,7 @@ from pydicom import Dataset
 from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder, JpegSettings
+from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
@@ -83,7 +84,8 @@ class WsiDicomizer(WsiDicom):
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
-            Encoding setting or encoder to use for transcoding.
+            Encoding setting or encoder to use for transcoding. If None, each
+            source picks a default matching its pixel format.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         uid_generator: Callable[[], UID] | UidGenerator | None = None
@@ -188,7 +190,8 @@ class WsiDicomizer(WsiDicom):
             size also depends on minimun_chunk_size from image_data.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use for images that cannot be passed
-            through, or for all images if `force_transcoding=True`.
+            through, or for all images if `force_transcoding=True`. If None,
+            each source picks a default matching its pixel format.
         force_transcoding: bool = False,
             If True, re-encode images using `encoding` even when the source
             transfer syntax is DICOM-compatible. Has no effect if `encoding` is
@@ -302,10 +305,20 @@ class WsiDicomizer(WsiDicom):
         encoding: Encoder | EncodingSettings | None = None,
     ) -> Encoder:
         """Return encoder from encoding."""
+    ) -> Encoder | None:
+        """Return encoder from encoding, or None to let the source pick a default.
+
+        Returning None defers the choice to the source, which knows its own
+        pixel format and selects a matching default (e.g. greyscale vs RGB) via
+        ``DicomizerSource._default_encoder``.
+        """
         if encoding is None:
             encoding = JpegSettings()
+            return None
         if isinstance(encoding, EncodingSettings):
             encoder = Encoder.create_for_settings(encoding)
         else:
             encoder = encoding
         return encoder
+            return Encoder.create_for_settings(encoding)
+        return encoding

@@ -31,6 +31,7 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_VENDOR,
 )
 from wsidicom.codec import Encoder
+from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.image_data import BaseDicomizerImageData
@@ -51,7 +52,7 @@ class TiffSlideSource(OpenSlideLikeSource):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -66,8 +67,9 @@ class TiffSlideSource(OpenSlideLikeSource):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int] = None,
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None
@@ -115,6 +117,13 @@ class TiffSlideSource(OpenSlideLikeSource):
 
     def close(self):
         self._tiffslide.close()
+
+    @property
+    def _pixel_format(self) -> tuple[Channels, int]:
+        axes = self._tiffslide.properties.get("tiffslide.series-axes")
+        samples_per_pixel = 1 if axes == "YX" else 3
+        dtype = self._tiffslide.ts_tifffile.series[0].dtype
+        return self._pixel_format_from(samples_per_pixel, dtype)
 
     @staticmethod
     def is_supported(path: Path) -> bool:

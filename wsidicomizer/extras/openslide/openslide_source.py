@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -51,7 +52,7 @@ class OpenSlideSource(OpenSlideLikeSource):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -66,7 +67,9 @@ class OpenSlideSource(OpenSlideLikeSource):
         filepath: Path
             Path to the file.
         encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int] = None,
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None
@@ -108,6 +111,11 @@ class OpenSlideSource(OpenSlideLikeSource):
 
     def close(self) -> None:
         return self._slide.close()
+
+    @property
+    def _pixel_format(self) -> tuple[Channels, int]:
+        # OpenSlide always presents 8-bit RGB.
+        return Channels.RGB, 8
 
     @staticmethod
     def is_supported(path: Path) -> bool:

@@ -20,6 +20,7 @@ from pathlib import Path
 from opentile import OpenTile
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.codec.settings import Channels
 from wsidicom.geometry import Size, SizeMm
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
@@ -40,7 +41,7 @@ class OpenTileSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -55,8 +56,9 @@ class OpenTileSource(DicomizerSource):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: int | None = None
             Preferred tile size to use, if not enforced by file. Falls back to
             `settings.default_tile_size` if `None`. Only has effect for NDPI
@@ -99,6 +101,11 @@ class OpenTileSource(DicomizerSource):
 
     def close(self):
         self._tiler.close()
+
+    @property
+    def _pixel_format(self) -> tuple[Channels, int]:
+        base = self._tiler.levels[0]
+        return self._pixel_format_from(base.samples_per_pixel, base.np_dtype)
 
     @property
     def base_metadata(self) -> OpenTileMetadata:

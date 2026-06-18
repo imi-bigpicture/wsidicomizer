@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydicom import Dataset
 from wsidicom.codec import Encoder
+from wsidicom.codec.settings import Channels
 from wsidicom.metadata import ImageType, UidGenerator, WsiMetadata
 
 from isyntax import ISyntax
@@ -38,7 +39,7 @@ class ISyntaxSource(DicomizerSource):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -54,8 +55,9 @@ class ISyntaxSource(DicomizerSource):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int] = None,
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None
@@ -139,3 +141,8 @@ class ISyntaxSource(DicomizerSource):
 
     def close(self) -> None:
         return self._slide.close()
+
+    @property
+    def _pixel_format(self) -> tuple[Channels, int]:
+        # iSyntax is 8-bit RGB.
+        return Channels.RGB, 8

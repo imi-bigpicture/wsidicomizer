@@ -58,7 +58,7 @@ class OpenSlideLikeSource(DicomizerSource):
         level_dimensions: Sequence[tuple[int, int]],
         associated_images: Mapping[str, Image],
         base_metadata: OpenSlideLikeMetadata,
-        encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -82,8 +82,9 @@ class OpenSlideLikeSource(DicomizerSource):
             Associated images in the file.
         base_metadata: OpenSlideLikeMetadata
             Base metadata for the file.
-        encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int] = None,
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None

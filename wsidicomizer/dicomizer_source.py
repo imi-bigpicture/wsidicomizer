@@ -24,6 +24,8 @@ from pathlib import Path
 from pydicom import Dataset, config
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
+from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
+from wsidicom.codec.settings import Channels
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import WsiDataset, WsiInstance
 from wsidicom.metadata import (
@@ -59,6 +61,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self,
         filepath: Path,
         encoder: Encoder,
+        encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
@@ -73,7 +76,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         filepath: Path
             Path to the file.
         encoder: Encoder
+        encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
+            If None, the source picks a default matching its pixel format.
         tile_size: Optional[int]
             Tile size to use. If None, the default tile size is used.
         metadata: Optional[WsiMetadata] = None
@@ -89,14 +94,55 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             the default `CallableUidGenerator` backed by
             `pydicom.generate_uid`.
         """
-        self._filepath = filepath
-        self._encoder = encoder
+        self._filepath: Path | None = filepath
+        self._provided_encoder = encoder
         self._tile_size = tile_size
         self._user_metadata = metadata
         self._default_metadata = default_metadata
         self._include_confidential = include_confidential
         self._metadata_post_processor = metadata_post_processor
         self._uid_generator: UidGenerator = uid_generator or CallableUidGenerator()
+
+    @cached_property
+    def _encoder(self) -> Encoder:
+        """The encoder to use, resolving a format-matched default when none was
+        supplied."""
+        if self._provided_encoder is not None:
+            return self._provided_encoder
+        return self._default_encoder(*self._pixel_format)
+
+    @property
+    @abstractmethod
+    def _pixel_format(self) -> tuple[Channels, int]:
+        """The (channels, bits) the source produces, used to pick a default
+        encoder when none is supplied. Derive it from a sample count and dtype
+        with ``_pixel_format_from``."""
+        raise NotImplementedError()
+
+    @staticmethod
+    def _pixel_format_from(
+        samples_per_pixel: int, dtype: np.typing.DTypeLike
+    ) -> tuple[Channels, int]:
+        """Map a sample count and numpy dtype to (channels, bits)."""
+        channels = Channels.GRAYSCALE if samples_per_pixel == 1 else Channels.RGB
+        return channels, np.dtype(dtype).itemsize * 8
+
+    @staticmethod
+    def _default_encoder(channels: Channels, bits: int = 8) -> Encoder:
+        """Create a default encoder for a pixel format.
+
+        Always compressed (uncompressed WSI is prohibitively large) using the
+        most broadly supported codec for the depth: 8-bit uses JPEG, deeper
+        greyscale uses JPEG 2000 (JPEG is 8-bit only). RGB keeps the historical
+        bare ``JpegSettings`` default (YBR).
+        """
+        if channels == Channels.GRAYSCALE:
+            if bits > 8:
+                settings = Jpeg2kSettings(bits=bits, channels=channels)
+            else:
+                settings = JpegSettings(channels=channels)
+            return Encoder.create_for_settings(settings)
+        return Encoder.create_for_settings(JpegSettings())
 
     @staticmethod
     @abstractmethod
