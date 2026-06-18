@@ -15,13 +15,14 @@
 """Image data for czi file."""
 
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from threading import RLock
 
 import numpy as np
-from czifile import CziFile, DirectoryEntryDV
+from czifile import CziDirectoryEntryDV, CziFile, CziSubBlockSegmentData
 from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import UID
@@ -73,14 +74,13 @@ class CziImageData(BaseDicomizerImageData):
         self._merged_metadata = merged_metadata
 
         assert self._merged_metadata.pixel_spacing is not None
-        self._czi._fh.lock = True
-        self._dtype = self._czi.dtype
+        self._czi.set_lock(True)
         super().__init__(encoder)
         if tile_size is None:
             tile_size = settings.default_tile_size
         self._tile_size = Size(tile_size, tile_size)
-        assert isinstance(self._czi.filtered_subblock_directory, list)
         self._block_directory = self._czi.filtered_subblock_directory
+        self._dtype = np.dtype(self._block_directory[0].dtype)
         self._block_locks: dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
@@ -90,7 +90,7 @@ class CziImageData(BaseDicomizerImageData):
         self._image_size = Size(self._get_size(axis="X"), self._get_size(axis="Y"))
         self._tiled_size = self.image_size.ceil_div(self.tile_size)
         self._focal_planes = sorted(self._czi_metadata.focal_plane_mapping)
-        self._samples_per_pixel = self._get_size(axis="0")
+        self._samples_per_pixel = self._get_size(axis="S")
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem | None:
@@ -167,8 +167,7 @@ class CziImageData(BaseDicomizerImageData):
         tile_directory: dict[tuple[Point, float, str], list[CziBlock]] = defaultdict(
             list
         )
-        assert isinstance(self._czi.filtered_subblock_directory, list)
-        for index, block in enumerate(self._czi.filtered_subblock_directory):
+        for index, block in enumerate(self._block_directory):
             block_start, block_size, z, c = self._get_block_dimensions(block)
             tile_region = Region.from_points(
                 block_start // self.tile_size,
@@ -186,7 +185,7 @@ class CziImageData(BaseDicomizerImageData):
         return self._samples_per_pixel
 
     @property
-    def block_directory(self) -> list[DirectoryEntryDV]:
+    def block_directory(self) -> Sequence[CziDirectoryEntryDV]:
         return self._block_directory
 
     @staticmethod
@@ -291,21 +290,35 @@ class CziImageData(BaseDicomizerImageData):
         frame = self._get_tile(tile, z, path)
         return self.encoder.encode(frame)
 
+    @staticmethod
+    def _block_axis(block: CziDirectoryEntryDV, axis: str) -> tuple[int, int] | None:
+        """Return (start, size) of block along axis, or None if axis is absent."""
+        if axis not in block.dims:
+            return None
+        index = block.dims.index(axis)
+        return block.start[index], block.shape[index]
+
     def _get_size(self, axis: str) -> int:
-        index = self._get_axis_index(axis)
-        assert isinstance(self._czi.shape, tuple)
-        return self._czi.shape[index]
+        """Full image size along axis, derived from the subblock directory."""
+        spans = [
+            span
+            for block in self._block_directory
+            if (span := self._block_axis(block, axis)) is not None
+        ]
+        if not spans:
+            return 1
+        return max(start + size for start, size in spans) - min(
+            start for start, _ in spans
+        )
 
     def _get_start(self, axis: str) -> int:
-        index = self._get_axis_index(axis)
-        assert isinstance(self._czi.start, tuple)
-        return self._czi.start[index]
-
-    def _get_axis_index(self, axis: str) -> int:
-        index = str(self._czi.axes).index(axis.capitalize())
-        if not index >= 0:
-            raise ValueError(f"Axis {axis} not found in axes {self._czi.axes}")
-        return index
+        """Origin of the image along axis (lowest block start)."""
+        starts = [
+            span[0]
+            for block in self._block_directory
+            if (span := self._block_axis(block, axis)) is not None
+        ]
+        return min(starts) if starts else 0
 
     def _create_blank_tile_array(self) -> np.ndarray:
         """Return blank tile in numpy array.
@@ -316,11 +329,10 @@ class CziImageData(BaseDicomizerImageData):
             A blank tile as numpy array.
         """
         fill_value = 0 if self.photometric_interpretation == "MONOCHROME2" else 1
-        assert isinstance(self._czi.dtype, np.dtype)
         return np.full(
             self._size_to_numpy_shape(self.tile_size),
-            fill_value * np.iinfo(self._czi.dtype).max,
-            dtype=np.dtype(self._czi.dtype),
+            fill_value * np.iinfo(self._dtype).max,
+            dtype=self._dtype,
         )
 
     @lru_cached_method(maxsize=lambda: settings.czi_block_cache_size)
@@ -341,20 +353,22 @@ class CziImageData(BaseDicomizerImageData):
             else:
                 # Read the block data.
                 block = self.block_directory[block_index]
-                return block.data_segment().data()
+                segment = block.read_segment_data(self._czi)
+                assert isinstance(segment, CziSubBlockSegmentData)
+                return segment.data()
         finally:
             if acquired:
                 block_lock.release()
 
     def _get_block_dimensions(
-        self, block: DirectoryEntryDV
+        self, block: CziDirectoryEntryDV
     ) -> tuple[Point, Size, float, str]:
         """Return start coordinate and size for block relative to image
         origin and block focal plane and optical path.
 
         Parameters
         ----------
-        block: DirectoryEntryDV
+        block: CziDirectoryEntryDV
             Block to get start and size from.
 
         Returns
@@ -370,17 +384,19 @@ class CziImageData(BaseDicomizerImageData):
         z = 0.0
         c = "0"
 
-        for dimension_entry in block.dimension_entries:
-            if dimension_entry.dimension == "X":
-                x_start = dimension_entry.start
-                x_size = dimension_entry.size
-            elif dimension_entry.dimension == "Y":
-                y_start = dimension_entry.start
-                y_size = dimension_entry.size
-            elif dimension_entry.dimension == "Z":
-                z = self._czi_metadata.focal_plane_mapping[dimension_entry.start]
-            elif dimension_entry.dimension == "C":
-                c = self._czi_metadata.channel_mapping[dimension_entry.start]
+        for dimension, start, size in zip(
+            block.dims, block.start, block.shape, strict=True
+        ):
+            if dimension == "X":
+                x_start = start
+                x_size = size
+            elif dimension == "Y":
+                y_start = start
+                y_size = size
+            elif dimension == "Z":
+                z = self._czi_metadata.focal_plane_mapping[start]
+            elif dimension == "C":
+                c = self._czi_metadata.channel_mapping[start]
 
         if x_start is None or x_size is None or y_start is None or y_size is None:
             raise ValueError("Could not determine position of block.")

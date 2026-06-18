@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Updated the `czifile` requirement to `>=2026.3.12` (previously capped at `<2020.0.0`).
+- Updated the minimum Python version to `>=3.12` (required by czifile 2026).
+
 ## [0.26.1] - 2026-06-17
 
 ### Fixed

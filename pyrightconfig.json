@@ -2,7 +2,7 @@
   "include": ["wsidicomizer", "tests"],
   "venvPath": ".",
   "venv": ".venv",
-  "pythonVersion": "3.11",
+  "pythonVersion": "3.12",
   "reportMissingImports": "error",
   "reportUnusedImport": "warning"
 }

@@ -7,7 +7,7 @@ authors = [
 ]
 license = { text = "Apache-2.0" }
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 keywords = ["whole slide image", "digital pathology", "dicom", "converter"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -22,7 +22,7 @@ dependencies = [
     "opentile>=0.22.0,<0.23.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",
-    "czifile>=2019.7.2.3,<2020.0.0",
+    "czifile>=2026.3.12",
     "tiffslide>=3.0.0,<4.0.0",
     "click>=8.3.0,<9.0.0",
 ]
@@ -58,7 +58,7 @@ wsidicomizer = "wsidicomizer.cli:main"
 Repository = "https://github.com/imi-bigpicture/wsidicomizer"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]
