@@ -225,9 +225,7 @@ class TestOpenSlideHandleRead:
         poisoned_osr = handle._osr
         barrier = threading.Barrier(workers, timeout=10)
 
-        def fake_read_region(
-            osr: object, buffer: object, *rest: int
-        ) -> None:
+        def fake_read_region(osr: object, buffer: object, *rest: int) -> None:
             if osr is poisoned_osr:
                 barrier.wait()  # all readers in-flight together, then poison
                 raise OpenSlideError(ERROR)
@@ -261,9 +259,7 @@ class TestOpenSlideHandleRead:
         poisoned_osr = handle._osr
         barrier = threading.Barrier(workers, timeout=10)
 
-        def fake_read_region(
-            osr: object, buffer: object, x: int, *rest: int
-        ) -> None:
+        def fake_read_region(osr: object, buffer: object, x: int, *rest: int) -> None:
             if osr is poisoned_osr:
                 barrier.wait()  # all first reads in-flight, then all fail
                 raise OpenSlideError(ERROR)
