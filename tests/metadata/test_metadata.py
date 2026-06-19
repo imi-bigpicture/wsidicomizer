@@ -28,7 +28,44 @@ from wsidicom.metadata import (
     WsiMetadata,
 )
 
+from opentile import Metadata
+
 from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
+
+
+class FakeMetadata(Metadata):
+    def __init__(self, magnification: float | None):
+        self._magnification = magnification
+
+    @property
+    def magnification(self) -> float | None:
+        return self._magnification
+
+
+class TestOpenTileObjectivePower:
+    def test_magnification_populates_objective_power(self):
+        # Arrange
+        metadata = FakeMetadata(magnification=20.0)
+
+        # Act
+        result = OpenTileMetadata(metadata, has_label=False, has_overview=False)
+
+        # Assert
+        optical_paths = result.pyramid.optical_paths
+        assert len(optical_paths) == 1
+        assert optical_paths[0].objective is not None
+        assert optical_paths[0].objective.objective_power == 20.0
+
+    def test_no_magnification_no_optical_path(self):
+        # Arrange
+        metadata = FakeMetadata(magnification=None)
+
+        # Act
+        result = OpenTileMetadata(metadata, has_label=False, has_overview=False)
+
+        # Assert
+        assert result.pyramid.optical_paths == []
 
 
 @pytest.fixture
