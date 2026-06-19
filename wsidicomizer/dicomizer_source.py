@@ -21,9 +21,9 @@ from dataclasses import replace
 from functools import cached_property
 from pathlib import Path
 
+import numpy as np
 from pydicom import Dataset, config
 from wsidicom import ImageData
-from wsidicom.codec import Encoder
 from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
 from wsidicom.codec.settings import Channels
 from wsidicom.graphical_annotations import AnnotationInstance
@@ -60,7 +60,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def __init__(
         self,
         filepath: Path,
-        encoder: Encoder,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -75,7 +74,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
             If None, the source picks a default matching its pixel format.
