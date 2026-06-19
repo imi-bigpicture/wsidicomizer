@@ -34,6 +34,7 @@ from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_VENDOR,
     OpenSlide,
 )
+from wsidicomizer.extras.openslide.openslide_handle import OpenSlideHandle
 from wsidicomizer.extras.openslide.openslide_image_data import (
     OpenSlideLevelImageData,
 )
@@ -66,7 +67,6 @@ class OpenSlideSource(OpenSlideLikeSource):
         ----------
         filepath: Path
             Path to the file.
-        encoder: Encoder
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
             If None, the source picks a default matching its pixel format.
@@ -81,25 +81,26 @@ class OpenSlideSource(OpenSlideLikeSource):
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
         """
-        self._slide = OpenSlide(filepath)
+        self._handle = OpenSlideHandle(filepath)
+        handle_properties = self._handle.properties
         properties = OpenSlideLikeProperties(
-            background_color=self._slide.properties.get(PROPERTY_NAME_BACKGROUND_COLOR),
-            bounds_x=self._slide.properties.get(PROPERTY_NAME_BOUNDS_X),
-            bounds_y=self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y),
-            bounds_width=self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
-            bounds_height=self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
-            objective_power=self._slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER),
-            vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
-            mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
-            mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
+            background_color=handle_properties.get(PROPERTY_NAME_BACKGROUND_COLOR),
+            bounds_x=handle_properties.get(PROPERTY_NAME_BOUNDS_X),
+            bounds_y=handle_properties.get(PROPERTY_NAME_BOUNDS_Y),
+            bounds_width=handle_properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
+            bounds_height=handle_properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
+            objective_power=handle_properties.get(PROPERTY_NAME_OBJECTIVE_POWER),
+            vendor=handle_properties.get(PROPERTY_NAME_VENDOR),
+            mpp_x=handle_properties.get(PROPERTY_NAME_MPP_X),
+            mpp_y=handle_properties.get(PROPERTY_NAME_MPP_Y),
         )
         super().__init__(
             filepath,
             properties,
-            self._slide.level_downsamples,
-            self._slide.level_dimensions,
-            self._slide.associated_images,
-            OpenSlideLikeMetadata(properties, self._slide.color_profile),
+            self._handle.level_downsamples,
+            self._handle.level_dimensions,
+            self._handle.associated_images,
+            OpenSlideLikeMetadata(properties, self._handle.color_profile),
             encoder,
             tile_size,
             metadata,
@@ -110,7 +111,7 @@ class OpenSlideSource(OpenSlideLikeSource):
         )
 
     def close(self) -> None:
-        return self._slide.close()
+        return self._handle.close()
 
     @property
     def _pixel_format(self) -> tuple[Channels, int]:
@@ -124,7 +125,7 @@ class OpenSlideSource(OpenSlideLikeSource):
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return OpenSlideLevelImageData(
-            self._slide,
+            self._handle,
             self._blank_color,
             self._base_level_offset,
             self._base_level_size,

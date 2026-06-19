@@ -66,12 +66,22 @@ from openslide import (  # noqa: E402
     PROPERTY_NAME_OBJECTIVE_POWER,  # noqa: E402
     PROPERTY_NAME_VENDOR,  # noqa: E402
     OpenSlide,  # noqa: E402
+    OpenSlideError,  # noqa: E402
 )
+
+# The following are protected members of OpenSlide-Python, used to get image data
+# as numpy arrays instead of Pillow images: _read_region reads raw data from the
+# OpenSlide C API and argb2rgba converts argb to rgba. We consider this safe, as
+# they map directly to the OpenSlide C API and are thus not likely to change often.
 from openslide._convert import argb2rgba as convert_argb_to_rgba  # noqa: E402
-from openslide.lowlevel import _read_region, get_associated_image_names  # noqa: E402
+from openslide.lowlevel import (  # noqa: E402
+    _read_region,
+    get_associated_image_names,
+)
 
 __all__ = [
     "OpenSlide",
+    "OpenSlideError",
     "PROPERTY_NAME_BACKGROUND_COLOR",
     "PROPERTY_NAME_BOUNDS_HEIGHT",
     "PROPERTY_NAME_BOUNDS_WIDTH",

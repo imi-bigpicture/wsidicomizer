@@ -23,6 +23,7 @@ class Settings:
         self._default_tile_size = 512
         self._czi_block_cache_size = 8
         self._insert_icc_profile_if_missing = True
+        self._openslide_unreadable_region_limit = 16
 
     @property
     def default_tile_size(self) -> int:
@@ -51,6 +52,19 @@ class Settings:
     @insert_icc_profile_if_missing.setter
     def insert_icc_profile_if_missing(self, value: bool) -> None:
         self._insert_icc_profile_if_missing = value
+
+    @property
+    def openslide_unreadable_region_limit(self) -> int:
+        """Maximum number of regions that may fail to read (and be rendered blank)
+        before an OpenSlide conversion is aborted. A failed read poisons the shared
+        OpenSlide handle for all threads; the handle is reopened to recover, but
+        regions that still fail on a fresh handle are counted against this limit.
+        Set to 0 to abort on the first unreadable region."""
+        return self._openslide_unreadable_region_limit
+
+    @openslide_unreadable_region_limit.setter
+    def openslide_unreadable_region_limit(self, value: int) -> None:
+        self._openslide_unreadable_region_limit = value
 
 
 settings = Settings()

@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support for converting array-based pyramids (numpy, zarr, dask, ...) to DICOM (#135). Pass in-memory or array-object levels via `WsiDicomizer.open_array(levels, metadata=...)`, or point `WsiDicomizer.open()`/`convert()` at an on-disk `.zarr` store. Levels are read on demand, so a chunked zarr backing is never materialized in full. Pixel spacing must be supplied via `metadata` as an array carries none.
+
 ### Changed
 
 - The default encoder now matches each source's pixel format instead of always being RGB JPEG. When `encoding`/`encoder` is `None` (the default), the source picks a fitting codec: RGB is unchanged (JPEG/YBR), 8-bit greyscale uses JPEG, and deeper greyscale uses JPEG 2000.
 - Updated the `czifile` requirement to `>=2026.3.12` (previously capped at `<2020.0.0`).
 - Updated the minimum Python version to `>=3.12` (required by czifile 2026).
+
+### Fixed
+
+- A failed read no longer poisons the shared OpenSlide handle for the rest of the conversion. On a failed read the handle is reopened and the read retried; regions still unreadable on a fresh handle are rendered blank, up to `settings.openslide_unreadable_region_limit` (default 16) before the conversion is aborted.
 
 ## [0.26.1] - 2026-06-17
 

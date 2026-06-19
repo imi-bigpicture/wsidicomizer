@@ -25,20 +25,9 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
 
-from wsidicomizer.extras.openslide.openslide import (
-    OpenSlide,
-    _read_region,
-    convert_argb_to_rgba,
-)
+from wsidicomizer.extras.openslide.openslide import convert_argb_to_rgba
+from wsidicomizer.extras.openslide.openslide_handle import OpenSlideHandle
 from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
-
-"""
-OpenSlideImageData uses proteted functions from OpenSlide-Python to get image
-data as numpy arrays instead of pillow images. The proteted function
-_read_region is used to get raw data from the OpenSlide C API and argb2rgba is
-used to convert argb to rgba. We consider this safe, as these directly map
-to the Openslide C API and are thus not likely to change that often.
-"""
 
 
 class OpenSlideAssociatedImageType(Enum):
@@ -50,7 +39,7 @@ class OpenSlideAssociatedImageType(Enum):
 class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
     def __init__(
         self,
-        open_slide: OpenSlide,
+        handle: OpenSlideHandle,
         blank_color: int | tuple[int, int, int] | None,
         offset: Point | None,
         size: Size | None,
@@ -63,8 +52,8 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Parameters
         ----------
-        open_slide: OpenSlide
-            OpenSlide object to wrap.
+        handle: OpenSlideHandle
+            Shared OpenSlide handle to read from.
         image_metadata: ImageMetadata
             Image metadata for image.
         level_index: int
@@ -78,14 +67,14 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
             blank_color,
             offset,
             size,
-            open_slide.level_dimensions,
-            open_slide.level_downsamples,
+            handle.level_dimensions,
+            handle.level_downsamples,
             image_metadata,
             level_index,
             tile_size,
             encoder,
         )
-        self._osr = open_slide._osr
+        self._handle = handle
 
     def read_region(self, region: Region, z: float, path: str) -> Image:
         """Read a pixel region directly from the openslide object.
@@ -130,24 +119,18 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         """
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError("Negative size not allowed")
-        CHANNELS = 4
 
         location_in_base_level = region.start * self._downsample + self._offset
 
-        region_data = np.empty(
-            region.size.to_tuple() + (CHANNELS,), dtype=ctypes.c_uint8
-        )
-
-        _read_region(
-            self._osr,
-            region_data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint32)),
+        region_data = self._handle.read(
             location_in_base_level.x,
             location_in_base_level.y,
             self._level_index,
             region.size.width,
             region.size.height,
         )
-        region_data.shape = (region.size.height, region.size.width, CHANNELS)
+        if region_data is None:
+            return None
         if self._detect_blank_tile(region_data):
             return None
 
