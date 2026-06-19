@@ -28,7 +28,6 @@ from PIL.Image import Image
 from pydicom import Dataset
 from pydicom.uid import UID
 from wsidicom import WsiDicom
-from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
