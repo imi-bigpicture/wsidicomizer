@@ -303,8 +303,6 @@ class WsiDicomizer(WsiDicom):
     @staticmethod
     def _select_encoder(
         encoding: Encoder | EncodingSettings | None = None,
-    ) -> Encoder:
-        """Return encoder from encoding."""
     ) -> Encoder | None:
         """Return encoder from encoding, or None to let the source pick a default.
 
@@ -313,12 +311,7 @@ class WsiDicomizer(WsiDicom):
         ``DicomizerSource._default_encoder``.
         """
         if encoding is None:
-            encoding = JpegSettings()
             return None
         if isinstance(encoding, EncodingSettings):
-            encoder = Encoder.create_for_settings(encoding)
-        else:
-            encoder = encoding
-        return encoder
             return Encoder.create_for_settings(encoding)
         return encoding
