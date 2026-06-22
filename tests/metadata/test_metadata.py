@@ -14,6 +14,7 @@
 
 
 import pytest
+from opentile import Metadata
 from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
@@ -27,8 +28,6 @@ from wsidicom.metadata import (
     Study,
     WsiMetadata,
 )
-
-from opentile import Metadata
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
