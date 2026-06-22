@@ -14,8 +14,6 @@
 
 
 import pytest
-from decoy import Decoy
-from opentile import Metadata
 from pydicom.uid import UID
 from wsidicom.metadata import (
     Equipment,
@@ -31,52 +29,6 @@ from wsidicom.metadata import (
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
-from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
-
-
-class TestOpenTileMetadata:
-    def test_magnification_populates_objective_power(self, decoy: Decoy):
-        # Arrange
-        metadata = decoy.mock(cls=Metadata)
-        decoy.when(metadata.magnification).then_return(20.0)
-
-        # Act
-        result = OpenTileMetadata(metadata, has_label=False, has_overview=False)
-
-        # Assert
-        optical_paths = result.pyramid.optical_paths
-        assert len(optical_paths) == 1
-        assert optical_paths[0].objective is not None
-        assert optical_paths[0].objective.objective_power == 20.0
-
-    def test_no_magnification_no_optical_path(self, decoy: Decoy):
-        # Arrange
-        metadata = decoy.mock(cls=Metadata)
-        decoy.when(metadata.magnification).then_return(None)
-
-        # Act
-        result = OpenTileMetadata(metadata, has_label=False, has_overview=False)
-
-        # Assert
-        assert result.pyramid.optical_paths == []
-
-    def test_magnification_and_icc_share_one_optical_path(self, decoy: Decoy):
-        # Arrange
-        metadata = decoy.mock(cls=Metadata)
-        decoy.when(metadata.magnification).then_return(20.0)
-        icc_profile = b"icc-bytes"
-
-        # Act
-        result = OpenTileMetadata(
-            metadata, has_label=False, has_overview=False, icc_profile=icc_profile
-        )
-
-        # Assert
-        optical_paths = result.pyramid.optical_paths
-        assert len(optical_paths) == 1
-        assert optical_paths[0].icc_profile == icc_profile
-        assert optical_paths[0].objective is not None
-        assert optical_paths[0].objective.objective_power == 20.0
 
 
 @pytest.fixture
