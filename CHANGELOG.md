@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Objective lens power is now populated in the optical path (`ObjectiveLensPower`, `(0048,0112)`) for SVS and NDPI (via opentile) and for openslide/tiffslide sources that report `objective-power` (#207).
-- Support for converting array-based pyramids (numpy, zarr, dask, ...) to DICOM (#135). Pass in-memory or array-object levels via `WsiDicomizer.open_array(levels, metadata=...)`, or point `WsiDicomizer.open()`/`convert()` at an on-disk `.zarr` store. Levels are read on demand, so a chunked zarr backing is never materialized in full. Pixel spacing must be supplied via `metadata` as an array carries none.
 
 ### Changed
 
