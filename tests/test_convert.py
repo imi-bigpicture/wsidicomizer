@@ -404,10 +404,14 @@ class TestWsiDicomizerConvert:
         )
 
         # Act
-        image_data = wsi.pyramids[0].base_level.default_instance.image_data
+        transfer_syntaxes = [
+            level.default_instance.image_data.transfer_syntax
+            for level in wsi.pyramid.levels
+        ]
 
         # Assert
-        assert image_data.transfer_syntax == expected_transfer_syntax
+        for transfer_syntax in transfer_syntaxes:
+            assert transfer_syntax == expected_transfer_syntax
 
     @pytest.mark.parametrize(
         ["file_format", "file"],

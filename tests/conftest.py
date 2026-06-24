@@ -19,7 +19,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 import pytest
-from pydicom.uid import JPEG2000, UID
+from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
 from wsidicom import WsiDicom
 from wsidicom.codec.encoder import Encoder, Jpeg2kEncoder, Jpeg2kSettings
 
@@ -180,6 +180,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
+            "transfer_syntax": JPEGBaseline8Bit,
             "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
             "icc_profile": False,
             "read_region": [
@@ -513,6 +514,7 @@ test_parameters = {
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_FULL_422",
+            "transfer_syntax": JPEGBaseline8Bit,
             "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": False,
             "read_region": [
