@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-06-24
+
 ### Added
 
 - Objective lens power is now populated in the optical path (`ObjectiveLensPower`, `(0048,0112)`) for SVS and NDPI (via opentile) and for openslide/tiffslide sources that report `objective-power` (#207).
