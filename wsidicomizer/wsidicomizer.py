@@ -30,7 +30,7 @@ from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
-from wsidicom.file import OffsetTableType
+from wsidicom.file import InstanceSplit, OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -129,6 +129,7 @@ class WsiDicomizer(WsiDicom):
         tile_size: int | None = 512,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
         add_missing_levels: bool = False,
+        regenerate_pyramid: bool = False,
         include_levels: Sequence[int] | None = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -141,6 +142,7 @@ class WsiDicomizer(WsiDicom):
         encoding: Encoder | EncodingSettings | None = None,
         force_transcoding: bool = False,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
+        instance_split: InstanceSplit = InstanceSplit.NONE,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         **source_args,
     ) -> list[str]:
@@ -166,6 +168,10 @@ class WsiDicomizer(WsiDicom):
             generate UIDs for created instances.
         add_missing_levels: bool = False
             If to add missing dyadic levels up to the single tile level.
+        regenerate_pyramid: bool = False
+            If True, only the base level is read from the source and every
+            other written level is re-derived by downsampling from the base.
+            When set, the base level must be among the selected `include_levels`.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
             includes the two lowest levels. Negative indices can be used,
@@ -198,6 +204,11 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
             Offset table to use, 'bot' basic offset table, 'eot' extended
             offset table, 'empty' - empty offset table.
+        instance_split: InstanceSplit = InstanceSplit.NONE
+            Controls how optical paths and focal planes are split across output
+            instances. Default combines all into one instance per level.
+            `InstanceSplit.FOCAL_PLANE` and/or `InstanceSplit.OPTICAL_PATH`
+            write a separate instance per focal plane and/or optical path.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         **source_args
@@ -243,9 +254,11 @@ class WsiDicomizer(WsiDicom):
                 include_overviews=include_overview,
                 include_thumbnails=include_thumbnail,
                 add_missing_levels=add_missing_levels,
+                regenerate_pyramid=regenerate_pyramid,
                 label=label,
                 transcoding=encoding if force_transcoding else None,
                 force_transcoding=force_transcoding,
+                instance_split=instance_split,
             )
 
         return [str(filepath) for filepath in created_files]

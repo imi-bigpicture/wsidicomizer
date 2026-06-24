@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Objective lens power is now populated in the optical path (`ObjectiveLensPower`, `(0048,0112)`) for SVS and NDPI (via opentile) and for openslide/tiffslide sources that report `objective-power` (#207).
+- `WsiDicomizer.convert()` and the CLI gained a `regenerate_pyramid` flag (`--regenerate-pyramid`). When set, only the base level is read from the source and every other written level is re-derived by downsampling from it.
+- `WsiDicomizer.convert()` gained an `instance_split` parameter (`InstanceSplit` flag), exposed on the CLI as `--split-focal-planes` and `--split-optical-paths`, controlling whether optical paths and/or focal planes are written as separate instances.
 
 ### Changed
 
