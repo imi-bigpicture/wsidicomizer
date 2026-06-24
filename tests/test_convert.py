@@ -378,6 +378,38 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
+        ["file_format", "file", "native_transfer_syntax", "is_converted"],
+        [
+            (
+                file_format,
+                file,
+                file_parameters.get("transfer_syntax"),
+                file_parameters["convert"],
+            )
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_transfer_syntax(
+        self,
+        encoder: Encoder,
+        native_transfer_syntax: str,
+        is_converted: bool,
+        wsi: WsiDicom,
+    ):
+        # Arrange
+        expected_transfer_syntax = (
+            encoder.transfer_syntax if is_converted else native_transfer_syntax
+        )
+
+        # Act
+        image_data = wsi.pyramids[0].base_level.default_instance.image_data
+
+        # Assert
+        assert image_data.transfer_syntax == expected_transfer_syntax
+
+    @pytest.mark.parametrize(
         ["file_format", "file"],
         [
             (file_format, file)
