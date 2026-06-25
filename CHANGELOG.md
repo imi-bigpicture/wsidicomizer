@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Aperio JPEG 2000 levels with the `APERIO_JP2000_YCBC` (33003) compression are now passed through losslessly as JPEG 2000 (`YBR_ICT`).
+
 ## [0.27.0] - 2026-06-24
 
 ### Added

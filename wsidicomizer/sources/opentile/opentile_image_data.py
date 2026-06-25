@@ -238,7 +238,10 @@ class OpenTileImageData(BaseDicomizerImageData):
         compression = self.native_compression
         if compression == COMPRESSION.JPEG:
             return JPEGBaseline8Bit
-        elif compression == COMPRESSION.APERIO_JP2000_RGB:
+        elif compression in (
+            COMPRESSION.APERIO_JP2000_RGB,
+            COMPRESSION.APERIO_JP2000_YCBC,
+        ):
             return JPEG2000
         raise NotImplementedError(f"Not supported compression {compression}")
 
