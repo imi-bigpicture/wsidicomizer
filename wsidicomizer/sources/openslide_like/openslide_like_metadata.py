@@ -67,11 +67,6 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         properties: OpenSlideLikeProperties,
         color_profile: ImageCmsProfile | None,
     ):
-        if properties.objective_power is not None:
-            OpticalPath(
-                "0",
-                objective=Objectives(objective_power=float(properties.objective_power)),
-            )
         equipment = Equipment(manufacturer=properties.vendor)
         if properties.mpp_x is None or properties.mpp_y is None:
             logging.warning(
@@ -115,9 +110,16 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         image = Image(
             pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
         )
-        if color_profile is not None:
-            optical_path = OpticalPath(icc_profile=color_profile.tobytes())
-            optical_paths = [optical_path]
+        objectives = (
+            Objectives(objective_power=float(properties.objective_power))
+            if properties.objective_power is not None
+            else None
+        )
+        icc_profile = color_profile.tobytes() if color_profile is not None else None
+        if objectives is not None or icc_profile is not None:
+            optical_paths = [
+                OpticalPath("0", objective=objectives, icc_profile=icc_profile)
+            ]
         else:
             optical_paths = []
         pyramid = Pyramid(image=image, optical_paths=optical_paths)

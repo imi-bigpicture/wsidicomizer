@@ -15,7 +15,15 @@
 """Metadata for opentile file."""
 
 from opentile import Metadata
-from wsidicom.metadata import Equipment, Image, Label, OpticalPath, Overview, Pyramid
+from wsidicom.metadata import (
+    Equipment,
+    Image,
+    Label,
+    Objectives,
+    OpticalPath,
+    Overview,
+    Pyramid,
+)
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
@@ -46,9 +54,15 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             metadata.aquisition_datetime,
             image_coordinate_system=image_coordinate_system,
         )
-        if icc_profile is not None:
-            optical_path = OpticalPath(icc_profile=icc_profile)
-            optical_paths = [optical_path]
+        objectives = (
+            Objectives(objective_power=metadata.magnification)
+            if metadata.magnification is not None
+            else None
+        )
+        if objectives is not None or icc_profile is not None:
+            optical_paths = [
+                OpticalPath("0", objective=objectives, icc_profile=icc_profile)
+            ]
         else:
             optical_paths = []
         pyramid = Pyramid(image=image, optical_paths=optical_paths)

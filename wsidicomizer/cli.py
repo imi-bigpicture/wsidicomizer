@@ -24,7 +24,7 @@ from wsidicom.codec.settings import (
     JpegXlSettings,
     Subsampling,
 )
-from wsidicom.file import OffsetTableType
+from wsidicom.file import InstanceSplit, OffsetTableType
 from wsidicom.metadata.schema.json.wsi import WsiMetadataJsonSchema
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -94,6 +94,24 @@ class CliEncodingsOptions(Enum):
     "--add-missing-levels",
     is_flag=True,
     help="If to add missing dyadic levels up to the single tile level.",
+)
+@click.option(
+    "--regenerate-pyramid",
+    is_flag=True,
+    help=(
+        "Read only the base level from the source and re-derive every other "
+        "written level by downsampling from it."
+    ),
+)
+@click.option(
+    "--split-focal-planes",
+    is_flag=True,
+    help="Write a separate instance per focal plane.",
+)
+@click.option(
+    "--split-optical-paths",
+    is_flag=True,
+    help="Write a separate instance per optical path.",
 )
 @click.option(
     "--label",
@@ -178,6 +196,9 @@ def main(
     default_metadata: Path | None,
     levels: tuple[int, ...],
     add_missing_levels: bool,
+    regenerate_pyramid: bool,
+    split_focal_planes: bool,
+    split_optical_paths: bool,
     label: Path | None,
     no_label: bool,
     no_overview: bool,
@@ -209,6 +230,12 @@ def main(
     # Convert levels tuple to list or None
     include_levels = list(levels) if levels else None
 
+    instance_split = InstanceSplit.NONE
+    if split_focal_planes:
+        instance_split |= InstanceSplit.FOCAL_PLANE
+    if split_optical_paths:
+        instance_split |= InstanceSplit.OPTICAL_PATH
+
     # Create encoding settings
     if encoding_format is None:
         encoding_settings = None
@@ -237,6 +264,7 @@ def main(
         default_metadata=loaded_default_metadata,
         tile_size=tile_size,
         add_missing_levels=add_missing_levels,
+        regenerate_pyramid=regenerate_pyramid,
         include_levels=include_levels,
         include_label=not no_label,
         include_overview=not no_overview,
@@ -246,6 +274,7 @@ def main(
         encoding=encoding_settings,
         force_transcoding=force_transcoding,
         offset_table=offset_table,
+        instance_split=instance_split,
         label=label,
         preferred_source=source,
     )

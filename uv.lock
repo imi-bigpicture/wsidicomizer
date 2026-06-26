@@ -690,7 +690,7 @@ wheels = [
 
 [[package]]
 name = "opentile"
-version = "0.22.0"
+version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -704,9 +704,9 @@ dependencies = [
     { name = "tifffile" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/2a/1cc45a7913c12a3d451d176754f367832093eca660e050d6c869720d3ad3/opentile-0.22.0.tar.gz", hash = "sha256:0d851b3dea9938fe2f9de5b12953aa0e99c209a887050534f1009569b4b8ff69", size = 571424, upload-time = "2026-06-17T14:12:54.979Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/45/a334b27a439d230a455f0fd327e950b25f256becefab184bbb1e1667670a/opentile-0.23.0.tar.gz", hash = "sha256:93f22b9a69d9dfa1f2e10a0035fbe0ac9f79affed9f89e36be8389b66b3c33a0", size = 572518, upload-time = "2026-06-24T21:07:23.695Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a7/58/a8434c65222ff854b86457a527561dea5348473a366f0e5052df9cbfc059/opentile-0.22.0-py3-none-any.whl", hash = "sha256:b99536799cde7f6bfd6c4423bf4862d973dc6d1dbe6f43ec46b7e7669ca57d7c", size = 66060, upload-time = "2026-06-17T14:12:53.649Z" },
+    { url = "https://files.pythonhosted.org/packages/48/7f/e1d6b2a3ed898a1439fbb33fbc26313819f06b76f09317018be8b7a10e13/opentile-0.23.0-py3-none-any.whl", hash = "sha256:c212b80d4f93f4007560347092e0d85be6c7b97900669953069906fe7a2d609a", size = 66907, upload-time = "2026-06-24T21:07:19.04Z" },
 ]
 
 [[package]]
@@ -1335,7 +1335,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.31.0"
+version = "0.32.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1347,14 +1347,14 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9e/30/e5bfd65af3ed83efe808567e5bd63a86a1ceea83c2c68f1e5f184f24ad48/wsidicom-0.31.0.tar.gz", hash = "sha256:3183b11434d70fa362a696720e6af6a6cae67f92566465a744ee07dc5ae9802b", size = 950754, upload-time = "2026-06-17T13:36:43.129Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/91/501a4e3607517ccf68da3f961cc30cd5d5e9b5c84a17ef7a0aff3afcfc55/wsidicom-0.32.1.tar.gz", hash = "sha256:0d8b1e9c8517feca3fd12f3cec3548190ee9f262e809446cc579d9127e0643a3", size = 968842, upload-time = "2026-06-24T21:36:55.73Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/19/93f97417ef60d0a6885e04f55e691d1c171e55b01b807cdb3049217f274a/wsidicom-0.31.0-py3-none-any.whl", hash = "sha256:4a4d7c4c8b5eabff6106f64e4e3f426197aac67dfb720e11a3ad1e199e8d3b0d", size = 278502, upload-time = "2026-06-17T13:36:41.564Z" },
+    { url = "https://files.pythonhosted.org/packages/49/8b/5a204016ecf69a151cea14f6a764a784523b28ff0edd2062a5faab5e45fb/wsidicom-0.32.1-py3-none-any.whl", hash = "sha256:430d08c5fba7d2959266f6f5fe3d8c2da4b529048b73352d33ce37ed66cefd9e", size = 283816, upload-time = "2026-06-24T21:36:54.319Z" },
 ]
 
 [[package]]
 name = "wsidicomizer"
-version = "0.26.1"
+version = "0.27.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1413,7 +1413,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.6.0" },
     { name = "openslide-python", marker = "extra == 'openslide'", specifier = ">=1.3.0,<2.0.0" },
-    { name = "opentile", specifier = ">=0.22.0,<0.23.0" },
+    { name = "opentile", specifier = ">=0.23.0,<0.24.0" },
     { name = "pydicom", specifier = ">=3.0.0" },
     { name = "pyisyntax", marker = "extra == 'isyntax'", specifier = ">=0.1.2,<0.2.0" },
     { name = "pyjpegls", marker = "extra == 'pyjpegls'", specifier = ">=1.2.0,<2.0.0" },
@@ -1421,7 +1421,7 @@ requires-dist = [
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=3.0.0,<4.0.0" },
-    { name = "wsidicom", specifier = ">=0.31.0,<0.32.0" },
+    { name = "wsidicom", specifier = ">=0.32.1,<0.33.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
 
