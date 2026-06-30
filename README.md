@@ -40,6 +40,12 @@ For czi and isyntax only the base level is read from file. To produce a conversi
 pip install wsidicomizer
 ```
 
+***Alternative install wsidicomizer from conda***
+
+```console
+conda install -c conda-forge wsidicomizer
+```
+
 See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
 
 ***Install libjpeg-turbo***
