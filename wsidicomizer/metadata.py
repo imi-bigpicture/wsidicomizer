@@ -21,6 +21,7 @@ from typing import Any, TypeVar
 from pydicom import Dataset
 from pydicom.uid import UID
 from wsidicom.metadata import (
+    ContributingEquipment,
     Equipment,
     Image,
     Label,
@@ -53,6 +54,7 @@ class WsiDicomizerMetadata(WsiMetadata):
         overview: Overview | None = None,
         frame_of_reference_uid: UID | None = None,
         dimension_organization_uids: Sequence[UID] | None = None,
+        contributing_equipment: Sequence[ContributingEquipment] | None = None,
     ):
         super().__init__(
             study if study is not None else Study(),
@@ -65,6 +67,7 @@ class WsiDicomizerMetadata(WsiMetadata):
             overview,
             frame_of_reference_uid,
             dimension_organization_uids,
+            contributing_equipment if contributing_equipment is not None else (),
         )
 
     def merge(

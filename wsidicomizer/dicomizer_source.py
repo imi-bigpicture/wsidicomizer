@@ -18,7 +18,9 @@ files."""
 from abc import ABCMeta, abstractmethod
 from collections.abc import Sequence
 from dataclasses import replace
+from datetime import datetime
 from functools import cached_property
+from importlib.metadata import version
 from pathlib import Path
 
 import numpy as np
@@ -28,8 +30,10 @@ from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
 from wsidicom.codec.settings import Channels
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import WsiDataset, WsiInstance
+from wsidicom.conceptcode import ContributingEquipmentPurposeCode
 from wsidicom.metadata import (
     CallableUidGenerator,
+    ContributingEquipment,
     ImageType,
     UidGenerator,
     WsiMetadata,
@@ -191,7 +195,30 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             self._include_confidential,
         )
         merged = self._ensure_required_content(merged)
+        merged = self._add_contributing_equipment(merged)
         return MetadataUidResolver(self._uid_generator).resolve(merged)
+
+    @staticmethod
+    def _add_contributing_equipment(metadata: WsiMetadata) -> WsiMetadata:
+        """Record wsidicomizer as contributing (modifying) equipment, so the
+        converted file documents that it was produced by a tool rather than
+        acquired directly by the scanner. Appended, preserving any existing items.
+        """
+        wsidicomizer_equipment = ContributingEquipment(
+            purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
+            manufacturer="wsidicomizer",
+            model_name="wsidicomizer",
+            software_versions=[version("wsidicomizer")],
+            description="Converted to DICOM WSI by wsidicomizer",
+            contribution_datetime=datetime.now(),
+        )
+        return replace(
+            metadata,
+            contributing_equipment=[
+                *metadata.contributing_equipment,
+                wsidicomizer_equipment,
+            ],
+        )
 
     @staticmethod
     def _ensure_required_content(metadata: WsiMetadata) -> WsiMetadata:
