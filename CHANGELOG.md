@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Aperio JPEG 2000 levels with the `APERIO_JP2000_YCBC` (33003) compression are now passed through losslessly as JPEG 2000 (`YBR_ICT`) instead of being transcoded to lossy JPEG Baseline.
+- JPEG 2000 levels from `OpenTile` sources (svs, ndpi, ...) are now written with the transfer syntax matching the codestream wavelet: reversible (5/3) streams use `JPEG2000Lossless` (`YBR_RCT`) and irreversible (9/7) streams use `JPEG2000` (`YBR_ICT`). Previously all were written as the irreversible `JPEG2000`.
+- The transfer syntax for `OpenTile` sources is now resolved from the parsed codestream (`TiffImage.encoded_info`) instead of the raw compression code. Unexpected codestreams (non-baseline JPEG, extended JPEG 2000, ...) now fall through to transcoding instead of risking a mislabeled transfer syntax.
 - Corrected image orientation for `mrxs` so that label is at the bottom.
 - Corrected image orientation for `svs` overview image to match the level orientation.
 

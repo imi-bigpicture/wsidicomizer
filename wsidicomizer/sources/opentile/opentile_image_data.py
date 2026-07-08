@@ -17,6 +17,8 @@
 import dataclasses
 from collections.abc import Iterable, Iterator
 
+from opentile.jpeg import JpegInfo, JpegProcess
+from opentile.jpeg2000 import Jpeg2000Info
 from opentile.tiff_image import (
     AssociatedTiffImage,
     LevelTiffImage,
@@ -234,16 +236,30 @@ class OpenTileImageData(BaseDicomizerImageData):
             return False
 
     def get_transfer_syntax(self) -> UID:
-        """Return transfer syntax (UID) for compression type in image data."""
-        compression = self.native_compression
-        if compression == COMPRESSION.JPEG:
-            return JPEGBaseline8Bit
-        elif compression in (
-            COMPRESSION.APERIO_JP2000_RGB,
-            COMPRESSION.APERIO_JP2000_YCBC,
+        """Return the transfer syntax (UID) for the encoded image data, or raise
+        NotImplementedError if it can not be passed through unchanged (and must
+        therefore be transcoded).
+
+        Dispatches on the parsed codestream info from opentile rather than the
+        raw compression code, so any unexpected codestream (non-baseline JPEG,
+        extended JPEG 2000, ...) falls through to transcoding instead of being
+        mislabeled.
+        """
+        info = self._tiff_image.encoded_info
+        if (
+            isinstance(info, JpegInfo)
+            and info.process == JpegProcess.BASELINE
+            and info.bit_depth == 8
         ):
-            return JPEG2000
-        raise NotImplementedError(f"Not supported compression {compression}")
+            return JPEGBaseline8Bit
+        # Part-1 only; reversible (5/3) is lossless, irreversible (9/7) lossy.
+        if isinstance(info, Jpeg2000Info) and not info.extended:
+            return JPEG2000Lossless if info.reversible else JPEG2000
+            if info.reversible:
+                return JPEG2000Lossless
+            else:
+                return JPEG2000
+        raise NotImplementedError(f"Not supported encoding {self.native_compression}")
 
 
 class OpenTileLevelImageData(OpenTileImageData):
