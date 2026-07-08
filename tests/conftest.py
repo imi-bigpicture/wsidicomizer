@@ -216,7 +216,7 @@ test_parameters = {
             "encode_format": "jpeg2000",
             "encode_quality": 0,
             "photometric_interpretation": "YBR_ICT",
-            "image_coordinate_system": {"x": 2.3061675, "y": 20.79015, "rotation": 0},
+            "image_coordinate_system": {"x": 2.3061675, "y": 20.79015, "rotation": 270},
             "icc_profile": False,
             "read_region": [
                 {
