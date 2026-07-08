@@ -28,9 +28,9 @@ from pydicom import Dataset, config
 from wsidicom import ImageData
 from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
 from wsidicom.codec.settings import Channels
+from wsidicom.conceptcode import ContributingEquipmentPurposeCode
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import WsiDataset, WsiInstance
-from wsidicom.conceptcode import ContributingEquipmentPurposeCode
 from wsidicom.metadata import (
     CallableUidGenerator,
     ContributingEquipment,

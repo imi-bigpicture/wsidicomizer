@@ -16,7 +16,6 @@ from dataclasses import replace
 from importlib.metadata import version
 
 import pytest
-
 from wsidicom.conceptcode import ContributingEquipmentPurposeCode
 from wsidicom.metadata import (
     ContributingEquipment,
