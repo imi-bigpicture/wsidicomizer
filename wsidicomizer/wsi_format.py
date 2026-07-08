@@ -54,12 +54,12 @@ class FormatCoordinateDefaults:
     def from_wsi_format(cls, wsi_format: WsiFormat) -> "FormatCoordinateDefaults":
         """Return the default coordinate system rotations for a WSI format."""
         rotations: dict[WsiFormat, tuple[float, float | None, float | None]] = {
-            WsiFormat.SVS: (180.0, 180.0, 90.0),
+            WsiFormat.SVS: (180.0, 180.0, 180.0),
             WsiFormat.NDPI: (180.0, 180.0, 180.0),
             WsiFormat.PHILIPS_TIFF: (180.0, 180.0, 180.0),
             WsiFormat.HISTECH_TIFF: (0.0, None, None),
             WsiFormat.OME_TIFF: (0.0, None, None),
-            WsiFormat.MIRAX: (0.0, 0.0, 0.0),
+            WsiFormat.MIRAX: (270.0, 270.0, 270.0),
             WsiFormat.VENTANA: (0.0, None, None),
             WsiFormat.CZI: (0.0, None, None),
             WsiFormat.ISYNTAX: (180.0, 180.0, 180.0),

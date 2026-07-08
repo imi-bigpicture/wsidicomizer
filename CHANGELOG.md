@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Aperio JPEG 2000 levels with the `APERIO_JP2000_YCBC` (33003) compression are now passed through losslessly as JPEG 2000 (`YBR_ICT`).
+- Aperio JPEG 2000 levels with the `APERIO_JP2000_YCBC` (33003) compression are now passed through losslessly as JPEG 2000 (`YBR_ICT`) instead of being transcoded to lossy JPEG Baseline.
+- Corrected image orientation for `mrxs` so that label is at the bottom.
+- Corrected image orientation for `svs` overview image to match the level orientation.
 
 ## [0.27.0] - 2026-06-24
 
