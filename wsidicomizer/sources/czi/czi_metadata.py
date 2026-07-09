@@ -41,7 +41,7 @@ class CziMetadata(WsiDicomizerMetadata):
         # input, so the stdlib parser is acceptable here.
         self._metadata = ElementTree.fromstring(metadata_xml)  # noqa: S314
         image = Image(
-            acquisition_datetime=self.aquisition_datetime,
+            acquisition_datetime=self.acquisition_datetime,
             pixel_spacing=self.pixel_spacing,
             image_coordinate_system=FormatCoordinateDefaults.from_wsi_format(
                 WsiFormat.CZI
@@ -58,7 +58,7 @@ class CziMetadata(WsiDicomizerMetadata):
         super().__init__(equipment=equipment, pyramid=pyramid)
 
     @property
-    def aquisition_datetime(self) -> datetime | None:
+    def acquisition_datetime(self) -> datetime | None:
         value = self.get_value_from_element(
             self._metadata,
             "AcquisitionDateAndTime",

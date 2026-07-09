@@ -29,7 +29,7 @@ def opentile_metadata(decoy: Decoy) -> Metadata:
     decoy.when(metadata.scanner_model).then_return(None)
     decoy.when(metadata.scanner_serial_number).then_return(None)
     decoy.when(metadata.scanner_software_versions).then_return(None)
-    decoy.when(metadata.aquisition_datetime).then_return(None)
+    decoy.when(metadata.acquisition_datetime).then_return(None)
     decoy.when(metadata.magnification).then_return(None)
     return metadata
 
@@ -130,7 +130,7 @@ class TestOpenTileMetadata:
     ):
         # Arrange
         acquired = datetime(2026, 6, 22, 12, 0, 0)
-        decoy.when(opentile_metadata.aquisition_datetime).then_return(acquired)
+        decoy.when(opentile_metadata.acquisition_datetime).then_return(acquired)
 
         # Act
         result = OpenTileMetadata(

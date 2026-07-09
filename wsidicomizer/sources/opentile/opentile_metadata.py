@@ -51,7 +51,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             defaults = None
             image_coordinate_system = None
         image = Image(
-            metadata.aquisition_datetime,
+            metadata.acquisition_datetime,
             image_coordinate_system=image_coordinate_system,
         )
         objectives = (
@@ -72,7 +72,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             )
             label = Label(
                 image=Image(
-                    metadata.aquisition_datetime,
+                    metadata.acquisition_datetime,
                     image_coordinate_system=label_image_coordinate_system,
                 ),
                 optical_paths=[],
@@ -85,7 +85,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             )
             overview = Overview(
                 image=Image(
-                    metadata.aquisition_datetime,
+                    metadata.acquisition_datetime,
                     image_coordinate_system=overview_image_coordinate_system,
                 ),
                 optical_paths=[],
