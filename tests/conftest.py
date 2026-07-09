@@ -31,6 +31,8 @@ test_parameters = {
     "svs": {
         "CMU-1/CMU-1.svs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
@@ -84,6 +86,8 @@ test_parameters = {
         },
         "JP2K-33003-1/JP2K-33003-1.svs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": False,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
@@ -131,6 +135,8 @@ test_parameters = {
         },
         "CMU-1-JP2K-33005/CMU-1-JP2K-33005.svs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": False,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
@@ -178,6 +184,8 @@ test_parameters = {
         },
         "svs1/input.svs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
@@ -229,6 +237,8 @@ test_parameters = {
         },
         "zstack1/zstack1.svs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": False,
             "include_levels": [0, 1],
             "lowest_included_pyramid_level": 0,
@@ -271,6 +281,8 @@ test_parameters = {
     "czi": {
         "czi1/input.czi": {
             "convert": False,
+            "has_label": False,
+            "has_overview": False,
             "openslide": False,
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,
@@ -305,6 +317,8 @@ test_parameters = {
     "mirax": {
         "CMU-1/CMU-1.mrxs": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [4, 6],
             "lowest_included_pyramid_level": 4,
@@ -352,6 +366,8 @@ test_parameters = {
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
@@ -410,6 +426,8 @@ test_parameters = {
         },
         "ndpi1/input.ndpi": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
@@ -461,6 +479,8 @@ test_parameters = {
         },
         "ndpi2/input.ndpi": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [4, 6],
             "lowest_included_pyramid_level": 4,
@@ -500,6 +520,8 @@ test_parameters = {
         },
         "zstack1/zstack1.ndpi": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
@@ -549,6 +571,8 @@ test_parameters = {
     "philips_tiff": {
         "philips1/input.tif": {
             "convert": True,
+            "has_label": True,
+            "has_overview": True,
             "openslide": True,
             "include_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
@@ -608,6 +632,8 @@ test_parameters = {
     "isyntax": {
         "isyntax1/testslide.isyntax": {
             "convert": False,
+            "has_label": True,
+            "has_overview": True,
             "openslide": False,
             "include_levels": [0],
             "lowest_included_pyramid_level": 0,

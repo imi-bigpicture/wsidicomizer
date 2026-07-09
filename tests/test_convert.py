@@ -560,6 +560,42 @@ class TestWsiDicomizerConvert:
         assert has_thumbnail_instances == embedded_thumbnail
 
     @pytest.mark.parametrize(
+        ["file_format", "file", "has_label"],
+        [
+            (file_format, file, file_parameters["has_label"])
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_has_label(self, wsi: WsiDicom, has_label: bool):
+        # Arrange
+
+        # Act
+        actual_has_label = wsi.labels is not None and len(wsi.labels) > 0
+
+        # Assert
+        assert actual_has_label == has_label
+
+    @pytest.mark.parametrize(
+        ["file_format", "file", "has_overview"],
+        [
+            (file_format, file, file_parameters["has_overview"])
+            for file_format, format_files in test_parameters.items()
+            for file, file_parameters in format_files.items()
+        ],
+        scope="module",
+    )
+    def test_has_overview(self, wsi: WsiDicom, has_overview: bool):
+        # Arrange
+
+        # Act
+        actual_has_overview = wsi.overviews is not None and len(wsi.overviews) > 0
+
+        # Assert
+        assert actual_has_overview == has_overview
+
+    @pytest.mark.parametrize(
         ["file_format", "file", "embedded_thumbnail_size"],
         [
             (file_format, file, file_parameters["embedded_thumbnail_size"])
