@@ -35,6 +35,8 @@ test_parameters = {
             "include_levels": [0, 1, 2],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
+            "transfer_syntax": JPEGBaseline8Bit,
+            "passthrough": True,
             "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
             "icc_profile": True,
             "read_region": [
@@ -78,6 +80,100 @@ test_parameters = {
             ],
             "thumbnail_pixel_spacing": (0.022416015625, 0.022416015625),
             "imaged_size": (22.954000473022461, 16.42408561706543),
+            "focal_planes": [0.0],
+        },
+        "JP2K-33003-1/JP2K-33003-1.svs": {
+            "convert": True,
+            "openslide": False,
+            "include_levels": [0, 1, 2],
+            "lowest_included_pyramid_level": 0,
+            "photometric_interpretation": "YBR_ICT",
+            "transfer_syntax": JPEG2000,
+            "passthrough": True,
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
+            "icc_profile": True,
+            "read_region": [
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 0,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "59e3ed51eba8344291349fd714e88df5",
+                },
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 1,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "f1c1962496298e5b92dff48a885fcd55",
+                },
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 2,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "a558d7078c9e977bdb0f473335ad3851",
+                },
+            ],
+            "read_region_openslide": [],
+            "read_thumbnail": [
+                {
+                    "size": {"width": 512, "height": 512},
+                    "md5": "809b85697e43b71c2b2ba77a777b91f1",
+                }
+            ],
+            "embedded_thumbnail_size": (674, 768),
+            "pixel_spacings": [
+                (0.0002498, 0.0002498),
+                (0.00099933000260, 0.00099933000260),
+                (0.00199918021864, 0.00199918021864),
+            ],
+            "thumbnail_pixel_spacing": (0.00569796023739, 0.00569796023739),
+            "imaged_size": (3.8404252529144287, 4.370750427246094),
+            "focal_planes": [0.0],
+        },
+        "CMU-1-JP2K-33005/CMU-1-JP2K-33005.svs": {
+            "convert": True,
+            "openslide": False,
+            "include_levels": [0, 1, 2],
+            "lowest_included_pyramid_level": 0,
+            "photometric_interpretation": "YBR_ICT",
+            "transfer_syntax": JPEG2000,
+            "passthrough": True,
+            "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
+            "icc_profile": True,
+            "read_region": [
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 0,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "94bced3d9d84f51b5c953dfb1e9cd495",
+                },
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 1,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "44ceca50920e864c665ac54adf01a981",
+                },
+                {
+                    "location": {"x": 0, "y": 0},
+                    "level": 2,
+                    "size": {"width": 200, "height": 200},
+                    "md5": "acb6dcf3afecde42a6d4f9d707f254c8",
+                },
+            ],
+            "read_region_openslide": [],
+            "read_thumbnail": [
+                {
+                    "size": {"width": 512, "height": 512},
+                    "md5": "e9ab4d977293f7739aee97e9ee615cbd",
+                }
+            ],
+            "embedded_thumbnail_size": (1024, 732),
+            "pixel_spacings": [
+                (0.000499, 0.000499),
+                (0.001996, 0.001996),
+                (0.007984, 0.007984),
+            ],
+            "thumbnail_pixel_spacing": (0.022416015625, 0.022416015625),
+            "imaged_size": (22.95400047302246, 16.413606643676758),
             "focal_planes": [0.0],
         },
         "svs1/input.svs": {
@@ -261,6 +357,8 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
+            "transfer_syntax": JPEGBaseline8Bit,
+            "passthrough": True,
             "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
             "icc_profile": False,
             "read_region": [

@@ -25,6 +25,14 @@ FILES: dict[str, dict[str, Any]] = {
         "url": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1.svs",  # NOQA
         "md5": {"CMU-1.svs": "751b0b86a3c5ff4dfc8567cf24daaa85"},
     },
+    "svs/JP2K-33003-1/JP2K-33003-1.svs": {
+        "url": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/JP2K-33003-1.svs",  # NOQA
+        "md5": {"JP2K-33003-1.svs": "a38c8a8f747e3858c615614e4e0f6d30"},
+    },
+    "svs/CMU-1-JP2K-33005/CMU-1-JP2K-33005.svs": {
+        "url": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1-JP2K-33005.svs",  # NOQA
+        "md5": {"CMU-1-JP2K-33005.svs": "b08f34f9d16c49e2c4a5bc91c4597fd1"},
+    },
     "ndpi/CMU-1/CMU-1.ndpi": {
         "url": "https://openslide.cs.cmu.edu/download/openslide-testdata/Hamamatsu/CMU-1.ndpi",  # NOQA
         "md5": {"CMU-1.ndpi": "fb89dea54f85fb112e418a3cf4c7888a"},
