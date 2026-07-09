@@ -401,7 +401,7 @@ class CziImageData(BaseDicomizerImageData):
         y_start: int | None = None
         y_size: int | None = None
         z = 0.0
-        c = "0"
+        c = "1"
 
         for dimension, start, size in zip(
             block.dims, block.start, block.shape, strict=True

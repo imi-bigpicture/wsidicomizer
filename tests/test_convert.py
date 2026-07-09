@@ -124,7 +124,7 @@ class TestWsiDicomizerConvert:
 
         # Act & Assert
         with pytest.raises(WsiDicomNotFoundError):
-            wsi.read_tile(0, (0, 0), path="1")
+            wsi.read_tile(0, (0, 0), path="non-existent-optical-path")
 
     @pytest.mark.parametrize(
         ["file_format", "file"],

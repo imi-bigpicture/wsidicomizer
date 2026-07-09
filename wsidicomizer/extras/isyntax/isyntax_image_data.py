@@ -102,7 +102,7 @@ class ISyntaxLevelImageData(PixelImageData):
 
     @property
     def optical_paths(self) -> list[str]:
-        return ["0"]
+        return ["1"]
 
     @property
     def blank_color(self) -> int | tuple[int, int, int]:
@@ -305,7 +305,7 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
 
     @property
     def optical_paths(self) -> list[str]:
-        return ["0"]
+        return ["1"]
 
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem:

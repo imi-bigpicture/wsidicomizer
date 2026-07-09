@@ -52,7 +52,7 @@ class CziMetadata(WsiDicomizerMetadata):
             software_versions=self.scanner_software_versions,
         )
         optical_paths = [
-            OpticalPath("0", objective=Objectives(objective_power=self.magnification))
+            OpticalPath("1", objective=Objectives(objective_power=self.magnification))
         ]
         pyramid = Pyramid(image=image, optical_paths=optical_paths)
         super().__init__(equipment=equipment, pyramid=pyramid)

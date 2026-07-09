@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Converted files now record wsidicomizer as contributing equipment (`ContributingEquipmentSequence`, `(0018,A001)`), documenting that the file was produced by a conversion tool rather than acquired directly by the scanner. The item uses purpose `(109103, DCM, "Modifying Equipment")`, manufacturer and model name `wsidicomizer`, the wsidicomizer version, and the conversion date and time. The scanner's own `Manufacturer`/`ManufacturerModelName` in the General Equipment module are left untouched.
 
+### Changed
+
+- The default optical path identifier is now `1` instead of `0`.
+
 ### Fixed
 
 - Aperio JPEG 2000 levels with the `APERIO_JP2000_YCBC` (33003) compression are now passed through losslessly as JPEG 2000 (`YBR_ICT`) instead of being transcoded to lossy JPEG Baseline.
