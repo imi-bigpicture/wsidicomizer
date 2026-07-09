@@ -254,7 +254,6 @@ class OpenTileImageData(BaseDicomizerImageData):
             return JPEGBaseline8Bit
         # Part-1 only; reversible (5/3) is lossless, irreversible (9/7) lossy.
         if isinstance(info, Jpeg2000Info) and not info.extended:
-            return JPEG2000Lossless if info.reversible else JPEG2000
             if info.reversible:
                 return JPEG2000Lossless
             else:
