@@ -114,7 +114,7 @@ class OpenTileImageData(BaseDicomizerImageData):
     @property
     def suggested_minimum_chunk_size(self) -> int:
         """Return suggested minimum chunk size for optimal performance with
-        get_encoeded_tiles()."""
+        get_encoded_tiles()."""
         return self._tiff_image.suggested_minimum_chunk_size
 
     @property

@@ -26,3 +26,13 @@ jobs:
         run: uv sync --all-extras
       - name: Pyright
         run: uv run pyright
+
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      - name: Typos
+        run: uv run typos wsidicomizer tests README.md CHANGELOG.md

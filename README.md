@@ -244,7 +244,7 @@ When creating the DICOM dataset, the metadata provided in the `metadata` and `de
 For example:
 
 - `equipment` in the `metadata`-parameter metadata will override the `equipment` metadata from the source image (if present).
-- `optical_paths` in the `default_metadata`-parameter metadata will be overriden by any `optical_paths` present in the `metadata` parameter metadata or source image metadata.
+- `optical_paths` in the `default_metadata`-parameter metadata will be overridden by any `optical_paths` present in the `metadata` parameter metadata or source image metadata.
 
 Note that merging is also performed on nested metadata, e.g. `focus_method` in an `Image` can be merged from the different sources.
 
@@ -343,7 +343,7 @@ scyjava.shutdown_jvm()
 Due to the need to start a JVM, the `bioformats` module is not imported when using the default `WsiDicomzer`-class unless `SourceIdentifier.BIOFORMATS` is used as preferred_source:
 
 ```python
-from wsidicomizer import SouceIdentifier, WsiDicomizer
+from wsidicomizer import SourceIdentifier, WsiDicomizer
 
 with WsiDicomizer('input file', preferred_source=SourceIdentifier.BIOFORMASTS) as wsi:
     ...

@@ -304,7 +304,7 @@ class BioformatsReader:
         reader: Memoizer, resolution_index: int, base_width: int
     ) -> float:
         """Return resolution scale for resolution as rounded int of resolution width
-        divided by base widht."""
+        divided by base width."""
         reader.setResolution(resolution_index)
         width = reader.getSizeX()
         return base_width / width
@@ -372,7 +372,7 @@ class BioformatsReader:
                 )
                 data = np.moveaxis(data, 0, 2).copy()
             if output_size is not None and data.shape[0:2] != output_size.to_tuple():
-                # Pad with zeros to get requsted output size.
+                # Pad with zeros to get requested output size.
                 if not output_size.all_greater_than_or_equal(region.size):
                     raise ValueError(
                         "Output size should be equal to or larger than region size."

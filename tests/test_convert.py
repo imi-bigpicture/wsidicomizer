@@ -613,10 +613,10 @@ class TestWsiDicomizerConvert:
         # Arrange
         assert wsi.pyramid.thumbnails is not None
         # Act
-        thumnail = wsi.pyramid.thumbnails[0]
+        thumbnail = wsi.pyramid.thumbnails[0]
 
         # Assert
-        assert thumnail.size == Size.from_tuple(embedded_thumbnail_size)
+        assert thumbnail.size == Size.from_tuple(embedded_thumbnail_size)
 
     @pytest.mark.parametrize(
         ["file_format", "file"],

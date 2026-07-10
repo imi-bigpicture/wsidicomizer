@@ -192,7 +192,7 @@ class WsiDicomizer(WsiDicom):
             Maximum number of thread workers to use.
         chunk_size: Optional[int] = None,
             Chunk size (number of tiles) to process at a time. Actual chunk
-            size also depends on minimun_chunk_size from image_data.
+            size also depends on minimum_chunk_size from image_data.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use for images that cannot be passed
             through, or for all images if `force_transcoding=True`. If None,
