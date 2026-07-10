@@ -1,0 +1,35 @@
+name: release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  pypi:
+    needs: [lint]  # don't publish unless CI is green
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for PyPI trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Check tag matches project version and changelog
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(uv version --short)"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Release tag ($tag) does not match pyproject version ($version)"
+            exit 1
+          fi
+          if ! grep -q "\[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no entry for [$version]"
+            exit 1
+          fi
+
+      - run: uv build
+      - run: uv publish  # trusted publishing; no token needed in CI
