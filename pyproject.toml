@@ -18,8 +18,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
-    "wsidicom>=0.32.1,<0.33.0",
-    "opentile>=0.23.0,<0.24.0",
+    "wsidicom>=0.33.0,<0.34.0",
+    "opentile>=0.24.0,<0.25.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",
     "czifile>=2026.3.12",
@@ -74,6 +74,9 @@ ignore = ["S101"]
 # data (S311), md5 for image-hash comparison (S324), and file handles whose
 # lifetime is managed by a fixture/wrapper rather than a context manager (SIM115).
 "tests/**" = ["S105", "S106", "S311", "S324", "SIM115"]
+
+[tool.typos.default.extend-words]
+ome = "ome"  # OME-TIFF format / ome-types package
 
 [build-system]
 requires = ["hatchling"]
