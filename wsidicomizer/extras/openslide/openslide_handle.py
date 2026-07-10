@@ -246,31 +246,55 @@ class OpenSlideHandle:
                 while self._readers > 0:  # drain in-flight reads
                     self._condition.wait()
                 if self._generation == read_generation:
-                    # First to observe this poisoning; reopen once. Later victims
-                    # of the same poisoning skip this and retry on the fresh handle.
+                    # First to observe this poisoning: reopen, so a failed read here
+                    # is on a guaranteed-fresh handle and is therefore definitive.
+                    self._reopen()
+                    try:
+                        self._read(region_data, x, y, level, width, height)
+                        return True
+                    except OpenSlideError as error:
+                        return self._mark_unreadable(error)
+                # A prior victim of the same poisoning already reopened, but the
+                # handle may have been re-poisoned since by another thread's bad read
+                # (whose sticky error persists after that read has drained). Try the
+                # current handle; only if that fails do we reopen for a definitive,
+                # isolated retry -- so a good region is never blanked just because
+                # another region poisoned the shared handle.
+                try:
+                    self._read(region_data, x, y, level, width, height)
+                    return True
+                except OpenSlideError:
                     self._reopen()
                 try:
                     self._read(region_data, x, y, level, width, height)
-                    return True  # retried alone on the fresh handle
+                    return True
                 except OpenSlideError as error:
-                    # Still fails when read alone on a fresh handle: a genuinely
-                    # unreadable region. Restore a clean handle for the next waiter
-                    # and blank this region.
-                    self._reopen()
-                    self._unreadable_regions += 1
-                    limit = settings.openslide_unreadable_region_limit
-                    if self._unreadable_regions > limit:
-                        raise RuntimeError(
-                            f"Aborting: {self._unreadable_regions} regions of "
-                            f"{self._filepath} could not be read even after reopening "
-                            f"the OpenSlide handle, exceeding the accepted limit of "
-                            f"{limit} (settings.openslide_unreadable_region_limit). "
-                            f"The file may be corrupt or otherwise unreadable."
-                        ) from error
-                    return False
+                    return self._mark_unreadable(error)
             finally:
                 self._recovering = False
                 self._condition.notify_all()
+
+    def _mark_unreadable(self, error: OpenSlideError) -> bool:
+        """Record a region that failed to read on a freshly reopened handle. The
+        failed read left the handle poisoned, so reopen to leave a clean one for the
+        next waiter, count the region against the limit, and return False so it is
+        rendered blank. Raises once the limit is exceeded.
+
+        Only ever called after a read that failed on a handle reopened within this
+        recovery's lock hold, so the failure is genuinely the region's, not a
+        collateral poisoning from another thread."""
+        self._reopen()
+        self._unreadable_regions += 1
+        limit = settings.openslide_unreadable_region_limit
+        if self._unreadable_regions > limit:
+            raise RuntimeError(
+                f"Aborting: {self._unreadable_regions} regions of {self._filepath} "
+                f"could not be read even after reopening the OpenSlide handle, "
+                f"exceeding the accepted limit of {limit} "
+                f"(settings.openslide_unreadable_region_limit). The file may be "
+                f"corrupt or otherwise unreadable."
+            ) from error
+        return False
 
     def close(self) -> None:
         self._slide.close()

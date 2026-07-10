@@ -165,6 +165,34 @@ class TestOpenSlideHandleRead:
         assert handle._generation == generation + 1
         decoy.verify(slides[0].close(), times=0)
 
+    def test_skip_path_reopens_before_blanking_a_repoisoned_handle(
+        self,
+        decoy: Decoy,
+        handle: OpenSlideHandle,
+        read_region: ReadRegion,
+        slides: list[OpenSlide],
+    ) -> None:
+        # Arrange: the skip-reopen path (generation already advanced), but the
+        # current handle was re-poisoned in the gap between serialized recoveries —
+        # reads on it fail, reads on the next reopened handle are unstubbed and
+        # succeed. A good region must be reopened-and-retried here, never blanked
+        # just because another thread's bad read poisoned the shared handle (#146).
+        decoy.when(
+            read_region(slides[0]._osr, ANY, ANY, ANY, ANY, ANY, ANY)
+        ).then_raise(OpenSlideError(ERROR))
+        generation = handle._generation
+        handle._generation += 1
+
+        # Act: recover with the stale generation seen before the reopen.
+        result = handle._recover(
+            generation, np.empty((1, 1, 4), np.uint8), 0, 0, 0, 1, 1
+        )
+
+        # Assert: the good region recovered on a fresh handle instead of blanking.
+        assert result is True
+        assert handle._unreadable_regions == 0
+        decoy.verify(slides[0].close(), times=1)
+
     def test_aborts_when_unreadable_limit_exceeded(
         self,
         decoy: Decoy,
@@ -281,6 +309,9 @@ class TestOpenSlideHandleRead:
         assert results[0] is None
         assert all(result is not None for result in results[1:])
         assert handle._unreadable_regions == 1
-        # One reopen recovers the poisoning; one more restores the handle after the
-        # corrupt region's retry fails.
-        assert handle._generation == 2
+        # Reopens: one clears the poisoning, one restores the handle after the
+        # corrupt region's retry re-poisons it. If the corrupt region recovers on
+        # the skip path (a victim reopened first), it reopens once more to retry on
+        # a fresh handle before blanking, rather than trusting the shared handle —
+        # so the exact count depends on recovery order.
+        assert handle._generation in (2, 3)
