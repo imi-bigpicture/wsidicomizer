@@ -46,7 +46,12 @@ from wsidicomizer.metadata import (
     MetadataPostProcessor,
     MetadataPreProcessor,
 )
-from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
+from wsidicomizer.sources import (
+    CziSource,
+    MiraxSource,
+    OpenTileSource,
+    TiffSlideSource,
+)
 
 
 class SourceIdentifier(Enum):
@@ -54,6 +59,7 @@ class SourceIdentifier(Enum):
     TIFFSLIDE = "tiffslide"
     OPENSLIDE = "openslide"
     CZI = "czi"
+    MIRAX = "mirax"
     ISYNTAX = "isyntax"
     BIOFORMATS = "bioformats"
 
@@ -343,6 +349,7 @@ class WsiDicomizer(WsiDicom):
             SourceIdentifier.OPENTILE: OpenTileSource,
             SourceIdentifier.TIFFSLIDE: TiffSlideSource,
             SourceIdentifier.CZI: CziSource,
+            SourceIdentifier.MIRAX: MiraxSource,
         }
         try:
             from wsidicomizer.extras.isyntax import ISyntaxSource
