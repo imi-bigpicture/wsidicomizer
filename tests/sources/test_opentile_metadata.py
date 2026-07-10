@@ -200,9 +200,7 @@ class TestOpenTileMetadata:
     ):
         # Arrange
         decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
-        result = OpenTileMetadata(
-            opentile_metadata, has_label=True, has_overview=False
-        )
+        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
 
         # Act
         merged = result.merge(None, None, include_confidential=True)
@@ -216,9 +214,7 @@ class TestOpenTileMetadata:
     ):
         # Arrange
         decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
-        result = OpenTileMetadata(
-            opentile_metadata, has_label=True, has_overview=False
-        )
+        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
 
         # Act
         merged = result.merge(None, None, include_confidential=False)
