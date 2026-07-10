@@ -94,26 +94,6 @@ class WsiDicomizerMetadata(WsiMetadata):
             dimension_organization_uids = user.dimension_organization_uids
         if dimension_organization_uids is None:
             dimension_organization_uids = default.dimension_organization_uids
-        # label = self._merge_module_with_image(
-        #     Label, base.label, user.label, default.label
-        # )
-        #     overview = self._merge_module_with_image(
-        #         Overview, base.overview, user.overview, default.overview
-        #     )
-        # if ensure_label:
-        #     if label is None:
-        #         label = Label(image=Image(), optical_paths=[])
-        #     elif label.image is None:
-        #         label = replace(label, image=Image())
-        #     elif label.optical_paths is None:
-        #         label = replace(label, optical_paths=[])
-        # if ensure_overview:
-        #     if overview is None:
-        #         overview = Overview(image=Image(), optical_paths=[])
-        #     if overview.image is None:
-        #         overview = replace(overview, image=Image())
-        #     elif overview.optical_paths is None:
-        #         overview = replace(overview, optical_paths=[])
         return WsiDicomizerMetadata(
             study=self._merge(Study, base.study, user.study, default.study),
             series=self._merge(Series, base.series, user.series, default.series),
