@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-07-10
+
+### Fixed
+
+- Converted non-label instances (VOLUME, OVERVIEW, THUMBNAIL) no longer produce a Slide Label module missing the required Type 2 `BarcodeValue`, which failed DICOM validation.
+
 ## [0.28.0] - 2026-07-10
 
 ### Added
@@ -477,7 +483,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.1..HEAD
+[0.28.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.0..v0.28.1
 [0.28.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.27.0..v0.28.0
 [0.27.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.26.1..v0.27.0
 [0.26.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.26.0..v0.26.1

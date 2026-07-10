@@ -1,6 +1,6 @@
 [project]
 name = "wsidicomizer"
-version = "0.28.0"
+version = "0.28.1"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = [
     { name = "Erik O Gabrielsson", email = "erik.o.gabrielsson@sectra.com" }
@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
-    "wsidicom>=0.33.0,<0.34.0",
+    "wsidicom>=0.33.1,<0.34.0",
     "opentile>=0.24.0,<0.25.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",
