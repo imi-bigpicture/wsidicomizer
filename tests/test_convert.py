@@ -432,16 +432,17 @@ class TestWsiDicomizerConvert:
 
         # Act
         with TemporaryDirectory() as temp_dir:
+            output_path = os.path.join(temp_dir, "wsi")
             WsiDicomizer.convert(
                 wsi_file,
-                temp_dir,
+                output_path,
                 include_levels=[-1],
                 label=label,
                 encoding=Jpeg2kTestEncoder(),
             )
 
             # Assert
-            with WsiDicom.open(temp_dir) as wsi:
+            with WsiDicom.open(output_path) as wsi:
                 new_label = wsi.read_label()
 
         assert np.array_equal(np.array(new_label), np.array(label))

@@ -708,6 +708,7 @@ def convert_wsi(file_path: Path, file_parameters: dict[str, Any], encoder: Encod
     force_transcoding = file_parameters.get("force_transcoding", True)
     tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
     tempdir = TemporaryDirectory()
+    os.rmdir(tempdir.name)
     WsiDicomizer.convert(
         file_path,
         output_path=tempdir.name,
