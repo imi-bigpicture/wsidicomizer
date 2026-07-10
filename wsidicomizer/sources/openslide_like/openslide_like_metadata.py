@@ -118,7 +118,9 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         icc_profile = color_profile.tobytes() if color_profile is not None else None
         if objectives is not None or icc_profile is not None:
             optical_paths = [
-                OpticalPath("1", objective=objectives, icc_profile=icc_profile)
+                OpticalPath(
+                    "1", objective=objectives, icc_profile=icc_profile
+                ).add_color_space_from_icc()
             ]
         else:
             optical_paths = []

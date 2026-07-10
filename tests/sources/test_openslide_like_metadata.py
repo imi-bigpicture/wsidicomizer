@@ -82,6 +82,19 @@ class TestOpenSlideLikeMetadata:
         assert optical_paths[0].icc_profile == color_profile.tobytes()
         assert optical_paths[0].objective is None
 
+    def test_color_space_populated_from_icc(
+        self, color_profile: ImageCms.ImageCmsProfile
+    ):
+        # Arrange
+        properties = OpenSlideLikeProperties()
+        expected = ImageCms.getProfileDescription(color_profile).strip()
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=color_profile)
+
+        # Assert
+        assert result.pyramid.optical_paths[0].color_space == expected
+
     def test_equipment_manufacturer_from_vendor(self):
         # Arrange
         properties = OpenSlideLikeProperties(vendor="aperio")

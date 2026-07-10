@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The optical path `ColorSpace` (0028,2002) is now populated from the source's embedded ICC profile description.
 - Converted files now record wsidicomizer as contributing equipment (`ContributingEquipmentSequence`, `(0018,A001)`), documenting that the file was produced by a conversion tool rather than acquired directly by the scanner. The item uses purpose `(109103, DCM, "Modifying Equipment")`, manufacturer and model name `wsidicomizer`, the wsidicomizer version, and the conversion date and time. The scanner's own `Manufacturer`/`ManufacturerModelName` in the General Equipment module are left untouched.
 - Slide label text from opentile sources is now written to the DICOM Slide Label module (`LabelText`), omitted when `include_confidential` is `False`.
 

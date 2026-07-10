@@ -17,6 +17,7 @@ from datetime import datetime
 import pytest
 from decoy import Decoy
 from opentile import Metadata
+from PIL import ImageCms
 
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 
@@ -105,6 +106,22 @@ class TestOpenTileMetadata:
         assert len(optical_paths) == 1
         assert optical_paths[0].icc_profile == icc_profile
         assert optical_paths[0].objective is None
+
+    def test_color_space_populated_from_icc(self, opentile_metadata: Metadata):
+        # Arrange
+        profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB"))
+        expected = ImageCms.getProfileDescription(profile).strip()
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata,
+            has_label=False,
+            has_overview=False,
+            icc_profile=profile.tobytes(),
+        )
+
+        # Assert
+        assert result.pyramid.optical_paths[0].color_space == expected
 
     def test_equipment_from_scanner_metadata(
         self, decoy: Decoy, opentile_metadata: Metadata
