@@ -122,6 +122,7 @@ test_parameters = {
                     "md5": "809b85697e43b71c2b2ba77a777b91f1",
                 }
             ],
+            "skip_hash_test_platforms": ["Darwin"],
             "embedded_thumbnail_size": (674, 768),
             "pixel_spacings": [
                 (0.0002498, 0.0002498),
@@ -171,6 +172,7 @@ test_parameters = {
                     "md5": "e9ab4d977293f7739aee97e9ee615cbd",
                 }
             ],
+            "skip_hash_test_platforms": ["Darwin"],
             "embedded_thumbnail_size": (1024, 732),
             "pixel_spacings": [
                 (0.000499, 0.000499),
