@@ -161,6 +161,53 @@ class TestOpenTileMetadata:
         # Assert
         assert result.label is None or result.label.image is None
 
+    def test_label_text_populates_label_without_label_image(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata, has_label=False, has_overview=False
+        )
+
+        # Assert
+        assert result.label is not None
+        assert result.label.text == "SR1274-908A"
+        assert result.label.image is None
+
+    def test_label_text_kept_when_include_confidential(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
+        result = OpenTileMetadata(
+            opentile_metadata, has_label=True, has_overview=False
+        )
+
+        # Act
+        merged = result.merge(None, None, include_confidential=True)
+
+        # Assert
+        assert merged.label is not None
+        assert merged.label.text == "SR1274-908A"
+
+    def test_label_text_dropped_when_not_include_confidential(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
+        result = OpenTileMetadata(
+            opentile_metadata, has_label=True, has_overview=False
+        )
+
+        # Act
+        merged = result.merge(None, None, include_confidential=False)
+
+        # Assert
+        assert merged.label is None or merged.label.text is None
+
     def test_overview_created_when_has_overview(self, opentile_metadata: Metadata):
         # Arrange
 

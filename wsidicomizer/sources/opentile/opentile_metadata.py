@@ -66,15 +66,19 @@ class OpenTileMetadata(WsiDicomizerMetadata):
         else:
             optical_paths = []
         pyramid = Pyramid(image=image, optical_paths=optical_paths)
-        if has_label:
+        label_text = metadata.label_text
+        if has_label or label_text is not None:
             label_image_coordinate_system = (
                 defaults.label_coordinate_system() if defaults else None
             )
             label = Label(
+                text=label_text,
                 image=Image(
                     metadata.acquisition_datetime,
                     image_coordinate_system=label_image_coordinate_system,
-                ),
+                )
+                if has_label
+                else None,
                 optical_paths=[],
             )
         else:
