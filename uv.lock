@@ -1280,19 +1280,19 @@ wheels = [
 
 [[package]]
 name = "tifffile"
-version = "2026.4.11"
+version = "2026.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d7/4a/e687f5957fead200faad58dbf9c9431a2bbb118040e96f5fb8a55f7ebc50/tifffile-2026.4.11.tar.gz", hash = "sha256:17758ff0c0d4db385792a083ad3ca51fcb0f4d942642f4d8f8bc1287fdcf17bc", size = 394956, upload-time = "2026-04-12T01:57:28.793Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/38/5e2ecef5af2f4fd4a89bb8d6240de9458bab4d51a4cbd97aeb3a0cd618e2/tifffile-2026.6.1.tar.gz", hash = "sha256:626c892c0e899d959b9438e7c0e1491dc154a7fead1f1f37a991724a50eceba9", size = 429694, upload-time = "2026-05-31T23:57:12.165Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/9f/74f110b4271ded519c7add4341cbabc824de26817ff1c345b3109df9e99c/tifffile-2026.4.11-py3-none-any.whl", hash = "sha256:9b94ffeddb39e97601af646345e8808f885773de01b299e480ed6d3a41509ec9", size = 248227, upload-time = "2026-04-12T01:57:26.969Z" },
+    { url = "https://files.pythonhosted.org/packages/81/59/208f71d70ddc6184f79b8c6d87d46eb7d7b12c19186a817dec9c9c3f3693/tifffile-2026.6.1-py3-none-any.whl", hash = "sha256:0d7382d2769b855b81ce358528e2b40c16d48aa39031746efa81215205332a8d", size = 267108, upload-time = "2026-05-31T23:57:10.597Z" },
 ]
 
 [[package]]
 name = "tiffslide"
-version = "3.0.1"
+version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec" },
@@ -1302,9 +1302,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "zarr" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/64/2c/7b966e2adbe30d96f458fe38f7a4697e33918658c2878f8844c8896f1e37/tiffslide-3.0.1.tar.gz", hash = "sha256:383de7b8013204b74f3ca5a6a5d768b1f21b7d15529a6b1d5dcbbcdd4b515b49", size = 747352, upload-time = "2026-07-03T00:43:30.82Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/58/7322b0864f45cfe8ecd24fdcd41cd0e3817626134728babae03a9e26ed6e/tiffslide-4.0.0.tar.gz", hash = "sha256:8e056c1784b591249f15fed1a68edf69f641602817a5e9763d4aa97c1457e891", size = 747516, upload-time = "2026-07-03T01:24:37.047Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/86/6829f6e93b9f820f26c09217fbaf6e15c0ea3cd06fe909132a27f74ef5d3/tiffslide-3.0.1-py3-none-any.whl", hash = "sha256:a2dbfb21f25ca717d8a81a30f23bd139bd9577c482084bfeffdcfc77fc55a3c8", size = 34625, upload-time = "2026-07-03T00:43:29.629Z" },
+    { url = "https://files.pythonhosted.org/packages/21/7e/2357f0fe30599f5d4b162248257761b82b464271761dbe6a3c0a051a1bac/tiffslide-4.0.0-py3-none-any.whl", hash = "sha256:e34141e5c9c3aac9c535b4ad1904b3f14f26e9bf9a3d04314e4289ed267985c1", size = 34727, upload-time = "2026-07-03T01:24:35.949Z" },
 ]
 
 [[package]]
@@ -1486,7 +1486,7 @@ requires-dist = [
     { name = "pylibjpeg-openjpeg", marker = "extra == 'pylibjpeg-openjpeg'", specifier = ">=2.1.1,<3.0.0" },
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
-    { name = "tiffslide", specifier = ">=3.0.0,<4.0.0" },
+    { name = "tiffslide", specifier = ">=4.0.0,<5.0.0" },
     { name = "wsidicom", specifier = ">=0.33.0,<0.34.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
@@ -1520,7 +1520,7 @@ wheels = [
 
 [[package]]
 name = "zarr"
-version = "3.1.6"
+version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "donfig" },
@@ -1530,7 +1530,7 @@ dependencies = [
     { name = "packaging" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/31/5a/b8a0cf39a14c770c30bd1f2d120c54000c8cd9e84e8e79f38d9a7ce58071/zarr-3.1.6.tar.gz", hash = "sha256:d95e72cbea4b90e9a70679468b8266400331756232576ae2b43400ac5108d0eb", size = 386531, upload-time = "2026-03-23T17:25:18.748Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/8d/aeb164004f87543b06ef54f885d02c342c31ceb274e2bbec470a98927621/zarr-3.2.1.tar.gz", hash = "sha256:71565b738a0e7e8ed226f0516eba8c6bb53440ad7669a8c48ebb3534a161d035", size = 675161, upload-time = "2026-05-05T12:37:22.383Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/7c/ba8ca8cbe9dbef8e83a95fc208fed8e6686c98b4719aaa0aa7f3d31fe390/zarr-3.1.6-py3-none-any.whl", hash = "sha256:b5a82c5079d1c3d4ee8f06746fa3b9a98a7d804300fa3f4be154362a33e1207e", size = 295655, upload-time = "2026-03-23T17:25:17.189Z" },
+    { url = "https://files.pythonhosted.org/packages/88/0a/469e2bd01be1490336e6c8707386845655d59261543315778a3ccc7e8019/zarr-3.2.1-py3-none-any.whl", hash = "sha256:f78cdd3d9687ad0e9f9cba2c5683b64f0c52589c19f685eeabe872e93cc0d2c7", size = 319617, upload-time = "2026-05-05T12:37:20.66Z" },
 ]
