@@ -242,7 +242,7 @@ class WsiDicomizer(WsiDicom):
             try:
                 os.mkdir(output_path)
             except FileExistsError:
-                ValueError(f"Output path {output_path} already exists")
+                raise ValueError(f"Output path {output_path} already exists") from None
             created_files = wsi.save(
                 output_path,
                 uid_generator,
