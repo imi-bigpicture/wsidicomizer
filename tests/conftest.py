@@ -738,62 +738,74 @@ def encoder():
 
 @pytest.fixture(scope="module")
 def converted(wsi_files: dict[str, dict[str, Path]], encoder: Encoder):
-    converted_folders = {
-        file_format: {
-            file: convert_wsi(wsi_files[file_format][file], file_parameters, encoder)
-            for file, file_parameters in file_format_parameters.items()
-            if wsi_files[file_format][file].exists() and file_parameters["convert"]
-        }
-        for file_format, file_format_parameters in test_parameters.items()
-    }
-    yield converted_folders
-    for file_format in converted_folders.values():
-        for converted_folder in file_format.values():
-            try:
-                converted_folder.cleanup()
-            except Exception as exception:
-                raise Exception("Failed to cleanup", file_format) from exception
+    """Cache of slide conversions, populated lazily on first use by the `wsi` and
+    `converted_path` fixtures so only slides whose tests actually run are converted
+    (fast-fail; no eager up-front conversion of every file). Cleaned up at module
+    teardown."""
+    cache: dict[tuple[str, str], TemporaryDirectory] = {}
+    yield cache
+    for converted_folder in cache.values():
+        try:
+            converted_folder.cleanup()
+        except Exception as exception:
+            raise Exception("Failed to cleanup", converted_folder) from exception
 
 
-@pytest.fixture(scope="module")
-def wsis(
+def converted_folder(
+    cache: dict[tuple[str, str], TemporaryDirectory],
     wsi_files: dict[str, dict[str, Path]],
-    converted: dict[str, dict[str, TemporaryDirectory]],
-):
-    wsis: dict[str, dict[str, WsiDicom]] = defaultdict(dict)
-    for file_format, file_format_parameters in wsi_files.items():
-        for file, file_path in file_format_parameters.items():
-            if not file_path.exists():
-                continue
-            if file_format not in converted or file not in converted[file_format]:
-                wsi = WsiDicomizer.open(file_path)
-            else:
-                wsi = WsiDicom.open(converted[file_format][file].name)
-            wsis[file_format][file] = wsi
-    yield wsis
-    for file_format in wsis.values():
-        for wsi in file_format.values():
-            wsi.close()
+    encoder: Encoder,
+    file_format: str,
+    file: str,
+) -> "TemporaryDirectory | None":
+    """Convert the slide once and cache the result, returning its temp dir, or None
+    if the file is missing or not marked for conversion."""
+    key = (file_format, file)
+    if key in cache:
+        return cache[key]
+    file_path = wsi_files[file_format][file]
+    file_parameters = test_parameters[file_format][file]
+    if not file_path.exists() or not file_parameters["convert"]:
+        return None
+    cache[key] = convert_wsi(file_path, file_parameters, encoder)
+    return cache[key]
 
 
 @pytest.fixture(scope="module")
 def converted_path(
-    converted: dict[str, dict[str, TemporaryDirectory]], file_format: str, file: str
+    converted: dict[tuple[str, str], TemporaryDirectory],
+    wsi_files: dict[str, dict[str, Path]],
+    encoder: Encoder,
+    file_format: str,
+    file: str,
 ):
-    if file_format not in converted or file not in converted[file_format]:
+    folder = converted_folder(converted, wsi_files, encoder, file_format, file)
+    if folder is None:
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
-    yield converted[file_format][file]
+    yield folder
 
 
 @pytest.fixture(scope="module")
 def wsi(
-    wsis: dict[str, dict[str, WsiDicom]],
+    converted: dict[tuple[str, str], TemporaryDirectory],
+    wsi_files: dict[str, dict[str, Path]],
+    encoder: Encoder,
     file_format: str,
     file: str,
 ):
-    if file_format not in wsis or file not in wsis[file_format]:
+    file_path = wsi_files[file_format][file]
+    if not file_path.exists():
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
-    yield wsis[file_format][file]
+    # A non-convert slide is served in-memory; a convert slide is transcoded (once,
+    # cached) and reopened from the written DICOM.
+    folder = converted_folder(converted, wsi_files, encoder, file_format, file)
+    wsi = (
+        WsiDicomizer.open(file_path)
+        if folder is None
+        else WsiDicom.open(folder.name)
+    )
+    yield wsi
+    wsi.close()
 
 
 @pytest.fixture(scope="module")
