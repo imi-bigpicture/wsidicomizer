@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import os
-from collections import defaultdict
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -34,7 +33,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [0, 1, 2],
+            "convert_levels": None,
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "transfer_syntax": JPEGBaseline8Bit,
@@ -89,7 +88,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": False,
-            "include_levels": [0, 1, 2],
+            "convert_levels": None,
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_ICT",
             "transfer_syntax": JPEG2000,
@@ -138,7 +137,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": False,
-            "include_levels": [0, 1, 2],
+            "convert_levels": None,
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_ICT",
             "transfer_syntax": JPEG2000,
@@ -187,7 +186,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [0, 1, 2],
+            "convert_levels": None,
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
@@ -240,7 +239,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": False,
-            "include_levels": [0, 1],
+            "convert_levels": [0, 1],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "RGB",
             "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
@@ -284,7 +283,7 @@ test_parameters = {
             "has_label": False,
             "has_overview": False,
             "openslide": False,
-            "include_levels": [0],
+            "convert_levels": [0],
             "lowest_included_pyramid_level": 0,
             "tile_size": 512,
             "photometric_interpretation": "YBR_FULL_422",
@@ -320,12 +319,12 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [4, 6],
+            "convert_levels": [4, 6],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "encode_format": "jpeg2000",
             "encode_quality": 0,
-            "photometric_interpretation": "YBR_ICT",
+            "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 2.3061675, "y": 20.79015, "rotation": 270},
             "icc_profile": False,
             "read_region": [
@@ -369,7 +368,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [2, 3],
+            "convert_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
@@ -429,7 +428,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [2, 3],
+            "convert_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
@@ -482,7 +481,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [4, 6],
+            "convert_levels": [4, 6],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
@@ -523,7 +522,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [2, 3],
+            "convert_levels": [2, 3],
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
@@ -571,10 +570,16 @@ test_parameters = {
     "philips_tiff": {
         "philips1/input.tif": {
             "convert": True,
+            # Passthrough-capable (native JPEG tiles); no need to re-test transcoding
+            # here, so wrap native tiles instead. Transcoding is covered by other
+            # formats. convert_levels/lowest kept so pixel_spacings stays unchanged.
+            "force_transcoding": False,
+            "passthrough": True,
+            "transfer_syntax": JPEGBaseline8Bit,
             "has_label": True,
             "has_overview": True,
             "openslide": True,
-            "include_levels": [4, 5, 6],
+            "convert_levels": [4, 5, 6],
             "lowest_included_pyramid_level": 4,
             "photometric_interpretation": "YBR_FULL_422",
             "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
@@ -635,7 +640,7 @@ test_parameters = {
             "has_label": True,
             "has_overview": True,
             "openslide": False,
-            "include_levels": [0],
+            "convert_levels": [0],
             "lowest_included_pyramid_level": 0,
             "photometric_interpretation": "YBR_FULL_422",
             "transfer_syntax": JPEGBaseline8Bit,
@@ -696,16 +701,20 @@ class Jpeg2kTestEncoder(Jpeg2kEncoder):
 
 
 def convert_wsi(file_path: Path, file_parameters: dict[str, Any], encoder: Encoder):
-    include_levels = file_parameters["include_levels"]
+    # `convert_levels` (optional, None = all) bounds cost when transcoding. A
+    # passthrough-capable format can set `force_transcoding: False` to wrap its native
+    # tiles instead of re-encoding, which is cheap enough to convert all levels.
+    convert_levels = file_parameters.get("convert_levels")
+    force_transcoding = file_parameters.get("force_transcoding", True)
     tile_size = file_parameters.get("tile_size", DEFAULT_TILE_SIZE)
     tempdir = TemporaryDirectory()
     WsiDicomizer.convert(
         file_path,
         output_path=tempdir.name,
         tile_size=tile_size,
-        include_levels=include_levels,
+        include_levels=convert_levels,
         encoding=encoder,
-        force_transcoding=True,
+        force_transcoding=force_transcoding,
     )
     return tempdir
 
@@ -758,15 +767,16 @@ def converted_folder(
     file_format: str,
     file: str,
 ) -> "TemporaryDirectory | None":
-    """Convert the slide once and cache the result, returning its temp dir, or None
-    if the file is missing or not marked for conversion."""
+    """Convert the slide once (at its `convert_levels`) and cache the result,
+    returning its temp dir, or None if the file is missing. Conversion is demand
+    driven: it only runs when a converted-mode fixture actually requests it."""
     key = (file_format, file)
     if key in cache:
         return cache[key]
     file_path = wsi_files[file_format][file]
-    file_parameters = test_parameters[file_format][file]
-    if not file_path.exists() or not file_parameters["convert"]:
+    if not file_path.exists():
         return None
+    file_parameters = test_parameters[file_format][file]
     cache[key] = convert_wsi(file_path, file_parameters, encoder)
     return cache[key]
 
@@ -796,14 +806,46 @@ def wsi(
     file_path = wsi_files[file_format][file]
     if not file_path.exists():
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
-    # A non-convert slide is served in-memory; a convert slide is transcoded (once,
-    # cached) and reopened from the written DICOM.
+    if test_parameters[file_format][file]["convert"]:
+        folder = converted_folder(converted, wsi_files, encoder, file_format, file)
+        assert folder is not None  # the file exists (checked above), so it converts
+        wsi = WsiDicom.open(folder.name)
+    else:
+        wsi = WsiDicomizer.open(file_path)
+    yield wsi
+    wsi.close()
+
+
+@pytest.fixture(scope="module")
+def opened_wsi(
+    wsi_files: dict[str, dict[str, Path]],
+    file_format: str,
+    file: str,
+):
+    """The slide opened in-memory (full pyramid, no level restriction), for tests
+    that read/compose directly from the source file at any level."""
+    file_path = wsi_files[file_format][file]
+    if not file_path.exists():
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    wsi = WsiDicomizer.open(file_path)
+    yield wsi
+    wsi.close()
+
+
+@pytest.fixture(scope="module")
+def converted_wsi(
+    converted: dict[tuple[str, str], TemporaryDirectory],
+    wsi_files: dict[str, dict[str, Path]],
+    encoder: Encoder,
+    file_format: str,
+    file: str,
+):
+    """The slide transcoded to DICOM (at its `convert_levels`) and reopened, for
+    tests that exercise the converted output."""
     folder = converted_folder(converted, wsi_files, encoder, file_format, file)
-    wsi = (
-        WsiDicomizer.open(file_path)
-        if folder is None
-        else WsiDicom.open(folder.name)
-    )
+    if folder is None:
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    wsi = WsiDicom.open(folder.name)
     yield wsi
     wsi.close()
 

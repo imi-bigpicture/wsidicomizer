@@ -342,13 +342,14 @@ class TestWsiDicomizerConvert:
             assert band_rms < 4, f"{file_format}: {file} {thumbnail}"
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "native_photometric_interpretation", "is_converted"],
+        ["file_format", "file", "native_photometric_interpretation", "is_transcoded"],
         [
             (
                 file_format,
                 file,
                 file_parameters["photometric_interpretation"],
-                file_parameters["convert"],
+                file_parameters["convert"]
+                and file_parameters.get("force_transcoding", True),
             )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
@@ -359,13 +360,13 @@ class TestWsiDicomizerConvert:
         self,
         encoder: Encoder,
         native_photometric_interpretation: str,
-        is_converted: bool,
+        is_transcoded: bool,
         wsi: WsiDicom,
     ):
         # Arrange
         expected_photometric_interpretation = (
             encoder.photometric_interpretation
-            if is_converted
+            if is_transcoded
             else native_photometric_interpretation
         )
 
@@ -378,13 +379,14 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "native_transfer_syntax", "is_converted"],
+        ["file_format", "file", "native_transfer_syntax", "is_transcoded"],
         [
             (
                 file_format,
                 file,
                 file_parameters.get("transfer_syntax"),
-                file_parameters["convert"],
+                file_parameters["convert"]
+                and file_parameters.get("force_transcoding", True),
             )
             for file_format, format_files in test_parameters.items()
             for file, file_parameters in format_files.items()
@@ -395,12 +397,12 @@ class TestWsiDicomizerConvert:
         self,
         encoder: Encoder,
         native_transfer_syntax: str,
-        is_converted: bool,
+        is_transcoded: bool,
         wsi: WsiDicom,
     ):
         # Arrange
         expected_transfer_syntax = (
-            encoder.transfer_syntax if is_converted else native_transfer_syntax
+            encoder.transfer_syntax if is_transcoded else native_transfer_syntax
         )
 
         # Act
