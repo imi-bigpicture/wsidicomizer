@@ -128,8 +128,13 @@ class OpenTileSource(DicomizerSource):
 
     @staticmethod
     def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by OpenTile."""
-        return OpenTile.detect_format(path) is not None
+        """Return True if file in path is supported by OpenTile. Formats whose tiles
+        overlap (e.g. Trestle, Ventana) are not composed by this source yet and are
+        left for another source to handle."""
+        if OpenTile.detect_format(path) is None:
+            return False
+        with OpenTile.open(path) as tiler:
+            return tiler.get_level(0).overlap is None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return OpenTileLevelImageData(
