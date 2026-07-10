@@ -31,6 +31,7 @@ def opentile_metadata(decoy: Decoy) -> Metadata:
     decoy.when(metadata.scanner_software_versions).then_return(None)
     decoy.when(metadata.acquisition_datetime).then_return(None)
     decoy.when(metadata.magnification).then_return(None)
+    decoy.when(metadata.label_text).then_return(None)
     return metadata
 
 
