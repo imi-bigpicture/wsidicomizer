@@ -1,6 +1,9 @@
 name: pytest
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_call:
 
 jobs:
   cache_test_images:

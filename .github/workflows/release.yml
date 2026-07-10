@@ -7,9 +7,11 @@ on:
 jobs:
   lint:
     uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/pytest.yaml
 
   pypi:
-    needs: [lint]  # don't publish unless CI is green
+    needs: [lint, test]  # don't publish unless CI is green
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
