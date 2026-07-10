@@ -97,6 +97,7 @@ class TiffSlideSource(OpenSlideLikeSource):
             vendor=self._tiffslide.properties.get(PROPERTY_NAME_VENDOR),
             mpp_x=self._tiffslide.properties.get(PROPERTY_NAME_MPP_X),
             mpp_y=self._tiffslide.properties.get(PROPERTY_NAME_MPP_Y),
+            raw_properties=dict(self._tiffslide.properties),
         )
 
         super().__init__(

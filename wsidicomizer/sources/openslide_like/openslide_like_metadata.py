@@ -15,7 +15,8 @@
 """Metadata for openslide like file."""
 
 import logging
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from PIL.ImageCms import ImageCmsProfile
 from wsidicom.geometry import PointMm, SizeMm
@@ -28,9 +29,14 @@ from wsidicom.metadata import (
     OpticalPath,
     Overview,
     Pyramid,
+    Series,
+    Slide,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
+from wsidicomizer.sources.openslide_like.openslide_like_vendor_metadata import (
+    VendorMetadata,
+)
 from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 
@@ -45,6 +51,9 @@ class OpenSlideLikeProperties:
     vendor: str | None = None
     mpp_x: str | None = None
     mpp_y: str | None = None
+    raw_properties: Mapping[str, str] = field(default_factory=dict)
+    """All properties, for reading vendor-specific keys openslide does not
+    normalise (e.g. ``mirax.GENERAL.SLIDE_NAME``, ``philips.DICOM_*``)."""
 
     @property
     def wsi_format(self) -> WsiFormat | None:
@@ -67,7 +76,17 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         properties: OpenSlideLikeProperties,
         color_profile: ImageCmsProfile | None,
     ):
-        equipment = Equipment(manufacturer=properties.vendor)
+        vendor_metadata = VendorMetadata.for_vendor(
+            properties.vendor, properties.raw_properties
+        )
+        equipment = Equipment(
+            manufacturer=vendor_metadata.manufacturer or properties.vendor,
+            model_name=vendor_metadata.model_name,
+            device_serial_number=vendor_metadata.device_serial_number,
+            software_versions=vendor_metadata.software_versions,
+        )
+        series = Series(description=vendor_metadata.series_description)
+        slide = Slide(identifier=vendor_metadata.container_identifier)
         if properties.mpp_x is None or properties.mpp_y is None:
             logging.warning(
                 "Could not determine pixel spacing as did not "
@@ -108,11 +127,24 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             else:
                 image_coordinate_system = None
         image = Image(
-            pixel_spacing=pixel_spacing, image_coordinate_system=image_coordinate_system
+            pixel_spacing=pixel_spacing,
+            image_coordinate_system=image_coordinate_system,
+            acquisition_datetime=vendor_metadata.acquisition_datetime,
+        )
+        objective_power = (
+            float(properties.objective_power)
+            if properties.objective_power is not None
+            else None
         )
         objectives = (
-            Objectives(objective_power=float(properties.objective_power))
-            if properties.objective_power is not None
+            Objectives(
+                objective_power=objective_power,
+                objective_numerical_aperture=(
+                    vendor_metadata.objective_numerical_aperture
+                ),
+            )
+            if objective_power is not None
+            or vendor_metadata.objective_numerical_aperture is not None
             else None
         )
         icc_profile = color_profile.tobytes() if color_profile is not None else None
@@ -143,5 +175,10 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
                     optical_paths=[],
                 )
         super().__init__(
-            equipment=equipment, pyramid=pyramid, label=label, overview=overview
+            series=series,
+            slide=slide,
+            equipment=equipment,
+            pyramid=pyramid,
+            label=label,
+            overview=overview,
         )

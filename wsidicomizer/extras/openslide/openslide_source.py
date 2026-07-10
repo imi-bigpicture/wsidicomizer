@@ -92,6 +92,7 @@ class OpenSlideSource(OpenSlideLikeSource):
             vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
             mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
             mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
+            raw_properties=dict(self._slide.properties),
         )
         super().__init__(
             filepath,

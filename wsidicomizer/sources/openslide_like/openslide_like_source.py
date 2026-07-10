@@ -36,9 +36,6 @@ from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeProperties,
     OpenSlideLikeThumbnailImageData,
 )
-from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
-    OpenSlideLikeMetadata,
-)
 
 
 class OpenSlideLikeAssociatedImageType(Enum):
@@ -57,7 +54,7 @@ class OpenSlideLikeSource(DicomizerSource):
         level_downsamples: Sequence[float],
         level_dimensions: Sequence[tuple[int, int]],
         associated_images: Mapping[str, Image],
-        base_metadata: OpenSlideLikeMetadata,
+        base_metadata: WsiDicomizerMetadata,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
