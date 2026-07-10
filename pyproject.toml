@@ -1,6 +1,6 @@
 [project]
 name = "wsidicomizer"
-version = "0.27.0"
+version = "0.28.0"
 description = "Tool for reading WSI files from proprietary formats and optionally convert them to to DICOM"
 authors = [
     { name = "Erik O Gabrielsson", email = "erik.o.gabrielsson@sectra.com" }
