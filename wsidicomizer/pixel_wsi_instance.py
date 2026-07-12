@@ -20,6 +20,7 @@ from PIL.Image import Image
 from wsidicom.geometry import Region, Size
 from wsidicom.instance import WsiInstance
 from wsidicom.instance.dataset import WsiDataset
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.image_data import PixelImageData
 
@@ -49,8 +50,12 @@ class PixelWsiInstance(WsiInstance):
         z: float,
         path: str,
         output_size: Size | None = None,
-        threads: int = 1,
+        *,
+        executor: ReadExecutor,
     ) -> Image:
+        # A pixel source reads the whole region in one native call, so there is
+        # no per-tile fan-out to dispatch; the executor is accepted to satisfy
+        # the base signature and left unused.
         image = self._image_data.read_region(region, z, path)
         if output_size is None or output_size == region.size:
             return image

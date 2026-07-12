@@ -22,9 +22,15 @@ from pydicom.uid import JPEGBaseline8Bit
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.instance.dataset import WsiDataset
 from wsidicom.metadata import ImageType
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.image_data import PixelImageData
 from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
+
+
+@pytest.fixture
+def read_executor() -> ReadExecutor:
+    return ReadExecutor(None, None)
 
 
 @pytest.fixture
@@ -79,6 +85,7 @@ class TestPixelWsiInstance:
         self,
         decoy: Decoy,
         instance: tuple[PixelWsiInstance, PixelImageData],
+        read_executor: ReadExecutor,
     ):
         # Arrange
         pixel_wsi_instance, image_data = instance
@@ -87,7 +94,9 @@ class TestPixelWsiInstance:
         decoy.when(image_data.read_region(region, 0.0, "0")).then_return(expected)
 
         # Act
-        result = pixel_wsi_instance.get_region(region, z=0.0, path="0")
+        result = pixel_wsi_instance.get_region(
+            region, z=0.0, path="0", executor=read_executor
+        )
 
         # Assert
         assert result is expected
@@ -96,6 +105,7 @@ class TestPixelWsiInstance:
         self,
         decoy: Decoy,
         instance: tuple[PixelWsiInstance, PixelImageData],
+        read_executor: ReadExecutor,
     ):
         # Arrange
         pixel_wsi_instance, image_data = instance
@@ -109,7 +119,7 @@ class TestPixelWsiInstance:
 
         # Act
         result = pixel_wsi_instance.get_region(
-            region, z=0.0, path="0", output_size=output_size
+            region, z=0.0, path="0", output_size=output_size, executor=read_executor
         )
 
         # Assert — result downsampled to output_size (native read returned region size)
@@ -119,6 +129,7 @@ class TestPixelWsiInstance:
         self,
         decoy: Decoy,
         instance: tuple[PixelWsiInstance, PixelImageData],
+        read_executor: ReadExecutor,
     ):
         # Arrange
         pixel_wsi_instance, image_data = instance
@@ -128,7 +139,7 @@ class TestPixelWsiInstance:
 
         # Act
         result = pixel_wsi_instance.get_region(
-            region, z=0.0, path="0", output_size=region.size
+            region, z=0.0, path="0", output_size=region.size, executor=read_executor
         )
 
         # Assert — returns the native image unmodified (`is` identity)
