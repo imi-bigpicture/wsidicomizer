@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The CLI now supports a `--version` flag reporting the installed wsidicomizer version, and a `--versions` flag reporting wsidicomizer together with its key dependencies (`wsidicom`, `opentile`, source readers, and codecs).
+
 ## [0.28.1] - 2026-07-10
 
 ### Fixed
