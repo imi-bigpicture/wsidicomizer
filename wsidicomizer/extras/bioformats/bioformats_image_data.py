@@ -18,8 +18,6 @@ from contextlib import AbstractContextManager
 from pathlib import Path
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -108,11 +106,20 @@ class BioformatsImageData(BaseDicomizerImageData):
             self._image_index, self._resolution_index, cropped_region, self.tile_size
         )
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile defined by tile (x, y), z,
-        and optical path."""
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile.
+
+        The source tile is a transient (context-managed) buffer, so it is
+        copied out directly.
+        """
         with self._get_tile(tile_point, z, path) as data:
-            return Pillow.fromarray(data)
+            return np.array(data)
 
     def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile defined by tile (x, y), z,

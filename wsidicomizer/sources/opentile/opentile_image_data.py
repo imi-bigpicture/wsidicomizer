@@ -17,6 +17,7 @@
 import dataclasses
 from collections.abc import Iterable, Iterator
 
+import numpy as np
 from opentile.jpeg import JpegInfo, JpegProcess
 from opentile.jpeg2000 import Jpeg2000Info
 from opentile.tiff_image import (
@@ -25,8 +26,6 @@ from opentile.tiff_image import (
     ThumbnailTiffImage,
     TiffImage,
 )
-from PIL import Image as Pillow
-from PIL.Image import Image
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
@@ -192,27 +191,30 @@ class OpenTileImageData(BaseDicomizerImageData):
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile.
-
-        Parameters
-        ----------
-        tile_point: Point
-            Tile position to get.
-        z: float
-            Focal plane of tile to get.
-        path: str
-            Optical path of tile to get.
-
-        Returns
-        ----------
-        Image.Image
-            Tile as Image.
-        """
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile, as opentile produces it."""
         if z not in self.focal_planes or path not in self.optical_paths:
             raise ValueError
-        return Pillow.fromarray(
-            self._tiff_image.get_decoded_tile(tile_point.to_tuple())
+        return self._tiff_image.get_decoded_tile(tile_point.to_tuple())
+
+    def get_decoded_tiles(
+        self,
+        tiles: Iterable[Point],
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> Iterator[np.ndarray]:
+        """Return the pixels for multiple tiles, batched by opentile."""
+        if z not in self.focal_planes or path not in self.optical_paths:
+            raise ValueError
+        return iter(
+            self._tiff_image.get_decoded_tiles([tile.to_tuple() for tile in tiles])
         )
 
     def get_encoded_tiles(

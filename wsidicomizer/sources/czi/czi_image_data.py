@@ -23,8 +23,6 @@ from threading import RLock
 
 import numpy as np
 from czifile import CziDirectoryEntryDV, CziFile, CziSubBlockSegmentData
-from PIL import Image as Pillow
-from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom.cache import lru_cached_method
 from wsidicom.codec import Encoder
@@ -141,12 +139,12 @@ class CziImageData(BaseDicomizerImageData):
         return self._czi_metadata.channel_mapping
 
     @cached_property
-    def blank_decoded_tile(self) -> Image:
-        return Pillow.fromarray(self._create_blank_tile_array())
+    def blank_decoded_tile(self) -> np.ndarray:
+        return self._create_blank_tile()
 
     @cached_property
     def blank_encoded_tile(self) -> bytes:
-        return self.encoder.encode(self._create_blank_tile_array())
+        return self.encoder.encode(self._create_blank_tile())
 
     @cached_property
     def pixel_origin(self) -> Point:
@@ -210,7 +208,7 @@ class CziImageData(BaseDicomizerImageData):
             Tile as numpy array.
         """
         # A blank tile to paste blocks into
-        image_data = self._create_blank_tile_array()
+        image_data = self._create_blank_tile()
         if (tile_point, z, path) not in self.tile_directory:
             # Should not happen (get_decoded_tile() and get_enoded_tile()
             # should already have checked).
@@ -236,7 +234,9 @@ class CziImageData(BaseDicomizerImageData):
             # Get decompressed data
             block_data = self._get_tile_data(block.index)
             # Reshape the block data to remove leading 1-indices.
-            block_data.shape = self._size_to_numpy_shape(block.size)
+            block_data = np.reshape(
+                block_data, self._size_to_numpy_shape(block.size), copy=False
+            )
             # Paste in block data into tile.
             image_data[
                 block_start_in_tile.y : block_end_in_tile.y,
@@ -247,26 +247,17 @@ class CziImageData(BaseDicomizerImageData):
             ]
         return image_data
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile.
-
-        Parameters
-        ----------
-        tile_point: Point
-            Tile position to get.
-        z: float
-            Focal plane of tile to get.
-        path: str
-            Optical path of tile to get.
-
-        Returns
-        ----------
-        Image
-            Tile as Image.
-        """
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile, as czi produces it."""
         if (tile_point, z, path) not in self.tile_directory:
-            return self.blank_decoded_tile
-        return Pillow.fromarray(self._get_tile(tile_point, z, path))
+            return self._create_blank_tile()
+        return self._get_tile(tile_point, z, path)
 
     def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Tile is encoded as jpeg.
@@ -339,7 +330,7 @@ class CziImageData(BaseDicomizerImageData):
         ]
         return min(starts) if starts else 0
 
-    def _create_blank_tile_array(self) -> np.ndarray:
+    def _create_blank_tile(self) -> np.ndarray:
         """Return blank tile in numpy array.
 
         Returns

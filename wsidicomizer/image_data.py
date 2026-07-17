@@ -17,8 +17,6 @@
 from abc import abstractmethod
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
 from wsidicom import ImageData
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Region, Size
@@ -33,7 +31,7 @@ class BaseDicomizerImageData(ImageData):
 
     _blank_encoded_frame: bytes | None = None
     _blank_encoded_frame_size: Size | None = None
-    _blank_decoded_frame: Image | None = None
+    _blank_decoded_frame: np.ndarray | None = None
     _blank_decoded_frame_size: Size | None = None
 
     @property
@@ -95,9 +93,8 @@ class BaseDicomizerImageData(ImageData):
             self._blank_encoded_frame_size = size
         return self._blank_encoded_frame
 
-    def _get_blank_decoded_frame(self, size: Size) -> Image:
-        """Return cached blank decoded frame for size, or create frame if
-        cached frame not available or of wrong size.
+    def _get_blank_decoded_frame(self, size: Size) -> np.ndarray:
+        """Return the cached blank frame pixels for the size.
 
         Parameters
         ----------
@@ -106,12 +103,13 @@ class BaseDicomizerImageData(ImageData):
 
         Returns
         ----------
-        bytes
-            Decoded blank frame.
+        np.ndarray
+            Decoded blank frame as ``(rows, columns, 3)``.
         """
         if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
-            frame = Pillow.new("RGB", size.to_tuple(), self.blank_color)
-            self._blank_decoded_frame = frame
+            self._blank_decoded_frame = np.full(
+                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
+            )
             self._blank_decoded_frame_size = size
         return self._blank_decoded_frame
 
@@ -156,8 +154,11 @@ class PixelImageData(BaseDicomizerImageData):
     """
 
     @abstractmethod
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        """Read a pixel region from the source as a Pillow image.
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        """Read the pixels of a region from the source.
+
+        The region-read primitive. Pixel sources decode to numpy and implement
+        this; Pillow, when needed, is derived at the read boundary.
 
         Parameters
         ----------
@@ -170,7 +171,7 @@ class PixelImageData(BaseDicomizerImageData):
 
         Returns
         -------
-        Image
-            The region as a Pillow image.
+        np.ndarray
+            The region as ``(rows, columns)`` or ``(rows, columns, samples)``.
         """
         raise NotImplementedError()

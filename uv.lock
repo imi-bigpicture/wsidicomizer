@@ -1401,7 +1401,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.33.0"
+version = "0.33.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1413,14 +1413,14 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/0e/19c3fef22a8464cfa02781dda6b317908f7223a5de5f3d5face062eca8aa/wsidicom-0.33.0.tar.gz", hash = "sha256:fa01ec59a23d849583e8bde92d062a1df240cfa85fed6650121f6c8abd357807", size = 391533, upload-time = "2026-07-10T11:27:14.971Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/09/3511842827c51b901fb6b61992c7cf4e3a441b340cb041ac54061e7d8228/wsidicom-0.33.1.tar.gz", hash = "sha256:defe223727ebdcd1e8c1d009341a32df58c21c791257d67fe13f75f42319a5d7", size = 391995, upload-time = "2026-07-10T13:57:07.824Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/92/5c7db780175e1d0c4b4b7496e6215bb05a48e2f420a513bfa4d4d0d7b3e1/wsidicom-0.33.0-py3-none-any.whl", hash = "sha256:b5ebe0f4fe4a4e29f188b06dd8a7dad164cf0ba3a0cc0c85a89a15188830616d", size = 286030, upload-time = "2026-07-10T11:27:13.388Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/bf/a76574fcab89474767e36629f27f58e229889c8bbf25b55de8982491b359/wsidicom-0.33.1-py3-none-any.whl", hash = "sha256:2cdf2753537fa0ad4d732e1d14716149e85c3b3504b7c600f01fe7f4a30de4d9", size = 285984, upload-time = "2026-07-10T13:57:06.56Z" },
 ]
 
 [[package]]
 name = "wsidicomizer"
-version = "0.28.0"
+version = "0.28.1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1487,7 +1487,7 @@ requires-dist = [
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=4.0.0,<5.0.0" },
-    { name = "wsidicom", specifier = ">=0.33.0,<0.34.0" },
+    { name = "wsidicom", specifier = ">=0.33.1,<0.34.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
 

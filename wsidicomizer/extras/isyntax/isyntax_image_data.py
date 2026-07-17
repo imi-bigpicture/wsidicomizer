@@ -14,13 +14,12 @@
 
 """Image data for pyisintax compatible file."""
 
-from io import BytesIO
+from functools import cached_property
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
 from pydicom.uid import UID, JPEGBaseline8Bit
 from wsidicom.codec import Encoder
+from wsidicom.codec.decoder import ImageCodecsDecoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -118,8 +117,9 @@ class ISyntaxLevelImageData(PixelImageData):
     def thread_safe(self) -> bool:
         return False
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        """Read a pixel region directly from the ISyntax object.
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        """Read the pixels of a region directly from the ISyntax object.
+
 
         Parameters
         ----------
@@ -132,8 +132,8 @@ class ISyntaxLevelImageData(PixelImageData):
 
         Returns
         -------
-        Image
-            The region as a Pillow image.
+        np.ndarray
+            The region pixels.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
@@ -142,7 +142,7 @@ class ISyntaxLevelImageData(PixelImageData):
         image_data = self._get_region(region)
         if image_data is None:
             return self._get_blank_decoded_frame(region.size)
-        return Pillow.fromarray(image_data)
+        return image_data
 
     def _get_region(self, region: Region) -> np.ndarray | None:
         """Return Image read from region in ISyntax image. If image data for
@@ -215,8 +215,14 @@ class ISyntaxLevelImageData(PixelImageData):
             return self._get_blank_encoded_frame(self.tile_size)
         return self.encoder.encode(decoded)
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile.
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile.
 
         Parameters
         ----------
@@ -229,13 +235,13 @@ class ISyntaxLevelImageData(PixelImageData):
 
         Returns
         ----------
-        Image
-            Tile as Image.
+        np.ndarray
+            Tile pixels.
         """
         tile = self._get_tile(tile_point, z, path)
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
-        return Pillow.fromarray(tile)
+        return tile
 
 
 class ISyntaxAssociatedImageImageData(PixelImageData):
@@ -258,6 +264,7 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
             self._transfer_syntax = JPEGBaseline8Bit
         self._image_metadata = image_metadata
         self._image_type = image_type
+        self._decoder = ImageCodecsDecoder(JPEGBaseline8Bit, "YBR_FULL_422")
 
     @property
     def transfer_syntax(self) -> UID:
@@ -271,13 +278,14 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
             return self.encoder.photometric_interpretation
         return "YBR_FULL_422"
 
-    @property
-    def image(self) -> Image:
-        return Pillow.open(BytesIO(self._frame))
+    @cached_property
+    def _decoded(self) -> np.ndarray:
+        """Decode the associated image frame to a numpy array once."""
+        return self._decoder.decode(self._frame)
 
     @property
     def image_size(self) -> Size:
-        return Size(self.image.width, self.image.height)
+        return Size(width=self._decoded.shape[1], height=self._decoded.shape[0])
 
     @property
     def tile_size(self) -> Size:
@@ -329,11 +337,18 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
                 f"focal plane {z} or optical path {path}", str(self)
             )
         if self._force_transcoding:
-            return self.encoder.encode(self.image)
+            return self.encoder.encode(self._decoded)
         return self._frame
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        return self.image
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        return self._decoded
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        return self.image.crop(region.box)
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        left, upper, right, lower = region.box
+        return self._decoded[upper:lower, left:right]
