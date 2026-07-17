@@ -29,7 +29,7 @@ from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
-from wsidicom.config import settings
+from wsidicom.config import Settings, use_settings
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -53,10 +53,8 @@ def pin_pillow_downsampler():
     across platforms, so its checksums are the golden values; an installed opencv
     extra would otherwise change non-2x read output (its fractional resampling is
     not reproducible across platforms)."""
-    original = settings.preferred_downsampler
-    settings.preferred_downsampler = DownsamplerOption.PILLOW
-    yield
-    settings.preferred_downsampler = original
+    with use_settings(Settings(preferred_downsampler=DownsamplerOption.PILLOW)):
+        yield
 
 
 @pytest.fixture
