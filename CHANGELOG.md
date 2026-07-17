@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Keyword-only `settings` parameter on `WsiDicomizer.open` and `convert`, taking a wsidicom `Settings` used for that call instead of the process-wide default.
+
 ## [0.29.0] - 2026-07-17
 
 ### Added

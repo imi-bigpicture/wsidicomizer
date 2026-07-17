@@ -225,6 +225,17 @@ region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
 ```
 
+***Configure a single open or conversion with settings.***
+
+`open()` and `convert()` take a keyword-only `settings` argument, a wsidicom `Settings` used for that call instead of the process-wide default (see the [wsidicom settings documentation](https://github.com/imi-bigpicture/wsidicom#settings)):
+
+```python
+from wsidicomizer import WsiDicomizer
+from wsidicom.config import Settings
+
+wsi = WsiDicomizer.open(path_to_wsi_file, settings=Settings(strict_uid_check=True))
+```
+
 ## Metadata handling
 
 The `open()` and `convert()` methods of `WsiDicomizer` takes three parameters that are important for inserting additional metadata into the DICOM dataset of the converted image:

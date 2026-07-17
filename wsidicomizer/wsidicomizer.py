@@ -30,6 +30,7 @@ from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
+from wsidicom.config import Settings, use_settings
 from wsidicom.file import InstanceSplit, OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
 
@@ -62,6 +63,8 @@ class WsiDicomizer(WsiDicom):
         encoding: EncodingSettings | Encoder | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
+        *,
+        settings: Settings | None = None,
         **source_args,
     ) -> WsiDicom:
         """Open data in file in filepath as WsiDicom.
@@ -89,6 +92,8 @@ class WsiDicomizer(WsiDicom):
             Optional override source to use.
         uid_generator: Callable[[], UID] | UidGenerator | None = None
             Generator used to populate UIDs on the metadata if not already set.
+        settings: Settings | None = None
+            Settings to use for this object instead of the process-wide default.
         **source_args
             Optional keyword args to pass to source.
 
@@ -106,18 +111,19 @@ class WsiDicomizer(WsiDicom):
         selected_source = cls._select_source(filepath, preferred_source)
         encoder = cls._select_encoder(encoding)
 
-        source = selected_source(
-            filepath,
-            encoder,
-            tile_size,
-            metadata,
-            default_metadata,
-            include_confidential,
-            metadata_post_processor,
-            uid_generator=uid_generator,
-            **source_args,
-        )
-        return cls(source, True)
+        with use_settings(settings):
+            source = selected_source(
+                filepath,
+                encoder,
+                tile_size,
+                metadata,
+                default_metadata,
+                include_confidential,
+                metadata_post_processor,
+                uid_generator=uid_generator,
+                **source_args,
+            )
+            return cls(source, True, settings=settings)
 
     @classmethod
     def convert(
@@ -144,6 +150,8 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         instance_split: InstanceSplit = InstanceSplit.NONE,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
+        *,
+        settings: Settings | None = None,
         **source_args,
     ) -> list[str]:
         """Convert data in file to DICOM files in output path. Created
@@ -211,6 +219,8 @@ class WsiDicomizer(WsiDicom):
             write a separate instance per focal plane and/or optical path.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
+        settings: Settings | None = None
+            Settings to use for this conversion instead of the process-wide default.
         **source_args
             Optional keyword args to pass to source.
 
@@ -233,6 +243,7 @@ class WsiDicomizer(WsiDicom):
             encoding,
             preferred_source,
             uid_generator,
+            settings=settings,
             **source_args,
         ) as wsi:
             if output_path is None:
