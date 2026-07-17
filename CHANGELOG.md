@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The CLI now supports a `--version` flag reporting the installed wsidicomizer version, and a `--versions` flag reporting wsidicomizer together with its key dependencies (`wsidicom`, `opentile`, source readers, and codecs).
+
 ### Changed
 
 - Replaced use of Pillow image with numpy arrays, to match changes in wsidicom.
+
+### Fixed
+
+- JPEG 2000 levels whose colour transform was applied outside the codestream (no multi-component transform, e.g. Aperio `APERIO_JP2000_YCBC` / 33003) are now written with `PhotometricInterpretation` `YBR_FULL` instead of `YBR_ICT`. `YBR_ICT`/`YBR_RCT` are now only used when the codestream actually carries the irreversible/reversible multi-component transform (e.g. Aperio 33005), as required by PS3.5 8.2.4. The bitstream is still passed through unchanged.
 
 ## [0.28.1] - 2026-07-10
 

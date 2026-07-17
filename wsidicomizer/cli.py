@@ -14,6 +14,7 @@
 
 import os
 from enum import Enum
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
@@ -38,7 +39,45 @@ class CliEncodingsOptions(Enum):
     JPEGXL = "jpegxl"
 
 
+# Distribution names (not import names) of the packages wsidicomizer is tightly
+# coupled to: core, source readers, and codecs. Optional ones may be absent.
+_VERSION_PACKAGES = [
+    "wsidicomizer",
+    "wsidicom",
+    "opentile",
+    "pydicom",
+    "tiffslide",
+    "tifffile",
+    "imagecodecs",
+    "czifile",
+    "openslide-python",
+    "pyisyntax",
+]
+
+
+def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
+    if not value or ctx.resilient_parsing:
+        return
+    width = max(len(name) for name in _VERSION_PACKAGES)
+    for name in _VERSION_PACKAGES:
+        try:
+            installed = version(name)
+        except PackageNotFoundError:
+            installed = "not installed"
+        click.echo(f"{name.ljust(width)}  {installed}")
+    ctx.exit()
+
+
 @click.command()
+@click.version_option(package_name="wsidicomizer")
+@click.option(
+    "--versions",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_print_versions,
+    help="Show versions of wsidicomizer and its key dependencies, then exit.",
+)
 @click.option(
     "-i",
     "--input",

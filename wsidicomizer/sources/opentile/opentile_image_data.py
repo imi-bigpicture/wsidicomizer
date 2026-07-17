@@ -123,10 +123,16 @@ class OpenTileImageData(BaseDicomizerImageData):
         if self._tiff_image.photometric_interpretation == PHOTOMETRIC.YCBCR:
             if self.transfer_syntax == JPEGBaseline8Bit:
                 return "YBR_FULL_422"
-            elif self.transfer_syntax == JPEG2000:
-                return "YBR_ICT"
-            elif self.transfer_syntax == JPEG2000Lossless:
-                return "YBR_RCT"
+            info = self._tiff_image.encoded_info
+            if isinstance(info, Jpeg2000Info):
+                if not info.uses_mct:
+                    # The colour transform was applied outside the codestream
+                    # (e.g. Aperio 33003), so the stored components are plain
+                    # YCbCr. Describe them as such rather than YBR_ICT/YBR_RCT,
+                    # which would falsely imply a codestream multi-component
+                    # transform (PS3.5 8.2.4).
+                    return "YBR_FULL"
+                return "YBR_RCT" if info.reversible else "YBR_ICT"
         elif self._tiff_image.photometric_interpretation == PHOTOMETRIC.RGB:
             return "RGB"
         elif self._tiff_image.photometric_interpretation == (PHOTOMETRIC.MINISBLACK):
