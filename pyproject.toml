@@ -83,6 +83,3 @@ ome = "ome"  # OME-TIFF format / ome-types package
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.uv.sources]
-wsidicom = { path = "../wsidicom", editable = true }
