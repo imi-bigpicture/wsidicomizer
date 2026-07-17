@@ -17,9 +17,19 @@ from typing import Any
 
 import pytest
 from isyntax import ISyntax
+from upath import UPath
 
 from tests.conftest import test_parameters
+from wsidicomizer.extras.isyntax import ISyntaxSource
 from wsidicomizer.extras.isyntax.isyntax_metadata import ISyntaxMetadata
+
+
+@pytest.fixture
+def slide(testdata_dir: Path) -> Path:
+    path = testdata_dir.joinpath("slides", "isyntax", "isyntax1", "testslide.isyntax")
+    if not path.exists():
+        pytest.skip("isyntax test data not available")
+    return path
 
 
 class TestIsyntaxSource:
@@ -39,3 +49,20 @@ class TestIsyntaxSource:
 
         # Assert
         assert label.barcode == "             "
+
+    def test_supports_local_path(self, slide: Path):
+        # Act
+        supported = ISyntaxSource.is_supported(slide)
+
+        # Assert
+        assert supported is True
+
+    def test_does_not_support_fsspec_path(self, slide: Path):
+        # isyntax reads only real local files, so the same slide must be declined
+        # when given as a fsspec url (file://) it cannot consume.
+
+        # Act
+        supported = ISyntaxSource.is_supported(UPath(slide.as_uri()))
+
+        # Assert
+        assert supported is False

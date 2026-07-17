@@ -18,6 +18,7 @@ from pathlib import Path
 
 from czifile import CziFile
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator, WsiMetadata
@@ -92,7 +93,11 @@ class CziSource(DicomizerSource):
 
     @staticmethod
     def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by CziFile."""
+        """Return True if file in path is supported by CziFile. czifile can only
+        read a real local file, so a fsspec path (e.g. ``s3://``, ``file://``) is
+        declined rather than opened."""
+        if UPath(path).protocol not in ("", "local"):
+            return False
         return CziImageData.detect_format(path) is not None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:

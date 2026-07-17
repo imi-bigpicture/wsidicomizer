@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import tifffile
+from upath import UPath
 from wsidicom.geometry import SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import Pyramid
@@ -30,6 +31,14 @@ def metadata() -> WsiDicomizerMetadata:
     return WsiDicomizerMetadata(
         pyramid=Pyramid(ImageMetadata(pixel_spacing=SizeMm(0.0005, 0.0005)), [])
     )
+
+
+@pytest.fixture
+def slide(testdata_dir: Path) -> Path:
+    path = testdata_dir.joinpath("slides", "svs", "CMU-1", "CMU-1.svs")
+    if not path.exists():
+        pytest.skip("svs test data not available")
+    return path
 
 
 def _write_tiff(path: Path, array: np.ndarray) -> None:
@@ -68,3 +77,17 @@ class TestTiffSlideSource:
         assert image_data.samples_per_pixel == expected_samples
         assert image_data.photometric_interpretation == expected_photometric
         source.close()
+
+    def test_supports_local_path(self, slide: Path):
+        # Act
+        supported = TiffSlideSource.is_supported(slide)
+
+        # Assert
+        assert supported is True
+
+    def test_supports_fsspec_path(self, slide: Path):
+        # Act
+        supported = TiffSlideSource.is_supported(UPath(slide.as_uri()))
+
+        # Assert
+        assert supported is True
