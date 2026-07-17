@@ -15,7 +15,6 @@
 from collections.abc import Sequence
 
 import numpy as np
-from PIL import Image as Pillow
 from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom.codec import Encoder
@@ -66,22 +65,27 @@ class OpenSlideLikeImageData(PixelImageData):
     def thread_safe(self) -> bool:
         return True
 
-    def _remove_alpha(self, alpha_image: Image) -> Image:
-        """Remove alpha channel from image.
+    def _composite_over_background(self, rgba: np.ndarray) -> np.ndarray:
+        """Composite an RGBA array over the background colour, returning RGB.
+
+        Bit-exact with Pillow's paste-with-mask blend
+        (``(src * a + bg * (255 - a) + 127) // 255``).
 
         Parameters
         ----------
-        alpha_image: Image
-            Image to remove alpha from.
+        rgba: np.ndarray
+            RGBA array to composite.
 
         Returns
         ----------
-        Image
-            Image without alpha channel.
+        np.ndarray
+            RGB array with the alpha composited over the background colour.
         """
-        image = Pillow.new("RGB", alpha_image.size, self.blank_color)
-        image.paste(alpha_image, mask=alpha_image.split()[3])
-        return image
+        alpha = rgba[..., 3:4].astype(np.int32)
+        rgb = rgba[..., :3].astype(np.int32)
+        background = np.asarray(self.blank_color, dtype=np.int32)
+        composited = (rgb * alpha + background * (255 - alpha) + 127) // 255
+        return composited.astype(np.uint8)
 
 
 class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
@@ -95,12 +99,12 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
             blank_color,
             encoder,
         )
-        if image.mode == "RGBA":
-            image = self._remove_alpha(image)
-        self._image_size = Size.from_tuple(image.size)
-        self._decoded_image = image
-        self._encoded_image = self.encoder.encode(np.asarray(image))
-        self._image_size = Size.from_tuple(image.size)
+        array = np.asarray(image)
+        if array.ndim == 3 and array.shape[2] == 4:
+            array = self._composite_over_background(array)
+        self._decoded = array
+        self._image_size = Size(width=array.shape[1], height=array.shape[0])
+        self._encoded_image = self.encoder.encode(array)
 
     @property
     def image_size(self) -> Size:
@@ -117,13 +121,20 @@ class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._encoded_image
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
         if tile_point != Point(0, 0):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
-        return self._decoded_image
+        return self._decoded
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        return self._decoded_image.crop(region.box)
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        left, upper, right, lower = region.box
+        return self._decoded[upper:lower, left:right]
 
 
 class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):

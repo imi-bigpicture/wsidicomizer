@@ -14,9 +14,9 @@
 
 """Tests for PixelWsiInstance / PixelImageData wiring."""
 
+import numpy as np
 import pytest
 from decoy import Decoy
-from PIL import Image as Pillow
 from pydicom import Dataset
 from pydicom.uid import JPEGBaseline8Bit
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -79,9 +79,11 @@ def instance(
 
 @pytest.mark.unittest
 class TestPixelWsiInstance:
-    """PixelWsiInstance routes get_region through PixelImageData.read_region."""
+    """PixelWsiInstance reads via PixelImageData.read_region, returning the
+    numpy array directly and downsampling it in numpy when asked for a smaller
+    output."""
 
-    def test_get_region_calls_read_region_with_exact_args(
+    def test_get_region_returns_read_region_array(
         self,
         decoy: Decoy,
         instance: tuple[PixelWsiInstance, PixelImageData],
@@ -90,16 +92,16 @@ class TestPixelWsiInstance:
         # Arrange
         pixel_wsi_instance, image_data = instance
         region = Region(position=Point(100, 200), size=Size(400, 300))
-        expected = Pillow.new("RGB", region.size.to_tuple())
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(expected)
+        array = np.zeros((300, 400, 3), np.uint8)
+        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
 
         # Act
         result = pixel_wsi_instance.get_region(
             region, z=0.0, path="0", executor=read_executor
         )
 
-        # Assert
-        assert result is expected
+        # Assert — the native array is returned unmodified (`is` identity)
+        assert result is array
 
     def test_get_region_downsamples_when_output_size_given(
         self,
@@ -111,19 +113,17 @@ class TestPixelWsiInstance:
         pixel_wsi_instance, image_data = instance
         region = Region(position=Point(0, 0), size=Size(400, 300))
         output_size = Size(200, 150)
-        image = Pillow.new("RGB", region.size.to_tuple())
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(image)
-        expected = image.resize(
-            output_size.to_tuple(), resample=Pillow.Resampling.BILINEAR
-        )
+        array = np.zeros((300, 400, 3), np.uint8)
+        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
 
         # Act
         result = pixel_wsi_instance.get_region(
             region, z=0.0, path="0", output_size=output_size, executor=read_executor
         )
 
-        # Assert — result downsampled to output_size (native read returned region size)
-        assert result == expected
+        # Assert — array downsampled to output_size, still numpy (rows, cols, 3)
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (output_size.height, output_size.width, 3)
 
     def test_get_region_skips_downsample_when_output_matches_region(
         self,
@@ -134,13 +134,13 @@ class TestPixelWsiInstance:
         # Arrange
         pixel_wsi_instance, image_data = instance
         region = Region(position=Point(0, 0), size=Size(400, 300))
-        native = Pillow.new("RGB", region.size.to_tuple())
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(native)
+        array = np.zeros((300, 400, 3), np.uint8)
+        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
 
         # Act
         result = pixel_wsi_instance.get_region(
             region, z=0.0, path="0", output_size=region.size, executor=read_executor
         )
 
-        # Assert — returns the native image unmodified (`is` identity)
-        assert result is native
+        # Assert — returns the native array unmodified (`is` identity)
+        assert result is array

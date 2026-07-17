@@ -329,7 +329,7 @@ wheels = [
 
 [[package]]
 name = "dicomweb-client"
-version = "0.59.3"
+version = "0.61.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -338,9 +338,9 @@ dependencies = [
     { name = "requests" },
     { name = "retrying" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/dd/160c7670dcba8081c737404a3186ae219a8804d8cc087b29aa8d08c2c8fa/dicomweb_client-0.59.3.tar.gz", hash = "sha256:dd11604c99711d3fc9d223de960a1b64db3b2dcbc30592473d935e27b9243d46", size = 70995, upload-time = "2024-10-22T01:26:25.053Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/0f/b77437e5a9e33541eedccfbff9e954c15c8e8445e61d75727a6cd7fcf57e/dicomweb_client-0.61.0.tar.gz", hash = "sha256:24bc525322e72d215485c56acf0d0de218f284a1db73639ac8e0249822f93787", size = 82497, upload-time = "2026-04-21T21:56:49.411Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/77/e7ac701ad5ce4507d52ed5ace9f3c0c0129e6fbb29d108a0fd00362547c1/dicomweb_client-0.59.3-py3-none-any.whl", hash = "sha256:58ba2c9d4924ab3bc66d7a078b070b73562d321846f70f0050fb51d078897726", size = 61563, upload-time = "2024-10-22T01:26:23.109Z" },
+    { url = "https://files.pythonhosted.org/packages/13/e2/7c9ad1b1bc98dbb028549b02d853b0ab66ce065f7897064396797963bf8d/dicomweb_client-0.61.0-py3-none-any.whl", hash = "sha256:dc3385f5dbbeb167c521d04a70eac8bf219c4302c14574af05b5bc577a7e22c5", size = 62084, upload-time = "2026-04-21T21:56:48.055Z" },
 ]
 
 [[package]]
@@ -675,6 +675,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/81/c6137d88691dd68a792652f10d6164f70256b7d1ab5877a45919b18a8f81/ome_types-0.5.3.tar.gz", hash = "sha256:f19a7e6021f798117d342a52629ce4137ab9a9bc45b7707abd7f26191a3899be", size = 122427, upload-time = "2024-11-21T02:08:09.127Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/81/264aca3b548d77554039abd29ed75e4bc57c1d4e2f1ba6a76c1d547ff4d2/ome_types-0.5.3-py3-none-any.whl", hash = "sha256:081d8e42bdacbbaf3de65dff3f4d73f809822c8ac6b422fd46c34fdd28a76ea8", size = 248395, upload-time = "2024-11-21T02:08:07.051Z" },
+]
+
+[[package]]
+name = "opencv-python-headless"
+version = "5.0.0.93"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1d/99/76b7c80252aa83c1af16393454aafd125a0287101afe8deb0a6821af0e30/opencv_python_headless-5.0.0.93.tar.gz", hash = "sha256:b82f9831daab90b725c7c1ee1b36cb5732c367096ac76d119e64e14eb70d5f3c", size = 81817738, upload-time = "2026-07-02T07:01:06.039Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/53/7c/8c8097891c509d98cd128493835c95631c80be6a8f37ed9d25716c2e16f1/opencv_python_headless-5.0.0.93-cp37-abi3-macosx_13_0_arm64.whl", hash = "sha256:030ca5e0837a2963ab36ef896baa9767eb8d2b83353fb28af5a521e40dd8756f", size = 48322581, upload-time = "2026-07-02T05:50:34.207Z" },
+    { url = "https://files.pythonhosted.org/packages/90/8c/eab2ad388c3cbab2a350c10c2ef19ce6bd099240afc31789032c996bab52/opencv_python_headless-5.0.0.93-cp37-abi3-macosx_14_0_x86_64.whl", hash = "sha256:1e55af3abfb462eeeabe5c775f12bdb36216d8a93a3583d69e6bd6e1d6ba7d00", size = 34782894, upload-time = "2026-07-02T05:51:39.856Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/78/afca939f40ffe2b2380bfa86f812b2f7d4acc5a27b27dc41b49cad7ce7b4/opencv_python_headless-5.0.0.93-cp37-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:10818d91510e05c04568ae12b5cd120779c70c01bf897b001a6221fe430df80f", size = 36521085, upload-time = "2026-07-02T06:55:24.429Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/97/8170e9819764c47e436c130d3ff6cfb73b58f923eae9d3a03d8982b04aec/opencv_python_headless-5.0.0.93-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:09a872a157c1376ab922a69bbf22f9a95bcc7b658a9d8b436a60212b02b2eeb4", size = 56563598, upload-time = "2026-07-02T06:55:47.355Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/98/1a28a7101e31801042b3098871a74b76c61581d328ef40774ff4edb53a56/opencv_python_headless-5.0.0.93-cp37-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:840bd717c21e5c11cadadc022a823315ea417f961213d06b4df010e019eb16f4", size = 39648433, upload-time = "2026-07-02T06:56:04.255Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/21/f6ef335f6e65724aa78b8d792b48d40a48c381715f1e62f5a5049e09d07e/opencv_python_headless-5.0.0.93-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ed709fdf9aa0bd1f2ed8549e71d19449b03a675bb581eb292285f6861953be37", size = 61204038, upload-time = "2026-07-02T06:56:41.823Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/8f/b8756467ea991449a293797f6b3fa80fcfdd29598a0a60d1cd5715b96e61/opencv_python_headless-5.0.0.93-cp37-abi3-win32.whl", hash = "sha256:c6bcd96b185975ea240d22cfdb15a1f6d080cc95264cfbe2621f21bb144d89b9", size = 35411237, upload-time = "2026-07-02T05:50:12.901Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/88/763b967f7efd7226b82c9fae16d560cba049b1f0c036647e65c610fd636e/opencv_python_headless-5.0.0.93-cp37-abi3-win_amd64.whl", hash = "sha256:829717b6a95554f273e49e357cee3b3a2a26b6f4842fbc1bed2b45bdd8f87e0e", size = 43825962, upload-time = "2026-07-02T05:50:09.627Z" },
 ]
 
 [[package]]
@@ -1401,7 +1420,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.33.1"
+version = "0.34.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1413,14 +1432,14 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/09/3511842827c51b901fb6b61992c7cf4e3a441b340cb041ac54061e7d8228/wsidicom-0.33.1.tar.gz", hash = "sha256:defe223727ebdcd1e8c1d009341a32df58c21c791257d67fe13f75f42319a5d7", size = 391995, upload-time = "2026-07-10T13:57:07.824Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/10/66/6ae1f2bc60b9cb62aae4e14e7ddb86b13a1ca2b81596f385987c42cc6b7c/wsidicom-0.34.0.tar.gz", hash = "sha256:8a805735c32bc1d688cf36787ed039909414388414b860fb377694dc0dc59ea4", size = 412690, upload-time = "2026-07-17T10:34:00.91Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ab/bf/a76574fcab89474767e36629f27f58e229889c8bbf25b55de8982491b359/wsidicom-0.33.1-py3-none-any.whl", hash = "sha256:2cdf2753537fa0ad4d732e1d14716149e85c3b3504b7c600f01fe7f4a30de4d9", size = 285984, upload-time = "2026-07-10T13:57:06.56Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/24/949a83178546d4f583ac219e390ea75c76876c02ca492a7225f2eada0267/wsidicom-0.34.0-py3-none-any.whl", hash = "sha256:0105c20e829045382abd717fa9df252f230c55649b353716b346751995fe7456", size = 296530, upload-time = "2026-07-17T10:33:59.658Z" },
 ]
 
 [[package]]
 name = "wsidicomizer"
-version = "0.28.1"
+version = "0.29.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -1442,6 +1461,9 @@ imagecodecs = [
 ]
 isyntax = [
     { name = "pyisyntax" },
+]
+opencv = [
+    { name = "opencv-python-headless" },
 ]
 openslide = [
     { name = "openslide-python" },
@@ -1478,6 +1500,7 @@ requires-dist = [
     { name = "imagecodecs", marker = "extra == 'imagecodecs'", specifier = ">=2024.1.1,!=2024.9.22" },
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.6.0" },
+    { name = "opencv-python-headless", marker = "extra == 'opencv'", specifier = ">=4.5.0" },
     { name = "openslide-python", marker = "extra == 'openslide'", specifier = ">=1.3.0,<2.0.0" },
     { name = "opentile", specifier = ">=0.24.0,<0.25.0" },
     { name = "pydicom", specifier = ">=3.0.0" },
@@ -1487,9 +1510,9 @@ requires-dist = [
     { name = "pylibjpeg-rle", marker = "extra == 'pylibjpeg-rle'", specifier = ">=2.0.0,<3.0.0" },
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=4.0.0,<5.0.0" },
-    { name = "wsidicom", specifier = ">=0.33.1,<0.34.0" },
+    { name = "wsidicom", specifier = ">=0.34.0,<0.35.0" },
 ]
-provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg"]
+provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg", "opencv"]
 
 [package.metadata.requires-dev]
 dev = [

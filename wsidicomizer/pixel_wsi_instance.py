@@ -16,7 +16,7 @@
 
 from collections.abc import Sequence
 
-from PIL.Image import Image
+import numpy as np
 from wsidicom.geometry import Region, Size
 from wsidicom.instance import WsiInstance
 from wsidicom.instance.dataset import WsiDataset
@@ -52,11 +52,11 @@ class PixelWsiInstance(WsiInstance):
         output_size: Size | None = None,
         *,
         executor: ReadExecutor,
-    ) -> Image:
-        # A pixel source reads the whole region in one native call, so there is
-        # no per-tile fan-out to dispatch; the executor is accepted to satisfy
-        # the base signature and left unused.
-        image = self._image_data.read_region(region, z, path)
+    ) -> np.ndarray:
+        # Read the region straight from the image data, bypassing wsidicom's
+        # per-tile decode-and-stitch path, then downsample if a smaller output
+        # was requested.
+        array = self._image_data.read_region(region, z, path)
         if output_size is None or output_size == region.size:
-            return image
-        return self._downsampler.downsample(image, output_size)
+            return array
+        return self._downsampler.downsample(array, output_size)

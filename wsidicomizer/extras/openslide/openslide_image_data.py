@@ -18,8 +18,6 @@ import ctypes
 from enum import Enum
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
@@ -87,8 +85,12 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         )
         self._osr = open_slide._osr
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        """Read a pixel region directly from the openslide object.
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        """Read the pixels of a region directly from the openslide object.
+
+        openslide reads 4-byte ARGB; the alpha is composited over the background
+        colour in numpy. ``read_region`` (Pillow) is derived from this by the
+        base class.
 
         Parameters
         ----------
@@ -101,22 +103,21 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Returns
         -------
-        Image
-            The region as a Pillow image.
+        np.ndarray
+            The region as an RGB numpy array.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
         if path not in self.optical_paths:
             raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-        image_data = self._get_region(region)
-        if image_data is None:
+        region_data = self._get_region(region)
+        if region_data is None:
             return self._get_blank_decoded_frame(region.size)
-        return image_data
+        return region_data
 
-    def _get_region(self, region: Region) -> Image | None:
-        """Return Image read from region in openslide image. If image data for
-        region is blank, None is returned. Transparent pixels are made into
-        background color
+    def _get_region(self, region: Region) -> np.ndarray | None:
+        """Return the region as an RGB numpy array, with openslide's ARGB alpha
+        composited over the background colour. None if the region is blank.
 
         Parameters
         ----------
@@ -125,8 +126,8 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Returns
         ----------
-        Optional[Image]
-            Image of region, or None if region is blank.
+        np.ndarray | None
+            Region as an RGB array, or None if blank.
         """
         if region.size.width < 0 or region.size.height < 0:
             raise ValueError("Negative size not allowed")
@@ -147,14 +148,14 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
             region.size.width,
             region.size.height,
         )
-        region_data.shape = (region.size.height, region.size.width, CHANNELS)
+        region_data = np.reshape(
+            region_data, (region.size.height, region.size.width, CHANNELS), copy=False
+        )
         if self._detect_blank_tile(region_data):
             return None
 
         convert_argb_to_rgba(region_data.view(ctypes.c_uint32))  # type: ignore
-
-        alpha_image = Pillow.fromarray(region_data)
-        return self._remove_alpha(alpha_image)
+        return self._composite_over_background(region_data)
 
     def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return image bytes for tile. Transparency is removed and tile is
@@ -181,10 +182,16 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
         if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
-        return self.encoder.encode(np.asarray(decoded))
+        return self.encoder.encode(decoded)
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile. Image mode is RGB.
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile (RGB).
 
         Parameters
         ----------
@@ -197,8 +204,8 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Returns
         ----------
-        Image
-            Tile as Image.
+        np.ndarray
+            Tile pixels.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))

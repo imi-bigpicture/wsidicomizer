@@ -29,10 +29,12 @@ from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
+from wsidicom.config import settings
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import Pyramid, WsiMetadata
+from wsidicom.options import DownsamplerOption
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BOUNDS_X,
@@ -42,7 +44,41 @@ from wsidicomizer.extras.openslide.openslide import (
 from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-from .conftest import Jpeg2kTestEncoder, test_parameters
+from .conftest import Jpeg2kTestEncoder, converted_folder, test_parameters
+
+
+@pytest.fixture(autouse=True)
+def pin_pillow_downsampler():
+    """Pin the Pillow downsampler for read goldens. Pillow's resampling is stable
+    across platforms, so its checksums are the golden values; an installed opencv
+    extra would otherwise change non-2x read output (its fractional resampling is
+    not reproducible across platforms)."""
+    original = settings.preferred_downsampler
+    settings.preferred_downsampler = DownsamplerOption.PILLOW
+    yield
+    settings.preferred_downsampler = original
+
+
+@pytest.fixture
+def wsi(
+    converted: dict[tuple[str, str], "TemporaryDirectory"],
+    wsi_files: dict[str, dict[str, Path]],
+    encoder: Encoder,
+    file_format: str,
+    file: str,
+):
+    """Open the (cached) converted wsi."""
+    file_path = wsi_files[file_format][file]
+    if not file_path.exists():
+        pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+    if test_parameters[file_format][file]["convert"]:
+        folder = converted_folder(converted, wsi_files, encoder, file_format, file)
+        assert folder is not None
+        wsi = WsiDicom.open(folder.name)
+    else:
+        wsi = WsiDicomizer.open(file_path)
+    yield wsi
+    wsi.close()
 
 
 @pytest.fixture(scope="module")

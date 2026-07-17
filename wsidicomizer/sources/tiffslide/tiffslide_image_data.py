@@ -15,8 +15,6 @@
 """Image data for tiffslide compatible file."""
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
 from tiffslide import TiffSlide
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
@@ -76,8 +74,9 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         """Number of samples per pixel in the image."""
         return self._samples_per_pixel
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        """Read a pixel region directly from the tiffslide object.
+    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+        """Read the pixels of a region directly from the tiffslide object.
+
 
         Parameters
         ----------
@@ -90,8 +89,8 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Returns
         -------
-        Image
-            The region as a Pillow image.
+        np.ndarray
+            The region pixels (RGB, as tifffile decodes it).
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
@@ -100,7 +99,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         image_data = self._get_region(region)
         if image_data is None:
             return self._get_blank_decoded_frame(region.size)
-        return Pillow.fromarray(image_data)
+        return image_data
 
     def _get_region(self, region: Region) -> np.ndarray | None:
         """Return Image read from region in tiffslide image. If image data for
@@ -161,8 +160,14 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
             return self._get_blank_encoded_frame(self.tile_size)
         return self.encoder.encode(decoded)
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return Image for tile. Image mode is RGB.
+    def get_decoded_tile(
+        self,
+        tile_point: Point,
+        z: float,
+        path: str,
+        cache: bool = True,
+    ) -> np.ndarray:
+        """Return the pixels of a tile (RGB).
 
         Parameters
         ----------
@@ -175,8 +180,8 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
 
         Returns
         ----------
-        Image
-            Tile as Image.
+        np.ndarray
+            Tile pixels.
         """
         if z not in self.focal_planes:
             raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
@@ -185,7 +190,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
-        return Pillow.fromarray(tile)
+        return tile
 
     def _detect_blank_tile2(self, data: np.ndarray) -> bool:
         """Detect if tile data is a blank tile, i.e. either has full
