@@ -30,10 +30,10 @@ from pydicom.uid import UID
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
-from wsidicom.config import Settings, use_settings
 from wsidicom.file import InstanceSplit, OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
 
+from wsidicomizer.config import Settings, use_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.metadata import MetadataPostProcessor
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource

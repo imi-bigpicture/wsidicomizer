@@ -30,7 +30,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
-from wsidicomizer.config import settings
+from wsidicomizer.config import get_settings
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
@@ -75,7 +75,7 @@ class CziImageData(BaseDicomizerImageData):
         self._czi.set_lock(True)
         super().__init__(encoder)
         if tile_size is None:
-            tile_size = settings.default_tile_size
+            tile_size = get_settings().default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._block_directory = self._czi.filtered_subblock_directory
         self._dtype = np.dtype(self._block_directory[0].dtype)
@@ -345,7 +345,7 @@ class CziImageData(BaseDicomizerImageData):
             dtype=self._dtype,
         )
 
-    @lru_cached_method(maxsize=lambda: settings.czi_block_cache_size)
+    @lru_cached_method(maxsize=lambda: get_settings().czi_block_cache_size)
     def _get_tile_data(self, block_index: int) -> np.ndarray:
         """Get decompressed tile data from czi file. Cache the tile data. To
         prevent multiple threads proceseing the same tile, use a lock for

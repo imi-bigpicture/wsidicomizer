@@ -42,7 +42,7 @@ from wsidicom.metadata.sample import SlideSample
 from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.source import Source
 
-from wsidicomizer.config import settings
+from wsidicomizer.config import get_settings
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 from wsidicomizer.uid_resolver import MetadataUidResolver
@@ -318,7 +318,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self, image_type: ImageType, photometric_interpretation: str
     ) -> WsiDataset:
         require_icc_profile = (
-            settings.insert_icc_profile_if_missing
+            get_settings().insert_icc_profile_if_missing
             and not photometric_interpretation.startswith("MONOCHROME")
         )
         dataset = WsiMetadataDicomSchema().dump(

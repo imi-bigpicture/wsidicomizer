@@ -22,7 +22,7 @@ from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem
 
-from wsidicomizer.config import settings
+from wsidicomizer.config import get_settings
 from wsidicomizer.image_data import PixelImageData
 
 
@@ -251,7 +251,7 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
             encoder,
         )
         if tile_size is None:
-            tile_size = settings.default_tile_size
+            tile_size = get_settings().default_tile_size
         self._tile_size = Size(tile_size, tile_size)
         self._level_index = level_index
         self._downsample = level_downsamples[self._level_index]

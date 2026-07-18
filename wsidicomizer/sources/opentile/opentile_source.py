@@ -25,7 +25,7 @@ from wsidicom.geometry import Size, SizeMm
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
-from wsidicomizer.config import settings
+from wsidicomizer.config import get_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor

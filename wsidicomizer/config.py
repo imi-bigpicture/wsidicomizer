@@ -12,46 +12,86 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Module containing settings for WsiDicomizer."""
+"""Module containing settings for WsiDicomizer.
+
+``Settings`` extends the wsidicom ``Settings`` (so every wsidicom setting, such
+as ``pyramid_resampling_filter``, is a first-class field here) and adds
+wsidicomizer's own settings and per-source settings (e.g. ``opentile``).
+"""
+
+import contextvars
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+
+from opentile.config import Settings as OpenTileSettings
+from opentile.config import set_default_settings as set_opentile_default_settings
+from opentile.config import use_settings as use_opentile_settings
+from wsidicom.config import Settings as DicomSettings
+from wsidicom.config import set_default_settings as set_dicom_default_settings
+from wsidicom.config import use_settings as use_dicom_settings
 
 
-class Settings:
-    """Class containing settings. Settings are to be accessed through the
-    global variable settings."""
+@dataclass(frozen=True)
+class Settings(DicomSettings):
+    """Immutable settings for WsiDicomizer.
 
-    def __init__(self) -> None:
-        self._default_tile_size = 512
-        self._czi_block_cache_size = 8
-        self._insert_icc_profile_if_missing = True
+    Inherits all wsidicom settings and adds wsidicomizer's own. To change the
+    process-wide default, use ``set_default_settings(Settings(...))``. To apply
+    settings to a block of code, use ``use_settings``.
+    """
 
-    @property
-    def default_tile_size(self) -> int:
-        """Default tile size to use."""
-        return self._default_tile_size
-
-    @default_tile_size.setter
-    def default_tile_size(self, value: int) -> None:
-        self._default_tile_size = value
-
-    @property
-    def czi_block_cache_size(self) -> int:
-        """Size of block cache to use for czi files."""
-        return self._czi_block_cache_size
-
-    @czi_block_cache_size.setter
-    def czi_block_cache_size(self, value: int) -> None:
-        self._czi_block_cache_size = value
-
-    @property
-    def insert_icc_profile_if_missing(self) -> bool:
-        """Whether to insert a default ICC profile in the DICOM file if no profile
-        is present in the source file or provided metadata."""
-        return self._insert_icc_profile_if_missing
-
-    @insert_icc_profile_if_missing.setter
-    def insert_icc_profile_if_missing(self, value: bool) -> None:
-        self._insert_icc_profile_if_missing = value
+    default_tile_size: int = 512
+    """Default tile size to use."""
+    czi_block_cache_size: int = 8
+    """Size of block cache to use for czi files."""
+    insert_icc_profile_if_missing: bool = True
+    """Whether to insert a default ICC profile in the DICOM file if no profile
+    is present in the source file or provided metadata."""
+    opentile: OpenTileSettings = field(default_factory=OpenTileSettings)
+    """Settings for the opentile source (e.g. used when reading NDPI files)."""
 
 
-settings = Settings()
-"""Global settings variable."""
+_default_settings = Settings()
+_active_settings: contextvars.ContextVar[Settings | None] = contextvars.ContextVar(
+    "wsidicomizer_active_settings", default=None
+)
+
+
+def get_settings() -> Settings:
+    """The settings in effect: those active in the current context (see
+    ``use_settings``), or the process-wide default when none is active."""
+    return _active_settings.get() or _default_settings
+
+
+def set_default_settings(new_settings: Settings) -> None:
+    """Replace the process-wide default settings.
+
+    The change is propagated to the wsidicom and opentile default settings the
+    ``Settings`` carries, so all three layers stay in agreement.
+    """
+    global _default_settings
+    _default_settings = new_settings
+    set_dicom_default_settings(new_settings)
+    set_opentile_default_settings(new_settings.opentile)
+
+
+@contextmanager
+def use_settings(active: Settings | None = None) -> Iterator[Settings]:
+    """Activate wsidicomizer settings for the current context and yield the
+    settings in effect.
+
+    With an ``active`` ``Settings`` it activates it here, together with the
+    wsidicom and opentile layers it carries, so all three agree, and resets on
+    exit. With no argument it activates nothing (each layer keeps its own
+    default) and just yields the settings currently in effect.
+    """
+    if active is None:
+        yield get_settings()
+        return
+    with use_dicom_settings(active), use_opentile_settings(active.opentile):
+        token = _active_settings.set(active)
+        try:
+            yield active
+        finally:
+            _active_settings.reset(token)

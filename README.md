@@ -227,14 +227,24 @@ wsi.close()
 
 ***Configure a single open or conversion with settings.***
 
-`open()` and `convert()` take a keyword-only `settings` argument, a wsidicom `Settings` used for that call instead of the process-wide default (see the [wsidicom settings documentation](https://github.com/imi-bigpicture/wsidicom#settings)):
+`open()` and `convert()` take a keyword-only `settings` argument used for that call instead of the process-wide default. The wsidicomizer `Settings` extends the wsidicom `Settings` — so every wsidicom setting (e.g. `pyramid_resampling_filter`) is available alongside wsidicomizer's own (e.g. `default_tile_size`) — and nests per-source settings such as `opentile`:
 
 ```python
-from wsidicomizer import WsiDicomizer
-from wsidicom.config import Settings
+from wsidicomizer import Settings, WsiDicomizer
+from opentile.config import Settings as OpenTileSettings
 
-wsi = WsiDicomizer.open(path_to_wsi_file, settings=Settings(strict_uid_check=True))
+wsi = WsiDicomizer.open(
+    path_to_wsi_file,
+    settings=Settings(
+        strict_uid_check=True,                          # wsidicom setting
+        pyramid_resampling_filter="box",                # wsidicom setting
+        default_tile_size=1024,                         # wsidicomizer setting
+        opentile=OpenTileSettings(ndpi_frame_cache=64),  # opentile source setting
+    ),
+)
 ```
+
+To change the process-wide default instead, use `set_default_settings(Settings(...))` (it also updates the wsidicom and opentile defaults the `Settings` carries).
 
 ## Metadata handling
 

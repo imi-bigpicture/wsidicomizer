@@ -14,9 +14,23 @@
 
 from importlib.metadata import version
 
+from wsidicomizer.config import (
+    Settings,
+    get_settings,
+    set_default_settings,
+    use_settings,
+)
 from wsidicomizer.uid_resolver import MetadataUidResolver
 from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
 __version__ = version("wsidicomizer")
 
-__all__ = ["MetadataUidResolver", "SourceIdentifier", "WsiDicomizer"]
+__all__ = [
+    "Settings",
+    "get_settings",
+    "set_default_settings",
+    "use_settings",
+    "MetadataUidResolver",
+    "SourceIdentifier",
+    "WsiDicomizer",
+]

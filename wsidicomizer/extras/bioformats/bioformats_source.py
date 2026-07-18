@@ -18,6 +18,7 @@ from functools import cached_property
 from pathlib import Path
 
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator
@@ -43,6 +44,7 @@ class BioformatsSource(DicomizerSource):
         readers: int | None = None,
         cache_path: str | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict | None = None,
     ) -> None:
         """Create a new BioformatsSource.
 
@@ -85,12 +87,19 @@ class BioformatsSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
-    @staticmethod
-    def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by Bio-Formats."""
-        return BioformatsImageData.detect_format(path)
+    @classmethod
+    def is_supported(
+        cls, path: str | Path | UPath, file_options: dict | None = None
+    ) -> bool:
+        """Return True if file in path is supported by Bio-Formats. Bio-Formats
+        reads only local files, so a fsspec path is declined rather than opened
+        and ``file_options`` is ignored."""
+        if not cls.is_plain_local_path(path):
+            return False
+        return BioformatsImageData.detect_format(Path(path))
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:

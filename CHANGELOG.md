@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Keyword-only `settings` parameter on `WsiDicomizer.open` and `convert`, taking a wsidicom `Settings` used for that call instead of the process-wide default.
+- `Settings` (immutable) and `get_settings`, `set_default_settings` and `use_settings` for configuring wsidicomizer. `Settings` extends the wsidicom `Settings` (every wsidicom setting is available) and nests per-source settings (`opentile`); `set_default_settings` and `open`/`convert`'s `settings` argument drive all layers.
+
+### Removed
+
+- The mutable `settings` global (`settings.<field> = ...`). Change the process-wide default with `set_default_settings(Settings(...))` instead.
 
 ## [0.29.0] - 2026-07-17
 
