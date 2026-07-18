@@ -22,9 +22,11 @@ from datetime import datetime
 from functools import cached_property
 from importlib.metadata import version
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from pydicom import Dataset, config
+from upath import UPath
 from wsidicom import ImageData
 from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
 from wsidicom.codec.settings import Channels
@@ -63,7 +65,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     def __init__(
         self,
-        filepath: Path,
+        filepath: Path | UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -71,13 +73,15 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new DicomizerSource.
 
         Parameters
         ----------
-        filepath: Path
-            Path to the file.
+        filepath: Path | UPath
+            Path to the file; a `Path` for a local file or a `UPath` for a
+            fsspec location.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
             If None, the source picks a default matching its pixel format.
@@ -95,8 +99,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             Generator used by the source to fill metadata UIDs. `None` uses
             the default `CallableUidGenerator` backed by
             `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
-        self._filepath: Path | None = filepath
+        self._filepath = filepath
         self._provided_encoder = encoder
         self._tile_size = tile_size
         self._user_metadata = metadata
@@ -104,6 +111,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._include_confidential = include_confidential
         self._metadata_post_processor = metadata_post_processor
         self._uid_generator: UidGenerator = uid_generator or CallableUidGenerator()
+        self._file_options = file_options
 
     @cached_property
     def _encoder(self) -> Encoder:
@@ -148,8 +156,26 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def is_supported(path: Path) -> bool:
-        """Return True if file in filepath is supported by Dicomizer."""
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
+        """Return True if the file at `path` is supported.
+
+        Parameters
+        ----------
+        path: Path | UPath
+            Path to the file. A plain `Path` for a local file, or a `UPath` for a
+            fsspec location (remote, `file://`, or chained). Sources that read
+            only local files decline a `UPath`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem for sources that can use
+            it; ignored by local-only sources.
+
+        Returns
+        -------
+        bool
+            True if the file at `path` is supported.
+        """
         raise NotImplementedError()
 
     @property

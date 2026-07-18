@@ -16,6 +16,7 @@
 """Source for reading tiffslide compatible file."""
 
 from pathlib import Path
+from typing import Any
 
 from pydicom import Dataset
 from tiffslide import TiffSlide
@@ -30,6 +31,7 @@ from tiffslide.tiffslide import (
     PROPERTY_NAME_OBJECTIVE_POWER,
     PROPERTY_NAME_VENDOR,
 )
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator, WsiMetadata
@@ -59,6 +61,7 @@ class TiffSlideSource(OpenSlideLikeSource):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
         **source_args,
     ) -> None:
         """Create a new TiffSlideSource.
@@ -80,9 +83,16 @@ class TiffSlideSource(OpenSlideLikeSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
-
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
-        self._tiffslide = TiffSlide(filepath, **source_args)
+        self._tiffslide = TiffSlide(
+            filepath, storage_options=file_options, **source_args
+        )
         properties = OpenSlideLikeProperties(
             background_color=self._tiffslide.properties.get(
                 PROPERTY_NAME_BACKGROUND_COLOR
@@ -114,6 +124,7 @@ class TiffSlideSource(OpenSlideLikeSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
     def close(self):
@@ -127,9 +138,16 @@ class TiffSlideSource(OpenSlideLikeSource):
         return self._pixel_format_from(samples_per_pixel, dtype)
 
     @staticmethod
-    def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by TiffSlide."""
-        format = TiffSlide.detect_format(path)
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
+        """Return True if file in path is supported by TiffSlide. A path whose
+        fsspec backend is unavailable or unreadable is treated as unsupported so
+        source selection stays robust (mirrors opentile's defensive detection)."""
+        try:
+            format = TiffSlide.detect_format(path, storage_options=file_options)
+        except Exception:
+            return False
         return format is not None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:

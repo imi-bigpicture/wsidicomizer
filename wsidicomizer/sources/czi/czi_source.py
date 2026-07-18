@@ -15,6 +15,7 @@
 """Source for reading czi file."""
 
 from pathlib import Path
+from typing import Any
 
 from czifile import CziFile
 from pydicom import Dataset
@@ -41,6 +42,7 @@ class CziSource(DicomizerSource):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new CziSource.
 
@@ -61,6 +63,12 @@ class CziSource(DicomizerSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         super().__init__(
             filepath,
@@ -71,6 +79,7 @@ class CziSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
         self._czi = CziFile(filepath)
         self._base_metadata = CziMetadata(self._czi)
@@ -92,11 +101,10 @@ class CziSource(DicomizerSource):
         return self._base_metadata
 
     @staticmethod
-    def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by CziFile. czifile can only
-        read a real local file, so a fsspec path (e.g. ``s3://``, ``file://``) is
-        declined rather than opened."""
-        if UPath(path).protocol not in ("", "local"):
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
+        if isinstance(path, UPath):
             return False
         return CziImageData.detect_format(path) is not None
 

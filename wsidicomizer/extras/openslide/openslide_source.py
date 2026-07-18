@@ -15,8 +15,10 @@
 """Source for reading openslide compatible file."""
 
 from pathlib import Path
+from typing import Any
 
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator
@@ -59,6 +61,7 @@ class OpenSlideSource(OpenSlideLikeSource):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new OpenSlideSource.
 
@@ -80,6 +83,12 @@ class OpenSlideSource(OpenSlideLikeSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         self._slide = OpenSlide(filepath)
         properties = OpenSlideLikeProperties(
@@ -108,6 +117,7 @@ class OpenSlideSource(OpenSlideLikeSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
     def close(self) -> None:
@@ -119,8 +129,11 @@ class OpenSlideSource(OpenSlideLikeSource):
         return Channels.RGB, 8
 
     @staticmethod
-    def is_supported(path: Path) -> bool:
-        """Return True if file in path is supported by OpenSlide."""
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
+        if isinstance(path, UPath):
+            return False
         return OpenSlide.detect_format(str(path)) is not None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:

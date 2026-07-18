@@ -16,6 +16,7 @@
 
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 from pydicom import Dataset
 from upath import UPath
@@ -44,7 +45,7 @@ class BioformatsSource(DicomizerSource):
         readers: int | None = None,
         cache_path: str | None = None,
         uid_generator: UidGenerator | None = None,
-        file_options: dict | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new BioformatsSource.
 
@@ -69,6 +70,12 @@ class BioformatsSource(DicomizerSource):
             Number of readers to use.
         cache_path: Optional[str] = None
             Path to cache directory.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
@@ -90,16 +97,14 @@ class BioformatsSource(DicomizerSource):
             file_options,
         )
 
-    @classmethod
+    @staticmethod
     def is_supported(
-        cls, path: str | Path | UPath, file_options: dict | None = None
+        path: Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
-        """Return True if file in path is supported by Bio-Formats. Bio-Formats
-        reads only local files, so a fsspec path is declined rather than opened
-        and ``file_options`` is ignored."""
-        if not cls.is_plain_local_path(path):
+        """Return True if file in path is supported by Bio-Formats."""
+        if isinstance(path, UPath):
             return False
-        return BioformatsImageData.detect_format(Path(path))
+        return BioformatsImageData.detect_format(path)
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:

@@ -18,15 +18,15 @@ like DICOM instances, enabling viewing and saving.
 """
 
 import contextlib
-import os
 from collections.abc import Callable, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 from PIL.Image import Image
 from pydicom import Dataset
 from pydicom.uid import UID
+from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
@@ -54,7 +54,7 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def open(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
-        filepath: str | Path,
+        filepath: str | Path | UPath,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
@@ -63,6 +63,7 @@ class WsiDicomizer(WsiDicom):
         encoding: EncodingSettings | Encoder | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
         *,
         settings: Settings | None = None,
         **source_args,
@@ -71,14 +72,16 @@ class WsiDicomizer(WsiDicom):
 
         Parameters
         ----------
-        filepath: str
-            Path to file
+        filepath: str | Path | UPath
+            Path to file. May be a fsspec path (e.g. ``s3://``) for sources that
+            can read through fsspec (opentile, tiffslide); sources that only read
+            local files (openslide, czifile, isyntax) decline such paths.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
         tile_size: Optional[int] = 512
-            Output tile size. Falls back to `settings.default_tile_size` if
+            Output tile size. Falls back to `get_settings().default_tile_size` if
             `None`. Has no effect on sources that read native tiles
             (`OpenTile` non-NDPI, `ISyntax`).
         include_confidential: bool = True
@@ -92,6 +95,9 @@ class WsiDicomizer(WsiDicom):
             Optional override source to use.
         uid_generator: Callable[[], UID] | UidGenerator | None = None
             Generator used to populate UIDs on the metadata if not already set.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when opening a fsspec
+            path (e.g. credentials). Ignored by sources that read local files.
         settings: Settings | None = None
             Settings to use for this object instead of the process-wide default.
         **source_args
@@ -102,13 +108,12 @@ class WsiDicomizer(WsiDicom):
         WsiDicom
             WsiDicom object of file.
         """
-        if not isinstance(filepath, Path):
-            filepath = Path(filepath)
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
         elif not isinstance(uid_generator, UidGenerator):
             uid_generator = CallableUidGenerator(uid_generator)
-        selected_source = cls._select_source(filepath, preferred_source)
+        filepath = cls._normalize_path(filepath)
+        selected_source = cls._select_source(filepath, preferred_source, file_options)
         encoder = cls._select_encoder(encoding)
 
         with use_settings(settings):
@@ -121,6 +126,7 @@ class WsiDicomizer(WsiDicom):
                 include_confidential,
                 metadata_post_processor,
                 uid_generator=uid_generator,
+                file_options=file_options,
                 **source_args,
             )
             return cls(source, True, settings=settings)
@@ -128,8 +134,8 @@ class WsiDicomizer(WsiDicom):
     @classmethod
     def convert(
         cls,
-        filepath: str | Path,
-        output_path: str | Path | None = None,
+        filepath: str | Path | UPath,
+        output_path: str | Path | UPath | None = None,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
@@ -150,6 +156,7 @@ class WsiDicomizer(WsiDicom):
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         instance_split: InstanceSplit = InstanceSplit.NONE,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
+        file_options: dict[str, Any] | None = None,
         *,
         settings: Settings | None = None,
         **source_args,
@@ -168,7 +175,7 @@ class WsiDicomizer(WsiDicom):
         default_metadata: Optional[WsiMetadata] = None
             User-specified metadata that will be used as default values.
         tile_size: Optional[int] = 512
-            Output tile size. Falls back to `settings.default_tile_size` if
+            Output tile size. Falls back to `get_settings().default_tile_size` if
             `None`. Has no effect on sources that read native tiles
             (`OpenTile` non-NDPI, `ISyntax`).
         uid_generator: Callable[[], UID] | UidGenerator | None = None
@@ -219,6 +226,11 @@ class WsiDicomizer(WsiDicom):
             write a separate instance per focal plane and/or optical path.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem for both the input
+            (e.g. credentials) and the output. Ignored by sources that read
+            local files. When `output_path` is omitted it defaults to a folder
+            next to the source on the same filesystem.
         settings: Settings | None = None
             Settings to use for this conversion instead of the process-wide default.
         **source_args
@@ -233,25 +245,32 @@ class WsiDicomizer(WsiDicom):
             uid_generator = CallableUidGenerator()
         elif not isinstance(uid_generator, UidGenerator):
             uid_generator = CallableUidGenerator(uid_generator)
-        with cls.open(
-            filepath,
-            metadata,
-            default_metadata,
-            tile_size,
-            include_confidential,
-            metadata_post_processor,
-            encoding,
-            preferred_source,
-            uid_generator,
-            settings=settings,
-            **source_args,
-        ) as wsi:
+        with (
+            use_settings(settings),
+            cls.open(
+                filepath,
+                metadata,
+                default_metadata,
+                tile_size,
+                include_confidential,
+                metadata_post_processor,
+                encoding,
+                preferred_source,
+                uid_generator,
+                file_options,
+                settings=settings,
+                **source_args,
+            ) as wsi,
+        ):
             if output_path is None:
-                output_path = str(
-                    Path(filepath).parents[0].joinpath(Path(filepath).stem)
-                )
+                # Default to a folder next to the source, named after it. UPath
+                # keeps this working for fsspec sources, where the output can
+                # live on the same (possibly remote) filesystem as the input.
+                source_path = UPath(filepath)
+                output_path = source_path.parent / source_path.stem
+            output_path = UPath(output_path)
             try:
-                os.mkdir(output_path)
+                output_path.mkdir()
             except FileExistsError:
                 raise ValueError(f"Output path {output_path} already exists") from None
             created_files = wsi.save(
@@ -270,14 +289,33 @@ class WsiDicomizer(WsiDicom):
                 transcoding=encoding if force_transcoding else None,
                 force_transcoding=force_transcoding,
                 instance_split=instance_split,
+                file_options=file_options,
             )
 
         return [str(filepath) for filepath in created_files]
 
     @staticmethod
+    def _normalize_path(path: str | Path | UPath) -> Path | UPath:
+        """Return `path` typed by its nature: a plain `Path` for a plain local
+        path, or a `UPath` for any fsspec location (remote, `file://`, or a
+        chained url such as `simplecache::s3://...`).
+
+        This lets the type carry the meaning downstream, so a source that reads
+        only local files can decline simply by rejecting `UPath`. A chained url
+        is checked via its string form because `UPath` reports it with an empty
+        protocol, so the protocol alone would misjudge it as local.
+        """
+        path = UPath(path) if isinstance(path, (str, Path)) else path
+        is_plain_local_path = path.protocol == "" and "::" not in str(path)
+        if is_plain_local_path:
+            return Path(path)
+        return path
+
+    @staticmethod
     def _select_source(
-        filepath: Path,
+        filepath: Path | UPath,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> type[DicomizerSource]:
         """Return source that supports file in filepath."""
         # List of supported sources in prioritization order.
@@ -313,11 +351,11 @@ class WsiDicomizer(WsiDicom):
                 (
                     source
                     for source in loaded_sources.values()
-                    if source.is_supported(filepath)
+                    if source.is_supported(filepath, file_options)
                 ),
                 None,
             )
-        elif preferred_source.is_supported(filepath):
+        elif preferred_source.is_supported(filepath, file_options):
             selected_source = preferred_source
         if selected_source is None:
             raise NotImplementedError(f"{filepath} is not supported")

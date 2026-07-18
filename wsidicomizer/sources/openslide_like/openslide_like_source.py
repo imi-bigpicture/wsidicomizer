@@ -20,6 +20,7 @@ import re
 from collections.abc import Mapping, Sequence
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from PIL.Image import Image
 from pydicom import Dataset
@@ -62,6 +63,7 @@ class OpenSlideLikeSource(DicomizerSource):
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new OpenSlideLikeSource.
 
@@ -92,7 +94,12 @@ class OpenSlideLikeSource(DicomizerSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
-
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         self._base_metadata = base_metadata
         self._level_downsamples = level_downsamples
@@ -116,6 +123,7 @@ class OpenSlideLikeSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
     @property

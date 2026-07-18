@@ -15,8 +15,10 @@
 """Source for reading libisyntax compatible file."""
 
 from pathlib import Path
+from typing import Any
 
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import ImageType, UidGenerator, WsiMetadata
@@ -48,6 +50,7 @@ class ISyntaxSource(DicomizerSource):
         force_transcoding: bool = False,
         cache: int = 2048,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new ISyntaxSource.
 
@@ -72,6 +75,12 @@ class ISyntaxSource(DicomizerSource):
             If to force transcoding of label and overview images.
         cache: int = 2048
             Cache size to use for ISyntax.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         self._slide = ISyntax.open(filepath, cache)
         self._force_transcoding = force_transcoding
@@ -85,10 +94,15 @@ class ISyntaxSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
     @staticmethod
-    def is_supported(path: Path) -> bool:
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
+        if isinstance(path, UPath):
+            return False
         try:
             ISyntax.open(path)
         except Exception:

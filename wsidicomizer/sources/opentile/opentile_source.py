@@ -16,9 +16,11 @@
 
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 from opentile import OpenTile
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.geometry import Size, SizeMm
@@ -49,6 +51,7 @@ class OpenTileSource(DicomizerSource):
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
         force_transcoding: bool = False,
         uid_generator: UidGenerator | None = None,
+        file_options: dict[str, Any] | None = None,
     ) -> None:
         """Create a new OpenTileSource.
 
@@ -61,7 +64,7 @@ class OpenTileSource(DicomizerSource):
             If None, the source picks a default matching its pixel format.
         tile_size: int | None = None
             Preferred tile size to use, if not enforced by file. Falls back to
-            `settings.default_tile_size` if `None`. Only has effect for NDPI
+            `get_settings().default_tile_size` if `None`. Only has effect for NDPI
             files where it controls how stripes are subdivided.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
@@ -73,10 +76,16 @@ class OpenTileSource(DicomizerSource):
             Optional metadata post processing by update from dataset or callback.
         force_transcoding: bool = False
             If to force transcoding images.
+        uid_generator: UidGenerator | None = None
+            Generator used by the source to fill metadata UIDs. `None` uses the
+            default `CallableUidGenerator` backed by `pydicom.generate_uid`.
+        file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when reading a fsspec
+            path. Ignored by sources that only read local files.
         """
         if tile_size is None:
-            tile_size = settings.default_tile_size
-        self._tiler = OpenTile.open(filepath, tile_size)
+            tile_size = get_settings().default_tile_size
+        self._tiler = OpenTile.open(filepath, tile_size, file_options=file_options)
         # opentile's TiffFormat member names match WsiFormat member names.
         self._wsi_format = WsiFormat[self._tiler.format.name]
         self._base_metadata = OpenTileMetadata(
@@ -97,6 +106,7 @@ class OpenTileSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
+            file_options,
         )
 
     def close(self):
@@ -127,13 +137,15 @@ class OpenTileSource(DicomizerSource):
         return len(self._tiler.overviews) > 0
 
     @staticmethod
-    def is_supported(path: Path) -> bool:
+    def is_supported(
+        path: Path | UPath, file_options: dict[str, Any] | None = None
+    ) -> bool:
         """Return True if file in path is supported by OpenTile. Formats whose tiles
         overlap (e.g. Trestle, Ventana) are not composed by this source yet and are
         left for another source to handle."""
-        if OpenTile.detect_format(path) is None:
+        if OpenTile.detect_format(path, file_options) is None:
             return False
-        with OpenTile.open(path) as tiler:
+        with OpenTile.open(path, file_options=file_options) as tiler:
             return tiler.get_level(0).overlap is None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
