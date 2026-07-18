@@ -69,6 +69,11 @@ def set_default_settings(new_settings: Settings) -> None:
 
     The change is propagated to the wsidicom and opentile default settings the
     ``Settings`` carries, so all three layers stay in agreement.
+
+    Parameters
+    ----------
+    new_settings: Settings
+        The new process-wide default settings.
     """
     global _default_settings
     _default_settings = new_settings
@@ -78,13 +83,23 @@ def set_default_settings(new_settings: Settings) -> None:
 
 @contextmanager
 def use_settings(active: Settings | None = None) -> Iterator[Settings]:
-    """Activate wsidicomizer settings for the current context and yield the
-    settings in effect.
+    """Activate settings for the current context and yield the settings in effect.
 
-    With an ``active`` ``Settings`` it activates it here, together with the
-    wsidicom and opentile layers it carries, so all three agree, and resets on
-    exit. With no argument it activates nothing (each layer keeps its own
-    default) and just yields the settings currently in effect.
+    An ``active`` ``Settings`` is activated here together with the wsidicom and
+    opentile layers it carries, so all three agree. With no argument nothing is
+    activated (each layer keeps its own default).
+
+    Parameters
+    ----------
+    active: Settings | None = None
+        Settings to activate for the current context, together with the wsidicom
+        and opentile layers it carries. When None, nothing is activated and the
+        settings currently in effect are yielded.
+
+    Yields
+    ------
+    Settings
+        The settings in effect within the context.
     """
     if active is None:
         yield get_settings()
