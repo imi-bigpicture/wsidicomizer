@@ -27,10 +27,15 @@ from PIL.Image import Image
 from pydicom import Dataset
 from pydicom.uid import UID
 from upath import UPath
-from wsidicom import WsiDicom
+from wsidicom import (
+    ConcatenationByBytes,
+    ConcatenationByFrames,
+    InstanceSplit,
+    WsiDicom,
+)
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
-from wsidicom.file import InstanceSplit, OffsetTableType
+from wsidicom.file import OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
 
 from wsidicomizer.config import Settings, use_settings
@@ -155,6 +160,7 @@ class WsiDicomizer(WsiDicom):
         force_transcoding: bool = False,
         offset_table: Union["str", OffsetTableType] = OffsetTableType.BASIC,
         instance_split: InstanceSplit = InstanceSplit.NONE,
+        concatenation: ConcatenationByFrames | ConcatenationByBytes | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         file_options: dict[str, Any] | None = None,
         *,
@@ -224,6 +230,10 @@ class WsiDicomizer(WsiDicom):
             instances. Default combines all into one instance per level.
             `InstanceSplit.FOCAL_PLANE` and/or `InstanceSplit.OPTICAL_PATH`
             write a separate instance per focal plane and/or optical path.
+        concatenation: ConcatenationByFrames | ConcatenationByBytes | None = None
+            If set, split each pyramid level into concatenated instances (SOP
+            Instances sharing a Concatenation UID) by frame count
+            (`ConcatenationByFrames`) or byte size (`ConcatenationByBytes`).
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         file_options: dict[str, Any] | None = None
@@ -289,6 +299,7 @@ class WsiDicomizer(WsiDicom):
                 transcoding=encoding if force_transcoding else None,
                 force_transcoding=force_transcoding,
                 instance_split=instance_split,
+                concatenation=concatenation,
                 file_options=file_options,
             )
 
