@@ -162,11 +162,12 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
 )
 @click.option(
     "--concatenate-bytes",
-    type=int,
+    type=str,
     default=None,
     help="Split each level into concatenated instances whose pixel data is at most "
-    "this many bytes each (e.g. for DICOMweb STOW size limits). Mutually exclusive "
-    "with --concatenate-frames.",
+    "this size each (e.g. for DICOMweb STOW size limits). A plain byte count, "
+    "optionally with a binary suffix: '5000000', '500KB', '100M', '2GB'. Mutually "
+    "exclusive with --concatenate-frames.",
 )
 @click.option(
     "--label",
@@ -255,7 +256,7 @@ def main(
     split_focal_planes: bool,
     split_optical_paths: bool,
     concatenate_frames: int | None,
-    concatenate_bytes: int | None,
+    concatenate_bytes: str | None,
     label: Path | None,
     no_label: bool,
     no_overview: bool,
@@ -298,10 +299,13 @@ def main(
             "Use at most one of --concatenate-frames / --concatenate-bytes."
         )
     concatenation = None
-    if concatenate_frames is not None:
-        concatenation = ConcatenationByFrames(concatenate_frames)
-    elif concatenate_bytes is not None:
-        concatenation = ConcatenationByBytes(concatenate_bytes)
+    try:
+        if concatenate_frames is not None:
+            concatenation = ConcatenationByFrames(concatenate_frames)
+        elif concatenate_bytes is not None:
+            concatenation = ConcatenationByBytes(concatenate_bytes)
+    except ValueError as error:
+        raise click.UsageError(str(error)) from error
 
     # Create encoding settings
     if encoding_format is None:

@@ -233,7 +233,8 @@ class WsiDicomizer(WsiDicom):
         concatenation: ConcatenationByFrames | ConcatenationByBytes | None = None
             If set, split each pyramid level into concatenated instances (SOP
             Instances sharing a Concatenation UID) by frame count
-            (`ConcatenationByFrames`) or byte size (`ConcatenationByBytes`).
+            (`ConcatenationByFrames(n)`) or byte size (`ConcatenationByBytes(size)`,
+            where `size` is an int or a suffixed string such as `"100M"` or `"2GB"`).
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         file_options: dict[str, Any] | None = None
