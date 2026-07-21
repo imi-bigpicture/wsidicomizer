@@ -18,6 +18,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 import click
+from wsidicom import ConcatenationByBytes, ConcatenationByFrames, InstanceSplit
 from wsidicom.codec.settings import (
     HTJpeg2000Settings,
     Jpeg2kSettings,
@@ -25,7 +26,7 @@ from wsidicom.codec.settings import (
     JpegXlSettings,
     Subsampling,
 )
-from wsidicom.file import InstanceSplit, OffsetTableType
+from wsidicom.file import OffsetTableType
 from wsidicom.metadata.schema.json.wsi import WsiMetadataJsonSchema
 from wsidicom.metadata.wsi import WsiMetadata
 
@@ -153,6 +154,22 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     help="Write a separate instance per optical path.",
 )
 @click.option(
+    "--concatenate-frames",
+    type=int,
+    default=None,
+    help="Split each level into concatenated instances of at most this many frames "
+    "each. Mutually exclusive with --concatenate-bytes.",
+)
+@click.option(
+    "--concatenate-bytes",
+    type=str,
+    default=None,
+    help="Split each level into concatenated instances whose pixel data is at most "
+    "this size each (e.g. for DICOMweb STOW size limits). A plain byte count, "
+    "optionally with a binary suffix: '5000000', '500KB', '100M', '2GB'. Mutually "
+    "exclusive with --concatenate-frames.",
+)
+@click.option(
     "--label",
     type=click.Path(exists=True, path_type=Path),
     help="Optional label image to use instead of label found in file.",
@@ -238,6 +255,8 @@ def main(
     regenerate_pyramid: bool,
     split_focal_planes: bool,
     split_optical_paths: bool,
+    concatenate_frames: int | None,
+    concatenate_bytes: str | None,
     label: Path | None,
     no_label: bool,
     no_overview: bool,
@@ -274,6 +293,19 @@ def main(
         instance_split |= InstanceSplit.FOCAL_PLANE
     if split_optical_paths:
         instance_split |= InstanceSplit.OPTICAL_PATH
+
+    if concatenate_frames is not None and concatenate_bytes is not None:
+        raise click.UsageError(
+            "Use at most one of --concatenate-frames / --concatenate-bytes."
+        )
+    concatenation = None
+    try:
+        if concatenate_frames is not None:
+            concatenation = ConcatenationByFrames(concatenate_frames)
+        elif concatenate_bytes is not None:
+            concatenation = ConcatenationByBytes(concatenate_bytes)
+    except ValueError as error:
+        raise click.UsageError(str(error)) from error
 
     # Create encoding settings
     if encoding_format is None:
@@ -314,6 +346,7 @@ def main(
         force_transcoding=force_transcoding,
         offset_table=offset_table,
         instance_split=instance_split,
+        concatenation=concatenation,
         label=label,
         preferred_source=source,
     )

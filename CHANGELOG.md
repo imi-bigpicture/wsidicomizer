@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Keyword-only `settings` parameter on `WsiDicomizer.open` and `convert`, taking a wsidicom `Settings` used for that call instead of the process-wide default.
 - `Settings` (immutable) and `get_settings`, `set_default_settings` and `use_settings` for configuring wsidicomizer. `Settings` extends the wsidicom `Settings` (every wsidicom setting is available) and nests per-source settings (`opentile`); `set_default_settings` and `open`/`convert`'s `settings` argument drive all layers.
+- `concatenation` parameter on `WsiDicomizer.convert`, and `--concatenate-frames` / `--concatenate-bytes` CLI options, splitting each level into concatenated SOP Instances of at most that many frames, or bytes of pixel data.
 
 ### Removed
 
