@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Settings` (immutable) and `get_settings`, `set_default_settings` and `use_settings` for configuring wsidicomizer. `Settings` extends the wsidicom `Settings` (every wsidicom setting is available) and nests per-source settings (`opentile`); `set_default_settings` and `open`/`convert`'s `settings` argument drive all layers.
 - `concatenation` parameter on `WsiDicomizer.convert`, and `--concatenate-frames` / `--concatenate-bytes` CLI options, splitting each level into concatenated SOP Instances of at most that many frames, or bytes of pixel data.
 
+### Changed
+
+- Ndpi levels are placed on the slide using the file's offset from the slide center instead of the format default corner.
+
 ### Removed
 
 - The mutable `settings` global (`settings.<field> = ...`). Change the process-wide default with `set_default_settings(Settings(...))` instead.

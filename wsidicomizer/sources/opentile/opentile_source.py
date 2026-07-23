@@ -94,6 +94,7 @@ class OpenTileSource(DicomizerSource):
             self.has_overview,
             self._tiler.icc_profile,
             wsi_format=self._wsi_format,
+            imaged_size=self._volume_imaged_size,
         )
 
         self._force_transcoding = force_transcoding

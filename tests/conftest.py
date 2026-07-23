@@ -376,7 +376,7 @@ test_parameters = {
             "photometric_interpretation": "YBR_FULL_422",
             "transfer_syntax": JPEGBaseline8Bit,
             "passthrough": True,
-            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
+            "image_coordinate_system": {"x": 23.519, "y": 44.307, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -434,7 +434,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
+            "image_coordinate_system": {"x": 23.393, "y": 32.103, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -487,7 +487,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
+            "image_coordinate_system": {"x": 23.563, "y": 38.715, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {
@@ -528,7 +528,7 @@ test_parameters = {
             "lowest_included_pyramid_level": 4,
             "tile_size": 1024,
             "photometric_interpretation": "YBR_FULL_422",
-            "image_coordinate_system": {"x": 25.0, "y": 50.0, "rotation": 180},
+            "image_coordinate_system": {"x": 21.798, "y": 34.254, "rotation": 180},
             "icc_profile": False,
             "read_region": [
                 {

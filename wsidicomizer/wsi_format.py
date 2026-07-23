@@ -16,6 +16,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import ClassVar
 
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
 
@@ -50,22 +51,54 @@ class FormatCoordinateDefaults:
     label_rotation: float | None
     overview_rotation: float | None
 
+    ROTATIONS: ClassVar[dict[WsiFormat, tuple[float, float | None, float | None]]] = {
+        WsiFormat.SVS: (180.0, 180.0, 180.0),
+        WsiFormat.NDPI: (180.0, 180.0, 180.0),
+        WsiFormat.PHILIPS_TIFF: (180.0, 180.0, 180.0),
+        WsiFormat.HISTECH_TIFF: (0.0, None, None),
+        WsiFormat.OME_TIFF: (0.0, None, None),
+        WsiFormat.MIRAX: (270.0, 270.0, 270.0),
+        WsiFormat.VENTANA: (0.0, None, None),
+        WsiFormat.CZI: (0.0, None, None),
+        WsiFormat.ISYNTAX: (180.0, 180.0, 180.0),
+        WsiFormat.GENERIC: (0.0, None, None),
+    }
+    """Level, label and overview rotation for each WSI format."""
+
     @classmethod
     def from_wsi_format(cls, wsi_format: WsiFormat) -> "FormatCoordinateDefaults":
-        """Return the default coordinate system rotations for a WSI format."""
-        rotations: dict[WsiFormat, tuple[float, float | None, float | None]] = {
-            WsiFormat.SVS: (180.0, 180.0, 180.0),
-            WsiFormat.NDPI: (180.0, 180.0, 180.0),
-            WsiFormat.PHILIPS_TIFF: (180.0, 180.0, 180.0),
-            WsiFormat.HISTECH_TIFF: (0.0, None, None),
-            WsiFormat.OME_TIFF: (0.0, None, None),
-            WsiFormat.MIRAX: (270.0, 270.0, 270.0),
-            WsiFormat.VENTANA: (0.0, None, None),
-            WsiFormat.CZI: (0.0, None, None),
-            WsiFormat.ISYNTAX: (180.0, 180.0, 180.0),
-            WsiFormat.GENERIC: (0.0, None, None),
-        }
-        return cls(*rotations[wsi_format])
+        """Return the default coordinate system rotations for a WSI format.
+
+        Parameters
+        ----------
+        wsi_format: WsiFormat
+            Format to return the defaults for.
+
+        Returns
+        -------
+        FormatCoordinateDefaults
+            The default coordinate system rotations for the format.
+        """
+        return cls(*cls.ROTATIONS[wsi_format])
+
+    @classmethod
+    def level_rotation_for(cls, wsi_format: WsiFormat) -> float:
+        """Return the rotation of the level image of a WSI format.
+
+        The rotation is a property of the format, and applies also to images placed
+        from a position read from the file.
+
+        Parameters
+        ----------
+        wsi_format: WsiFormat
+            Format to return the level rotation for.
+
+        Returns
+        -------
+        float
+            The rotation of the level image in degrees.
+        """
+        return cls.from_wsi_format(wsi_format).level_rotation
 
     def level_coordinate_system(self) -> ImageCoordinateSystem:
         return ImageCoordinateSystem.default_for(self.level_rotation, ImageType.VOLUME)

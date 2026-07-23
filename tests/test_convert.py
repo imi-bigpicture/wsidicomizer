@@ -523,9 +523,11 @@ class TestWsiDicomizerConvert:
         # Arrange
         for image_coordinate_system in image_coordinate_systems:
             assert image_coordinate_system is not None
-            assert (
-                image_coordinate_system.origin
-                == expected_image_coordinate_system_origin
+            assert image_coordinate_system.origin.x == pytest.approx(
+                expected_image_coordinate_system_origin.x, abs=0.001
+            )
+            assert image_coordinate_system.origin.y == pytest.approx(
+                expected_image_coordinate_system_origin.y, abs=0.001
             )
             assert (
                 image_coordinate_system.rotation

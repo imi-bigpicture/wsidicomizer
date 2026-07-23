@@ -39,76 +39,143 @@ class TestVendorToWsiFormat:
             ("not-a-vendor", None),
         ],
     )
-    def test_wsi_format_from_vendor(self, vendor, expected):
-        assert OpenSlideLikeProperties(vendor=vendor).wsi_format == expected
+    def test_wsi_format_from_vendor(self, vendor: str, expected: WsiFormat | None):
+        # Arrange
+        properties = OpenSlideLikeProperties(vendor=vendor)
+
+        # Act
+        result = properties.wsi_format
+
+        # Assert
+        assert result == expected
 
     def test_wsi_format_no_vendor(self):
-        assert OpenSlideLikeProperties(vendor=None).wsi_format is None
+        # Arrange
+        properties = OpenSlideLikeProperties(vendor=None)
+
+        # Act
+        result = properties.wsi_format
+
+        # Assert
+        assert result is None
 
 
 class TestFormatCoordinateDefaults:
     @pytest.mark.parametrize("wsi_format", list(WsiFormat), ids=lambda f: f.name)
     def test_defined_for_all_formats(self, wsi_format: WsiFormat):
-        # Every WsiFormat must have an entry (no KeyError).
-        assert isinstance(
-            FormatCoordinateDefaults.from_wsi_format(wsi_format),
-            FormatCoordinateDefaults,
-        )
+        # Arrange
+
+        # Act
+        result = FormatCoordinateDefaults.from_wsi_format(wsi_format)
+
+        # Assert
+        assert isinstance(result, FormatCoordinateDefaults)
+
+    @pytest.mark.parametrize("wsi_format", list(WsiFormat), ids=lambda f: f.name)
+    def test_level_rotation_for_matches_defaults(self, wsi_format: WsiFormat):
+        # Arrange
+        expected = FormatCoordinateDefaults.from_wsi_format(wsi_format).level_rotation
+
+        # Act
+        result = FormatCoordinateDefaults.level_rotation_for(wsi_format)
+
+        # Assert
+        assert result == expected
 
     @pytest.mark.parametrize("wsi_format", list(WsiFormat), ids=lambda f: f.name)
     def test_rotations_are_supported(self, wsi_format: WsiFormat):
+        # Arrange
         defaults = FormatCoordinateDefaults.from_wsi_format(wsi_format)
-        for rotation in (
+
+        # Act
+        rotations = (
             defaults.level_rotation,
             defaults.label_rotation,
             defaults.overview_rotation,
-        ):
+        )
+
+        # Assert
+        for rotation in rotations:
             assert rotation is None or rotation in SUPPORTED_ROTATIONS
 
     @pytest.mark.parametrize("wsi_format", list(WsiFormat), ids=lambda f: f.name)
     def test_coordinate_systems_resolve(self, wsi_format: WsiFormat):
+        # Arrange
         defaults = FormatCoordinateDefaults.from_wsi_format(wsi_format)
-        assert isinstance(defaults.level_coordinate_system(), ImageCoordinateSystem)
-        for system in (
-            defaults.label_coordinate_system(),
-            defaults.overview_coordinate_system(),
-        ):
+
+        # Act
+        level = defaults.level_coordinate_system()
+        label = defaults.label_coordinate_system()
+        overview = defaults.overview_coordinate_system()
+
+        # Assert
+        assert isinstance(level, ImageCoordinateSystem)
+        for system in (label, overview):
             assert system is None or isinstance(system, ImageCoordinateSystem)
 
     def test_level_delegates_to_default_for(self):
+        # Arrange
         defaults = FormatCoordinateDefaults(180.0, None, None)
-        assert defaults.level_coordinate_system() == ImageCoordinateSystem.default_for(
-            180.0, ImageType.VOLUME
-        )
 
-    def test_level_origin_matches_rotation(self):
-        volume_0 = FormatCoordinateDefaults(0.0, None, None).level_coordinate_system()
-        assert (volume_0.origin, volume_0.rotation) == (PointMm(0, 0), 0.0)
-        volume_180 = FormatCoordinateDefaults(
-            180.0, None, None
-        ).level_coordinate_system()
-        assert (volume_180.origin, volume_180.rotation) == (PointMm(25, 50), 180.0)
+        # Act
+        result = defaults.level_coordinate_system()
+
+        # Assert
+        assert result == ImageCoordinateSystem.default_for(180.0, ImageType.VOLUME)
+
+    @pytest.mark.parametrize(
+        ["rotation", "expected_origin"],
+        [(0.0, PointMm(0, 0)), (180.0, PointMm(25, 50))],
+    )
+    def test_level_origin_matches_rotation(
+        self, rotation: float, expected_origin: PointMm
+    ):
+        # Arrange
+        defaults = FormatCoordinateDefaults(rotation, None, None)
+
+        # Act
+        result = defaults.level_coordinate_system()
+
+        # Assert
+        assert result.origin == expected_origin
+        assert result.rotation == rotation
 
     def test_label_none_when_rotation_none(self):
-        assert (
-            FormatCoordinateDefaults(0.0, None, None).label_coordinate_system() is None
-        )
+        # Arrange
+        defaults = FormatCoordinateDefaults(0.0, None, None)
+
+        # Act
+        result = defaults.label_coordinate_system()
+
+        # Assert
+        assert result is None
 
     def test_label_delegates_to_default_for(self):
+        # Arrange
         defaults = FormatCoordinateDefaults(0.0, 0.0, None)
-        assert defaults.label_coordinate_system() == ImageCoordinateSystem.default_for(
-            0.0, ImageType.LABEL
-        )
+
+        # Act
+        result = defaults.label_coordinate_system()
+
+        # Assert
+        assert result == ImageCoordinateSystem.default_for(0.0, ImageType.LABEL)
 
     def test_overview_none_when_rotation_none(self):
-        assert (
-            FormatCoordinateDefaults(0.0, None, None).overview_coordinate_system()
-            is None
-        )
+        # Arrange
+        defaults = FormatCoordinateDefaults(0.0, None, None)
+
+        # Act
+        result = defaults.overview_coordinate_system()
+
+        # Assert
+        assert result is None
 
     def test_overview_delegates_to_default_for(self):
+        # Arrange
         defaults = FormatCoordinateDefaults(0.0, None, 0.0)
-        assert (
-            defaults.overview_coordinate_system()
-            == ImageCoordinateSystem.default_for(0.0, ImageType.OVERVIEW)
-        )
+
+        # Act
+        result = defaults.overview_coordinate_system()
+
+        # Assert
+        assert result == ImageCoordinateSystem.default_for(0.0, ImageType.OVERVIEW)

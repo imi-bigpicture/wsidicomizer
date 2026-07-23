@@ -18,8 +18,10 @@ import pytest
 from decoy import Decoy
 from opentile import Metadata
 from PIL import ImageCms
+from wsidicom.geometry import SizeMm
 
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
+from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
 
 @pytest.fixture
@@ -33,6 +35,7 @@ def opentile_metadata(decoy: Decoy) -> Metadata:
     decoy.when(metadata.acquisition_datetime).then_return(None)
     decoy.when(metadata.magnification).then_return(None)
     decoy.when(metadata.label_text).then_return(None)
+    decoy.when(metadata.properties).then_return({})
     return metadata
 
 
@@ -241,3 +244,83 @@ class TestOpenTileMetadata:
 
         # Assert
         assert result.overview is None
+
+    def test_ndpi_offsets_place_level_on_slide(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        # CMU-1.ndpi: imaged region center 4.877 mm right of and 2.340 mm above the
+        # center of the slide, in the stored image direction.
+        decoy.when(opentile_metadata.properties).then_return(
+            {
+                "x_offset_from_slide_center": 4876667,
+                "y_offset_from_slide_center": -2340000,
+            }
+        )
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata,
+            has_label=False,
+            has_overview=False,
+            wsi_format=WsiFormat.NDPI,
+            imaged_size=SizeMm(23.37, 17.36),
+        )
+
+        # Assert
+        image_coordinate_system = result.pyramid.image.image_coordinate_system
+        assert image_coordinate_system is not None
+        assert image_coordinate_system.rotation == 180.0
+        assert image_coordinate_system.origin.x == pytest.approx(23.520, abs=0.001)
+        assert image_coordinate_system.origin.y == pytest.approx(44.308, abs=0.001)
+
+    def test_ndpi_without_offsets_falls_back_to_default(
+        self, opentile_metadata: Metadata
+    ):
+        # Arrange
+        # (properties default to empty via fixture)
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata,
+            has_label=False,
+            has_overview=False,
+            wsi_format=WsiFormat.NDPI,
+            imaged_size=SizeMm(23.37, 17.36),
+        )
+
+        # Assert
+        assert (
+            result.pyramid.image.image_coordinate_system
+            == FormatCoordinateDefaults.from_wsi_format(
+                WsiFormat.NDPI
+            ).level_coordinate_system()
+        )
+
+    def test_offsets_ignored_for_other_formats(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.properties).then_return(
+            {
+                "x_offset_from_slide_center": 4876667,
+                "y_offset_from_slide_center": -2340000,
+            }
+        )
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata,
+            has_label=False,
+            has_overview=False,
+            wsi_format=WsiFormat.SVS,
+            imaged_size=SizeMm(23.37, 17.36),
+        )
+
+        # Assert
+        assert (
+            result.pyramid.image.image_coordinate_system
+            == FormatCoordinateDefaults.from_wsi_format(
+                WsiFormat.SVS
+            ).level_coordinate_system()
+        )
