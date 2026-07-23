@@ -35,6 +35,7 @@ def opentile_metadata(decoy: Decoy) -> Metadata:
     decoy.when(metadata.acquisition_datetime).then_return(None)
     decoy.when(metadata.magnification).then_return(None)
     decoy.when(metadata.label_text).then_return(None)
+    decoy.when(metadata.barcode).then_return(None)
     decoy.when(metadata.properties).then_return({})
     return metadata
 
@@ -197,6 +198,46 @@ class TestOpenTileMetadata:
         assert result.label is not None
         assert result.label.text == "SR1274-908A"
         assert result.label.image is None
+
+    def test_barcode_populates_label(self, decoy: Decoy, opentile_metadata: Metadata):
+        # Arrange
+        decoy.when(opentile_metadata.barcode).then_return("SR1274-908A")
+
+        # Act
+        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
+
+        # Assert
+        assert result.label is not None
+        assert result.label.barcode == "SR1274-908A"
+
+    def test_barcode_populates_label_without_label_image(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.barcode).then_return("SR1274-908A")
+
+        # Act
+        result = OpenTileMetadata(
+            opentile_metadata, has_label=False, has_overview=False
+        )
+
+        # Assert
+        assert result.label is not None
+        assert result.label.barcode == "SR1274-908A"
+        assert result.label.image is None
+
+    def test_barcode_dropped_when_not_include_confidential(
+        self, decoy: Decoy, opentile_metadata: Metadata
+    ):
+        # Arrange
+        decoy.when(opentile_metadata.barcode).then_return("SR1274-908A")
+        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
+
+        # Act
+        merged = result.merge(None, None, include_confidential=False)
+
+        # Assert
+        assert merged.label is None or merged.label.barcode is None
 
     def test_label_text_kept_when_include_confidential(
         self, decoy: Decoy, opentile_metadata: Metadata
