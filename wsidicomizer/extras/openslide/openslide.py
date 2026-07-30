@@ -56,16 +56,17 @@ if os.name == "nt":
         os.add_dll_directory(openslide_dir)
 
 from openslide import (  # noqa: E402
-    PROPERTY_NAME_BACKGROUND_COLOR,  # noqa: E402
-    PROPERTY_NAME_BOUNDS_HEIGHT,  # noqa: E402
-    PROPERTY_NAME_BOUNDS_WIDTH,  # noqa: E402
-    PROPERTY_NAME_BOUNDS_X,  # noqa: E402
-    PROPERTY_NAME_BOUNDS_Y,  # noqa: E402
-    PROPERTY_NAME_MPP_X,  # noqa: E402
-    PROPERTY_NAME_MPP_Y,  # noqa: E402
-    PROPERTY_NAME_OBJECTIVE_POWER,  # noqa: E402
-    PROPERTY_NAME_VENDOR,  # noqa: E402
-    OpenSlide,  # noqa: E402
+    PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BARCODE,
+    PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH,
+    PROPERTY_NAME_BOUNDS_X,
+    PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_MPP_X,
+    PROPERTY_NAME_MPP_Y,
+    PROPERTY_NAME_OBJECTIVE_POWER,
+    PROPERTY_NAME_VENDOR,
+    OpenSlide,
 )
 from openslide._convert import argb2rgba as convert_argb_to_rgba  # noqa: E402
 from openslide.lowlevel import _read_region, get_associated_image_names  # noqa: E402
@@ -73,6 +74,7 @@ from openslide.lowlevel import _read_region, get_associated_image_names  # noqa:
 __all__ = [
     "OpenSlide",
     "PROPERTY_NAME_BACKGROUND_COLOR",
+    "PROPERTY_NAME_BARCODE",
     "PROPERTY_NAME_BOUNDS_HEIGHT",
     "PROPERTY_NAME_BOUNDS_WIDTH",
     "PROPERTY_NAME_BOUNDS_X",

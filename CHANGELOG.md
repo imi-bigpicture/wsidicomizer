@@ -13,9 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Settings` (immutable) and `get_settings`, `set_default_settings` and `use_settings` for configuring wsidicomizer. `Settings` extends the wsidicom `Settings` (every wsidicom setting is available) and nests per-source settings (`opentile`); `set_default_settings` and `open`/`convert`'s `settings` argument drive all layers.
 - `concatenation` parameter on `WsiDicomizer.convert`, and `--concatenate-frames` / `--concatenate-bytes` CLI options, splitting each level into concatenated SOP Instances of at most that many frames, or bytes of pixel data.
 - Label barcode from opentile files (ndpi, philips tiff and ventana) is mapped to DICOM Barcode Value.
+- Label barcode from the `openslide.barcode` property is mapped to DICOM Barcode Value. The property is produced by openslide 4.0.1 and later, and is omitted for files without a barcode.
 
 ### Changed
 
+- Updated the `openslide-python` requirement to `>=1.4.6` (exports the barcode property name).
 - Ndpi levels are placed on the slide using the file's offset from the slide center instead of the format default corner.
 
 ### Removed

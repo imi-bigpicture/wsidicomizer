@@ -51,6 +51,7 @@ class OpenSlideLikeProperties:
     vendor: str | None = None
     mpp_x: str | None = None
     mpp_y: str | None = None
+    barcode: str | None = None
     raw_properties: Mapping[str, str] = field(default_factory=dict)
     """All properties, for reading vendor-specific keys openslide does not
     normalise (e.g. ``mirax.GENERAL.SLIDE_NAME``, ``philips.DICOM_*``)."""
@@ -160,12 +161,15 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
 
         label = None
         overview = None
+        label_image_coordinate_system = (
+            defaults.label_coordinate_system() if defaults is not None else None
+        )
+        if properties.barcode is not None or label_image_coordinate_system is not None:
+            label = Label(
+                barcode=properties.barcode,
+                image=Image(image_coordinate_system=label_image_coordinate_system),
+            )
         if defaults is not None:
-            label_image_coordinate_system = defaults.label_coordinate_system()
-            if label_image_coordinate_system is not None:
-                label = Label(
-                    image=Image(image_coordinate_system=label_image_coordinate_system)
-                )
             overview_image_coordinate_system = defaults.overview_coordinate_system()
             if overview_image_coordinate_system is not None:
                 overview = Overview(

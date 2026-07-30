@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-openslide = ["openslide-python>=1.3.0,<2.0.0"]
+openslide = ["openslide-python>=1.4.6,<2.0.0"]
 bioformats = ["scyjava>=1.8.1,<2.0.0", "ome-types>=0.5.0,<0.6.0"]
 isyntax = ["pyisyntax>=0.1.2,<0.2.0"]
 imagecodecs = ["imagecodecs>=2024.1.1,!=2024.9.22"]
@@ -47,8 +47,8 @@ dev = [
     "dicom-validator>=0.4.0,<0.5.0",
     "ruff>=0.15.14",
     "pyright>=1.1.409",
-    "openslide-python>=1.3.0,<2.0.0",
-    "openslide-bin>=4.0.0,<5.0.0",
+    "openslide-python>=1.4.6,<2.0.0",
+    "openslide-bin>=4.0.1,<5.0.0",
     "decoy>=2.0.0,<3.0.0",
     "typos>=1.48.0",
 ]

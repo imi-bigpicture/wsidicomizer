@@ -124,3 +124,48 @@ class TestOpenSlideLikeMetadata:
 
         # Assert
         assert result.pyramid.image.pixel_spacing is None
+
+    def test_barcode_populates_label(self):
+        # Arrange
+        properties = OpenSlideLikeProperties(barcode="SR1274-908A")
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        assert result.label is not None
+        assert result.label.barcode == "SR1274-908A"
+
+    def test_barcode_populates_label_for_known_vendor(self):
+        # Arrange
+        properties = OpenSlideLikeProperties(vendor="hamamatsu", barcode="SR1274-908A")
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        assert result.label is not None
+        assert result.label.barcode == "SR1274-908A"
+
+    def test_no_barcode_and_unknown_vendor_gives_empty_label(self):
+        # Arrange
+        properties = OpenSlideLikeProperties()
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        assert result.label is not None
+        assert result.label.barcode is None
+        assert result.label.image is None
+
+    def test_barcode_dropped_when_not_include_confidential(self):
+        # Arrange
+        properties = OpenSlideLikeProperties(barcode="SR1274-908A")
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Act
+        merged = result.merge(None, None, include_confidential=False)
+
+        # Assert
+        assert merged.label is None or merged.label.barcode is None

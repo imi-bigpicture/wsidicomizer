@@ -26,6 +26,7 @@ from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.extras.openslide.openslide import (
     PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BARCODE,
     PROPERTY_NAME_BOUNDS_HEIGHT,
     PROPERTY_NAME_BOUNDS_WIDTH,
     PROPERTY_NAME_BOUNDS_X,
@@ -101,6 +102,7 @@ class OpenSlideSource(OpenSlideLikeSource):
             vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
             mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
             mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
+            barcode=self._slide.properties.get(PROPERTY_NAME_BARCODE),
             raw_properties=dict(self._slide.properties),
         )
         super().__init__(
