@@ -22,6 +22,7 @@ from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import ImageType, UidGenerator, WsiMetadata
+from wsidicom.paths import as_local_path
 
 from isyntax import ISyntax
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -40,7 +41,7 @@ class ISyntaxSource(DicomizerSource):
 
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -56,7 +57,7 @@ class ISyntaxSource(DicomizerSource):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: UPath
             Path to the file.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
@@ -82,7 +83,7 @@ class ISyntaxSource(DicomizerSource):
             Options forwarded to the fsspec filesystem when reading a fsspec
             path. Ignored by sources that only read local files.
         """
-        self._slide = ISyntax.open(filepath, cache)
+        self._slide = ISyntax.open(self._require_local_filepath(filepath), cache)
         self._force_transcoding = force_transcoding
         self._base_metadata = ISyntaxMetadata(self._slide)
         super().__init__(
@@ -94,17 +95,17 @@ class ISyntaxSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
-            file_options,
         )
 
     @staticmethod
     def is_supported(
-        path: Path | UPath, file_options: dict[str, Any] | None = None
+        path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
-        if isinstance(path, UPath):
+        local_filepath = as_local_path(path)
+        if local_filepath is None:
             return False
         try:
-            ISyntax.open(path)
+            ISyntax.open(local_filepath)
         except Exception:
             return False
         return True

@@ -37,6 +37,7 @@ from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
 from wsidicom.file import OffsetTableType
 from wsidicom.metadata import CallableUidGenerator, UidGenerator, WsiMetadata
+from wsidicom.paths import as_upath
 
 from wsidicomizer.config import Settings, use_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
@@ -117,7 +118,7 @@ class WsiDicomizer(WsiDicom):
             uid_generator = CallableUidGenerator()
         elif not isinstance(uid_generator, UidGenerator):
             uid_generator = CallableUidGenerator(uid_generator)
-        filepath = cls._normalize_path(filepath)
+        filepath = as_upath(filepath, file_options)
         selected_source = cls._select_source(filepath, preferred_source, file_options)
         encoder = cls._select_encoder(encoding)
 
@@ -163,10 +164,11 @@ class WsiDicomizer(WsiDicom):
         concatenation: ConcatenationByFrames | ConcatenationByBytes | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         file_options: dict[str, Any] | None = None,
+        output_file_options: dict[str, Any] | None = None,
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> list[str]:
+    ) -> list[UPath]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -238,10 +240,15 @@ class WsiDicomizer(WsiDicom):
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
             Optional override source to use.
         file_options: dict[str, Any] | None = None
-            Options forwarded to the fsspec filesystem for both the input
-            (e.g. credentials) and the output. Ignored by sources that read
-            local files. When `output_path` is omitted it defaults to a folder
-            next to the source on the same filesystem.
+            Options forwarded to the fsspec filesystem when reading the input
+            (e.g. credentials), and to the output unless `output_file_options`
+            is set. Ignored by sources that read local files. When `output_path`
+            is omitted it defaults to a folder next to the source on the same
+            filesystem.
+        output_file_options: dict[str, Any] | None = None
+            Options forwarded to the fsspec filesystem when writing the output.
+            Set this when the output lives on a different filesystem than the
+            input. Defaults to `file_options`.
         settings: Settings | None = None
             Settings to use for this conversion instead of the process-wide default.
         **source_args
@@ -249,13 +256,16 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        List[str]
-            List of paths of created files.
+        list[UPath]
+            List of paths of created files, configured with
+            `output_file_options` so that they can be opened as returned.
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
         elif not isinstance(uid_generator, UidGenerator):
             uid_generator = CallableUidGenerator(uid_generator)
+        if output_file_options is None:
+            output_file_options = file_options
         with (
             use_settings(settings),
             cls.open(
@@ -277,13 +287,8 @@ class WsiDicomizer(WsiDicom):
                 # Default to a folder next to the source, named after it. UPath
                 # keeps this working for fsspec sources, where the output can
                 # live on the same (possibly remote) filesystem as the input.
-                source_path = UPath(filepath)
+                source_path = as_upath(filepath, output_file_options)
                 output_path = source_path.parent / source_path.stem
-            output_path = UPath(output_path)
-            try:
-                output_path.mkdir()
-            except FileExistsError:
-                raise ValueError(f"Output path {output_path} already exists") from None
             created_files = wsi.save(
                 output_path,
                 uid_generator,
@@ -301,31 +306,14 @@ class WsiDicomizer(WsiDicom):
                 force_transcoding=force_transcoding,
                 instance_split=instance_split,
                 concatenation=concatenation,
-                file_options=file_options,
+                file_options=output_file_options,
             )
 
-        return [str(filepath) for filepath in created_files]
-
-    @staticmethod
-    def _normalize_path(path: str | Path | UPath) -> Path | UPath:
-        """Return `path` typed by its nature: a plain `Path` for a plain local
-        path, or a `UPath` for any fsspec location (remote, `file://`, or a
-        chained url such as `simplecache::s3://...`).
-
-        This lets the type carry the meaning downstream, so a source that reads
-        only local files can decline simply by rejecting `UPath`. A chained url
-        is checked via its string form because `UPath` reports it with an empty
-        protocol, so the protocol alone would misjudge it as local.
-        """
-        path = UPath(path) if isinstance(path, (str, Path)) else path
-        is_plain_local_path = path.protocol == "" and "::" not in str(path)
-        if is_plain_local_path:
-            return Path(path)
-        return path
+        return created_files
 
     @staticmethod
     def _select_source(
-        filepath: Path | UPath,
+        filepath: UPath,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         file_options: dict[str, Any] | None = None,
     ) -> type[DicomizerSource]:

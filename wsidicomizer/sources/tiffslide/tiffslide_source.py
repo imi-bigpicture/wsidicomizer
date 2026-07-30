@@ -53,7 +53,7 @@ from wsidicomizer.sources.tiffslide.tiffslide_image_data import (
 class TiffSlideSource(OpenSlideLikeSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -68,7 +68,7 @@ class TiffSlideSource(OpenSlideLikeSource):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: UPath
             Path to the file.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
@@ -90,8 +90,11 @@ class TiffSlideSource(OpenSlideLikeSource):
             Options forwarded to the fsspec filesystem when reading a fsspec
             path. Ignored by sources that only read local files.
         """
+        # TiffSlide reads an UPath, but types its path parameter without it.
         self._tiffslide = TiffSlide(
-            filepath, storage_options=file_options, **source_args
+            filepath,  # pyright: ignore[reportArgumentType]
+            storage_options=file_options,
+            **source_args,
         )
         properties = OpenSlideLikeProperties(
             background_color=self._tiffslide.properties.get(
@@ -124,7 +127,6 @@ class TiffSlideSource(OpenSlideLikeSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
-            file_options,
         )
 
     def close(self):
@@ -139,13 +141,16 @@ class TiffSlideSource(OpenSlideLikeSource):
 
     @staticmethod
     def is_supported(
-        path: Path | UPath, file_options: dict[str, Any] | None = None
+        path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
         """Return True if file in path is supported by TiffSlide. A path whose
         fsspec backend is unavailable or unreadable is treated as unsupported so
         source selection stays robust (mirrors opentile's defensive detection)."""
         try:
-            format = TiffSlide.detect_format(path, storage_options=file_options)
+            format = TiffSlide.detect_format(
+                path,  # pyright: ignore[reportArgumentType]
+                storage_options=file_options,
+            )
         except Exception:
             return False
         return format is not None

@@ -15,7 +15,6 @@
 from pathlib import Path
 
 import pytest
-from upath import UPath
 
 from wsidicomizer.extras.openslide import OpenSlideSource
 
@@ -36,12 +35,19 @@ class TestOpenSlideSource:
         # Assert
         assert supported is True
 
-    def test_does_not_support_fsspec_path(self, slide: Path):
-        # openslide reads only real local files, so the same slide must be
-        # declined when given as a fsspec url (file://) it cannot consume.
+    def test_supports_local_file_url(self, slide: Path):
+        # Act
+        supported = OpenSlideSource.is_supported(slide.as_uri())
+
+        # Assert
+        assert supported is True
+
+    def test_does_not_support_path_on_other_filesystem(self, slide: Path):
+        # The same file, reached through a cache, which OpenSlideSource cannot open
+        # by name however readable it is, as it is not a local file.
 
         # Act
-        supported = OpenSlideSource.is_supported(UPath(slide.as_uri()))
+        supported = OpenSlideSource.is_supported(f"simplecache::{slide.as_uri()}")
 
         # Assert
         assert supported is False

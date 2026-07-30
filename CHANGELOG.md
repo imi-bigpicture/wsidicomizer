@@ -14,11 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `concatenation` parameter on `WsiDicomizer.convert`, and `--concatenate-frames` / `--concatenate-bytes` CLI options, splitting each level into concatenated SOP Instances of at most that many frames, or bytes of pixel data.
 - Label barcode from opentile files (ndpi, philips tiff and ventana) is mapped to DICOM Barcode Value.
 - Label barcode from the `openslide.barcode` property is mapped to DICOM Barcode Value. The property is produced by openslide 4.0.1 and later, and is omitted for files without a barcode.
+- `output_file_options` parameter on `WsiDicomizer.convert`, for when the output is on another filesystem than the input. Defaults to `file_options`, which is otherwise used for both.
+- The CLI takes fsspec urls for `--input` and `--output`, and `--file-options` / `--output-file-options` for configuring the filesystems they are on, given as JSON objects.
 
 ### Changed
 
 - Updated the `openslide-python` requirement to `>=1.4.6` (exports the barcode property name).
 - Ndpi levels are placed on the slide using the file's offset from the slide center instead of the format default corner.
+- `WsiDicomizer.convert` returns the created files as `UPath` instead of `str`, configured with the output file options so that they can be opened as returned.
+- A file on the local filesystem given as a `file://` or `local://` url is now read by the sources that only read local files (openslide, czi, isyntax, bioformats), instead of being declined for not being a plain path.
+- `WsiDicomizer.convert` allows the output folder to exist, as long as it is empty. It previously had to not exist.
+
+### Fixed
+
+- `WsiDicomizer.convert` to an fsspec output path applied the file options to the writing but not to the creation of the output folder, and did not detect an existing output on filesystems without directories (object stores), where creating a folder for a key prefix does nothing.
 
 ### Removed
 

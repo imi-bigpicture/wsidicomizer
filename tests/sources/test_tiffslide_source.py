@@ -70,7 +70,7 @@ class TestTiffSlideSource:
         _write_tiff(path, array)
 
         # Act
-        source = TiffSlideSource(path, None, metadata=metadata)
+        source = TiffSlideSource(UPath(path), None, metadata=metadata)
         image_data = source._create_level_image_data(0)
 
         # Assert
@@ -87,7 +87,7 @@ class TestTiffSlideSource:
 
     def test_supports_fsspec_path(self, slide: Path):
         # Act
-        supported = TiffSlideSource.is_supported(UPath(slide.as_uri()))
+        supported = TiffSlideSource.is_supported(slide.as_uri())
 
         # Assert
         assert supported is True

@@ -15,7 +15,6 @@
 from pathlib import Path
 
 import pytest
-from upath import UPath
 
 from wsidicomizer.sources import OpenTileSource
 
@@ -38,7 +37,7 @@ class TestOpenTileSource:
 
     def test_supports_fsspec_path(self, slide: Path):
         # Act
-        supported = OpenTileSource.is_supported(UPath(slide.as_uri()))
+        supported = OpenTileSource.is_supported(slide.as_uri())
 
         # Assert
         assert supported is True

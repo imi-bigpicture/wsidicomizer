@@ -21,12 +21,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+import fsspec
 import numpy as np
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
+from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
 from wsidicom.config import Settings, use_settings
@@ -480,6 +482,73 @@ class TestWsiDicomizerConvert:
                 new_label = wsi.read_label()
 
         assert np.array_equal(np.array(new_label), np.array(label))
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"], [("svs", "CMU-1/CMU-1.svs")], scope="module"
+    )
+    def test_convert_to_fsspec_output_should_write_to_output_filesystem(
+        self, wsi_file: Path
+    ):
+        # Arrange
+        output_path = "memory://test-fsspec-output/wsi"
+
+        # Act
+        created_files = WsiDicomizer.convert(
+            wsi_file,
+            output_path,
+            include_levels=[-1],
+            encoding=Jpeg2kTestEncoder(),
+            output_file_options={},
+        )
+
+        # Assert
+        filesystem = fsspec.filesystem("memory")
+        assert len(filesystem.ls("/test-fsspec-output/wsi")) == len(created_files)
+        assert all(str(file).startswith(output_path) for file in created_files)
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"], [("svs", "CMU-1/CMU-1.svs")], scope="module"
+    )
+    def test_convert_to_empty_folder(self, wsi_file: Path, tmp_path: Path):
+        # Arrange
+
+        # Act
+        created_files = WsiDicomizer.convert(
+            wsi_file, tmp_path, include_levels=[-1], encoding=Jpeg2kTestEncoder()
+        )
+
+        # Assert
+        assert len(list(tmp_path.iterdir())) == len(created_files)
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"], [("svs", "CMU-1/CMU-1.svs")], scope="module"
+    )
+    def test_convert_to_folder_with_files_raises(self, wsi_file: Path, tmp_path: Path):
+        # Arrange
+        tmp_path.joinpath("existing.dcm").touch()
+
+        # Act & Assert
+        with pytest.raises(ValueError):
+            WsiDicomizer.convert(
+                wsi_file, tmp_path, include_levels=[-1], encoding=Jpeg2kTestEncoder()
+            )
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"], [("mirax", "CMU-1/CMU-1.mrxs")], scope="module"
+    )
+    def test_open_local_file_url_with_source_that_reads_local_files(
+        self, wsi_file: Path
+    ):
+        # Arrange
+        with WsiDicomizer.open(wsi_file) as wsi:
+            expected_size = wsi.pyramid.base_level.size
+
+        # Act
+        with WsiDicomizer.open(UPath(wsi_file.as_uri())) as wsi:
+            size = wsi.pyramid.base_level.size
+
+        # Assert
+        assert size == expected_size
 
     @pytest.mark.parametrize(
         [

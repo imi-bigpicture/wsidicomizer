@@ -17,7 +17,6 @@ from typing import Any
 
 import pytest
 from isyntax import ISyntax
-from upath import UPath
 
 from tests.conftest import test_parameters
 from wsidicomizer.extras.isyntax import ISyntaxSource
@@ -57,12 +56,19 @@ class TestIsyntaxSource:
         # Assert
         assert supported is True
 
-    def test_does_not_support_fsspec_path(self, slide: Path):
-        # isyntax reads only real local files, so the same slide must be declined
-        # when given as a fsspec url (file://) it cannot consume.
+    def test_supports_local_file_url(self, slide: Path):
+        # Act
+        supported = ISyntaxSource.is_supported(slide.as_uri())
+
+        # Assert
+        assert supported is True
+
+    def test_does_not_support_path_on_other_filesystem(self, slide: Path):
+        # The same file, reached through a cache, which ISyntaxSource cannot open
+        # by name however readable it is, as it is not a local file.
 
         # Act
-        supported = ISyntaxSource.is_supported(UPath(slide.as_uri()))
+        supported = ISyntaxSource.is_supported(f"simplecache::{slide.as_uri()}")
 
         # Assert
         assert supported is False

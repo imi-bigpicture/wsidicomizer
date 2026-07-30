@@ -42,6 +42,7 @@ from wsidicom.metadata import (
 )
 from wsidicom.metadata.sample import SlideSample
 from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
+from wsidicom.paths import as_local_path
 from wsidicom.source import Source
 
 from wsidicomizer.config import get_settings
@@ -65,7 +66,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     def __init__(
         self,
-        filepath: Path | UPath,
+        filepath: UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -79,9 +80,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
         Parameters
         ----------
-        filepath: Path | UPath
-            Path to the file; a `Path` for a local file or a `UPath` for a
-            fsspec location.
+        filepath: UPath
+            Path to the file, on any filesystem.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
             If None, the source picks a default matching its pixel format.
@@ -100,8 +100,9 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             the default `CallableUidGenerator` backed by
             `pydicom.generate_uid`.
         file_options: dict[str, Any] | None = None
-            Options forwarded to the fsspec filesystem when reading a fsspec
-            path. Ignored by sources that only read local files.
+            Options for the filesystem the file is read from, used by the
+            sources that read through fsspec and ignored by the rest. Part of
+            the signature every source is constructed with.
         """
         self._filepath = filepath
         self._provided_encoder = encoder
@@ -111,7 +112,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._include_confidential = include_confidential
         self._metadata_post_processor = metadata_post_processor
         self._uid_generator: UidGenerator = uid_generator or CallableUidGenerator()
-        self._file_options = file_options
 
     @cached_property
     def _encoder(self) -> Encoder:
@@ -155,18 +155,30 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return Encoder.create_for_settings(JpegSettings())
 
     @staticmethod
+    def _require_local_filepath(filepath: UPath) -> Path:
+        """Return filepath as a local `Path`, for readers that open files by name.
+
+        Raises `ValueError` for a file on another filesystem, which such a
+        reader cannot open. Sources decline those in `is_supported()`.
+        """
+        local_filepath = as_local_path(filepath)
+        if local_filepath is None:
+            raise ValueError(f"{filepath} is not on the local filesystem.")
+        return local_filepath
+
+    @staticmethod
     @abstractmethod
     def is_supported(
-        path: Path | UPath, file_options: dict[str, Any] | None = None
+        path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
         """Return True if the file at `path` is supported.
 
         Parameters
         ----------
-        path: Path | UPath
-            Path to the file. A plain `Path` for a local file, or a `UPath` for a
-            fsspec location (remote, `file://`, or chained). Sources that read
-            only local files decline a `UPath`.
+        path: str | Path | UPath
+            Path to the file, on any filesystem. Sources that read only local
+            files decline a path that is not on the local filesystem, which
+            `as_local_path` reports.
         file_options: dict[str, Any] | None = None
             Options forwarded to the fsspec filesystem for sources that can use
             it; ignored by local-only sources.

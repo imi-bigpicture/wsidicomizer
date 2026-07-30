@@ -24,6 +24,7 @@ from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
+from wsidicom.paths import as_local_path
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
@@ -35,7 +36,7 @@ from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
 class BioformatsSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -51,7 +52,7 @@ class BioformatsSource(DicomizerSource):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: UPath
             Path to the file.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
@@ -79,7 +80,9 @@ class BioformatsSource(DicomizerSource):
         """
         if tile_size is None:
             raise ValueError("Tile size required for bioformats")
-        self._reader = BioformatsReader(Path(filepath), readers, cache_path)
+        self._reader = BioformatsReader(
+            self._require_local_filepath(filepath), readers, cache_path
+        )
         (
             self._pyramid_image_index,
             self._label_image_index,
@@ -94,17 +97,17 @@ class BioformatsSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
-            file_options,
         )
 
     @staticmethod
     def is_supported(
-        path: Path | UPath, file_options: dict[str, Any] | None = None
+        path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
         """Return True if file in path is supported by Bio-Formats."""
-        if isinstance(path, UPath):
+        local_filepath = as_local_path(path)
+        if local_filepath is None:
             return False
-        return BioformatsImageData.detect_format(path)
+        return BioformatsImageData.detect_format(local_filepath)
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:

@@ -12,12 +12,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import json
 import os
 from enum import Enum
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 import click
+from upath import UPath
 from wsidicom import ConcatenationByBytes, ConcatenationByFrames, InstanceSplit
 from wsidicom.codec.settings import (
     HTJpeg2000Settings,
@@ -83,19 +86,22 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     "-i",
     "--input",
     "input_path",
-    type=click.Path(exists=True, path_type=Path),
+    type=str,
     required=True,
-    help="Path to input wsi file.",
+    help=(
+        "Path to input wsi file. Can be an fsspec url (e.g. s3://bucket/key) "
+        "for sources that read through fsspec (opentile, tiffslide)."
+    ),
 )
 @click.option(
     "-o",
     "--output",
     "output_path",
-    type=click.Path(path_type=Path),
+    type=str,
     help=(
         "Path to output folder. Folder will be created and must not "
         "exist. If not specified a folder named after the input file "
-        "is created in the same path."
+        "is created in the same path. Can be an fsspec url."
     ),
 )
 @click.option(
@@ -244,9 +250,28 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
         "the library will be chosen based on file type."
     ),
 )
+@click.option(
+    "--file-options",
+    type=str,
+    default=None,
+    help=(
+        "Options for the fsspec filesystem the input is read from, as a JSON "
+        "object, e.g. '{\"anon\": true}'. Also used for the output, unless "
+        "--output-file-options is given."
+    ),
+)
+@click.option(
+    "--output-file-options",
+    type=str,
+    default=None,
+    help=(
+        "Options for the fsspec filesystem the output is written to, as a JSON "
+        "object. Use when the output is on another filesystem than the input."
+    ),
+)
 def main(
-    input_path: Path,
-    output_path: Path | None,
+    input_path: str,
+    output_path: str | None,
     tile_size: int,
     metadata: Path | None,
     default_metadata: Path | None,
@@ -269,12 +294,22 @@ def main(
     force_transcoding: bool,
     offset_table: OffsetTableType,
     source: SourceIdentifier | None,
+    file_options: str | None,
+    output_file_options: str | None,
 ):
     """Convert compatible wsi file to DICOM.
 
     The cli only supports a subset of the functionality of the WsiDicomizer
     class. For more advanced usage, use the class directly.
     """
+    loaded_file_options = _load_file_options(file_options, "--file-options")
+    loaded_output_file_options = _load_file_options(
+        output_file_options, "--output-file-options"
+    )
+    if not UPath(input_path, **(loaded_file_options or {})).exists():
+        raise click.BadParameter(
+            f"Input path {input_path} does not exist.", param_hint="--input"
+        )
 
     # Load metadata if provided
     loaded_metadata = None
@@ -349,7 +384,26 @@ def main(
         concatenation=concatenation,
         label=label,
         preferred_source=source,
+        file_options=loaded_file_options,
+        output_file_options=loaded_output_file_options,
     )
+
+
+def _load_file_options(options: str | None, hint: str) -> dict[str, Any] | None:
+    """Parse filesystem options given as a JSON object."""
+    if options is None:
+        return None
+    try:
+        loaded = json.loads(options)
+    except json.JSONDecodeError as exception:
+        raise click.BadParameter(
+            f"Could not parse {options} as JSON.", param_hint=hint
+        ) from exception
+    if not isinstance(loaded, dict):
+        raise click.BadParameter(
+            f"Expected {options} to be a JSON object.", param_hint=hint
+        )
+    return loaded
 
 
 def _load_metadata(filepath: Path) -> WsiMetadata:

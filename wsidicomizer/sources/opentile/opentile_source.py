@@ -42,7 +42,7 @@ from wsidicomizer.wsi_format import WsiFormat
 class OpenTileSource(DicomizerSource):
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         encoder: Encoder | None,
         tile_size: int | None = None,
         metadata: WsiMetadata | None = None,
@@ -57,8 +57,8 @@ class OpenTileSource(DicomizerSource):
 
         Parameters
         ----------
-        filepath: Path
-            Path to the file.
+        filepath: UPath
+            Path to the file, on any filesystem.
         encoder: Encoder | None
             Encoder to use. Pyramid is always re-encoded using the encoder.
             If None, the source picks a default matching its pixel format.
@@ -107,7 +107,6 @@ class OpenTileSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
-            file_options,
         )
 
     def close(self):
@@ -139,7 +138,7 @@ class OpenTileSource(DicomizerSource):
 
     @staticmethod
     def is_supported(
-        path: Path | UPath, file_options: dict[str, Any] | None = None
+        path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
         """Return True if file in path is supported by OpenTile. Formats whose tiles
         overlap (e.g. Trestle, Ventana) are not composed by this source yet and are

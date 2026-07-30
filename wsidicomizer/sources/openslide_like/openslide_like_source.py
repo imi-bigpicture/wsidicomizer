@@ -19,11 +19,11 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from PIL.Image import Image
 from pydicom import Dataset
+from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size
 from wsidicom.metadata import UidGenerator, WsiMetadata
@@ -50,7 +50,7 @@ class OpenSlideLikeSource(DicomizerSource):
 
     def __init__(
         self,
-        filepath: Path,
+        filepath: UPath,
         properties: OpenSlideLikeProperties,
         level_downsamples: Sequence[float],
         level_dimensions: Sequence[tuple[int, int]],
@@ -69,7 +69,7 @@ class OpenSlideLikeSource(DicomizerSource):
 
         Parameters
         ----------
-        filepath: Path
+        filepath: UPath
             Path to the file.
         properties: OpenSlideLikeProperties
             Properties of the file.
@@ -123,7 +123,6 @@ class OpenSlideLikeSource(DicomizerSource):
             include_confidential,
             metadata_post_processor,
             uid_generator,
-            file_options,
         )
 
     @property
