@@ -91,8 +91,11 @@ class OpenTileSource(DicomizerSource):
         if tile_size is None:
             tile_size = get_settings().default_tile_size
         self._tiler = OpenTile.open(filepath, tile_size, file_options=file_options)
-        # opentile's TiffFormat member names match WsiFormat member names.
-        self._wsi_format = WsiFormat[self._tiler.format.name]
+        format_name = self._tiler.format.name
+        try:
+            self._wsi_format = WsiFormat[format_name]
+        except KeyError:
+            self._wsi_format = WsiFormat.GENERIC
         self._base_metadata = OpenTileMetadata(
             self._tiler.metadata,
             self.has_label,

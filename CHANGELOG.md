@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Opening a file of a format that opentile reads but wsidicomizer has no image coordinate system defaults for raised `KeyError` instead of placing the images using the generic defaults.
 - `WsiDicomizer.convert` to an fsspec output path applied the file options to the writing but not to the creation of the output folder, and did not detect an existing output on filesystems without directories (object stores), where creating a folder for a key prefix does nothing.
 
 ### Removed
