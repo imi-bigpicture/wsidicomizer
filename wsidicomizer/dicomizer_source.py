@@ -47,7 +47,11 @@ from wsidicom.source import Source
 
 from wsidicomizer.config import get_settings
 from wsidicomizer.image_data import BaseDicomizerImageData
-from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
+from wsidicomizer.metadata import (
+    MetadataPostProcessor,
+    MetadataPreProcessor,
+    WsiDicomizerMetadata,
+)
 from wsidicomizer.uid_resolver import MetadataUidResolver
 
 config.enforce_valid_values = True
@@ -73,6 +77,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        metadata_pre_processor: MetadataPreProcessor | None = None,
         uid_generator: UidGenerator | None = None,
         file_options: dict[str, Any] | None = None,
     ) -> None:
@@ -95,6 +100,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        metadata_pre_processor: MetadataPreProcessor | None = None
+            Optional metadata pre processing by callback, of the metadata read
+            from the file before `metadata` and `default_metadata` are merged
+            into it.
         uid_generator: UidGenerator | None = None
             Generator used by the source to fill metadata UIDs. `None` uses
             the default `CallableUidGenerator` backed by
@@ -112,6 +121,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         self._include_confidential = include_confidential
         self._metadata_post_processor = metadata_post_processor
         self._uid_generator: UidGenerator = uid_generator or CallableUidGenerator()
+        self._metadata_pre_processor = metadata_pre_processor
 
     @cached_property
     def _encoder(self) -> Encoder:
@@ -193,7 +203,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     @property
     @abstractmethod
     def base_metadata(self) -> WsiDicomizerMetadata:
-        """Return metadata for file."""
+        """Return metadata read from file."""
         raise NotImplementedError()
 
     @property
@@ -227,11 +237,15 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def metadata(self) -> WsiMetadata:
         """Merged metadata from source file with user-specified and default metadata,
         with added required content and resolved UIDs."""
-        merged = self.base_metadata.merge(
-            self.user_metadata,
-            self.default_metadata,
-            self._include_confidential,
-        )
+        base = self.base_metadata
+        if not self._include_confidential:
+            base = base.remove_confidential()
+        if self._metadata_pre_processor is not None:
+            base = WsiDicomizerMetadata.from_metadata(base)
+            base = WsiDicomizerMetadata.from_metadata(
+                self._metadata_pre_processor(base)
+            )
+        merged = base.merge(self.user_metadata, self.default_metadata)
         merged = self._ensure_required_content(merged)
         merged = self._add_contributing_equipment(merged)
         return MetadataUidResolver(self._uid_generator).resolve(merged)

@@ -70,13 +70,34 @@ class WsiDicomizerMetadata(WsiMetadata):
             contributing_equipment if contributing_equipment is not None else (),
         )
 
+    @classmethod
+    def from_metadata(cls, metadata: WsiMetadata) -> "WsiDicomizerMetadata":
+        """Return metadata as this class exactly, with the same field values.
+
+        A subclass of it is converted too, so that the result can be constructed
+        and replaced a field at a time.
+        """
+        if type(metadata) is cls:
+            return metadata
+        return cls(
+            **{
+                field.name: getattr(metadata, field.name)
+                for field in fields(WsiMetadata)
+            }
+        )
+
     def merge(
         self,
         user: WsiMetadata | None,
         default: WsiMetadata | None,
-        include_confidential: bool,
     ) -> "WsiDicomizerMetadata":
-        base = self._remove_confidential() if not include_confidential else self
+        """Merge user-specified and default metadata into this.
+
+        What the file says about itself is what this holds; keeping the
+        confidential parts of it out is `remove_confidential`, done before this
+        rather than by it, so that it is done whoever does the merging.
+        """
+        base = self
         if user is None and default is None:
             return self._merge_not_none(WsiDicomizerMetadata, base, None, None)
         if user is None:
@@ -115,7 +136,14 @@ class WsiDicomizerMetadata(WsiMetadata):
             dimension_organization_uids=dimension_organization_uids,
         )
 
-    def _remove_confidential(self) -> "WsiDicomizerMetadata":
+    def remove_confidential(self) -> "WsiDicomizerMetadata":
+        """This without the metadata that is taken to be confidential.
+
+        The patient's name, identifier, birth date and sex, the label text and
+        barcode, the device serial number, the acquisition datetime, and any
+        comments. The study, series and slide are dropped whole, along with the
+        frame of reference and dimension organization uids.
+        """
         return WsiDicomizerMetadata(
             study=None,
             series=None,
@@ -270,3 +298,12 @@ class WsiDicomizerMetadata(WsiMetadata):
 
 
 MetadataPostProcessor = Callable[[Dataset, WsiMetadata], Dataset]
+"""Changes the dataset written for an image, given the metadata it was made from."""
+
+MetadataPreProcessor = Callable[[WsiDicomizerMetadata], WsiMetadata]
+"""Changes a file's metadata before user-specified and default metadata are merged in.
+
+Called without the confidential parts of it when they are not to be included.
+Drop something from it to have it left out of what is written; the merge only
+fills in.
+"""

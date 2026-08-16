@@ -41,7 +41,10 @@ from wsidicom.paths import as_upath
 
 from wsidicomizer.config import Settings, use_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.metadata import MetadataPostProcessor
+from wsidicomizer.metadata import (
+    MetadataPostProcessor,
+    MetadataPreProcessor,
+)
 from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
 
 
@@ -66,6 +69,7 @@ class WsiDicomizer(WsiDicom):
         tile_size: int | None = 512,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        metadata_pre_processor: MetadataPreProcessor | None = None,
         encoding: EncodingSettings | Encoder | None = None,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
@@ -94,6 +98,10 @@ class WsiDicomizer(WsiDicom):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        metadata_pre_processor: MetadataPreProcessor | None = None
+            Optional metadata pre processing by callback, of the metadata read
+            from the file before `metadata` and `default_metadata` are merged
+            into it.
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use for transcoding. If None, each
             source picks a default matching its pixel format.
@@ -133,6 +141,7 @@ class WsiDicomizer(WsiDicom):
                 metadata_post_processor,
                 uid_generator=uid_generator,
                 file_options=file_options,
+                metadata_pre_processor=metadata_pre_processor,
                 **source_args,
             )
             return cls(source, True, settings=settings)
@@ -154,6 +163,7 @@ class WsiDicomizer(WsiDicom):
         include_thumbnail: bool = True,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        metadata_pre_processor: MetadataPreProcessor | None = None,
         label: Image | str | Path | None = None,
         workers: int | None = None,
         chunk_size: int | None = None,
@@ -211,6 +221,10 @@ class WsiDicomizer(WsiDicom):
             Optional label image to use instead of label found in file.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        metadata_pre_processor: MetadataPreProcessor | None = None
+            Optional metadata pre processing by callback, of the metadata read
+            from the file before `metadata` and `default_metadata` are merged
+            into it.
         workers: Optional[int] = None,
             Maximum number of thread workers to use.
         chunk_size: Optional[int] = None,
@@ -275,6 +289,7 @@ class WsiDicomizer(WsiDicom):
                 tile_size,
                 include_confidential,
                 metadata_post_processor,
+                metadata_pre_processor,
                 encoding,
                 preferred_source,
                 uid_generator,

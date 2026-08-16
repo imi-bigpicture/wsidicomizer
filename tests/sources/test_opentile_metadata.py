@@ -226,45 +226,51 @@ class TestOpenTileMetadata:
         assert result.label.barcode == "SR1274-908A"
         assert result.label.image is None
 
-    def test_barcode_dropped_when_not_include_confidential(
+    def test_barcode_dropped_by_remove_confidential(
         self, decoy: Decoy, opentile_metadata: Metadata
     ):
         # Arrange
         decoy.when(opentile_metadata.barcode).then_return("SR1274-908A")
-        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
+        metadata = OpenTileMetadata(
+            opentile_metadata, has_label=True, has_overview=False
+        )
 
         # Act
-        merged = result.merge(None, None, include_confidential=False)
+        result = metadata.remove_confidential()
 
         # Assert
-        assert merged.label is None or merged.label.barcode is None
+        assert result.label is None or result.label.barcode is None
 
-    def test_label_text_kept_when_include_confidential(
+    def test_label_text_kept_without_remove_confidential(
         self, decoy: Decoy, opentile_metadata: Metadata
     ):
         # Arrange
         decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
-        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
+        metadata = OpenTileMetadata(
+            opentile_metadata, has_label=True, has_overview=False
+        )
 
         # Act
-        merged = result.merge(None, None, include_confidential=True)
+        result = metadata.merge(None, None)
 
         # Assert
-        assert merged.label is not None
-        assert merged.label.text == "SR1274-908A"
+        assert result.label is not None
+        assert result.label.text == "SR1274-908A"
 
-    def test_label_text_dropped_when_not_include_confidential(
+    def test_label_text_dropped_by_remove_confidential(
         self, decoy: Decoy, opentile_metadata: Metadata
     ):
         # Arrange
         decoy.when(opentile_metadata.label_text).then_return("SR1274-908A")
-        result = OpenTileMetadata(opentile_metadata, has_label=True, has_overview=False)
+        metadata = OpenTileMetadata(
+            opentile_metadata, has_label=True, has_overview=False
+        )
 
         # Act
-        merged = result.merge(None, None, include_confidential=False)
+        result = metadata.remove_confidential().merge(None, None)
 
         # Assert
-        assert merged.label is None or merged.label.text is None
+        assert result.label is None or result.label.text is None
 
     def test_overview_created_when_has_overview(self, opentile_metadata: Metadata):
         # Arrange

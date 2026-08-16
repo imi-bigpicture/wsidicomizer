@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Label barcode from the `openslide.barcode` property is mapped to DICOM Barcode Value. The property is produced by openslide 4.0.1 and later, and is omitted for files without a barcode.
 - `output_file_options` parameter on `WsiDicomizer.convert`, for when the output is on another filesystem than the input. Defaults to `file_options`, which is otherwise used for both.
 - The CLI takes fsspec urls for `--input` and `--output`, and `--file-options` / `--output-file-options` for configuring the filesystems they are on, given as JSON objects.
+- `metadata_pre_processor` on `WsiDicomizer.open` and `convert`: changes the metadata read from the file before `metadata` and `default_metadata` are merged into it. When `include_confidential` is False the metadata is given with confidential metadata already removed.
 
 ### Changed
 

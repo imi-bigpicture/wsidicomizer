@@ -27,7 +27,7 @@ from wsidicom.paths import as_local_path
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import BaseDicomizerImageData
-from wsidicomizer.metadata import MetadataPostProcessor
+from wsidicomizer.metadata import MetadataPostProcessor, MetadataPreProcessor
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
 from wsidicomizer.sources.czi.czi_metadata import CziMetadata
 
@@ -42,6 +42,7 @@ class CziSource(DicomizerSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        metadata_pre_processor: MetadataPreProcessor | None = None,
         uid_generator: UidGenerator | None = None,
         file_options: dict[str, Any] | None = None,
     ) -> None:
@@ -64,6 +65,10 @@ class CziSource(DicomizerSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        metadata_pre_processor: MetadataPreProcessor | None = None
+            Optional metadata pre processing by callback, of the metadata read
+            from the file before `metadata` and `default_metadata` are merged
+            into it.
         uid_generator: UidGenerator | None = None
             Generator used by the source to fill metadata UIDs. `None` uses the
             default `CallableUidGenerator` backed by `pydicom.generate_uid`.
@@ -72,14 +77,15 @@ class CziSource(DicomizerSource):
             path. Ignored by sources that only read local files.
         """
         super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            metadata,
-            default_metadata,
-            include_confidential,
-            metadata_post_processor,
-            uid_generator,
+            filepath=filepath,
+            encoder=encoder,
+            tile_size=tile_size,
+            metadata=metadata,
+            default_metadata=default_metadata,
+            include_confidential=include_confidential,
+            metadata_post_processor=metadata_post_processor,
+            metadata_pre_processor=metadata_pre_processor,
+            uid_generator=uid_generator,
         )
         self._czi = CziFile(self._require_local_filepath(filepath))
         self._base_metadata = CziMetadata(self._czi)

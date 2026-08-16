@@ -30,7 +30,11 @@ from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
 from wsidicomizer.image_data import BaseDicomizerImageData
-from wsidicomizer.metadata import MetadataPostProcessor, WsiDicomizerMetadata
+from wsidicomizer.metadata import (
+    MetadataPostProcessor,
+    MetadataPreProcessor,
+    WsiDicomizerMetadata,
+)
 from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeAssociatedImageData,
@@ -62,6 +66,7 @@ class OpenSlideLikeSource(DicomizerSource):
         default_metadata: WsiMetadata | None = None,
         include_confidential: bool = True,
         metadata_post_processor: Dataset | MetadataPostProcessor | None = None,
+        metadata_pre_processor: MetadataPreProcessor | None = None,
         uid_generator: UidGenerator | None = None,
         file_options: dict[str, Any] | None = None,
     ) -> None:
@@ -94,6 +99,10 @@ class OpenSlideLikeSource(DicomizerSource):
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
             Optional metadata post processing by update from dataset or callback.
+        metadata_pre_processor: MetadataPreProcessor | None = None
+            Optional metadata pre processing by callback, of the metadata read
+            from the file before `metadata` and `default_metadata` are merged
+            into it.
         uid_generator: UidGenerator | None = None
             Generator used by the source to fill metadata UIDs. `None` uses the
             default `CallableUidGenerator` backed by `pydicom.generate_uid`.
@@ -115,14 +124,15 @@ class OpenSlideLikeSource(DicomizerSource):
             properties
         )
         super().__init__(
-            filepath,
-            encoder,
-            tile_size,
-            metadata,
-            default_metadata,
-            include_confidential,
-            metadata_post_processor,
-            uid_generator,
+            filepath=filepath,
+            encoder=encoder,
+            tile_size=tile_size,
+            metadata=metadata,
+            default_metadata=default_metadata,
+            include_confidential=include_confidential,
+            metadata_post_processor=metadata_post_processor,
+            metadata_pre_processor=metadata_pre_processor,
+            uid_generator=uid_generator,
         )
 
     @property

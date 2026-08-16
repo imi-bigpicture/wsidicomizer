@@ -159,13 +159,13 @@ class TestOpenSlideLikeMetadata:
         assert result.label.barcode is None
         assert result.label.image is None
 
-    def test_barcode_dropped_when_not_include_confidential(self):
+    def test_barcode_dropped_by_remove_confidential(self):
         # Arrange
         properties = OpenSlideLikeProperties(barcode="SR1274-908A")
-        result = OpenSlideLikeMetadata(properties, color_profile=None)
+        metadata = OpenSlideLikeMetadata(properties, color_profile=None)
 
         # Act
-        merged = result.merge(None, None, include_confidential=False)
+        result = metadata.remove_confidential()
 
         # Assert
-        assert merged.label is None or merged.label.barcode is None
+        assert result.label is None or result.label.barcode is None

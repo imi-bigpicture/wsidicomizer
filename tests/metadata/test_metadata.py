@@ -123,7 +123,7 @@ class TestWsiDicomizerMetadata:
         )
 
         # Act
-        merged = base.merge(user, default, True)
+        merged = base.merge(user, default)
 
         # Assert
         assert merged is not None
@@ -203,7 +203,7 @@ class TestWsiDicomizerMetadata:
             expected_frame_of_reference_uid = None
 
         # Act
-        merged = base.merge(user, default, True)
+        merged = base.merge(user, default)
 
         # Assert
         assert merged.frame_of_reference_uid == expected_frame_of_reference_uid
@@ -263,7 +263,7 @@ class TestWsiDicomizerMetadata:
             expected_dimension_organization_uid = None
 
         # Act
-        merged = base.merge(user, default, True)
+        merged = base.merge(user, default)
 
         # Assert
         assert merged.dimension_organization_uids == expected_dimension_organization_uid
