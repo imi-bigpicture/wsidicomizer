@@ -117,7 +117,7 @@ def source(
 
 class TestMetadataPreProcessor:
     @pytest.mark.parametrize(
-        (   "user_metadata", "pre_processor"),
+        ("user_metadata", "pre_processor"),
         [
             (
                 WsiDicomizerMetadata(
