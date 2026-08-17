@@ -12,6 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+# Checksum and source-URL literals are unavoidably longer than the line limit.
+# ruff: noqa: E501
+
 """Download the WSI test slides used by the test suite from Hugging Face.
 
 Each slide's original `source` and checksums are recorded in `FILES` for provenance;
@@ -29,7 +32,7 @@ import requests
 
 FILES: dict[str, dict[str, Any]] = {
     "svs/CMU-1": {
-        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1.svs",  # NOQA
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1.svs",
         "description": "Brightfield, JPEG",
         "license": "CC0-1.0",
         "sha256": {
@@ -37,7 +40,7 @@ FILES: dict[str, dict[str, Any]] = {
         },
     },
     "svs/JP2K-33003-1": {
-        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/JP2K-33003-1.svs",  # NOQA
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/JP2K-33003-1.svs",
         "description": "Aorta tissue, brightfield, JPEG 2000, YCbCr",
         "license": "distributable",
         "sha256": {
@@ -45,7 +48,7 @@ FILES: dict[str, dict[str, Any]] = {
         },
     },
     "svs/CMU-1-JP2K-33005": {
-        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1-JP2K-33005.svs",  # NOQA
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Aperio/CMU-1-JP2K-33005.svs",
         "description": "Export of CMU-1.svs, brightfield, JPEG 2000, ICT",
         "license": "CC0-1.0",
         "sha256": {
@@ -53,7 +56,7 @@ FILES: dict[str, dict[str, Any]] = {
         },
     },
     "ndpi/CMU-1": {
-        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Hamamatsu/CMU-1.ndpi",  # NOQA
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Hamamatsu/CMU-1.ndpi",
         "description": "Small scan with valid JPEG headers, brightfield, circa 2009",
         "license": "CC0-1.0",
         "sha256": {
@@ -61,7 +64,7 @@ FILES: dict[str, dict[str, Any]] = {
         },
     },
     "mirax/CMU-1": {
-        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/CMU-1.zip",  # NOQA
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Mirax/CMU-1.zip",
         "description": "Brightfield, JPEG, MIRAX (multi-file), CURRENT_SLIDE_VERSION 1.9",
         "license": "CC0-1.0",
         "sha256": {
