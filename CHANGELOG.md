@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-08-17
+
 ### Added
 
 - Keyword-only `settings` parameter on `WsiDicomizer.open` and `convert`, taking a wsidicom `Settings` used for that call instead of the process-wide default.
@@ -526,7 +528,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.29.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.30.0..HEAD
+[0.30.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.29.0..v0.30.0
 [0.29.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.1..v0.29.0
 [0.28.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.0..v0.28.1
 [0.28.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.27.0..v0.28.0
