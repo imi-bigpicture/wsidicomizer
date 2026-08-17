@@ -729,7 +729,7 @@ def icc_profile():
 
 @pytest.fixture(scope="module")
 def testdata_dir():
-    yield Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata"))
+    yield Path(os.environ.get("WSIDICOMIZER_TESTDIR", "tests/testdata")).resolve()
 
 
 @pytest.fixture(scope="module")
