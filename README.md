@@ -208,11 +208,12 @@ metadata = WsiDicomizerMetadata(
 
 ```python
 from wsidicomizer import WsiDicomizer
+
 created_files = WsiDicomizer.convert(
     filepath=path_to_wsi_file,
     output_path=path_to_output_folder,
     metadata=metadata,
-    tile_size=tile_size
+    tile_size=tile_size,
 )
 ```
 
@@ -220,6 +221,7 @@ created_files = WsiDicomizer.convert(
 
 ```python
 from wsidicomizer import WsiDicomizer
+
 wsi = WsiDicomizer.open(path_to_wsi_file)
 region = wsi.read_region((1000, 1000), 6, (200, 200))
 wsi.close()
@@ -236,9 +238,9 @@ from opentile.config import Settings as OpenTileSettings
 wsi = WsiDicomizer.open(
     path_to_wsi_file,
     settings=Settings(
-        strict_uid_check=True,                          # wsidicom setting
-        pyramid_resampling_filter="box",                # wsidicom setting
-        default_tile_size=1024,                         # wsidicomizer setting
+        strict_uid_check=True,  # wsidicom setting
+        pyramid_resampling_filter="box",  # wsidicom setting
+        default_tile_size=1024,  # wsidicomizer setting
         opentile=OpenTileSettings(ndpi_frame_cache=64),  # opentile source setting
     ),
 )
@@ -282,7 +284,7 @@ dataset.PatientAge = "042Y"
 WsiDicomizer.convert(
     filepath=path_to_wsi_file,
     output_path=path_to_output_folder,
-    metadata_post_processor=dataset
+    metadata_post_processor=dataset,
 )
 ```
 
@@ -292,14 +294,16 @@ For more complex processing a callback function that takes the merged `Dataset` 
 from pydicom import Dataset
 from wsidicom.metadata import WsiMetadata
 
+
 def metadata_post_processor(dataset: Dataset, metadata: WsiMetadata) -> Dataset:
     dataset.PatientAge = "042Y"
     return dataset
 
+
 WsiDicomizer.convert(
     filepath=path_to_wsi_file,
     output_path=path_to_output_folder,
-    metadata_post_processor=metadata_post_processor
+    metadata_post_processor=metadata_post_processor,
 )
 ```
 
@@ -310,6 +314,7 @@ WsiDicom provides methods for serializing and deserialising metadata to and from
 ```python
 import json
 from wsidicom.metadata.schema.json import WsiMetadataJsonSchema
+
 metadata = WsiDicomizerMetadata(
     study=study,
     series=series,
@@ -318,7 +323,7 @@ metadata = WsiDicomizerMetadata(
     slide=slide,
     label=label,
 )
-with open('metadata.json', 'w') as f:
+with open("metadata.json", "w") as f:
     json.dump(WsiMetadataJsonSchema().dump(metadata), f, indent=4)
 ```
 
@@ -358,6 +363,7 @@ As the Bioformats library is a java library it needs to run in a java virtual ma
 
 ```python
 import scyjava
+
 scyjava.shutdown_jvm()
 ```
 
@@ -366,7 +372,7 @@ Due to the need to start a JVM, the `bioformats` module is not imported when usi
 ```python
 from wsidicomizer import SourceIdentifier, WsiDicomizer
 
-with WsiDicomizer('input file', preferred_source=SourceIdentifier.BIOFORMASTS) as wsi:
+with WsiDicomizer("input file", preferred_source=SourceIdentifier.BIOFORMASTS) as wsi:
     ...
 ```
 

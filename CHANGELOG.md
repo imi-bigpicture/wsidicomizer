@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `output_file_options` parameter on `WsiDicomizer.convert`, for when the output is on another filesystem than the input. Defaults to `file_options`, which is otherwise used for both.
 - The CLI takes fsspec urls for `--input` and `--output`, and `--file-options` / `--output-file-options` for configuring the filesystems they are on, given as JSON objects.
 - `metadata_pre_processor` on `WsiDicomizer.open` and `convert`: changes the metadata read from the file before `metadata` and `default_metadata` are merged into it. When `include_confidential` is False the metadata is given with confidential metadata already removed.
+- Files read through the opentile source that hold more than one pyramid are refused with `NotImplementedError`; converting several pyramids is not yet supported.
 
 ### Changed
 

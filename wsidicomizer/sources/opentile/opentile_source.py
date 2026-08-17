@@ -132,6 +132,12 @@ class OpenTileSource(DicomizerSource):
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+        pyramid_count = len(self._tiler.pyramids)
+        if pyramid_count > 1:
+            raise NotImplementedError(
+                f"File holds {pyramid_count} pyramids (e.g. several ROIs); only one is "
+                "supported."
+            )
         return {
             (level.pyramid_index, level.focal_plane, level.optical_path): index
             for index, level in enumerate(self._tiler.levels)
