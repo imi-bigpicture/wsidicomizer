@@ -24,6 +24,8 @@ jobs:
         uses: actions/cache@v6
         with:
           key: test-images-cache-${{ hashFiles('tests/download_test_images.py') }}
+          restore-keys: |
+            test-images-cache-
           path: tests/testdata/slides
           enableCrossOsArchive: true
       - name: Download test images
