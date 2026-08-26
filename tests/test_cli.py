@@ -25,11 +25,30 @@ class TestCli:
         runner = CliRunner()
 
         # Act
-        result = runner.invoke(main, ["-i", str(tmp_path.joinpath("missing.svs"))])
+        result = runner.invoke(
+            main,
+            [
+                "-i",
+                str(tmp_path.joinpath("missing.svs")),
+                "-o",
+                str(tmp_path.joinpath("output")),
+            ],
+        )
 
         # Assert
         assert result.exit_code == 2
         assert "does not exist" in result.output
+
+    def test_missing_output_gives_error(self):
+        # Arrange
+        runner = CliRunner()
+
+        # Act
+        result = runner.invoke(main, ["-i", "input.svs"])
+
+        # Assert
+        assert result.exit_code == 2
+        assert "--output" in result.output
 
     @pytest.mark.parametrize("options", ["not json", '["not", "an", "object"]'])
     def test_file_options_that_are_not_a_json_object_gives_error(
@@ -41,7 +60,17 @@ class TestCli:
         input_path.touch()
 
         # Act
-        result = runner.invoke(main, ["-i", str(input_path), "--file-options", options])
+        result = runner.invoke(
+            main,
+            [
+                "-i",
+                str(input_path),
+                "-o",
+                str(tmp_path.joinpath("output")),
+                "--file-options",
+                options,
+            ],
+        )
 
         # Assert
         assert result.exit_code == 2

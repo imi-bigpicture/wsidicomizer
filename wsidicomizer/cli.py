@@ -98,10 +98,10 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     "--output",
     "output_path",
     type=str,
+    required=True,
     help=(
-        "Path to output folder. Folder will be created and must not "
-        "exist. If not specified a folder named after the input file "
-        "is created in the same path. Can be an fsspec url."
+        "Path to output folder. Must not already exist, or be an empty "
+        "folder. Can be an fsspec url."
     ),
 )
 @click.option(
@@ -271,7 +271,7 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
 )
 def main(
     input_path: str,
-    output_path: str | None,
+    output_path: str,
     tile_size: int,
     metadata: Path | None,
     default_metadata: Path | None,

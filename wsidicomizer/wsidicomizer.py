@@ -150,7 +150,7 @@ class WsiDicomizer(WsiDicom):
     def convert(
         cls,
         filepath: str | Path | UPath,
-        output_path: str | Path | UPath | None = None,
+        output_path: str | Path | UPath,
         metadata: WsiMetadata | None = None,
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
@@ -186,8 +186,9 @@ class WsiDicomizer(WsiDicom):
         ----------
         filepath: Union[str, Path],
             Path to file
-        output_path: str = None
-            Folder path to save files to.
+        output_path: str | Path | UPath
+            Folder path to save files to. Must not already exist, or be an
+            empty folder.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
@@ -256,9 +257,7 @@ class WsiDicomizer(WsiDicom):
         file_options: dict[str, Any] | None = None
             Options forwarded to the fsspec filesystem when reading the input
             (e.g. credentials), and to the output unless `output_file_options`
-            is set. Ignored by sources that read local files. When `output_path`
-            is omitted it defaults to a folder next to the source on the same
-            filesystem.
+            is set. Ignored by sources that read local files.
         output_file_options: dict[str, Any] | None = None
             Options forwarded to the fsspec filesystem when writing the output.
             Set this when the output lives on a different filesystem than the
@@ -298,12 +297,6 @@ class WsiDicomizer(WsiDicom):
                 **source_args,
             ) as wsi,
         ):
-            if output_path is None:
-                # Default to a folder next to the source, named after it. UPath
-                # keeps this working for fsspec sources, where the output can
-                # live on the same (possibly remote) filesystem as the input.
-                source_path = as_upath(filepath, output_file_options)
-                output_path = source_path.parent / source_path.stem
             created_files = wsi.save(
                 output_path,
                 uid_generator,

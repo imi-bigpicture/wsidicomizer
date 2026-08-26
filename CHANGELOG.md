@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
 - Reading an all-background region from an openslide, tiffslide or iSyntax source returned a blank frame with its width and height transposed, so a non-square region came back with the wrong shape. Square regions were unaffected, as was conversion, which only ever requests square tiles.
 
+### Removed
+
+- The default output folder. `output_path` on `WsiDicomizer.convert` and `--output` on the cli are now required. The default was a folder next to the source named after it, which named the source's own data for formats that keep their image data in a folder of that name (e.g. MIRAX, where `slide.mrxs` sits beside `slide/`), and otherwise wrote the converted images into the source directory without being asked.
+
 ## [0.30.0] - 2026-08-17
 
 ### Added

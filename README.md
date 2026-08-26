@@ -72,10 +72,8 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 
 ```console
   -i, --input PATH                Path to input wsi file.  [required]
-  -o, --output PATH               Path to output folder. Folder will be
-                                  created and must not exist. If not specified
-                                  a folder named after the input file is
-                                  created in the same path.
+  -o, --output PATH               Path to output folder. Must not already
+                                  exist, or be an empty folder.  [required]
   -t, --tile-size INTEGER         Tile size (same for width and height).
                                   Required for ndpi and openslide formats.
   -m, --metadata PATH             Path to json metadata that will override
