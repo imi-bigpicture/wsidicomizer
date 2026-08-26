@@ -21,12 +21,14 @@ from wsidicom.metadata import Label
 from isyntax import ISyntax
 from wsidicomizer.metadata import WsiDicomizerMetadata
 
+logger = logging.getLogger(__name__)
+
 
 class ISyntaxMetadata(WsiDicomizerMetadata):
     def __init__(self, slide: ISyntax):
         try:
             label = Label(barcode=slide.barcode) if slide.barcode != "" else None
         except UnicodeDecodeError:
-            logging.warning("Failed to decode barcode", exc_info=True)
+            logger.warning("Failed to decode barcode", exc_info=True)
             label = None
         super().__init__(label=label)

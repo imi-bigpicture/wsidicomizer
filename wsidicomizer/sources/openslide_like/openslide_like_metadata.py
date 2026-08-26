@@ -39,6 +39,8 @@ from wsidicomizer.sources.openslide_like.openslide_like_vendor_metadata import (
 )
 from wsidicomizer.wsi_format import FormatCoordinateDefaults, WsiFormat
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class OpenSlideLikeProperties:
@@ -89,7 +91,7 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         series = Series(description=vendor_metadata.series_description)
         slide = Slide(identifier=vendor_metadata.container_identifier)
         if properties.mpp_x is None or properties.mpp_y is None:
-            logging.warning(
+            logger.warning(
                 "Could not determine pixel spacing as did not "
                 "provide mpp from the file.",
                 exc_info=True,

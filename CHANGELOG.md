@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- wsidicomizer now logs through a logger per module (`logging.getLogger(__name__)`) instead of the root logger, so its output can be configured and filtered independently of the rest of the application.
+
 ### Fixed
 
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
