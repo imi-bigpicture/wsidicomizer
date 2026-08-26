@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
+- Reading an all-background region from an openslide, tiffslide or iSyntax source returned a blank frame with its width and height transposed, so a non-square region came back with the wrong shape. Square regions were unaffected, as was conversion, which only ever requests square tiles.
 
 ## [0.30.0] - 2026-08-17
 

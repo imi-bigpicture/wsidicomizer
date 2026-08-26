@@ -87,7 +87,7 @@ class BaseDicomizerImageData(ImageData):
         """
         if self._blank_encoded_frame is None or self._blank_encoded_frame_size != size:
             frame = np.full(
-                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
+                (size.height, size.width, 3), self.blank_color, dtype=np.dtype(np.uint8)
             )
             self._blank_encoded_frame = self.encoder.encode(frame)
             self._blank_encoded_frame_size = size
@@ -108,7 +108,7 @@ class BaseDicomizerImageData(ImageData):
         """
         if self._blank_decoded_frame is None or self._blank_decoded_frame_size != size:
             self._blank_decoded_frame = np.full(
-                size.to_tuple() + (3,), self.blank_color, dtype=np.dtype(np.uint8)
+                (size.height, size.width, 3), self.blank_color, dtype=np.dtype(np.uint8)
             )
             self._blank_decoded_frame_size = size
         return self._blank_decoded_frame
