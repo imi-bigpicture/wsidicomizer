@@ -115,7 +115,8 @@ class ISyntaxSource(DicomizerSource):
         if local_filepath is None:
             return False
         try:
-            ISyntax.open(local_filepath)
+            with ISyntax.open(local_filepath):
+                pass
         except Exception:
             return False
         return True
