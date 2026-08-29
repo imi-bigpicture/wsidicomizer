@@ -371,15 +371,23 @@ class BioformatsReader:
                     region.size.width,
                 )
                 data = np.moveaxis(data, 0, 2).copy()
-            if output_size is not None and data.shape[0:2] != output_size.to_tuple():
-                # Pad with zeros to get requested output size.
-                if not output_size.all_greater_than_or_equal(region.size):
+            rows, columns = data.shape[0], data.shape[1]
+            if output_size is not None and (rows, columns) != (
+                output_size.height,
+                output_size.width,
+            ):
+                if output_size.height < rows or output_size.width < columns:
                     raise ValueError(
                         "Output size should be equal to or larger than region size."
                     )
-                padding_width = output_size.width - data.shape[0]
-                padding_height = output_size.height - data.shape[1]
-                data = np.pad(data, ((0, padding_width), (0, padding_height), (0, 0)))
+                data = np.pad(
+                    data,
+                    (
+                        (0, output_size.height - rows),
+                        (0, output_size.width - columns),
+                        (0, 0),
+                    ),
+                )
             yield data
         finally:
             raw_data.release()
