@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A malformed `openslide.bounds-x`/`bounds-y` raised `ValueError` while opening, and a malformed `openslide.objective-power` did the same. The image is now placed by the format defaults, and the objective power left out, as for an absent property. A malformed `openslide.mpp-x`/`mpp-y` still refuses to open, since the image data requires a pixel spacing, but the value that could not be read is now logged.
 - Asking for a source whose extra is not installed (e.g. `--source openslide` without openslide) raised a bare `KeyError` instead of saying which extra is missing.
 - A file that opentile detects but fails to open aborted source selection instead of falling through to the remaining sources, so a file another source could read failed to open at all.
 - `--quality 0` on the cli was silently ignored and the default used instead, because `0` is falsy. It is now honoured, so `--quality 0` gives lossless jpeg2000 as `Jpeg2kSettings` documents.

@@ -176,7 +176,9 @@ class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
         self._image_coordinate_system = image_metadata.image_coordinate_system
         if image_metadata.pixel_spacing is None:
             raise ValueError(
-                "Could not determine pixel spacing for openslide thumbnail image."
+                "Could not determine pixel spacing for the thumbnail image: the file "
+                "did not provide an mpp that could be read. Give one with the "
+                "`metadata` or `default_metadata` argument to convert it anyway."
             )
         base_level_dimensions = level_dimensions[0]
         downsample = (
@@ -257,7 +259,9 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
         self._downsample = level_downsamples[self._level_index]
         if image_metadata.pixel_spacing is None:
             raise ValueError(
-                "Could not determine pixel spacing for tiffslide level image."
+                "Could not determine pixel spacing for the level image: the file did "
+                "not provide an mpp that could be read. Give one with the `metadata` "
+                "or `default_metadata` argument to convert it anyway."
             )
         self._pixel_spacing = SizeMm(
             image_metadata.pixel_spacing.width * self._downsample,

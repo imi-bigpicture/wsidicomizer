@@ -73,6 +73,21 @@ class OpenSlideLikeProperties:
         return vendor_map.get(self.vendor.lower())
 
 
+def _parse_float(value: str | None) -> float | None:
+    """Return value as a float, or None when absent or not a number.
+
+    openslide-like properties are strings read from the file, so a malformed one
+    cannot be told apart from a missing one here. It is for the caller to decide
+    whether that is something to leave out or to refuse to convert without.
+    """
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 class OpenSlideLikeMetadata(WsiDicomizerMetadata):
     def __init__(
         self,
@@ -91,19 +106,24 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         series = Series(description=vendor_metadata.series_description)
         slide = Slide(identifier=vendor_metadata.container_identifier)
         if properties.mpp_x is None or properties.mpp_y is None:
-            logger.warning(
-                "Could not determine pixel spacing as did not "
-                "provide mpp from the file.",
-                exc_info=True,
-            )
+            logger.warning("The file did not provide mpp, so pixel spacing is unknown.")
             pixel_spacing = None
         else:
-            base_mpp_x = float(properties.mpp_x)
-            base_mpp_y = float(properties.mpp_y)
-            pixel_spacing = SizeMm(
-                base_mpp_x / 1000.0,
-                base_mpp_y / 1000.0,
-            )
+            base_mpp_x = _parse_float(properties.mpp_x)
+            base_mpp_y = _parse_float(properties.mpp_y)
+            if base_mpp_x is None or base_mpp_y is None:
+                logger.warning(
+                    "Could not read mpp %r/%r from the file as a number, "
+                    "so pixel spacing is unknown.",
+                    properties.mpp_x,
+                    properties.mpp_y,
+                )
+                pixel_spacing = None
+            else:
+                pixel_spacing = SizeMm(
+                    base_mpp_x / 1000.0,
+                    base_mpp_y / 1000.0,
+                )
 
         # Get set image origin and size to bounds if available
         wsi_format = properties.wsi_format
@@ -111,14 +131,12 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             FormatCoordinateDefaults.from_wsi_format(wsi_format) if wsi_format else None
         )
         rotation = defaults.level_rotation if defaults else 0
-        if (
-            properties.bounds_x is not None
-            and properties.bounds_y is not None
-            and pixel_spacing is not None
-        ):
+        bounds_x = _parse_float(properties.bounds_x)
+        bounds_y = _parse_float(properties.bounds_y)
+        if bounds_x is not None and bounds_y is not None and pixel_spacing is not None:
             origin = PointMm(
-                int(properties.bounds_x) * pixel_spacing.width,
-                int(properties.bounds_y) * pixel_spacing.height,
+                bounds_x * pixel_spacing.width,
+                bounds_y * pixel_spacing.height,
             )
             image_coordinate_system = ImageCoordinateSystem(
                 origin,
@@ -134,11 +152,7 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             image_coordinate_system=image_coordinate_system,
             acquisition_datetime=vendor_metadata.acquisition_datetime,
         )
-        objective_power = (
-            float(properties.objective_power)
-            if properties.objective_power is not None
-            else None
-        )
+        objective_power = _parse_float(properties.objective_power)
         objectives = (
             Objectives(
                 objective_power=objective_power,
