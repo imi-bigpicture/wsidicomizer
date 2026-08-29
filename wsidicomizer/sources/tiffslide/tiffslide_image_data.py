@@ -191,30 +191,3 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return tile
-
-    def _detect_blank_tile2(self, data: np.ndarray) -> bool:
-        """Detect if tile data is a blank tile, i.e. either has full
-        transparency or is filled with background color. First checks if the
-        corners are transparent or has background color before checking whole
-        data.
-
-        Parameters
-        ----------
-        data: np.ndarray
-            Data to check if blank.
-
-        Returns
-        ----------
-        bool
-            True if tile is blank.
-        """
-
-        TOP = RIGHT = -1
-        BOTTOM = LEFT = 0
-        CORNERS_Y = [BOTTOM, BOTTOM, TOP, TOP]
-        CORNERS_X = [LEFT, RIGHT, LEFT, RIGHT]
-        background = np.array(self.blank_color)
-        corners_rgb = np.ix_(CORNERS_X, CORNERS_Y)
-        return bool(
-            np.all(data[corners_rgb] == background) and np.all(data == background)
-        )
