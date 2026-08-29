@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Asking for a source whose extra is not installed (e.g. `--source openslide` without openslide) raised a bare `KeyError` instead of saying which extra is missing.
+- A file that opentile detects but fails to open aborted source selection instead of falling through to the remaining sources, so a file another source could read failed to open at all.
 - `--quality 0` on the cli was silently ignored and the default used instead, because `0` is falsy. It is now honoured, so `--quality 0` gives lossless jpeg2000 as `Jpeg2kSettings` documents.
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
 - Reading an all-background region from an openslide, tiffslide or iSyntax source returned a blank frame with its width and height transposed, so a non-square region came back with the wrong shape. Square regions were unaffected, as was conversion, which only ever requests square tiles.

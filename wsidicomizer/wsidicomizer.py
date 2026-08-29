@@ -352,7 +352,13 @@ class WsiDicomizer(WsiDicom):
                     from wsidicomizer.extras.bioformats import BioformatsSource
 
                     loaded_sources[SourceIdentifier.BIOFORMATS] = BioformatsSource
-            preferred_source = loaded_sources[preferred_source]
+            try:
+                preferred_source = loaded_sources[preferred_source]
+            except KeyError:
+                raise ValueError(
+                    f"Source {preferred_source.value} is not available. It needs the "
+                    f"'{preferred_source.value}' extra to be installed."
+                ) from None
         selected_source = None
         if preferred_source is None:
             selected_source = next(
