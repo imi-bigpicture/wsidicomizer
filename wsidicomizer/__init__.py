@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import logging
 from importlib.metadata import version
 
 from wsidicomizer.config import (
@@ -24,6 +25,8 @@ from wsidicomizer.uid_resolver import MetadataUidResolver
 from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
 __version__ = version("wsidicomizer")
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __all__ = [
     "Settings",
