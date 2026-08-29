@@ -15,6 +15,7 @@
 
 """Source for reading openslide like compatible file."""
 
+import logging
 import math
 import re
 from collections.abc import Mapping, Sequence
@@ -41,6 +42,8 @@ from wsidicomizer.sources.openslide_like import (
     OpenSlideLikeProperties,
     OpenSlideLikeThumbnailImageData,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class OpenSlideLikeAssociatedImageType(Enum):
@@ -114,10 +117,7 @@ class OpenSlideLikeSource(DicomizerSource):
         self._level_downsamples = level_downsamples
         self._level_dimensions = level_dimensions
         self._associated_images = associated_images
-        self._pyramid_levels = {
-            (int(round(math.log2(downsample))), 0.0, "0"): index
-            for index, downsample in enumerate(level_downsamples)
-        }
+        self._pyramid_levels = self._map_pyramid_levels(level_downsamples)
 
         self._blank_color = self._get_blank_color(properties)
         self._base_level_offset, self._base_level_size = self._get_offset_and_size(
@@ -134,6 +134,32 @@ class OpenSlideLikeSource(DicomizerSource):
             metadata_pre_processor=metadata_pre_processor,
             uid_generator=uid_generator,
         )
+
+    @staticmethod
+    def _map_pyramid_levels(
+        level_downsamples: Sequence[float],
+    ) -> dict[tuple[int, float, str], int]:
+        """Map each level of the file to a dyadic pyramid index.
+
+        Several levels can map to the same index, and only one of them can be
+        written. That happens for files whose levels hold several same-sized
+        planes, such as a fluorescence qptiff read as a generic tiff. Log each
+        level left out rather than dropping it without a word.
+        """
+        levels: dict[tuple[int, float, str], int] = {}
+        for index, downsample in enumerate(level_downsamples):
+            key = (round(math.log2(downsample)), 0.0, "0")
+            if key in levels:
+                logger.warning(
+                    "Level %d and level %d both map to pyramid index %d; "
+                    "leaving out level %d.",
+                    levels[key],
+                    index,
+                    key[0],
+                    levels[key],
+                )
+            levels[key] = index
+        return levels
 
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
