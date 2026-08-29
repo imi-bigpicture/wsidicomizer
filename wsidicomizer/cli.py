@@ -213,8 +213,11 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     type=float,
     default=None,
     help=(
-        "Quality to use for encoding. It is not recommended to use > 95 for "
-        "jpeg. Use < 1 or > 1000 for lossless jpeg2000."
+        "Quality to use for encoding. What it means depends on --format: for "
+        "jpeg a 0-100 quality factor, not recommended above 95; for jpeg2000 "
+        "and htjpeg2000 a signal-to-noise ratio in dB, where 0 is lossless "
+        "and fractional values are allowed; for jpegxl a level from -100 to "
+        "100, where 100 is lossless."
     ),
 )
 @click.option(
@@ -352,14 +355,25 @@ def main(
             else Subsampling.R420
         )
         encoding_settings = JpegSettings(
-            quality=int(quality) if quality else 80, subsampling=subsampling_enum
+            quality=int(quality) if quality is not None else 80,
+            subsampling=subsampling_enum,
         )
+    # A jpeg2000 level is a signal-to-noise ratio in dB, so a fractional value is
+    # meaningful and is passed through rather than truncated. wsidicom <=0.35.0
+    # types `levels` as `Sequence[int]`, narrower than the floats the encoders
+    # take; drop the ignores once the requirement is raised past that.
     elif encoding_format == CliEncodingsOptions.JPEG2000:
-        encoding_settings = Jpeg2kSettings(levels=[int(quality) if quality else 80])
+        encoding_settings = Jpeg2kSettings(
+            levels=[quality if quality is not None else 80]  # pyright: ignore[reportArgumentType]
+        )
     elif encoding_format == CliEncodingsOptions.HTJPEG2000:
-        encoding_settings = HTJpeg2000Settings(levels=[int(quality) if quality else 80])
+        encoding_settings = HTJpeg2000Settings(
+            levels=[quality if quality is not None else 80]  # pyright: ignore[reportArgumentType]
+        )
     elif encoding_format == CliEncodingsOptions.JPEGXL:
-        encoding_settings = JpegXlSettings(level=int(quality) if quality else 90)
+        encoding_settings = JpegXlSettings(
+            level=int(quality) if quality is not None else 90
+        )
     else:
         raise ValueError(f"Unsupported encoding format {encoding_format}")
 

@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `--quality` is no longer truncated to a whole number for jpeg2000 and htjpeg2000, whose levels are a signal-to-noise ratio in dB. `--quality 0.5` now means 0.5 dB rather than lossless; use `--quality 0` for lossless.
 - wsidicomizer now logs through a logger per module (`logging.getLogger(__name__)`) instead of the root logger, so its output can be configured and filtered independently of the rest of the application.
 
 ### Fixed
 
+- `--quality 0` on the cli was silently ignored and the default used instead, because `0` is falsy. It is now honoured, so `--quality 0` gives lossless jpeg2000 as `Jpeg2kSettings` documents.
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
 - Reading an all-background region from an openslide, tiffslide or iSyntax source returned a blank frame with its width and height transposed, so a non-square region came back with the wrong shape. Square regions were unaffected, as was conversion, which only ever requests square tiles.
 
