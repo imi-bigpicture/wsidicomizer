@@ -59,27 +59,36 @@ class CziMetadata(WsiDicomizerMetadata):
 
     @property
     def acquisition_datetime(self) -> datetime | None:
-        value = self.get_value_from_element(
-            self._metadata,
-            "AcquisitionDateAndTime",
-            str,
-            nested=["Metadata", "Information", "Image"],
-        )
+        image = self.find_nested_element(["Metadata", "Information", "Image"])
+        if image is None:
+            return None
+        element = image.find("AcquisitionDateAndTime")
+        if element is None or element.text is None:
+            return None
         try:
-            return datetime.fromisoformat(value)
+            return datetime.fromisoformat(element.text)
         except ValueError:
-            # Remove timezone and keep only microseconds for Python <3.11 compatibility
-            value = re.split(r"Z|[-|+]\d{2}.\d{2}$", value)[0][:26]
-            return datetime.fromisoformat(value)
+            pass
+        # Remove timezone and keep only microseconds for Python <3.11 compatibility
+        trimmed = re.split(r"Z|[-|+]\d{2}.\d{2}$", element.text)[0][:26]
+        try:
+            return datetime.fromisoformat(trimmed)
+        except ValueError:
+            return None
 
     @property
     def scanner_model(self) -> str | None:
-        information = self.get_nested_element(["Metadata", "Information"])
-        image = self.get_nested_element(["Image"], information)
-        microscope_ref = self.get_element(image, "MicroscopeRef").get("Id")
-        microscopes = self.get_nested_element(
+        information = self.find_nested_element(["Metadata", "Information"])
+        if information is None:
+            return None
+        reference = self.find_nested_element(["Image", "MicroscopeRef"], information)
+        microscopes_element = self.find_nested_element(
             ["Instrument", "Microscopes"], information
-        ).findall("Microscope")
+        )
+        if reference is None or microscopes_element is None:
+            return None
+        microscope_ref = reference.get("Id")
+        microscopes = microscopes_element.findall("Microscope")
         try:
             microscope = next(
                 microscope
@@ -92,18 +101,21 @@ class CziMetadata(WsiDicomizerMetadata):
 
     @property
     def magnification(self) -> float | None:
-        information = self.get_nested_element(["Metadata", "Information"])
+        information = self.find_nested_element(["Metadata", "Information"])
+        if information is None:
+            return None
+        settings = self.find_nested_element(["Image", "ObjectiveSettings"], information)
+        objectives_element = self.find_nested_element(
+            ["Instrument", "Objectives"], information
+        )
+        if settings is None or objectives_element is None:
+            return None
         objective_refs = [
-            objective.get("Id")
-            for objective in self.get_nested_element(
-                ["Image", "ObjectiveSettings"], information
-            ).findall("ObjectiveRef")
+            objective.get("Id") for objective in settings.findall("ObjectiveRef")
         ]
         if len(objective_refs) != 1:
             return None
-        objectives = self.get_nested_element(
-            ["Instrument", "Objectives"], information
-        ).findall("Objective")
+        objectives = objectives_element.findall("Objective")
         try:
             objective = next(
                 objective
@@ -119,9 +131,11 @@ class CziMetadata(WsiDicomizerMetadata):
 
     @property
     def scanner_software_versions(self) -> list[str] | None:
-        application = self.get_nested_element(
+        application = self.find_nested_element(
             ["Metadata", "Information", "Application"]
         )
+        if application is None:
+            return None
         try:
             name = self.get_value_from_element(application, "Name", str)
             version = self.get_value_from_element(application, "Version", str)
@@ -131,18 +145,21 @@ class CziMetadata(WsiDicomizerMetadata):
 
     @cached_property
     def scaling(self) -> tuple[float | None, float | None, float | None]:
-        scaling_elements = self.get_nested_element(["Metadata", "Scaling", "Items"])
+        scaling_elements = self.find_nested_element(["Metadata", "Scaling", "Items"])
+        if scaling_elements is None:
+            return None, None, None
         x: float | None = None
         y: float | None = None
         z: float | None = None
         for distance in scaling_elements.findall("Distance"):
             dimension = distance.get("Id")
             # Value is in m per pixel, result in mm per pixel
-            value = self.get_value_from_element(
-                distance,
-                "Value",
-                float,
-            ) * pow(10, 6)
+            try:
+                value = self.get_value_from_element(distance, "Value", float) * pow(
+                    10, 6
+                )
+            except ValueError:
+                continue
             if dimension == "X":
                 x = value
             elif dimension == "Y":
@@ -152,11 +169,13 @@ class CziMetadata(WsiDicomizerMetadata):
         return x, y, z
 
     @cached_property
-    def pixel_spacing(self) -> SizeMm:
-        """Get pixel spacing (mm per pixel) from metadata"""
+    def pixel_spacing(self) -> SizeMm | None:
+        """Pixel spacing (mm per pixel) from the metadata, or None if the file
+        does not state a readable one. The image data requires it and refuses to
+        be created without."""
         x, y, _ = self.scaling
         if x is None or y is None:
-            raise ValueError("Could not find pixel spacing in metadata")
+            return None
         return SizeMm(x, y) / 1000
 
     @cached_property
@@ -187,6 +206,21 @@ class CziMetadata(WsiDicomizerMetadata):
         return [
             self.get_value_from_element(channel, "Fluor", str) for channel in channels
         ]
+
+    def find_nested_element(
+        self, tags: Sequence[str], element: ElementTree.Element | None = None
+    ) -> ElementTree.Element | None:
+        """Return the nested element, or None if any tag along the way is absent.
+
+        Metadata read from the file is optional as far as this class is
+        concerned: what is not there is left unset rather than failing the open.
+        """
+        found_element = self._metadata if element is None else element
+        for tag in tags:
+            found_element = found_element.find(tag)
+            if found_element is None:
+                return None
+        return found_element
 
     def get_nested_element(
         self, tags: Sequence[str], element: ElementTree.Element | None = None

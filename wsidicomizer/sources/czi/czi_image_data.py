@@ -71,7 +71,6 @@ class CziImageData(BaseDicomizerImageData):
         self._czi_metadata = czi_metadata
         self._merged_metadata = merged_metadata
 
-        assert self._merged_metadata.pixel_spacing is not None
         self._czi.set_lock(True)
         super().__init__(encoder)
         if tile_size is None:
@@ -82,7 +81,11 @@ class CziImageData(BaseDicomizerImageData):
         self._block_locks: dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
-            raise ValueError("Could not determine pixel spacing for czi level image.")
+            raise ValueError(
+                "Could not determine pixel spacing for the czi level image: the file "
+                "did not state a readable scaling. Give one with the `metadata` or "
+                "`default_metadata` argument to convert it anyway."
+            )
         self._pixel_spacing = self._merged_metadata.pixel_spacing
         self._image_coordinate_system = merged_metadata.image_coordinate_system
         self._image_size = Size(self._get_size(axis="X"), self._get_size(axis="Y"))

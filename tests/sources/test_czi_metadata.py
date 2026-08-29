@@ -154,3 +154,53 @@ class TestCziMetadata:
         assert pixel_spacing is not None
         assert pixel_spacing.width == pytest.approx(expected_pixel_spacing)
         assert pixel_spacing.height == pytest.approx(expected_pixel_spacing)
+
+
+SCALING_ONLY_XML = """<ImageDocument>
+      <Metadata>
+        <Scaling>
+          <Items>
+            <Distance Id="X"><Value>1e-7</Value></Distance>
+            <Distance Id="Y"><Value>1e-7</Value></Distance>
+          </Items>
+        </Scaling>
+      </Metadata>
+    </ImageDocument>"""
+
+NO_METADATA_XML = """<ImageDocument><Metadata/></ImageDocument>"""
+
+
+def czi_stating(decoy: Decoy, metadata_xml: str) -> CziFile:
+    czi = decoy.mock(cls=CziFile)
+    decoy.when(czi.metadata()).then_return(metadata_xml)
+    return czi
+
+
+class TestCziMetadataWithoutOptionalElements:
+    """A czi that does not state the optional metadata still reads. What the file
+    leaves out is left unset rather than failing the read."""
+
+    def test_reads_a_czi_stating_only_scaling(self, decoy: Decoy):
+        # Arrange
+        czi = czi_stating(decoy, SCALING_ONLY_XML)
+
+        # Act
+        result = CziMetadata(czi)
+
+        # Assert
+        assert result.equipment.model_name is None
+        assert result.equipment.software_versions is None
+        assert result.pyramid.image.acquisition_datetime is None
+        assert result.pyramid.image.pixel_spacing is not None
+
+    def test_reads_a_czi_stating_no_metadata(self, decoy: Decoy):
+        # Arrange
+        czi = czi_stating(decoy, NO_METADATA_XML)
+
+        # Act
+        result = CziMetadata(czi)
+
+        # Assert
+        assert result.pyramid.image.pixel_spacing is None
+        assert result.pyramid.optical_paths[0].objective is not None
+        assert result.pyramid.optical_paths[0].objective.objective_power is None
