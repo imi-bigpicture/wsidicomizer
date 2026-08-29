@@ -192,7 +192,7 @@ class BioformatsReader:
     def metadata(self) -> ome_types.OME:
         """Return parsed metadata."""
         metadata = self._read_metadata()
-        return ome_types.from_xml(str(metadata), parser="lxml")
+        return ome_types.from_xml(str(metadata))
 
     @property
     def images_count(self) -> int:
