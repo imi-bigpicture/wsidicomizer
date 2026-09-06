@@ -42,3 +42,18 @@ jobs:
         uses: astral-sh/setup-uv@v8.3.2
       - name: Typos
         run: uv run typos wsidicomizer tests README.md CHANGELOG.md
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          # Pinned: `uv audit` is still experimental and may change between releases.
+          version: "0.12.6"
+      # Audits uv.lock against the OSV database; reads the lockfile directly, so no
+      # project install is needed. --locked also asserts uv.lock is up to date.
+      - name: Audit dependencies
+        run: uv audit --locked --preview-features audit-command
