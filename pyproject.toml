@@ -59,6 +59,9 @@ wsidicomizer = "wsidicomizer.cli:main"
 [project.urls]
 Repository = "https://github.com/imi-bigpicture/wsidicomizer"
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.ruff]
 target-version = "py312"
 line-length = 88
