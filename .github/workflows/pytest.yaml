@@ -89,7 +89,7 @@ jobs:
           7z e openslide-win64-20221217.zip -oC:\openslide openslide-win64-20221217\bin
       - name: Set up paths in windows
         if: matrix.os == 'windows-latest'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             core.addPath('C:\\openslide')
