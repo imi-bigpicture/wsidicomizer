@@ -30,7 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 openslide = ["openslide-python>=1.4.6,<2.0.0"]
-bioformats = ["scyjava>=1.8.1,<2.0.0", "ome-types>=0.5.0,<0.6.0"]
+bioformats = ["scyjava>=1.8.1,<2.0.0", "ome-types>=0.5.0,<0.7.0"]
 isyntax = ["pyisyntax>=0.1.2,<0.2.0"]
 imagecodecs = ["imagecodecs>=2024.1.1,!=2024.9.22"]
 pylibjpeg-rle = ["pylibjpeg-rle>=2.0.0,<3.0.0"]
