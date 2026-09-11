@@ -26,6 +26,7 @@ import numpy as np
 import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
+from dicom_validator.validator.validation_result import ValidationResult
 from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
 from upath import UPath
@@ -88,10 +89,7 @@ def validator(
     standard_path = os.path.join(testdata_dir, "dicom-validator")
     edition_reader = EditionReader(standard_path)
     edition_reader.get_editions()
-    revision_path = edition_reader.get_revision("current")
-    assert isinstance(revision_path, Path)
-    json_path = revision_path.joinpath("json")
-    yield DicomFileValidator(EditionReader.load_dicom_info(json_path))
+    yield DicomFileValidator(edition_reader.dicom_info_for_edition("current"))
 
 
 @pytest.mark.integrationtest
@@ -114,15 +112,19 @@ class TestWsiDicomizerConvert:
         # Arrange
 
         # Act
-        result: dict[str, dict[str, dict[str, list[str]]]] = validator.validate_dir(
+        result: dict[str, ValidationResult] = validator.validate_dir(
             converted_path.name
         )
 
         # Assert
         errors_per_module = {
-            module: {tag: error for error, tags in errors.items() for tag in tags}
-            for module_errors in result.values()
-            for module, errors in module_errors.items()
+            # Key on the tag itself rather than str(tag), which prefixes any
+            # functional group parents, so that the tags ignored below match
+            # wherever they are reported.
+            module: {str(tag.tag): tag_error for tag, tag_error in tag_errors.items()}
+            for validation_result in result.values()
+            if validation_result.module_errors is not None
+            for module, tag_errors in validation_result.module_errors.items()
         }
         module_errors_to_ignore = {
             # These are not required for TILED_FULL organization type

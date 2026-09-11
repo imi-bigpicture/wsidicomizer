@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-08-28T14:51:10.0375429Z"
+exclude-newer = "2026-08-28T16:32:19.9715374Z"
 exclude-newer-span = "P14D"
 
 [[package]]
@@ -320,15 +320,16 @@ wheels = [
 
 [[package]]
 name = "dicom-validator"
-version = "0.4.1"
+version = "0.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lxml" },
     { name = "pydicom" },
+    { name = "pyparsing" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/27/087356cffeb7c95ef52767582f6ba12a401ab774ed42282067ed78ea25fa/dicom-validator-0.4.1.tar.gz", hash = "sha256:22dbbd233a723ae4bf924f6e207a4cb82037a4dc7be1090492d4af7420b0c5c1", size = 49477, upload-time = "2023-11-09T18:47:52.219Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/d7/7ae7a25d260613118f6d63545a2a0454aa209d06600c319ed9455a2d2887/dicom_validator-0.8.3.tar.gz", hash = "sha256:7b92f809f892ad37954e7b3c8c12bf10512496d6ae9a36db2dab3c1da456260e", size = 77652, upload-time = "2026-08-28T16:15:17.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/42/d24da48c4cf02f734c1297998dcaa9d910d7b7fc306cc05496f7b5a63d37/dicom_validator-0.4.1-py3-none-any.whl", hash = "sha256:44d0e6f8ff68206b25e3e9410c27fa39593ee6155b2275a90f3bfbaf5cacdbcf", size = 57245, upload-time = "2023-11-09T18:47:50.971Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/17/c4fc7e4cf99a8c9217bc1a3d40f2996f3ddece11d22ce27e9bd220b29342/dicom_validator-0.8.3-py3-none-any.whl", hash = "sha256:755e800f05df8357b38902debbdb0588dd9206a281828fc788d80aa79a993927", size = 89443, upload-time = "2026-08-28T16:15:16.354Z" },
 ]
 
 [[package]]
@@ -1112,6 +1113,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyparsing"
+version = "3.3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/91/9c6ee907786a473bf81c5f53cf703ba0957b23ab84c264080fb5a450416f/pyparsing-3.3.2.tar.gz", hash = "sha256:c777f4d763f140633dcb6d8a3eda953bf7a214dc4eff598413c070bcdc117cbc", size = 6851574, upload-time = "2026-01-21T03:57:59.36Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl", hash = "sha256:850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d", size = 122781, upload-time = "2026-01-21T03:57:55.912Z" },
+]
+
+[[package]]
 name = "pyright"
 version = "1.1.411"
 source = { registry = "https://pypi.org/simple" }
@@ -1526,7 +1536,7 @@ provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjp
 [package.metadata.requires-dev]
 dev = [
     { name = "decoy", specifier = ">=2.0.0,<3.0.0" },
-    { name = "dicom-validator", specifier = ">=0.4.0,<0.5.0" },
+    { name = "dicom-validator", specifier = ">=0.8.2,<0.9.0" },
     { name = "openslide-bin", specifier = ">=4.0.1,<5.0.0" },
     { name = "openslide-python", specifier = ">=1.4.6,<2.0.0" },
     { name = "pyright", specifier = ">=1.1.409" },
