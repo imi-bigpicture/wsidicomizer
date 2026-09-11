@@ -22,7 +22,7 @@ jobs:
       id-token: write  # required for PyPI trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v8.3.2
+      - uses: astral-sh/setup-uv@v10.0.1
 
       - name: Check tag matches project version and changelog
         run: |
