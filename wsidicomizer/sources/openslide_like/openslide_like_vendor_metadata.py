@@ -86,6 +86,14 @@ class VendorMetadata:
         return None
 
     @property
+    def study_datetime(self) -> datetime | None:
+        """When the study started, as the file says.
+
+        The scan, unless the vendor states a study or case datetime of its own.
+        """
+        return self.acquisition_datetime
+
+    @property
     def series_description(self) -> str | None:
         return None
 

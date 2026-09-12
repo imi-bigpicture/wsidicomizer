@@ -110,7 +110,11 @@ class OpenTileMetadata(WsiDicomizerMetadata):
         else:
             overview = None
         super().__init__(
-            equipment=equipment, pyramid=pyramid, label=label, overview=overview
+            study=self._study_started_at(metadata.acquisition_datetime),
+            equipment=equipment,
+            pyramid=pyramid,
+            label=label,
+            overview=overview,
         )
 
     @staticmethod

@@ -14,6 +14,7 @@
 
 """Base model for metadata."""
 
+import datetime
 from collections.abc import Callable, Sequence
 from dataclasses import Field, fields, is_dataclass
 from typing import Any, TypeVar
@@ -156,6 +157,19 @@ class WsiDicomizerMetadata(WsiMetadata):
             frame_of_reference_uid=None,
             dimension_organization_uids=None,
         )
+
+    @staticmethod
+    def _study_started_at(
+        study_datetime: datetime.datetime | None,
+    ) -> Study | None:
+        """The study dated by the datetime a source file states, or None.
+
+        None leaves the study undated for the order to fill, rather than dated
+        by the conversion.
+        """
+        if study_datetime is None:
+            return None
+        return Study(date=study_datetime.date(), time=study_datetime.time())
 
     @classmethod
     def _merge_list(

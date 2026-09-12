@@ -55,7 +55,11 @@ class CziMetadata(WsiDicomizerMetadata):
             OpticalPath("1", objective=Objectives(objective_power=self.magnification))
         ]
         pyramid = Pyramid(image=image, optical_paths=optical_paths)
-        super().__init__(equipment=equipment, pyramid=pyramid)
+        super().__init__(
+            study=self._study_started_at(self.acquisition_datetime),
+            equipment=equipment,
+            pyramid=pyramid,
+        )
 
     @property
     def acquisition_datetime(self) -> datetime | None:

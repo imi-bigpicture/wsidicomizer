@@ -195,6 +195,7 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
                     optical_paths=[],
                 )
         super().__init__(
+            study=self._study_started_at(vendor_metadata.study_datetime),
             series=series,
             slide=slide,
             equipment=equipment,

@@ -16,7 +16,7 @@
 # identifiers. Instance-identifying values (serial numbers, scan dates,
 # barcodes, slide ids/names) are placeholders.
 
-from datetime import datetime
+from datetime import date, datetime, time
 
 from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
     OpenSlideLikeMetadata,
@@ -201,6 +201,25 @@ class TestVendorMetadataForVendor:
         # Assert
         assert result.acquisition_datetime is None
 
+    def test_study_datetime_is_the_acquisition_datetime(self):
+        # Arrange
+        properties = {"mirax.GENERAL.SLIDE_CREATIONDATETIME": "02/01/2020 03:04:05"}
+
+        # Act
+        result = VendorMetadata.for_vendor("mirax", properties)
+
+        # Assert
+        assert result.study_datetime == datetime(2020, 1, 2, 3, 4, 5)
+
+    def test_study_datetime_is_none_when_the_file_states_no_datetime(self):
+        # Arrange
+
+        # Act
+        result = VendorMetadata.for_vendor("ventana", {"ventana.ScanSerialNumber": "1"})
+
+        # Assert
+        assert result.study_datetime is None
+
 
 class TestOpenSlideLikeMetadataVendorIntegration:
     def test_raw_properties_flow_into_metadata(self):
@@ -224,3 +243,30 @@ class TestOpenSlideLikeMetadataVendorIntegration:
         assert result.pyramid.image.acquisition_datetime == datetime(
             2020, 1, 2, 3, 4, 5
         )
+
+    def test_study_is_dated_by_the_datetime_the_file_states(self):
+        # Arrange
+        properties = OpenSlideLikeProperties(
+            vendor="mirax",
+            raw_properties={
+                "mirax.GENERAL.SLIDE_CREATIONDATETIME": "02/01/2020 03:04:05",
+            },
+        )
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        assert result.study.date == date(2020, 1, 2)
+        assert result.study.time == time(3, 4, 5)
+
+    def test_study_is_undated_when_the_file_states_no_datetime(self):
+        # Arrange
+        properties = OpenSlideLikeProperties(vendor="ventana", raw_properties={})
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        assert result.study.date is None
+        assert result.study.time is None

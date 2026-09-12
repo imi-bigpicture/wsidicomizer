@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `Study Date` and `Study Time` are now taken from the datetime a source file states it was imaged at, for the formats that state one. User-supplied metadata still overrides them.
+
 ### Changed
 
 - `--quality` is no longer truncated to a whole number for jpeg2000 and htjpeg2000, whose levels are a signal-to-noise ratio in dB. `--quality 0.5` now means 0.5 dB rather than lossless; use `--quality 0` for lossless.
