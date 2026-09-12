@@ -15,7 +15,9 @@
 
 import pytest
 from pydicom.uid import UID
+from wsidicom.conceptcode import ContributingEquipmentPurposeCode
 from wsidicom.metadata import (
+    ContributingEquipment,
     Equipment,
     Image,
     Label,
@@ -267,3 +269,54 @@ class TestWsiDicomizerMetadata:
 
         # Assert
         assert merged.dimension_organization_uids == expected_dimension_organization_uid
+
+    def test_merge_keeps_the_contributing_equipment_of_every_layer(self):
+        # Arrange
+        base_equipment = ContributingEquipment(
+            purpose=ContributingEquipmentPurposeCode("Acquisition Equipment"),
+            manufacturer="base",
+        )
+        user_equipment = ContributingEquipment(
+            purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
+            manufacturer="user",
+        )
+        default_equipment = ContributingEquipment(
+            purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
+            manufacturer="default",
+        )
+        base = WsiDicomizerMetadata(contributing_equipment=[base_equipment])
+        user = WsiDicomizerMetadata(contributing_equipment=[user_equipment])
+        default = WsiDicomizerMetadata(contributing_equipment=[default_equipment])
+
+        # Act
+        # Assert
+        assert base.merge(user, default).contributing_equipment == [
+            base_equipment,
+            user_equipment,
+            default_equipment,
+        ]
+        assert base.merge(None, default).contributing_equipment == [
+            base_equipment,
+            default_equipment,
+        ]
+        assert WsiDicomizerMetadata().merge(None, default).contributing_equipment == [
+            default_equipment
+        ]
+        assert WsiDicomizerMetadata().merge(None, None).contributing_equipment == ()
+
+    def test_remove_confidential_removes_contributing_equipment(self):
+        # Arrange
+        metadata = WsiDicomizerMetadata(
+            contributing_equipment=[
+                ContributingEquipment(
+                    purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
+                    institution_name="a hospital",
+                )
+            ]
+        )
+
+        # Act
+        result = metadata.remove_confidential()
+
+        # Assert
+        assert result.contributing_equipment == ()

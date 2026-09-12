@@ -135,6 +135,12 @@ class WsiDicomizerMetadata(WsiMetadata):
             ),
             frame_of_reference_uid=frame_of_reference_uid,
             dimension_organization_uids=dimension_organization_uids,
+            # States who contributed, so layers add to it rather than override.
+            contributing_equipment=[
+                *base.contributing_equipment,
+                *user.contributing_equipment,
+                *default.contributing_equipment,
+            ],
         )
 
     def remove_confidential(self) -> "WsiDicomizerMetadata":
@@ -143,7 +149,8 @@ class WsiDicomizerMetadata(WsiMetadata):
         The patient's name, identifier, birth date and sex, the label text and
         barcode, the device serial number, the acquisition datetime, and any
         comments. The study, series and slide are dropped whole, along with the
-        frame of reference and dimension organization uids.
+        frame of reference and dimension organization uids, and so is the
+        contributing equipment, which names the institution that contributed.
         """
         return WsiDicomizerMetadata(
             study=None,
@@ -156,6 +163,7 @@ class WsiDicomizerMetadata(WsiMetadata):
             overview=self.overview.remove_confidential() if self.overview else None,
             frame_of_reference_uid=None,
             dimension_organization_uids=None,
+            contributing_equipment=None,
         )
 
     @staticmethod

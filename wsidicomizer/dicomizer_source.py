@@ -95,7 +95,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
-            User-specified metadata that will be used as default values.
+            User-specified metadata that will be used as default values. This
+            is also the layer wsidicomizer states its own metadata in, so
+            stating the same metadata here leaves out what it would have said.
+            `DicomizerSource.default_metadata` reports the layer as it stands.
         include_confidential: bool = True
             Include confidential metadata.
         metadata_post_processor: Optional[Union[Dataset, MetadataPostProcessor]] = None
@@ -247,29 +250,22 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             )
         merged = base.merge(self.user_metadata, self.default_metadata)
         merged = self._ensure_required_content(merged)
-        merged = self._add_contributing_equipment(merged)
         return MetadataUidResolver(self._uid_generator).resolve(merged)
 
-    @staticmethod
-    def _add_contributing_equipment(metadata: WsiMetadata) -> WsiMetadata:
-        """Record wsidicomizer as contributing (modifying) equipment, so the
-        converted file documents that it was produced by a tool rather than
-        acquired directly by the scanner. Appended, preserving any existing items.
+    @classmethod
+    def _contributing_equipment(cls) -> ContributingEquipment:
+        """wsidicomizer's own record of having modified the image.
+
+        Stated in the default metadata, so that a converted file documents that
+        it was produced by a tool rather than acquired from the scanner.
         """
-        wsidicomizer_equipment = ContributingEquipment(
+        return ContributingEquipment(
             purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
             manufacturer="wsidicomizer",
             model_name="wsidicomizer",
             software_versions=[version("wsidicomizer")],
             description="Converted to DICOM WSI by wsidicomizer",
             contribution_datetime=datetime.now(),
-        )
-        return replace(
-            metadata,
-            contributing_equipment=[
-                *metadata.contributing_equipment,
-                wsidicomizer_equipment,
-            ],
         )
 
     @staticmethod
@@ -297,8 +293,18 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         return self._user_metadata
 
     @property
-    def default_metadata(self) -> WsiMetadata | None:
-        return self._default_metadata
+    def default_metadata(self) -> WsiMetadata:
+        """The defaults in force: what the caller gave, and
+        `_contributing_equipment` where the caller's defaults state none."""
+        given = self._default_metadata
+        if given is not None and len(given.contributing_equipment) > 0:
+            return given
+        return replace(
+            WsiDicomizerMetadata.from_metadata(given)
+            if given is not None
+            else WsiDicomizerMetadata(),
+            contributing_equipment=[self._contributing_equipment()],
+        )
 
     @property
     def base_dataset(self) -> WsiDataset:

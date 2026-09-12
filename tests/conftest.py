@@ -19,9 +19,12 @@ from typing import Any
 
 import pytest
 from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
+from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec.encoder import Encoder, Jpeg2kEncoder, Jpeg2kSettings
 
+from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.metadata import WsiDicomizerMetadata
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
 DEFAULT_TILE_SIZE = 512
@@ -865,3 +868,46 @@ def wsi_file(
     if not filepath.exists():
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
     yield filepath
+
+
+class FakeSource(DicomizerSource):
+    """A source that reads nothing but the metadata it is made with.
+
+    Not a mock: the metadata of a source is what is under test here, so the
+    behaviour of the class it is a source of is what has to run.
+    """
+
+    def __init__(self, base_metadata: WsiDicomizerMetadata, **kwargs):
+        self._base_metadata = base_metadata
+        super().__init__(filepath=UPath("slide.svs"), encoder=None, **kwargs)
+
+    @staticmethod
+    def is_supported(path, file_options: dict[str, Any] | None = None) -> bool:
+        return True
+
+    @property
+    def base_metadata(self) -> WsiDicomizerMetadata:
+        return self._base_metadata
+
+    @property
+    def _pixel_format(self):
+        raise NotImplementedError()
+
+    @property
+    def pyramid_levels(self):
+        raise NotImplementedError()
+
+    def _create_level_image_data(self, level_index: int):
+        raise NotImplementedError()
+
+    def _create_label_image_data(self):
+        raise NotImplementedError()
+
+    def _create_overview_image_data(self):
+        raise NotImplementedError()
+
+    def _create_thumbnail_image_data(self):
+        raise NotImplementedError()
+
+    def close(self) -> None:
+        pass

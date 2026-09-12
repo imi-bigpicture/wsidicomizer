@@ -13,11 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- wsidicomizer states its own contributing equipment in the default metadata layer rather than appending it after the merge. Contributing equipment stated in `metadata` is kept alongside it, and stating contributing equipment in `default_metadata` is what leaves it out. `DicomizerSource.default_metadata` reports the defaults in force rather than only the ones passed in, and is no longer `None`.
 - `--quality` is no longer truncated to a whole number for jpeg2000 and htjpeg2000, whose levels are a signal-to-noise ratio in dB. `--quality 0.5` now means 0.5 dB rather than lossless; use `--quality 0` for lossless.
 - wsidicomizer now logs through a logger per module (`logging.getLogger(__name__)`) instead of the root logger, so its output can be configured and filtered independently of the rest of the application.
 
 ### Fixed
 
+- Contributing equipment given in `metadata` or `default_metadata` was dropped by the merge, so it never reached the converted file. Every layer's is now kept, in the order the layers contributed: it records who contributed rather than one value of many, so a layer adds to it rather than overriding it.
 - A czi that did not state an acquisition time, microscope, objective or application raised `ValueError` while reading its metadata, so a valid file could not be opened for want of metadata that is optional. What the file leaves out is now left unset. A czi that states no readable scaling likewise reports the missing pixel spacing when the image data is created, rather than while reading the metadata.
 - Levels of an openslide or tiffslide file that map to the same pyramid index were discarded without notice, keeping whichever came last. Each level left out is now logged.
 - A malformed `openslide.bounds-x`/`bounds-y` raised `ValueError` while opening, and a malformed `openslide.objective-power` did the same. The image is now placed by the format defaults, and the objective power left out, as for an absent property. A malformed `openslide.mpp-x`/`mpp-y` still refuses to open, since the image data requires a pixel spacing, but the value that could not be read is now logged.

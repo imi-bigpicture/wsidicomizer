@@ -12,66 +12,101 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from dataclasses import replace
 from importlib.metadata import version
 
 import pytest
 from wsidicom.conceptcode import ContributingEquipmentPurposeCode
-from wsidicom.metadata import (
-    ContributingEquipment,
-    Equipment,
-    Image,
-    Label,
-    Patient,
-    Pyramid,
-    Series,
-    Study,
-    WsiMetadata,
-)
-from wsidicom.metadata.slide import Slide
+from wsidicom.metadata import ContributingEquipment
 
+from tests.conftest import FakeSource
 from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.metadata import WsiDicomizerMetadata
 
 
 @pytest.fixture
-def metadata() -> WsiMetadata:
-    return WsiMetadata(
-        study=Study(),
-        series=Series(),
-        patient=Patient(),
-        equipment=Equipment(),
-        slide=Slide(),
-        pyramid=Pyramid(image=Image(), optical_paths=[]),
-        label=Label(),
+def acme() -> ContributingEquipment:
+    return ContributingEquipment(
+        purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
+        manufacturer="ACME",
+        model_name="acmeizer",
     )
 
 
+@pytest.mark.unittest
 class TestContributingEquipment:
-    def test_adds_wsidicomizer_as_modifying_equipment(self, metadata: WsiMetadata):
+    def test_states_wsidicomizer_as_modifying_equipment(self):
         # Act
-        result = DicomizerSource._add_contributing_equipment(metadata)
+        stated = DicomizerSource._contributing_equipment()
 
         # Assert
-        assert len(result.contributing_equipment) == 1
-        item = result.contributing_equipment[0]
-        assert item.purpose == ContributingEquipmentPurposeCode("Modifying Equipment")
-        assert item.manufacturer == "wsidicomizer"
-        assert item.model_name == "wsidicomizer"
-        assert item.software_versions == [version("wsidicomizer")]
-        assert item.description == "Converted to DICOM WSI by wsidicomizer"
-        assert item.contribution_datetime is not None
+        assert stated.purpose == ContributingEquipmentPurposeCode("Modifying Equipment")
+        assert stated.manufacturer == "wsidicomizer"
+        assert stated.model_name == "wsidicomizer"
+        assert stated.software_versions == [version("wsidicomizer")]
+        assert stated.description == "Converted to DICOM WSI by wsidicomizer"
+        assert stated.contribution_datetime is not None
 
-    def test_appends_to_existing_contributing_equipment(self, metadata: WsiMetadata):
+    def test_is_stated_by_the_default_layer_when_nothing_else_states_any(self):
         # Arrange
-        existing = ContributingEquipment(
-            purpose=ContributingEquipmentPurposeCode("Modifying Equipment"),
-            model_name="other",
-        )
-        metadata = replace(metadata, contributing_equipment=[existing])
+        source = FakeSource(WsiDicomizerMetadata())
 
         # Act
-        result = DicomizerSource._add_contributing_equipment(metadata)
+        stated = source.metadata.contributing_equipment
 
         # Assert
-        assert len(result.contributing_equipment) == 2
-        assert result.contributing_equipment[0] == existing
+        assert [equipment.manufacturer for equipment in stated] == ["wsidicomizer"]
+
+    def test_the_default_layer_reports_what_it_states(self):
+        # Arrange
+        source = FakeSource(WsiDicomizerMetadata())
+
+        # Act
+        default = source.default_metadata
+
+        # Assert
+        assert [
+            equipment.manufacturer for equipment in default.contributing_equipment
+        ] == ["wsidicomizer"]
+
+    def test_is_kept_alongside_what_the_caller_states(
+        self, acme: ContributingEquipment
+    ):
+        # Arrange
+        source = FakeSource(
+            WsiDicomizerMetadata(),
+            metadata=WsiDicomizerMetadata(contributing_equipment=[acme]),
+        )
+
+        # Act
+        stated = source.metadata.contributing_equipment
+
+        # Assert
+        assert [equipment.manufacturer for equipment in stated] == [
+            "ACME",
+            "wsidicomizer",
+        ]
+
+    def test_is_left_out_by_what_the_callers_defaults_state(
+        self, acme: ContributingEquipment
+    ):
+        # Arrange
+        source = FakeSource(
+            WsiDicomizerMetadata(),
+            default_metadata=WsiDicomizerMetadata(contributing_equipment=[acme]),
+        )
+
+        # Act
+        stated = source.metadata.contributing_equipment
+
+        # Assert
+        assert [equipment.manufacturer for equipment in stated] == ["ACME"]
+
+    def test_is_stated_even_when_confidential_metadata_is_left_out(self):
+        # Arrange
+        source = FakeSource(WsiDicomizerMetadata(), include_confidential=False)
+
+        # Act
+        stated = source.metadata.contributing_equipment
+
+        # Assert
+        assert [equipment.manufacturer for equipment in stated] == ["wsidicomizer"]
