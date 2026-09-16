@@ -304,6 +304,30 @@ class TestWsiDicomizerMetadata:
         ]
         assert WsiDicomizerMetadata().merge(None, None).contributing_equipment == ()
 
+    def test_merge_optical_paths_keeps_user_and_default_when_base_is_empty(self):
+        # Arrange
+        base = WsiDicomizerMetadata(pyramid=Pyramid(image=Image(), optical_paths=[]))
+        user = WsiDicomizerMetadata(
+            pyramid=Pyramid(
+                image=Image(),
+                optical_paths=[OpticalPath(identifier="1", description="user")],
+            )
+        )
+        default = WsiDicomizerMetadata(
+            pyramid=Pyramid(
+                image=Image(),
+                optical_paths=[OpticalPath(icc_profile=b"default")],
+            )
+        )
+
+        # Act
+        merged = base.merge(user, default)
+
+        # Assert
+        assert len(merged.pyramid.optical_paths) == 1
+        assert merged.pyramid.optical_paths[0].description == "user"
+        assert merged.pyramid.optical_paths[0].icc_profile == b"default"
+
     def test_remove_confidential_removes_contributing_equipment(self):
         # Arrange
         metadata = WsiDicomizerMetadata(

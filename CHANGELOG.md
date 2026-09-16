@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quality 0` on the cli was silently ignored and the default used instead, because `0` is falsy. It is now honoured, so `--quality 0` gives lossless jpeg2000 as `Jpeg2kSettings` documents.
 - `ISyntaxSource.is_supported` closes the iSyntax handle it opens for format detection, instead of leaving the native close to `__del__` of the discarded object.
 - Reading an all-background region from an openslide, tiffslide or iSyntax source returned a blank frame with its width and height transposed, so a non-square region came back with the wrong shape. Square regions were unaffected, as was conversion, which only ever requests square tiles.
+- Merging a list module (e.g. `optical_paths`) discarded both `metadata` and `default_metadata` entirely when the source stated none of its own (an empty `base`), such as an iSyntax file with a user-supplied objective power. The item count for merging by position is now taken from whichever of the three layers is longest, rather than always from `base`.
 
 ### Removed
 

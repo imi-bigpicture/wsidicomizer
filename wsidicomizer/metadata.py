@@ -194,12 +194,14 @@ class WsiDicomizerMetadata(WsiMetadata):
         if len(models) == 1:
             # Only one list not empty
             return models[0]
-        user_expanded = cls._repeat_list(base, user)
-        default_expanded = cls._repeat_list(base, default)
+        shape = max((base, user, default), key=len)
+        base_expanded = cls._repeat_list(shape, base)
+        user_expanded = cls._repeat_list(shape, user)
+        default_expanded = cls._repeat_list(shape, default)
         return [
             cls._merge_not_none(model_class, base_item, user_item, default_item)
             for base_item, user_item, default_item in zip(
-                base, user_expanded, default_expanded, strict=False
+                base_expanded, user_expanded, default_expanded, strict=False
             )
         ]
 
