@@ -364,11 +364,11 @@ def main(
     # take; drop the ignores once the requirement is raised past that.
     elif encoding_format == CliEncodingsOptions.JPEG2000:
         encoding_settings = Jpeg2kSettings(
-            levels=[quality if quality is not None else 80]  # pyright: ignore[reportArgumentType]
+            levels=[quality if quality is not None else 80]
         )
     elif encoding_format == CliEncodingsOptions.HTJPEG2000:
         encoding_settings = HTJpeg2000Settings(
-            levels=[quality if quality is not None else 80]  # pyright: ignore[reportArgumentType]
+            levels=[quality if quality is not None else 80]
         )
     elif encoding_format == CliEncodingsOptions.JPEGXL:
         encoding_settings = JpegXlSettings(

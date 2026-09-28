@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from pydicom import Dataset, config
+from pydicom import Dataset
 from upath import UPath
 from wsidicom import ImageData
 from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
@@ -53,9 +53,6 @@ from wsidicomizer.metadata import (
     WsiDicomizerMetadata,
 )
 from wsidicomizer.uid_resolver import MetadataUidResolver
-
-config.enforce_valid_values = True
-config.future_behavior()
 
 
 class DicomizerSource(Source, metaclass=ABCMeta):
