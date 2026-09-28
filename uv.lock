@@ -10,6 +10,10 @@ resolution-markers = [
 exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P14D"
 
+[options.exclude-newer-package]
+opentile = false
+wsidicom = false
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -765,7 +769,7 @@ wheels = [
 
 [[package]]
 name = "opentile"
-version = "0.25.0"
+version = "0.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -780,9 +784,9 @@ dependencies = [
     { name = "tifffile" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/b2/18ddedad14471637ee8a3a8e242cd8b7a54895adf95ffa8ca624986aaf0a/opentile-0.25.0.tar.gz", hash = "sha256:f75962e5a474dde50618f8a310ee2fb587acfcc9934c728babbaa0d1762bf509", size = 588115, upload-time = "2026-08-17T11:39:38.356Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/2e/1e246b66e3c75475cace49d9038cae2d34fa52d18bdcdeecd5faf92a95eb/opentile-0.26.0.tar.gz", hash = "sha256:053b15ebd7eda440944300f23cba971a9c822b8f2b10346161421c6cc43788ba", size = 600856, upload-time = "2026-09-28T09:45:04.677Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/11/d3b228430401a0cc4223ad44b0c62953e6d60765089be38c3d5a0694d268/opentile-0.25.0-py3-none-any.whl", hash = "sha256:408711403a7e08224f24b86e208738722012dfa6bd0f444723a8af910c956422", size = 131512, upload-time = "2026-08-17T11:39:37.29Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/97/d7bad860c66d9c7912557a77c71ff7a8827d2f66b315ed57b773a7b64576/opentile-0.26.0-py3-none-any.whl", hash = "sha256:29aea98a9aeb46e9061b4ddc521b264732b73f3862832c641b5c00ddf026e45f", size = 133393, upload-time = "2026-09-28T09:45:03.154Z" },
 ]
 
 [[package]]
@@ -1473,7 +1477,7 @@ wheels = [
 
 [[package]]
 name = "wsidicom"
-version = "0.35.0"
+version = "0.36.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1485,9 +1489,9 @@ dependencies = [
     { name = "pydicom" },
     { name = "universal-pathlib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/8d/7085f9b54cc67c7e0f888ba2062a8d66cabba0a7aaee428112fce273f8a0/wsidicom-0.35.0.tar.gz", hash = "sha256:513b347614505c3356bd4316a53bf05ede6f9e2b7d5780b58565540682afae95", size = 446673, upload-time = "2026-08-15T15:45:50.734Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/8d/2950a0dafecb8be3fa03131ef8846ac3b31a002c45eb17e121a4f8c01009/wsidicom-0.36.0.tar.gz", hash = "sha256:06822c68ef83b3dbea29dc6efab92bf8c7064adf909746e968cff81afe8184ec", size = 511784, upload-time = "2026-09-28T13:06:54.738Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6b/6c/9bbe243c2d3db31e1b0514b2b812edf1b8d8f98f503239299b50edff2ba5/wsidicom-0.35.0-py3-none-any.whl", hash = "sha256:002335fb5f71ea288bc97c6b4e6323ef7f6fea3b06a8f38d3514bb85ac0e5369", size = 307146, upload-time = "2026-08-15T15:45:49.303Z" },
+    { url = "https://files.pythonhosted.org/packages/92/c0/b00742cfa3c46b0fc349b9df4ebe5c697612f5e5eeca3ffea596ea5e85a8/wsidicom-0.36.0-py3-none-any.whl", hash = "sha256:8e66c2a561512a4a0c98b9956966ba847b15e65d7293e13f13e01a757afa008c", size = 354624, upload-time = "2026-09-28T13:06:53.317Z" },
 ]
 
 [[package]]
@@ -1556,7 +1560,7 @@ requires-dist = [
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.7.0" },
     { name = "opencv-python-headless", marker = "extra == 'opencv'", specifier = ">=4.5.0" },
     { name = "openslide-python", marker = "extra == 'openslide'", specifier = ">=1.4.6,<2.0.0" },
-    { name = "opentile", specifier = ">=0.25.0,<0.26.0" },
+    { name = "opentile", specifier = ">=0.26.0,<0.27.0" },
     { name = "pydicom", specifier = ">=3.0.0" },
     { name = "pyisyntax", marker = "extra == 'isyntax'", specifier = ">=0.1.2,<0.2.0" },
     { name = "pyjpegls", marker = "extra == 'pyjpegls'", specifier = ">=1.2.0,<2.0.0" },
@@ -1565,7 +1569,7 @@ requires-dist = [
     { name = "scyjava", marker = "extra == 'bioformats'", specifier = ">=1.8.1,<2.0.0" },
     { name = "tiffslide", specifier = ">=4.0.0,<5.0.0" },
     { name = "universal-pathlib", specifier = ">=0.3.0,<1.0.0" },
-    { name = "wsidicom", specifier = ">=0.35.0,<0.36.0" },
+    { name = "wsidicom", specifier = ">=0.36.0,<0.37.0" },
 ]
 provides-extras = ["openslide", "bioformats", "isyntax", "imagecodecs", "pylibjpeg-rle", "pyjpegls", "pylibjpeg-openjpeg", "opencv"]
 
