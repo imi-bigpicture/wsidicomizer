@@ -33,6 +33,8 @@ import re
 from collections.abc import Mapping
 from datetime import datetime
 
+from wsidicom.geometry import PointMm
+
 
 class VendorMetadata:
     """Vendor-specific metadata read from an openslide-like property mapping.
@@ -103,6 +105,12 @@ class VendorMetadata:
 
     @property
     def objective_numerical_aperture(self) -> float | None:
+        return None
+
+    @property
+    def slide_centre_offset(self) -> PointMm | None:
+        """Offset from the slide centre to the imaged region centre, in mm along
+        the image axes."""
         return None
 
     @staticmethod
@@ -198,6 +206,15 @@ class HamamatsuMetadata(VendorMetadata):
         return self.parse_datetime(
             self._properties.get("tiff.DateTime"), self._TIFF_DATETIME
         )
+
+    @property
+    def slide_centre_offset(self) -> PointMm | None:
+        # Stored in nm. tiffslide gives the values as int, openslide as str.
+        x = self.parse_float(self._properties.get("hamamatsu.XOffsetFromSlideCentre"))
+        y = self.parse_float(self._properties.get("hamamatsu.YOffsetFromSlideCentre"))
+        if x is None or y is None:
+            return None
+        return PointMm(x / 10**6, y / 10**6)
 
 
 class LeicaMetadata(VendorMetadata):

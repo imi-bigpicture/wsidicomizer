@@ -15,7 +15,7 @@
 """Metadata for opentile file."""
 
 from opentile import Metadata
-from wsidicom.geometry import Orientation, PointMm, SizeMm
+from wsidicom.geometry import PointMm, SizeMm
 from wsidicom.metadata import (
     Equipment,
     Image,
@@ -123,10 +123,7 @@ class OpenTileMetadata(WsiDicomizerMetadata):
     ) -> ImageCoordinateSystem | None:
         """Return the level coordinate system measured from an ndpi file.
 
-        Ndpi files store the offset from the center of the slide to the center of the
-        imaged region, in nm along the image axes. Verified against the ndpi macro
-        image, which covers the whole slide and has zero offset: x is along the image
-        rows and y along the columns, both increasing in the stored image direction.
+        See :meth:`FormatCoordinateDefaults.ndpi_level_coordinate_system`.
 
         Parameters
         ----------
@@ -141,16 +138,10 @@ class OpenTileMetadata(WsiDicomizerMetadata):
             The measured coordinate system, or `None` if the file does not carry the
             offsets.
         """
-        rotation = FormatCoordinateDefaults.level_rotation_for(WsiFormat.NDPI)
         x = metadata.properties.get("x_offset_from_slide_center")
         y = metadata.properties.get("y_offset_from_slide_center")
         if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
             return None
-        slide_size = ImageCoordinateSystem.SLIDE_SIZE_WITH_LABEL
-        slide_middle = PointMm(slide_size.width / 2, slide_size.height / 2)
-        offset = Orientation.from_rotation(rotation).apply_transform(
-            PointMm(x / 10**6, y / 10**6)
-        )
-        return ImageCoordinateSystem.from_middle_of_slide(
-            slide_middle + offset, imaged_size, rotation, None
+        return FormatCoordinateDefaults.ndpi_level_coordinate_system(
+            PointMm(x / 10**6, y / 10**6), imaged_size
         )

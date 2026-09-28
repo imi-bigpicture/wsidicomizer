@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar
 
+from wsidicom.geometry import Orientation, PointMm, SizeMm
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
 
 
@@ -99,6 +100,40 @@ class FormatCoordinateDefaults:
             The rotation of the level image in degrees.
         """
         return cls.from_wsi_format(wsi_format).level_rotation
+
+    @classmethod
+    def ndpi_level_coordinate_system(
+        cls, offset_from_slide_centre: PointMm, imaged_size: SizeMm
+    ) -> ImageCoordinateSystem:
+        """Return the level coordinate system measured from an ndpi file.
+
+        Ndpi files store the offset from the center of the slide to the center of the
+        imaged region, in nm along the image axes. Verified against the ndpi macro
+        image, which covers the whole slide and has zero offset: x is along the image
+        rows and y along the columns, both increasing in the stored image direction.
+
+        Parameters
+        ----------
+        offset_from_slide_centre: PointMm
+            Offset from the center of the slide to the center of the imaged region,
+            in mm along the image axes.
+        imaged_size: SizeMm
+            Size of the imaged region of the level.
+
+        Returns
+        -------
+        ImageCoordinateSystem
+            The measured coordinate system.
+        """
+        rotation = cls.level_rotation_for(WsiFormat.NDPI)
+        slide_size = ImageCoordinateSystem.SLIDE_SIZE_WITH_LABEL
+        slide_middle = PointMm(slide_size.width / 2, slide_size.height / 2)
+        offset = Orientation.from_rotation(rotation).apply_transform(
+            offset_from_slide_centre
+        )
+        return ImageCoordinateSystem.from_middle_of_slide(
+            slide_middle + offset, imaged_size, rotation, None
+        )
 
     def level_coordinate_system(self) -> ImageCoordinateSystem:
         return ImageCoordinateSystem.default_for(self.level_rotation, ImageType.VOLUME)
