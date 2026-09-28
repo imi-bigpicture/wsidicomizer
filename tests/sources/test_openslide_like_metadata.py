@@ -14,7 +14,7 @@
 
 import pytest
 from PIL import ImageCms
-from wsidicom.geometry import SizeMm
+from wsidicom.geometry import PointMm, SizeMm
 
 from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
     OpenSlideLikeMetadata,
@@ -169,3 +169,23 @@ class TestOpenSlideLikeMetadata:
 
         # Assert
         assert result.label is None or result.label.barcode is None
+
+    @pytest.mark.parametrize("vendor", [None, "generic-tiff"])
+    def test_image_placed_by_generic_defaults_when_vendor_missing_or_unrecognised(
+        self, vendor: str | None
+    ):
+        # Arrange
+        assert vendor not in OpenSlideLikeProperties.VENDOR_FORMATS, (
+            f"{vendor!r} is now a recognised vendor, pick another for this test"
+        )
+        properties = OpenSlideLikeProperties(vendor=vendor)
+
+        # Act
+        result = OpenSlideLikeMetadata(properties, color_profile=None)
+
+        # Assert
+        image_coordinate_system = result.pyramid.image.image_coordinate_system
+        assert image_coordinate_system is not None
+        assert image_coordinate_system.rotation == 0.0
+        assert image_coordinate_system.origin == PointMm(0.0, 0.0)
+        assert result.overview is None

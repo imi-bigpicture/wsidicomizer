@@ -35,11 +35,12 @@ class TestVendorToWsiFormat:
             ("mirax", WsiFormat.MIRAX),
             ("ventana", WsiFormat.VENTANA),
             ("philips", WsiFormat.PHILIPS_TIFF),
-            ("leica", None),  # not mapped to a WsiFormat
-            ("not-a-vendor", None),
+            ("leica", WsiFormat.GENERIC),  # no WsiFormat of its own
+            ("generic-tiff", WsiFormat.GENERIC),
+            ("not-a-vendor", WsiFormat.GENERIC),
         ],
     )
-    def test_wsi_format_from_vendor(self, vendor: str, expected: WsiFormat | None):
+    def test_wsi_format_from_vendor(self, vendor: str, expected: WsiFormat):
         # Arrange
         properties = OpenSlideLikeProperties(vendor=vendor)
 
@@ -57,7 +58,7 @@ class TestVendorToWsiFormat:
         result = properties.wsi_format
 
         # Assert
-        assert result is None
+        assert result == WsiFormat.GENERIC
 
 
 class TestFormatCoordinateDefaults:
