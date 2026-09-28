@@ -21,6 +21,7 @@ from pydicom import Dataset
 from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
+from wsidicom.geometry import Size
 from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 from wsidicom.paths import as_local_path
@@ -117,7 +118,11 @@ class OpenSlideSource(OpenSlideLikeSource):
             level_downsamples=self._slide.level_downsamples,
             level_dimensions=self._slide.level_dimensions,
             associated_images=self._slide.associated_images,
-            base_metadata=OpenSlideLikeMetadata(properties, self._slide.color_profile),
+            base_metadata=OpenSlideLikeMetadata(
+                properties,
+                self._slide.color_profile,
+                Size(*self._slide.level_dimensions[0]),
+            ),
             encoder=encoder,
             tile_size=tile_size,
             metadata=metadata,

@@ -18,6 +18,8 @@
 
 from datetime import date, datetime, time
 
+from wsidicom.geometry import PointMm
+
 from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
     OpenSlideLikeMetadata,
     OpenSlideLikeProperties,
@@ -121,6 +123,32 @@ class TestVendorMetadataForVendor:
         assert result.device_serial_number == "SN-1"
         assert result.software_versions == ["NDP.scan 2.5.86"]
         assert result.acquisition_datetime == datetime(2020, 1, 2, 3, 4, 5)
+
+    def test_hamamatsu_reads_slide_centre_offset_in_mm(self):
+        # Arrange
+        properties = {
+            "hamamatsu.XOffsetFromSlideCentre": "4876667",
+            "hamamatsu.YOffsetFromSlideCentre": "-2340000",
+        }
+
+        # Act
+        result = VendorMetadata.for_vendor("hamamatsu", properties)
+
+        # Assert
+        assert result.slide_centre_offset == PointMm(4.876667, -2.34)
+
+    def test_hamamatsu_malformed_slide_centre_offset_is_ignored(self):
+        # Arrange
+        properties = {
+            "hamamatsu.XOffsetFromSlideCentre": "not a number",
+            "hamamatsu.YOffsetFromSlideCentre": "-2340000",
+        }
+
+        # Act
+        result = VendorMetadata.for_vendor("hamamatsu", properties)
+
+        # Assert
+        assert result.slide_centre_offset is None
 
     def test_trestle_reads_tiff_tags(self):
         # Arrange

@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 from PIL.ImageCms import ImageCmsProfile
-from wsidicom.geometry import PointMm, SizeMm
+from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import (
     Equipment,
     Image,
@@ -101,7 +101,20 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         self,
         properties: OpenSlideLikeProperties,
         color_profile: ImageCmsProfile | None,
+        base_size: Size | None = None,
     ):
+        """Metadata read from an openslide-like property mapping.
+
+        Parameters
+        ----------
+        properties: OpenSlideLikeProperties
+            Properties of the file.
+        color_profile: ImageCmsProfile | None
+            Color profile of the file.
+        base_size: Size | None = None
+            Pixel size of the base level, needed to place an ndpi image from the
+            offset it states.
+        """
         vendor_metadata = VendorMetadata.for_vendor(
             properties.vendor, properties.raw_properties
         )
@@ -146,6 +159,17 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
                 origin,
                 defaults.level_rotation,
             )
+        elif (
+            properties.wsi_format == WsiFormat.NDPI
+            and vendor_metadata.slide_centre_offset is not None
+            and pixel_spacing is not None
+            and base_size is not None
+        ):
+            image_coordinate_system = (
+                FormatCoordinateDefaults.ndpi_level_coordinate_system(
+                    vendor_metadata.slide_centre_offset, pixel_spacing * base_size
+                )
+            )
         else:
             image_coordinate_system = defaults.level_coordinate_system()
         image = Image(
@@ -182,12 +206,18 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
         if properties.barcode is not None or label_image_coordinate_system is not None:
             label = Label(
                 barcode=properties.barcode,
-                image=Image(image_coordinate_system=label_image_coordinate_system),
+                image=Image(
+                    acquisition_datetime=vendor_metadata.acquisition_datetime,
+                    image_coordinate_system=label_image_coordinate_system,
+                ),
             )
         overview_image_coordinate_system = defaults.overview_coordinate_system()
         if overview_image_coordinate_system is not None:
             overview = Overview(
-                image=Image(image_coordinate_system=overview_image_coordinate_system),
+                image=Image(
+                    acquisition_datetime=vendor_metadata.acquisition_datetime,
+                    image_coordinate_system=overview_image_coordinate_system,
+                ),
                 optical_paths=[],
             )
         super().__init__(

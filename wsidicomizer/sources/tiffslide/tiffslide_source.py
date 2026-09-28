@@ -34,6 +34,7 @@ from tiffslide.tiffslide import (
 from upath import UPath
 from wsidicom.codec import Encoder
 from wsidicom.codec.settings import Channels
+from wsidicom.geometry import Size
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.image_data import BaseDicomizerImageData
@@ -125,7 +126,9 @@ class TiffSlideSource(OpenSlideLikeSource):
             level_dimensions=self._tiffslide.level_dimensions,
             associated_images=self._tiffslide.associated_images,
             base_metadata=OpenSlideLikeMetadata(
-                properties, self._tiffslide.color_profile
+                properties,
+                self._tiffslide.color_profile,
+                Size(*self._tiffslide.level_dimensions[0]),
             ),
             encoder=encoder,
             tile_size=tile_size,
