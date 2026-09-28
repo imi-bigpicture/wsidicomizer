@@ -130,7 +130,11 @@ class OpenTileImageData(BaseDicomizerImageData):
                     # (e.g. Aperio 33003), so the stored components are plain
                     # YCbCr. Describe them as such rather than YBR_ICT/YBR_RCT,
                     # which would falsely imply a codestream multi-component
-                    # transform (PS3.5 8.2.4).
+                    # transform (PS3.5 8.2.4). Subsampled chroma is YBR_FULL_422,
+                    # which CP-2650 allows for JPEG 2000 and which, like for
+                    # JPEG, also covers 4:2:0 (PS3.3 C.7.6.3.1.2).
+                    if info.subsampling not in (None, (1, 1)):
+                        return "YBR_FULL_422"
                     return "YBR_FULL"
                 return "YBR_RCT" if info.reversible else "YBR_ICT"
         elif self._tiff_image.photometric_interpretation == PHOTOMETRIC.RGB:

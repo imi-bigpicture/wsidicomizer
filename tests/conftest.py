@@ -93,7 +93,7 @@ test_parameters = {
             "openslide": False,
             "convert_levels": None,
             "lowest_included_pyramid_level": 0,
-            "photometric_interpretation": "YBR_FULL",
+            "photometric_interpretation": "YBR_FULL_422",
             "transfer_syntax": JPEG2000,
             "passthrough": True,
             "image_coordinate_system": {"x": 25, "y": 50, "rotation": 180},
