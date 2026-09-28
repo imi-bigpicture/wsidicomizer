@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Importing wsidicomizer no longer changes pydicom's global configuration. It used to make pydicom raise on invalid values and switch on `config.future_behavior()` for the whole process. Invalid values are now rejected by wsidicom only while it creates and writes the converted datasets, as set by its `strict_dicom_value_validation` setting.
+- Importing wsidicomizer no longer changes pydicom's global configuration. It used to make pydicom raise on invalid values and switch on `config.future_behavior()` for the whole process. Values are now checked by wsidicom on the datasets it writes, as set by its `dicom_value_validation` setting, without touching pydicom's configuration.
 - A JPEG 2000 image whose colour transform was applied outside the codestream (no multiple component transform, e.g. Aperio 33003) with subsampled chroma is now passed through as `YBR_FULL_422` rather than `YBR_FULL`, as CP-2650 allows for JPEG 2000. `YBR_FULL` is kept for such images without subsampling.
 - wsidicomizer states its own contributing equipment in the default metadata layer rather than appending it after the merge. Contributing equipment stated in `metadata` is kept alongside it, and stating contributing equipment in `default_metadata` is what leaves it out. `DicomizerSource.default_metadata` reports the defaults in force rather than only the ones passed in, and is no longer `None`.
 - `--quality` is no longer truncated to a whole number for jpeg2000 and htjpeg2000, whose levels are a signal-to-noise ratio in dB. `--quality 0.5` now means 0.5 dB rather than lossless; use `--quality 0` for lossless.

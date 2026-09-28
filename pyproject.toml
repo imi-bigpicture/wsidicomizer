@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
-    "wsidicom>=0.36.0,<0.37.0",
+    "wsidicom>=0.36.1,<0.37.0",
     "opentile>=0.26.0,<0.27.0",
     "numpy>=1.22.0",
     "pydicom>=3.0.0",

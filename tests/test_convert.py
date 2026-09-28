@@ -29,6 +29,7 @@ from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from dicom_validator.validator.validation_result import ValidationResult
 from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
+from pydicom import config as pydicom_config
 from upath import UPath
 from wsidicom import WsiDicom
 from wsidicom.codec import Encoder
@@ -89,7 +90,11 @@ def validator(
     standard_path = os.path.join(testdata_dir, "dicom-validator")
     edition_reader = EditionReader(standard_path)
     edition_reader.get_editions()
+    # dicom-validator sets pydicom's reading validation mode to ignore for the
+    # whole process when it reads a file, and does not set it back.
+    reading_validation_mode = pydicom_config.settings.reading_validation_mode
     yield DicomFileValidator(edition_reader.dicom_info_for_edition("current"))
+    pydicom_config.settings.reading_validation_mode = reading_validation_mode
 
 
 @pytest.mark.integrationtest
