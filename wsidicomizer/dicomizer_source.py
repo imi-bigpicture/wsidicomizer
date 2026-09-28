@@ -371,7 +371,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     def _create_dataset(
         self, image_type: ImageType, photometric_interpretation: str
-    ) -> WsiDataset:
+    ) -> Dataset:
         require_icc_profile = (
             get_settings().insert_icc_profile_if_missing
             and not photometric_interpretation.startswith("MONOCHROME")
@@ -383,7 +383,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             dataset.update(self._metadata_post_processor)
         elif callable(self._metadata_post_processor):
             dataset = self._metadata_post_processor(dataset, self.metadata)
-        return WsiDataset(dataset)
+        return dataset
 
     @staticmethod
     def _is_included_level(

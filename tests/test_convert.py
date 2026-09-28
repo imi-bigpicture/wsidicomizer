@@ -743,7 +743,7 @@ class TestWsiDicomizerConvert:
 
         # Act
         with WsiDicomizer.open(wsi_file, metadata_post_processor=dataset) as wsi:
-            patient_age = wsi.pyramid.datasets[0].PatientAge
+            patient_age = wsi.pyramid.datasets[0].as_dataset().PatientAge
 
         # Assert
         assert patient_age == given_patient_age
@@ -767,7 +767,7 @@ class TestWsiDicomizerConvert:
 
         # Act
         with WsiDicomizer.open(wsi_file, metadata_post_processor=callback) as wsi:
-            patient_age = wsi.pyramid.datasets[0].PatientAge
+            patient_age = wsi.pyramid.datasets[0].as_dataset().PatientAge
 
         # Assert
         assert patient_age == given_patient_age
