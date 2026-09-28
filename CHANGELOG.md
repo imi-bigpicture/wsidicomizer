@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-28
+
 ### Added
 
 - `Study Date` and `Study Time` are now taken from the datetime a source file states it was imaged at, for the formats that state one. User-supplied metadata still overrides them.
@@ -560,7 +562,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of wsidicomizer
 
-[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.30.0..HEAD
+[Unreleased]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.31.0..HEAD
+[0.31.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.30.0..v0.31.0
 [0.30.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.29.0..v0.30.0
 [0.29.0]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.1..v0.29.0
 [0.28.1]: https://github.com/imi-bigpicture/wsidicomizer/compare/v0.28.0..v0.28.1
