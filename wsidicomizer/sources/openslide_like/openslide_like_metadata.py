@@ -17,6 +17,7 @@
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from PIL.ImageCms import ImageCmsProfile
 from wsidicom.geometry import PointMm, SizeMm
@@ -58,19 +59,26 @@ class OpenSlideLikeProperties:
     """All properties, for reading vendor-specific keys openslide does not
     normalise (e.g. ``mirax.GENERAL.SLIDE_NAME``, ``philips.DICOM_*``)."""
 
+    VENDOR_FORMATS: ClassVar[Mapping[str, WsiFormat]] = {
+        "aperio": WsiFormat.SVS,
+        "hamamatsu": WsiFormat.NDPI,
+        "mirax": WsiFormat.MIRAX,
+        "ventana": WsiFormat.VENTANA,
+        "philips": WsiFormat.PHILIPS_TIFF,
+    }
+    """WsiFormat by lower-case vendor, for the vendors with a format of their own."""
+
     @property
-    def wsi_format(self) -> WsiFormat | None:
-        """Return the WsiFormat for the vendor, if recognised."""
+    def wsi_format(self) -> WsiFormat:
+        """Return the WsiFormat for the vendor.
+
+        A file that states no vendor, or a vendor not in :attr:`VENDOR_FORMATS` (e.g.
+        openslide's and tiffslide's ``generic-tiff``), is ``WsiFormat.GENERIC``, so
+        that it is placed by the generic defaults rather than by none at all.
+        """
         if self.vendor is None:
-            return None
-        vendor_map: dict[str, WsiFormat] = {
-            "aperio": WsiFormat.SVS,
-            "hamamatsu": WsiFormat.NDPI,
-            "mirax": WsiFormat.MIRAX,
-            "ventana": WsiFormat.VENTANA,
-            "philips": WsiFormat.PHILIPS_TIFF,
-        }
-        return vendor_map.get(self.vendor.lower())
+            return WsiFormat.GENERIC
+        return self.VENDOR_FORMATS.get(self.vendor.lower(), WsiFormat.GENERIC)
 
 
 def _parse_float(value: str | None) -> float | None:
@@ -126,11 +134,7 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
                 )
 
         # Get set image origin and size to bounds if available
-        wsi_format = properties.wsi_format
-        defaults = (
-            FormatCoordinateDefaults.from_wsi_format(wsi_format) if wsi_format else None
-        )
-        rotation = defaults.level_rotation if defaults else 0
+        defaults = FormatCoordinateDefaults.from_wsi_format(properties.wsi_format)
         bounds_x = _parse_float(properties.bounds_x)
         bounds_y = _parse_float(properties.bounds_y)
         if bounds_x is not None and bounds_y is not None and pixel_spacing is not None:
@@ -140,13 +144,10 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
             )
             image_coordinate_system = ImageCoordinateSystem(
                 origin,
-                rotation,
+                defaults.level_rotation,
             )
         else:
-            if defaults is not None:
-                image_coordinate_system = defaults.level_coordinate_system()
-            else:
-                image_coordinate_system = None
+            image_coordinate_system = defaults.level_coordinate_system()
         image = Image(
             pixel_spacing=pixel_spacing,
             image_coordinate_system=image_coordinate_system,
@@ -177,23 +178,18 @@ class OpenSlideLikeMetadata(WsiDicomizerMetadata):
 
         label = None
         overview = None
-        label_image_coordinate_system = (
-            defaults.label_coordinate_system() if defaults is not None else None
-        )
+        label_image_coordinate_system = defaults.label_coordinate_system()
         if properties.barcode is not None or label_image_coordinate_system is not None:
             label = Label(
                 barcode=properties.barcode,
                 image=Image(image_coordinate_system=label_image_coordinate_system),
             )
-        if defaults is not None:
-            overview_image_coordinate_system = defaults.overview_coordinate_system()
-            if overview_image_coordinate_system is not None:
-                overview = Overview(
-                    image=Image(
-                        image_coordinate_system=overview_image_coordinate_system
-                    ),
-                    optical_paths=[],
-                )
+        overview_image_coordinate_system = defaults.overview_coordinate_system()
+        if overview_image_coordinate_system is not None:
+            overview = Overview(
+                image=Image(image_coordinate_system=overview_image_coordinate_system),
+                optical_paths=[],
+            )
         super().__init__(
             study=self._study_started_at(vendor_metadata.study_datetime),
             series=series,

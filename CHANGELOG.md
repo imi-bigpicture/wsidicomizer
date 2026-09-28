@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An openslide or tiffslide file with no vendor, or a vendor without a format of its own, got no image coordinate system and so the wsidicom default of 180° at (25, 50) mm, showing it upside down. Such files are now placed by the `WsiFormat.GENERIC` defaults: 0° at (0, 0) mm.
 - Contributing equipment given in `metadata` or `default_metadata` was dropped by the merge, so it never reached the converted file. Every layer's is now kept, in the order the layers contributed: it records who contributed rather than one value of many, so a layer adds to it rather than overriding it.
 - A czi that did not state an acquisition time, microscope, objective or application raised `ValueError` while reading its metadata, so a valid file could not be opened for want of metadata that is optional. What the file leaves out is now left unset. A czi that states no readable scaling likewise reports the missing pixel spacing when the image data is created, rather than while reading the metadata.
 - Levels of an openslide or tiffslide file that map to the same pyramid index were discarded without notice, keeping whichever came last. Each level left out is now logged.
