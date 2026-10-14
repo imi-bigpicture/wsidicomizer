@@ -17,7 +17,7 @@ files."""
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 from functools import cached_property
 from importlib.metadata import version
@@ -53,6 +53,25 @@ from wsidicomizer.metadata import (
     WsiDicomizerMetadata,
 )
 from wsidicomizer.uid_resolver import MetadataUidResolver
+
+
+@dataclass(frozen=True)
+class PyramidLevel:
+    """A pyramid level of a volume image in a source file."""
+
+    pyramid: int
+    """Index of the pyramid the level belongs to. A file holding a single
+    pyramid, which is the usual case, uses 0 for all its levels. Files that hold
+    several scanned areas of the same slide number them from 0, and each pyramid
+    must be given a separate image origin, as that is what the pyramids are
+    grouped by when read back."""
+    level: int
+    """Level in the pyramid, i.e. the dyadic scaling, 0 for the base level."""
+    index: int
+    """Index of the level in the file, as the source addresses it. Passed back
+    to `_create_level_image_data()`."""
+    focal_plane: float = 0.0
+    optical_path: str = "0"
 
 
 class DicomizerSource(Source, metaclass=ABCMeta):
@@ -219,9 +238,8 @@ class DicomizerSource(Source, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
-        """Dictionary of pyramid level (scalings), focal plane, and optical path as key
-        and level index in file as value for levels in file."""
+    def pyramid_levels(self) -> Sequence[PyramidLevel]:
+        """The volume image levels in the file."""
         raise NotImplementedError()
 
     @abstractmethod
@@ -324,15 +342,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     ) -> list[WsiInstance]:
         return [
             self._create_instance(
-                self._create_level_image_data(level_index),
+                self._create_level_image_data(level.index),
                 ImageType.VOLUME,
-                pyramid_index,
+                level.level,
             )
-            for (
-                pyramid_index,
-                _,
-                _,
-            ), level_index in self.pyramid_levels.items()
+            for level in self.pyramid_levels
         ]
 
     @cached_property

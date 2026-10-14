@@ -34,6 +34,7 @@ class WsiFormat(Enum):
     MIRAX = "mirax"
     VENTANA = "ventana"
     CZI = "czi"
+    VSI = "vsi"
     ISYNTAX = "isyntax"
     GENERIC = "generic"
 
@@ -63,6 +64,7 @@ class FormatCoordinateDefaults:
         WsiFormat.MIRAX: (270.0, 270.0, 270.0),
         WsiFormat.VENTANA: (0.0, None, None),
         WsiFormat.CZI: (0.0, None, None),
+        WsiFormat.VSI: (0.0, None, None),
         WsiFormat.ISYNTAX: (180.0, 180.0, 180.0),
         WsiFormat.GENERIC: (0.0, None, None),
     }

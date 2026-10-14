@@ -18,6 +18,7 @@ from collections.abc import Sequence
 
 import pytest
 
+from wsidicomizer.dicomizer_source import PyramidLevel
 from wsidicomizer.sources.openslide_like.openslide_like_source import (
     OpenSlideLikeSource,
 )
@@ -28,9 +29,28 @@ class TestMapPyramidLevels:
     @pytest.mark.parametrize(
         ("level_downsamples", "expected"),
         [
-            ([1.0, 2.0, 4.0, 8.0], {0: 0, 1: 1, 2: 2, 3: 3}),
-            ([1.0, 4.0, 16.0, 32.0], {0: 0, 2: 1, 4: 2, 5: 3}),
-            ([1.0, 3.0, 9.0], {0: 0, 2: 1, 3: 2}),
+            (
+                [1.0, 2.0, 4.0, 8.0],
+                [
+                    PyramidLevel(0, 0, 0),
+                    PyramidLevel(0, 1, 1),
+                    PyramidLevel(0, 2, 2),
+                    PyramidLevel(0, 3, 3),
+                ],
+            ),
+            (
+                [1.0, 4.0, 16.0, 32.0],
+                [
+                    PyramidLevel(0, 0, 0),
+                    PyramidLevel(0, 2, 1),
+                    PyramidLevel(0, 4, 2),
+                    PyramidLevel(0, 5, 3),
+                ],
+            ),
+            (
+                [1.0, 3.0, 9.0],
+                [PyramidLevel(0, 0, 0), PyramidLevel(0, 2, 1), PyramidLevel(0, 3, 2)],
+            ),
         ],
     )
     def test_maps_each_level_to_its_nearest_index(
@@ -40,7 +60,7 @@ class TestMapPyramidLevels:
         levels = OpenSlideLikeSource._map_pyramid_levels(level_downsamples)
 
         # Assert
-        assert {key[0]: index for key, index in levels.items()} == expected
+        assert levels == expected
 
     def test_colliding_levels_are_logged(self, caplog: pytest.LogCaptureFixture):
         """Several levels can map to the same index, e.g. a fluorescence qptiff

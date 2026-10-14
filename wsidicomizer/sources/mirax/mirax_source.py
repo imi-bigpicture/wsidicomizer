@@ -25,7 +25,7 @@ from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator, WsiMetadata
 from wsidicom.paths import as_local_path
 
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.errors import SourceNotSupportedError
 from wsidicomizer.image_data import (
     BaseDicomizerImageData,
@@ -128,9 +128,9 @@ class MiraxSource(DicomizerSource):
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+    def pyramid_levels(self) -> list[PyramidLevel]:
         # only the base level is read (see prefer_regenerated_pyramid)
-        return {(0, 0.0, "0"): 0}
+        return [PyramidLevel(0, 0, 0)]
 
     @property
     def prefer_regenerated_pyramid(self) -> bool:

@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trestle (`.tif`) and Ventana (`.bif`) slides, whose stored tiles overlap, through opentile. A level opentile can not serve as a plain grid is composed into non-overlapping output tiles and encoded anew. Only the base level is read and the pyramid is built from it.
 - `DicomizerSource.prefer_regenerated_pyramid`, true for MIRAX, Trestle, Ventana, iSyntax and CZI.
 - `--regenerate-pyramid/--keep-stored-levels` and `--no-add-missing-levels` on the cli.
+- The Olympus VSI reader reads the slide identifier / barcode (metadata tag 2061) into the DICOM container identifier when the file states it; it is treated as confidential.
+- The Olympus VSI reader sniffs the tile format from any present tile rather than the corner tile, so slides with a sparse level (the scanner omits tiles outside the scanned region) are read instead of failing.
+- Support for Olympus VSI files (`VsiSource`, `SourceIdentifier.VSI`), reading the pyramid from the `.ets` sidecar files. The tiles are JPEG 2000 or JPEG of uniform size without overlap and are copied to DICOM without transcoding, as are the label and overview images. Files with several scanned areas (several pyramids), several channels, focal planes or time points, and files with uncompressed tiles, are not supported.
 
 ### Changed
 

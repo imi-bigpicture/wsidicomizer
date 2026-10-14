@@ -32,6 +32,8 @@ from jpype.types import JArray
 from wsidicom.cache import lru_cached_method
 from wsidicom.geometry import Region, Size, SizeMm
 
+from wsidicomizer.dicomizer_source import PyramidLevel
+
 """
 Set version of bioformats jar to use with the environmental variable
 "BIOFORMATS_VERSION". Note the bioformats jar either has a BSD or GPL-2
@@ -268,21 +270,21 @@ class BioformatsReader:
         return interleaved
 
     @lru_cached_method()
-    def pyramid_levels(self, image_index: int) -> dict[tuple[int, float, str], int]:
-        """Return dictionary of dyadic scaling, focal plane, and optical path as key
-        and resolution index as value for resolutions in image.
+    def pyramid_levels(self, image_index: int) -> list[PyramidLevel]:
+        """Return the dyadic resolutions of an image as pyramid levels.
 
-        Focal planes and optical paths are not implemented.
+        An image holds a single pyramid, so the pyramid index is always 0. Focal
+        planes and optical paths are not implemented.
         """
         TOLERANCE = 1e-2
         float_pyramid_levels = (
             math.log2(scale) for scale in self._resolution_scales(image_index)
         )
-        return {
-            (round(float_level), 0.0, "0"): resolution_index
+        return [
+            PyramidLevel(0, round(float_level), resolution_index)
             for resolution_index, float_level in enumerate(float_pyramid_levels)
             if math.isclose(float_level, round(float_level), abs_tol=TOLERANCE)
-        }
+        ]
 
     @lru_cached_method()
     def _resolution_scales(self, image_index: int) -> list[float]:

@@ -18,5 +18,6 @@ from wsidicomizer.sources.czi import CziSource
 from wsidicomizer.sources.mirax import MiraxSource
 from wsidicomizer.sources.opentile import OpenTileSource
 from wsidicomizer.sources.tiffslide import TiffSlideSource
+from wsidicomizer.sources.vsi import VsiSource
 
-__all__ = ["CziSource", "MiraxSource", "OpenTileSource", "TiffSlideSource"]
+__all__ = ["CziSource", "MiraxSource", "OpenTileSource", "TiffSlideSource", "VsiSource"]

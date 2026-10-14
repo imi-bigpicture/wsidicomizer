@@ -29,7 +29,7 @@ from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.config import get_settings
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.errors import SourceNotSupportedError
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, MetadataPreProcessor
@@ -151,7 +151,7 @@ class OpenTileSource(DicomizerSource):
         return self._reads_only_base_levels
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+    def pyramid_levels(self) -> list[PyramidLevel]:
         """The levels read: every level, or only the base levels for the formats
         whose pyramid is rebuilt from the base (Trestle, Ventana)."""
         pyramid_count = len(self._tiler.pyramids)
@@ -161,12 +161,14 @@ class OpenTileSource(DicomizerSource):
                 "supported."
             )
         base_pyramid_index = self._tiler.levels[0].pyramid_index
-        return {
-            (level.pyramid_index, level.focal_plane, level.optical_path): index
+        return [
+            PyramidLevel(
+                0, level.pyramid_index, index, level.focal_plane, level.optical_path
+            )
             for index, level in enumerate(self._tiler.levels)
             if not self._reads_only_base_levels
             or level.pyramid_index == base_pyramid_index
-        }
+        ]
 
     @property
     def has_label(self) -> bool:

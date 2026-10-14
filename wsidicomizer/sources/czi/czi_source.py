@@ -25,7 +25,7 @@ from wsidicom.codec.settings import Channels
 from wsidicom.metadata import UidGenerator, WsiMetadata
 from wsidicom.paths import as_local_path
 
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, MetadataPreProcessor
 from wsidicomizer.sources.czi.czi_image_data import CziImageData
@@ -107,8 +107,8 @@ class CziSource(DicomizerSource):
         return True
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
-        return {(0, 0.0, "0"): 0}
+    def pyramid_levels(self) -> list[PyramidLevel]:
+        return [PyramidLevel(0, 0, 0)]
 
     @property
     def base_metadata(self) -> CziMetadata:
