@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Opentile sources provide the tile locations of opentile, when tiles are not transcoded, so that `read_encoded_tile()` of an opened slide reads a tile with a single read. Requires the unreleased opentile and wsidicom versions adding tile locations.
+
 ## [0.31.0] - 2026-09-28
 
 ### Added
