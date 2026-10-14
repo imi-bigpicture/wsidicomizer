@@ -15,7 +15,7 @@
 """Image data for opentile compatible file."""
 
 import dataclasses
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 
 import numpy as np
 from opentile.jpeg import JpegInfo, JpegProcess
@@ -30,6 +30,7 @@ from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
+from wsidicom.instance import FrameReader, TileLocations
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
@@ -200,6 +201,29 @@ class OpenTileImageData(BaseDicomizerImageData):
             decoded_tile = self._tiff_image.get_decoded_tile(tile.to_tuple())
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
+
+    def get_tile_locations(self, z: float, path: str) -> TileLocations | None:
+        """Return where opentile has the tiles stored, when they are served as
+        stored (not transcoded) and opentile serves them with a single read."""
+        if (
+            self.needs_transcoding
+            or z not in self.focal_planes
+            or path not in self.optical_paths
+        ):
+            return None
+        locations = self._tiff_image.tile_locations
+        if locations is None:
+            return None
+        # The arrays of opentile are shared rather than copied, which a length to be
+        # read through the image allows as both mark it with the same value.
+        return TileLocations.from_arrays(
+            self.image_size, self.tile_size, locations.positions, locations.lengths
+        )
+
+    def get_frame_readers(self) -> Sequence[FrameReader] | None:
+        """Return the frame reader of the image, which reads tiles as opentile serves
+        them (e.g. with the jpeg tables of the page added)."""
+        return [self._tiff_image.frame_reader]
 
     def get_decoded_tile(
         self,
