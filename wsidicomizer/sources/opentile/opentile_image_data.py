@@ -203,8 +203,8 @@ class OpenTileImageData(BaseDicomizerImageData):
         return self._tiff_image.get_tile(tile.to_tuple())
 
     def get_tile_byte_ranges(self, z: float, path: str) -> TileByteRanges | None:
-        """Return where opentile has the tiles stored, when they are served as
-        stored (not transcoded) and opentile serves them with a single read."""
+        """Return where opentile has the tiles stored. Returns None if the tiles are
+        transcoded, or if opentile does not read them with a single read."""
         if (
             self.needs_transcoding
             or z not in self.focal_planes
@@ -214,8 +214,8 @@ class OpenTileImageData(BaseDicomizerImageData):
         byte_ranges = self._tiff_image.tile_byte_ranges
         if byte_ranges is None:
             return None
-        # The arrays of opentile are shared rather than copied, which a length to be
-        # read through the image allows as both mark it with the same value.
+        # The arrays of opentile are shared rather than copied. This works because both
+        # libraries mark a tile to be read through the image with the same length.
         return TileByteRanges.from_arrays(
             self.image_size, self.tile_size, byte_ranges.positions, byte_ranges.lengths
         )

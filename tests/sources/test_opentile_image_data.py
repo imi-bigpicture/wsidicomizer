@@ -156,8 +156,8 @@ class TestOpenTileImageData:
         )
 
     def test_opentile_and_wsidicom_mark_tiles_to_read_through_alike(self):
-        """Lengths of opentile are passed on as they are, which requires a tile to be
-        read through the image to be marked with the same length by both."""
+        """The lengths of opentile are passed on unchanged. This requires both libraries
+        to mark a tile that is to be read through the image with the same length."""
         # Arrange
 
         # Act
