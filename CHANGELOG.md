@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- Opentile sources provide tile locations when tiles are not transcoded, so that `read_encoded_tile()` reads a tile with a single read. Requires opentile and wsidicom with tile locations.
+- Faster reading of encoded tiles from opentile sources whose tiles are not transcoded.
 
 ## [0.31.0] - 2026-09-28
 
