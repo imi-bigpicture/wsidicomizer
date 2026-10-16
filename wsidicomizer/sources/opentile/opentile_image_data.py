@@ -30,7 +30,7 @@ from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
-from wsidicom.instance import FrameReader, TileLocations
+from wsidicom.instance import FrameReader, TileByteRanges
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
@@ -202,7 +202,7 @@ class OpenTileImageData(BaseDicomizerImageData):
             return self.encoder.encode(decoded_tile)
         return self._tiff_image.get_tile(tile.to_tuple())
 
-    def get_tile_locations(self, z: float, path: str) -> TileLocations | None:
+    def get_tile_byte_ranges(self, z: float, path: str) -> TileByteRanges | None:
         """Return where opentile has the tiles stored, when they are served as
         stored (not transcoded) and opentile serves them with a single read."""
         if (
@@ -211,13 +211,13 @@ class OpenTileImageData(BaseDicomizerImageData):
             or path not in self.optical_paths
         ):
             return None
-        locations = self._tiff_image.tile_locations
-        if locations is None:
+        byte_ranges = self._tiff_image.tile_byte_ranges
+        if byte_ranges is None:
             return None
         # The arrays of opentile are shared rather than copied, which a length to be
         # read through the image allows as both mark it with the same value.
-        return TileLocations.from_arrays(
-            self.image_size, self.tile_size, locations.positions, locations.lengths
+        return TileByteRanges.from_arrays(
+            self.image_size, self.tile_size, byte_ranges.positions, byte_ranges.lengths
         )
 
     def get_frame_readers(self) -> Sequence[FrameReader] | None:

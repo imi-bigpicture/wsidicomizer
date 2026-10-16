@@ -23,13 +23,13 @@ from opentile.file import FrameReader
 from opentile.geometry import Size
 from opentile.jpeg2000 import Jpeg2000Info
 from opentile.tiff_image import AssociatedTiffImage
-from opentile.tile_locations import TileLocations as OpenTileTileLocations
+from opentile.tile_byte_ranges import TileByteRanges as OpenTileTileByteRanges
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless
 from tifffile import PHOTOMETRIC
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point
 from wsidicom.geometry import Size as WsiDicomSize
-from wsidicom.instance import TileLocations
+from wsidicom.instance import TileByteRanges
 
 from wsidicomizer import WsiDicomizer
 from wsidicomizer.sources.opentile.opentile_image_data import (
@@ -99,60 +99,60 @@ class TestOpenTileImageData:
             image_data.photometric_interpretation == expected_photometric_interpretation
         )
 
-    def test_get_tile_locations_are_the_locations_of_opentile(self, decoy: Decoy):
+    def test_get_tile_byte_ranges_are_the_byte_ranges_of_opentile(self, decoy: Decoy):
         # Arrange
         tiff_image = self._create_jpeg2000_tiff_image(decoy)
-        decoy.when(tiff_image.tile_locations).then_return(
-            OpenTileTileLocations(
+        decoy.when(tiff_image.tile_byte_ranges).then_return(
+            OpenTileTileByteRanges(
                 positions=np.array([100, 200, 300, 400], dtype=np.int64),
                 lengths=np.array(
-                    [4, OpenTileTileLocations.READ_THROUGH_IMAGE, 4, 4], dtype=np.int64
+                    [4, OpenTileTileByteRanges.READ_THROUGH_IMAGE, 4, 4], dtype=np.int64
                 ),
             )
         )
         image_data = OpenTileAssociatedImageData(tiff_image, decoy.mock(cls=Encoder))
 
         # Act
-        locations = image_data.get_tile_locations(
+        byte_ranges = image_data.get_tile_byte_ranges(
             image_data.default_z, image_data.default_path
         )
 
         # Assert
-        assert locations is not None
-        assert locations.tiled_size == WsiDicomSize(2, 2)
-        assert locations.whole_tiled_size == WsiDicomSize(2, 2)
-        assert locations.positions.tolist() == [100, 200, 300, 400]
-        assert locations.lengths.tolist() == [
+        assert byte_ranges is not None
+        assert byte_ranges.tiled_size == WsiDicomSize(2, 2)
+        assert byte_ranges.whole_tiled_size == WsiDicomSize(2, 2)
+        assert byte_ranges.positions.tolist() == [100, 200, 300, 400]
+        assert byte_ranges.lengths.tolist() == [
             4,
-            TileLocations.READ_THROUGH_IMAGE_DATA,
+            TileByteRanges.READ_THROUGH_IMAGE_DATA,
             4,
             4,
         ]
-        assert locations.file_indices is None
+        assert byte_ranges.file_indices is None
 
-    def test_get_tile_locations_share_the_arrays_of_opentile(self, decoy: Decoy):
-        """The locations are views of the arrays of opentile rather than copies."""
+    def test_get_tile_byte_ranges_share_the_arrays_of_opentile(self, decoy: Decoy):
+        """The byte ranges are views of the arrays of opentile rather than copies."""
         # Arrange
-        opentile_locations = OpenTileTileLocations(
+        opentile_byte_ranges = OpenTileTileByteRanges(
             positions=np.array([100, 200, 300, 400], dtype=np.int64),
             lengths=np.array([4, 4, 4, 4], dtype=np.int64),
         )
         tiff_image = self._create_jpeg2000_tiff_image(decoy)
-        decoy.when(tiff_image.tile_locations).then_return(opentile_locations)
+        decoy.when(tiff_image.tile_byte_ranges).then_return(opentile_byte_ranges)
         image_data = OpenTileAssociatedImageData(tiff_image, decoy.mock(cls=Encoder))
 
         # Act
-        locations = image_data.get_tile_locations(
+        byte_ranges = image_data.get_tile_byte_ranges(
             image_data.default_z, image_data.default_path
         )
 
         # Assert
-        assert locations is not None
+        assert byte_ranges is not None
         assert np.shares_memory(
-            np.asarray(locations.positions), opentile_locations.positions
+            np.asarray(byte_ranges.positions), opentile_byte_ranges.positions
         )
         assert np.shares_memory(
-            np.asarray(locations.lengths), opentile_locations.lengths
+            np.asarray(byte_ranges.lengths), opentile_byte_ranges.lengths
         )
 
     def test_opentile_and_wsidicom_mark_tiles_to_read_through_alike(self):
@@ -161,8 +161,8 @@ class TestOpenTileImageData:
         # Arrange
 
         # Act
-        opentile_mark = OpenTileTileLocations.READ_THROUGH_IMAGE
-        wsidicom_mark = TileLocations.READ_THROUGH_IMAGE_DATA
+        opentile_mark = OpenTileTileByteRanges.READ_THROUGH_IMAGE
+        wsidicom_mark = TileByteRanges.READ_THROUGH_IMAGE_DATA
 
         # Assert
         assert opentile_mark == wsidicom_mark
@@ -181,19 +181,19 @@ class TestOpenTileImageData:
         assert readers == [reader]
 
     @pytest.mark.parametrize(
-        ["force_transcoding", "has_locations"], [(True, True), (False, False)]
+        ["force_transcoding", "has_byte_ranges"], [(True, True), (False, False)]
     )
-    def test_get_tile_locations_is_none_when_transcoding_or_not_located(
-        self, decoy: Decoy, force_transcoding: bool, has_locations: bool
+    def test_get_tile_byte_ranges_is_none_when_transcoding_or_not_located(
+        self, decoy: Decoy, force_transcoding: bool, has_byte_ranges: bool
     ):
         # Arrange
         tiff_image = self._create_jpeg2000_tiff_image(decoy)
-        decoy.when(tiff_image.tile_locations).then_return(
-            OpenTileTileLocations(
+        decoy.when(tiff_image.tile_byte_ranges).then_return(
+            OpenTileTileByteRanges(
                 positions=np.zeros(4, dtype=np.int64),
                 lengths=np.zeros(4, dtype=np.int64),
             )
-            if has_locations
+            if has_byte_ranges
             else None
         )
         image_data = OpenTileAssociatedImageData(
@@ -201,17 +201,17 @@ class TestOpenTileImageData:
         )
 
         # Act
-        locations = image_data.get_tile_locations(
+        byte_ranges = image_data.get_tile_byte_ranges(
             image_data.default_z, image_data.default_path
         )
 
         # Assert
-        assert locations is None
+        assert byte_ranges is None
 
     def test_read_encoded_tile_of_svs_is_encoded_tile_of_level(
         self, testdata_dir: Path
     ):
-        """Tiles read with the tile locations are those read through the level."""
+        """Tiles read with the tile byte ranges are those read through the level."""
         # Arrange
         slide = testdata_dir.joinpath("slides", "svs", "CMU-1", "CMU-1.svs")
         if not slide.exists():
