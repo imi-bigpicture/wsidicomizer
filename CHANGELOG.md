@@ -7,13 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Opentile sources provide tile locations when tiles are not transcoded, so that `read_encoded_tile()` reads a tile with a single read. Requires opentile and wsidicom with tile locations.
-
 ### Changed
 
 - `WsiDicomizer.convert()` returns a `dict` from path to wsidicom `WsiFile` instead of a list of paths (#197). Indexing such as `created[0]` no longer works.
+- Faster reading of encoded tiles from opentile sources whose tiles are not transcoded.
 
 ## [0.31.0] - 2026-09-28
 
