@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `WsiDicomizer.convert()` returns a `dict` from path to wsidicom `CreatedFile` instead of a list of paths (#197). Indexing such as `created[0]` no longer works.
+
 ## [0.31.0] - 2026-09-28
 
 ### Added

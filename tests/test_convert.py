@@ -31,13 +31,18 @@ from PIL import Image, ImageChops, ImageStat
 from pydicom import Dataset
 from pydicom import config as pydicom_config
 from upath import UPath
-from wsidicom import WsiDicom
+from wsidicom import (
+    CreatedAssociatedFile,
+    CreatedLevelFile,
+    CreatedThumbnailFile,
+    WsiDicom,
+)
 from wsidicom.codec import Encoder
 from wsidicom.config import Settings, use_settings
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import PointMm, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import Pyramid, WsiMetadata
+from wsidicom.metadata import ImageType, Pyramid, WsiMetadata
 from wsidicom.options import DownsamplerOption
 
 from wsidicomizer.extras.openslide.openslide import (
@@ -526,6 +531,31 @@ class TestWsiDicomizerConvert:
 
         # Assert
         assert len(list(tmp_path.iterdir())) == len(created_files)
+
+    @pytest.mark.parametrize(
+        ["file_format", "file"], [("svs", "CMU-1/CMU-1.svs")], scope="module"
+    )
+    def test_convert_describes_created_files_by_image_type(
+        self, wsi_file: Path, tmp_path: Path
+    ):
+        # Arrange
+
+        # Act
+        created_files = WsiDicomizer.convert(
+            wsi_file, tmp_path, include_levels=[-1], encoding=Jpeg2kTestEncoder()
+        )
+
+        # Assert
+        image_types = [
+            (type(created_file), created_file.image_type)
+            for created_file in created_files.values()
+        ]
+        assert sorted(image_types, key=lambda item: item[1].value) == [
+            (CreatedAssociatedFile, ImageType.LABEL),
+            (CreatedAssociatedFile, ImageType.OVERVIEW),
+            (CreatedThumbnailFile, ImageType.THUMBNAIL),
+            (CreatedLevelFile, ImageType.VOLUME),
+        ]
 
     @pytest.mark.parametrize(
         ["file_format", "file"], [("svs", "CMU-1/CMU-1.svs")], scope="module"

@@ -30,6 +30,7 @@ from upath import UPath
 from wsidicom import (
     ConcatenationByBytes,
     ConcatenationByFrames,
+    CreatedFile,
     InstanceSplit,
     WsiDicom,
 )
@@ -178,7 +179,7 @@ class WsiDicomizer(WsiDicom):
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> list[UPath]:
+    ) -> dict[UPath, CreatedFile]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -269,9 +270,13 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        list[UPath]
-            List of paths of created files, configured with
-            `output_file_options` so that they can be opened as returned.
+        dict[UPath, CreatedFile]
+            The created files, by path, in the order they were written. The
+            paths are configured with `output_file_options` so that they can be
+            opened as returned. Each file is described as written: a
+            `CreatedLevelFile` for a pyramid level, a `CreatedThumbnailFile`
+            for a thumbnail, and a `CreatedAssociatedFile` for a label or
+            overview. Iterating gives the paths.
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
