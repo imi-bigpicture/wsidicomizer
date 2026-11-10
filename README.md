@@ -215,7 +215,7 @@ created_files = WsiDicomizer.convert(
 )
 ```
 
-`convert()` returns the created files as a dictionary from path to a description of the file, as written. A pyramid level is described by a `CreatedLevelFile`, a thumbnail by a `CreatedThumbnailFile`, and a label or overview by a `CreatedAssociatedFile`, all from `wsidicom`. For example, to find the label that was written:
+`convert()` returns the created files as a dictionary from path to a description of the file, as written. A pyramid level is described by a `WsiLevelFile`, a thumbnail by a `WsiThumbnailFile`, and a label or overview by a `WsiAssociatedFile`, all from `wsidicom`. For example, to find the label that was written:
 
 ```python
 from wsidicom.metadata import ImageType

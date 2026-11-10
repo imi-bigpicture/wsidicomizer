@@ -30,9 +30,9 @@ from upath import UPath
 from wsidicom import (
     ConcatenationByBytes,
     ConcatenationByFrames,
-    CreatedFile,
     InstanceSplit,
     WsiDicom,
+    WsiFile,
 )
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
@@ -179,7 +179,7 @@ class WsiDicomizer(WsiDicom):
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> dict[UPath, CreatedFile]:
+    ) -> dict[UPath, WsiFile]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -270,12 +270,12 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        dict[UPath, CreatedFile]
+        dict[UPath, WsiFile]
             The created files, by path, in the order they were written. The
             paths are configured with `output_file_options` so that they can be
             opened as returned. Each file is described as written: a
-            `CreatedLevelFile` for a pyramid level, a `CreatedThumbnailFile`
-            for a thumbnail, and a `CreatedAssociatedFile` for a label or
+            `WsiLevelFile` for a pyramid level, a `WsiThumbnailFile`
+            for a thumbnail, and a `WsiAssociatedFile` for a label or
             overview. Iterating gives the paths.
         """
         if uid_generator is None:

@@ -32,10 +32,10 @@ from pydicom import Dataset
 from pydicom import config as pydicom_config
 from upath import UPath
 from wsidicom import (
-    CreatedAssociatedFile,
-    CreatedLevelFile,
-    CreatedThumbnailFile,
+    WsiAssociatedFile,
     WsiDicom,
+    WsiLevelFile,
+    WsiThumbnailFile,
 )
 from wsidicom.codec import Encoder
 from wsidicom.config import Settings, use_settings
@@ -551,10 +551,10 @@ class TestWsiDicomizerConvert:
             for created_file in created_files.values()
         ]
         assert sorted(image_types, key=lambda item: item[1].value) == [
-            (CreatedAssociatedFile, ImageType.LABEL),
-            (CreatedAssociatedFile, ImageType.OVERVIEW),
-            (CreatedThumbnailFile, ImageType.THUMBNAIL),
-            (CreatedLevelFile, ImageType.VOLUME),
+            (WsiAssociatedFile, ImageType.LABEL),
+            (WsiAssociatedFile, ImageType.OVERVIEW),
+            (WsiThumbnailFile, ImageType.THUMBNAIL),
+            (WsiLevelFile, ImageType.VOLUME),
         ]
 
     @pytest.mark.parametrize(
