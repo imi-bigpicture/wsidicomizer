@@ -26,6 +26,10 @@ jobs:
 
       - name: Check tag matches project version and changelog
         run: |
+          if [ -f .github/unreleased-requirements.txt ]; then
+            echo "::error::.github/unreleased-requirements.txt exists; release only against released dependencies"
+            exit 1
+          fi
           tag="${GITHUB_REF_NAME#v}"
           version="$(uv version --short)"
           if [ "$tag" != "$version" ]; then

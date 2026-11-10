@@ -32,6 +32,7 @@ from wsidicom import (
     ConcatenationByFrames,
     InstanceSplit,
     WsiDicom,
+    WsiFile,
 )
 from wsidicom.codec import Encoder
 from wsidicom.codec import Settings as EncodingSettings
@@ -178,7 +179,7 @@ class WsiDicomizer(WsiDicom):
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> list[UPath]:
+    ) -> dict[UPath, WsiFile]:
         """Convert data in file to DICOM files in output path. Created
         instances get UID from uid_generator. Closes when finished.
 
@@ -269,9 +270,13 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        list[UPath]
-            List of paths of created files, configured with
-            `output_file_options` so that they can be opened as returned.
+        dict[UPath, WsiFile]
+            The created files, by path, in the order they were written. The
+            paths are configured with `output_file_options` so that they can be
+            opened as returned. Each file is described as written: a
+            `WsiLevelFile` for a pyramid level, a `WsiThumbnailFile`
+            for a thumbnail, and a `WsiAssociatedFile` for a label or
+            overview. Iterating gives the paths.
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()

@@ -30,8 +30,13 @@ jobs:
       # Pyright resolves imports against installed packages, so deps are required.
       - name: Install dependencies
         run: uv sync --all-extras
+      # A branch opts in to unreleased dependencies by committing this file.
+      - name: Install unreleased dependencies
+        if: ${{ hashFiles('.github/unreleased-requirements.txt') != '' }}
+        run: uv pip install -r .github/unreleased-requirements.txt
+      # --no-sync, as a sync would put back the locked versions.
       - name: Pyright
-        run: uv run pyright
+        run: uv run --no-sync pyright
 
   typos:
     runs-on: ubuntu-latest
