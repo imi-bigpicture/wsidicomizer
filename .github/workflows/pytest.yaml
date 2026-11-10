@@ -99,5 +99,10 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.2
       - name: Install Application
         run: uv sync --all-extras
+      # A branch opts in to unreleased dependencies by committing this file.
+      - name: Install unreleased dependencies
+        if: ${{ hashFiles('.github/unreleased-requirements.txt') != '' }}
+        run: uv pip install -r .github/unreleased-requirements.txt
+      # --no-sync, as a sync would put back the locked versions.
       - name: Test with pytest.
-        run: uv run pytest
+        run: uv run --no-sync pytest
