@@ -1,3 +1,4 @@
 # Unreleased dependencies that CI installs on top of uv.lock for this branch.
 # Delete this file before merging. A release refuses to run while it exists.
 wsidicom @ git+https://github.com/imi-bigpicture/wsidicom@main
+opentile @ git+https://github.com/imi-bigpicture/opentile@main

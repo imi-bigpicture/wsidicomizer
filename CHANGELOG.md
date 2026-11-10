@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `WsiDicomizer.convert()` returns a `dict` from path to wsidicom `WsiFile` instead of a list of paths (#197). Indexing such as `created[0]` no longer works.
+- Opentile sources whose tiles are not transcoded give the byte ranges of their tiles, so that `read_encoded_tile()` of an opened slide reads a tile with a single read from the file.
 
 ## [0.31.0] - 2026-09-28
 
