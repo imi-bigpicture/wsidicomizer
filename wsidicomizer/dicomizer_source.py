@@ -181,7 +181,12 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def is_supported(
         path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
-        """Return True if the file at `path` is supported.
+        """Return True if the file at `path` is of this source's format.
+
+        A check of the format only, meant to be cheap: it does not open the whole
+        file. A file of the format that the source does not read (a variant it
+        refuses) passes it, and the constructor raises `SourceNotSupportedError`
+        for it, so that `WsiDicomizer.open` tries the next source.
 
         Parameters
         ----------
@@ -196,7 +201,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         Returns
         -------
         bool
-            True if the file at `path` is supported.
+            True if the file at `path` is of this source's format.
         """
         raise NotImplementedError()
 

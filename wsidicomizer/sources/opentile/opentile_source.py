@@ -29,6 +29,7 @@ from wsidicom.metadata.wsi import WsiMetadata
 
 from wsidicomizer.config import get_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.errors import SourceNotSupportedError
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import MetadataPostProcessor, MetadataPreProcessor
 from wsidicomizer.sources.opentile.opentile_image_data import (
@@ -90,8 +91,24 @@ class OpenTileSource(DicomizerSource):
         """
         if tile_size is None:
             tile_size = get_settings().default_tile_size
-        self._tiler = OpenTile.open(filepath, tile_size, file_options=file_options)
         try:
+            self._tiler = OpenTile.open(filepath, tile_size, file_options=file_options)
+        except Exception as error:
+            # OpenTile is tried first, and a file of a format it detects but can
+            # not open (e.g. an OME-TIFF without a physical size) may still be
+            # read by another source.
+            raise SourceNotSupportedError(
+                f"OpenTile can not open {filepath}: {error}"
+            ) from error
+        try:
+            if self._tiler.get_level(0).overlap is not None:
+                # Formats whose tiles overlap (e.g. Trestle, Ventana) are not
+                # composed by this source yet and are left for another source to
+                # handle.
+                raise SourceNotSupportedError(
+                    f"{filepath} has overlapping tiles, which OpenTileSource does "
+                    "not compose."
+                )
             format_name = self._tiler.format.name
             try:
                 self._wsi_format = WsiFormat[format_name]
@@ -159,17 +176,8 @@ class OpenTileSource(DicomizerSource):
     def is_supported(
         path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
-        """Return True if file in path is supported by OpenTile. Formats whose tiles
-        overlap (e.g. Trestle, Ventana) are not composed by this source yet and are
-        left for another source to handle.
-        """
-        if OpenTile.detect_format(path, file_options) is None:
-            return False
-        try:
-            with OpenTile.open(path, file_options=file_options) as tiler:
-                return tiler.get_level(0).overlap is None
-        except Exception:
-            return False
+        """Return True if file in path is of a format OpenTile detects."""
+        return OpenTile.detect_format(path, file_options) is not None
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return OpenTileLevelImageData(
