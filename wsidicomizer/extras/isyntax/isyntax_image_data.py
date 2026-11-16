@@ -20,7 +20,6 @@ import numpy as np
 from pydicom.uid import UID, JPEGBaseline8Bit
 from wsidicom.codec import Encoder
 from wsidicom.codec.decoder import ImageCodecsDecoder
-from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
@@ -135,10 +134,7 @@ class ISyntaxLevelImageData(PixelImageData):
         np.ndarray
             The region pixels.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         image_data = self._get_region(region)
         if image_data is None:
             return self._get_blank_decoded_frame(region.size)
@@ -173,10 +169,7 @@ class ISyntaxLevelImageData(PixelImageData):
         return region_data
 
     def _get_tile(self, tile_point: Point, z: float, path: str) -> np.ndarray | None:
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         if self._tile_size == self.file_tile_size:
             tile = self._slide.read_tile(tile_point.x, tile_point.y, self._level)[
                 :, :, :3
@@ -332,10 +325,7 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
         return True
 
     def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
-        if z not in self.focal_planes or path not in self.optical_paths:
-            raise WsiDicomNotFoundError(
-                f"focal plane {z} or optical path {path}", str(self)
-            )
+        self._check_z_and_path(z, path)
         if self._force_transcoding:
             return self.encoder.encode(self._decoded)
         return self._frame

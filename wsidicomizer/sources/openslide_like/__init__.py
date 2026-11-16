@@ -16,9 +16,7 @@
 interface."""
 
 from wsidicomizer.sources.openslide_like.openslide_like_image_data import (
-    OpenSlideLikeAssociatedImageData,
     OpenSlideLikeLevelImageData,
-    OpenSlideLikeThumbnailImageData,
 )
 from wsidicomizer.sources.openslide_like.openslide_like_metadata import (
     OpenSlideLikeMetadata,
@@ -33,6 +31,4 @@ __all__ = [
     "OpenSlideLikeMetadata",
     "OpenSlideLikeProperties",
     "OpenSlideLikeLevelImageData",
-    "OpenSlideLikeAssociatedImageData",
-    "OpenSlideLikeThumbnailImageData",
 ]
