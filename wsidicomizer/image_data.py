@@ -17,9 +17,14 @@
 from abc import abstractmethod
 
 import numpy as np
+from opentile.geometry import Point as OpenTilePoint
+from opentile.geometry import Region as OpenTileRegion
+from opentile.geometry import Size as OpenTileSize
+from opentile.tile_overlap import TileOverlap
 from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom import ImageData
+from wsidicom.cache import LRU, CacheItem
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -27,6 +32,7 @@ from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
 from wsidicomizer.config import get_settings
+from wsidicomizer.overlap_index import OverlapIndex, Placement
 
 
 class BaseDicomizerImageData(ImageData):
@@ -382,6 +388,261 @@ class PixelLevelImageData(PixelImageData):
     @property
     def image_coordinate_system(self) -> ImageCoordinateSystem | None:
         return self._image_coordinate_system
+
+
+class ComposedLevelImageData(PixelLevelImageData):
+    """A level composed from stored tiles that overlap.
+
+    The pixels of a region are the placements of the stored tiles under it,
+    pasted in tile grid order (row, then column) onto a canvas of the background,
+    so the lower and the right-hand tile win an overlap, the same way in every
+    region. Each stored tile is decoded once per region,
+    even when it is placed several times in it. Subclasses decode the stored
+    tiles (`_decode_tile`).
+    """
+
+    _TEMPLATE_COUNT = 4
+    """Number of region sizes whose filled canvas template is kept."""
+
+    def __init__(
+        self,
+        overlap: TileOverlap,
+        fill: np.ndarray,
+        image_metadata: ImageMetadata,
+        tile_size: int | None,
+        blank_color: int | tuple[int, int, int] | None,
+        encoder: Encoder,
+    ):
+        """Create a composed level.
+
+        Parameters
+        ----------
+        overlap: TileOverlap
+            Placement of the level's stored tiles on the de-overlapped canvas;
+            its size is the level's size.
+        fill: np.ndarray
+            The background as one pixel: a (samples,) array of the tiles' dtype.
+        image_metadata: ImageMetadata
+            Image metadata of the level, giving its pixel spacing and coordinate
+            system.
+        tile_size: int | None
+            Output tile size. If None, the default tile size is used.
+        blank_color: int | tuple[int, int, int] | None
+            Background color of blank output tiles, or None for the encoder's
+            default.
+        encoder: Encoder
+            Encoder that encodes every tile.
+        """
+        super().__init__(
+            Size(overlap.image_size.width, overlap.image_size.height),
+            image_metadata,
+            tile_size,
+            blank_color,
+            encoder,
+        )
+        self._overlap_index = OverlapIndex(overlap)
+        self._fill = fill
+        self._templates = LRU[Size, np.ndarray](self._TEMPLATE_COUNT)
+
+    def read_region(
+        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    ) -> np.ndarray:
+        """Compose the pixels of a region.
+
+        Parameters
+        ----------
+        region: Region
+            Pixel region to read.
+        z: float
+            Z coordinate.
+        path: str
+            Optical path.
+        executor: ReadExecutor | None
+            Per-read parallelism the tile decodes fan out across (>1 worker for
+            viewing), or None on the conversion path.
+
+        Returns
+        -------
+        np.ndarray
+            The region as a ``(rows, columns, samples)`` array.
+        """
+        self._check_z_and_path(z, path)
+        data = self._compose(region, executor)
+        if self._detect_blank_tile(data):
+            return self._get_blank_decoded_frame(region.size)
+        return data
+
+    def get_decoded_tile(
+        self, tile_point: Point, z: float, path: str, cache: bool = True
+    ) -> np.ndarray:
+        """Return the pixels of a tile.
+
+        Parameters
+        ----------
+        tile_point: Point
+            Tile position to get.
+        z: float
+            Focal plane of the tile.
+        path: str
+            Optical path of the tile.
+        cache: bool = True
+            Unused; decoded stored tiles are cached by the source.
+
+        Returns
+        -------
+        np.ndarray
+            The tile as a ``(rows, columns, samples)`` array.
+        """
+        return self.read_region(
+            Region(tile_point * self.tile_size, self.tile_size), z, path
+        )
+
+    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
+        """Return the encoded bytes of a tile.
+
+        Parameters
+        ----------
+        tile: Point
+            Tile position to get.
+        z: float
+            Focal plane of the tile.
+        path: str
+            Optical path of the tile.
+
+        Returns
+        -------
+        bytes
+            The encoded tile.
+        """
+        self._check_z_and_path(z, path)
+        data = self._compose(Region(tile * self.tile_size, self.tile_size))
+        if self._detect_blank_tile(data):
+            return self._get_blank_encoded_frame(self.tile_size)
+        return self.encoder.encode(data)
+
+    @abstractmethod
+    def _decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
+        """Decode the stored tile at a grid position.
+
+        Called from several threads at once when a read is given an executor.
+
+        Parameters
+        ----------
+        grid_position: OpenTilePoint
+            (col, row) of the stored tile, a key of the overlap's placements.
+
+        Returns
+        -------
+        np.ndarray
+            The tile as a (height, width, samples) array of the fill's dtype. It
+            is only read from, so it may be shared with a cache.
+        """
+        raise NotImplementedError()
+
+    def _compose(
+        self, region: Region, executor: ReadExecutor | None = None
+    ) -> np.ndarray:
+        """Compose the placements under a region onto a canvas of the background.
+
+        Parameters
+        ----------
+        region: Region
+            Pixel region to compose.
+        executor: ReadExecutor | None = None
+            Per-read parallelism the tile decodes fan out across, or None to
+            decode serially.
+
+        Returns
+        -------
+        np.ndarray
+            The region as a ``(rows, columns, samples)`` array the caller owns.
+        """
+        if region.size.width < 0 or region.size.height < 0:
+            raise ValueError("Negative size not allowed")
+        # the placement works in opentile geometry
+        start, size = region.start, region.size
+        canvas_region = OpenTileRegion(
+            OpenTilePoint(start.x, start.y), OpenTileSize(size.width, size.height)
+        )
+        placements = self._overlap_index.placements_in(canvas_region)
+        # each stored tile once, even when it is placed several times
+        tile_positions = list(dict.fromkeys(placement.tile for placement in placements))
+        decoded = (
+            executor.map(self._decode_tile, tile_positions)
+            if executor is not None
+            else map(self._decode_tile, tile_positions)
+        )
+        decoded_tiles = dict(zip(tile_positions, decoded, strict=True))
+        canvas = self._blank_canvas(size)
+        for placement in placements:
+            self._paste(canvas, canvas_region, placement, decoded_tiles[placement.tile])
+        return canvas
+
+    @staticmethod
+    def _paste(
+        canvas: np.ndarray,
+        region: OpenTileRegion,
+        placement: Placement,
+        tile: np.ndarray,
+    ) -> None:
+        """Paste the placed region of a decoded tile onto a canvas.
+
+        Only the part inside the canvas is pasted.
+
+        Parameters
+        ----------
+        canvas: np.ndarray
+            Destination (height, width[, samples]) array covering `region`;
+            pasted into in place.
+        region: OpenTileRegion
+            Canvas region the destination covers.
+        placement: Placement
+            Where the tile's placed region goes on the canvas.
+        tile: np.ndarray
+            The decoded stored tile, with the canvas' samples and dtype.
+        """
+        canvas_height, canvas_width = canvas.shape[:2]
+        left = placement.position.x - region.start.x
+        top = placement.position.y - region.start.y
+        source = placement.source
+        visible_left, visible_top = max(left, 0), max(top, 0)
+        visible_right = min(left + source.size.width, canvas_width)
+        visible_bottom = min(top + source.size.height, canvas_height)
+        if visible_right <= visible_left or visible_bottom <= visible_top:
+            return
+        source_left = source.start.x + visible_left - left
+        source_top = source.start.y + visible_top - top
+        canvas[visible_top:visible_bottom, visible_left:visible_right] = tile[
+            source_top : source_top + visible_bottom - visible_top,
+            source_left : source_left + visible_right - visible_left,
+        ]
+
+    def _blank_canvas(self, size: Size) -> np.ndarray:
+        """Return a new canvas of a size, filled with the background.
+
+        The canvas is copied from a filled template, which is faster than filling
+        a new array each call. Templates for the `_TEMPLATE_COUNT` most recently
+        used sizes are kept.
+
+        Parameters
+        ----------
+        size: Size
+            Canvas size in pixels.
+
+        Returns
+        -------
+        np.ndarray
+            A (height, width, samples) canvas the caller owns.
+        """
+        template = self._templates.get(size)
+        if template is None:
+            # a lost race only fills one more template
+            template = np.empty(
+                (size.height, size.width, len(self._fill)), dtype=self._fill.dtype
+            )
+            template[:] = self._fill  # the fill pixel broadcasts; once per size
+            self._templates.put(size, CacheItem(template, 1))
+        return template.copy()
 
 
 class PixelSingleImageData(PixelImageData):

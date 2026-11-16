@@ -16,11 +16,27 @@
 
 from collections.abc import Iterator
 from pathlib import Path
+from textwrap import dedent
 
 import numpy as np
 import pytest
 
-from wsidicomizer.sources.mirax.reader import MiraxReader
+from wsidicomizer.sources.mirax.reader import (
+    MiraxAssociatedImageType,
+    MiraxReader,
+    MrxsError,
+    mirax_reader,
+)
+from wsidicomizer.sources.mirax.reader.decoder import MiraxJpegDecoder
+
+
+def _write_slidedat(directory: Path, slidedat: str) -> Path:
+    """Write a minimal slide, a .mrxs and its Slidedat.ini, and return its path."""
+    path = directory / "slide.mrxs"
+    path.touch()
+    (directory / "slide").mkdir()
+    (directory / "slide" / "Slidedat.ini").write_text(dedent(slidedat))
+    return path
 
 
 @pytest.fixture
@@ -31,36 +47,29 @@ def reader(mirax_path: Path) -> Iterator[MiraxReader]:
 
 
 class TestMiraxReader:
-    def test_levels_roughly_halve(self, reader: MiraxReader):
-        # Act
-        dimensions = reader.level_dimensions
-
-        # Assert
-        assert reader.level_count == 10
-        for level in range(1, reader.level_count):
-            width_coarse, height_coarse = dimensions[level - 1]
-            width_fine, height_fine = dimensions[level]
-            assert 1.5 < width_coarse / width_fine < 2.5, level
-            assert 1.5 < height_coarse / height_fine < 2.5, level
-
     def test_associated_image_sizes_match_slidedat(self, reader: MiraxReader):
         # Act
         associated = reader.associated_images
 
         # Assert - decoded sizes must match Slidedat.ini (nonhierarchical parsing)
-        assert associated["thumbnail"].size == (854, 1724)  # SlidePreview
-        assert associated["macro"].size == (563, 1128)  # SlideThumbnail
-        assert associated["label"].size == (615, 462)  # SlideBarcode
+        assert associated[MiraxAssociatedImageType.THUMBNAIL].size == (854, 1724)
+        assert associated[MiraxAssociatedImageType.MACRO].size == (563, 1128)
+        assert associated[MiraxAssociatedImageType.LABEL].size == (615, 462)
 
-    def test_reads_rgb_tissue_and_fill_margin(self, reader: MiraxReader):
+    def test_decodes_rgb_tiles(self, reader: MiraxReader):
+        # Arrange
+        grid_position = next(iter(reader.overlap.placements))
+
         # Act
-        tissue = reader.read_region(6, (0, 0), reader.level_dimensions[6])
-        margin = reader.read_region(0, (0, 0), (64, 64))  # top-left, no tiles
+        tile = reader.decode_tile(grid_position)
 
         # Assert
-        assert tissue.dtype == np.uint8 and tissue.shape[2] == 3
-        assert tissue[:, :, 1].min() < 255, "expected tissue"
-        assert (margin == 255).all(), "expected fill margin"
+        assert tile.dtype == reader.dtype == np.uint8
+        assert tile.shape == (
+            reader.slidedat.tile_size.height,
+            reader.slidedat.tile_size.width,
+            3,
+        )
 
     def test_brightfield_has_mpp_and_no_channels(self, reader: MiraxReader):
         # Act
@@ -72,68 +81,110 @@ class TestMiraxReader:
 
     def test_overlap_is_removed(self, reader: MiraxReader):
         # Arrange - a naive abutting layout ignores the per-photo overlap
-        columns = {column for column, _ in reader._index.levels[0]}
-        abutting_width = (max(columns) - min(columns) + 1) * reader._meta.tile_size[0]
+        columns = {position.x for position in reader._index.tiles}
+        abutting_width = (
+            max(columns) - min(columns) + 1
+        ) * reader.slidedat.tile_size.width
 
         # Act
-        width = reader.dimensions[0]
+        width = reader.dimensions.width
 
         # Assert
         assert reader._index.position_buffer is not None
         assert width < abutting_width
 
-    def test_read_regions_matches_read_region(self, reader: MiraxReader):
-        # Arrange
-        step = 512
-        locations = [
-            (15000 + i * step, 40000 + j * step) for j in range(3) for i in range(3)
-        ]
+    def test_tile_of_other_bit_depth_is_refused(
+        self, reader: MiraxReader, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Arrange - the 8-bit JPEG tiles decode as 16-bit, as a slide whose stated
+        # bit depth disagrees with its tiles would
+        decode = MiraxJpegDecoder.decode
 
-        # Act
-        batch = reader.read_regions(0, locations, (step, step))
+        def decode_16_bit(self: MiraxJpegDecoder, blob: bytes) -> np.ndarray:
+            return decode(self, blob).astype(np.uint16)
 
-        # Assert
-        for location, region in zip(locations, batch, strict=True):
-            reference = reader.read_region(0, location, (step, step))
-            assert np.array_equal(region, reference), location
+        monkeypatch.setattr(MiraxJpegDecoder, "decode", decode_16_bit)
 
-    def test_get_tile_matches_read_region(self, reader: MiraxReader):
-        # Arrange
-        step = 512
+        # Act / Assert - refused instead of wrapped into an 8-bit canvas
+        with pytest.raises(MrxsError, match="bit depth"):
+            reader.decode_tile(next(iter(reader.overlap.placements)))
 
-        # Act
-        tile = reader.get_tile(0, 30, 79, step)  # == read_region at (15360, 40448)
+    def test_tile_smaller_than_tile_size_is_refused(
+        self, reader: MiraxReader, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Arrange - the JPEG tiles decode one row short of the slide's tile size
+        decode = MiraxJpegDecoder.decode
 
-        # Assert
-        reference = reader.read_region(0, (30 * step, 79 * step), (step, step))
-        assert np.array_equal(tile, reference)
+        def decode_short(self: MiraxJpegDecoder, blob: bytes) -> np.ndarray:
+            return decode(self, blob)[:-1]
 
-    def test_blank_tiles_are_independent(self, reader: MiraxReader):
-        # Arrange - an empty grid position returns a fresh fill tile
-        blank = reader.get_tile(0, 0, 0, 512)
+        monkeypatch.setattr(MiraxJpegDecoder, "decode", decode_short)
 
-        # Act - mutate one blank tile
-        blank[:] = 7
-
-        # Assert - the shared fill template is not corrupted
-        assert not (reader.get_tile(0, 0, 0, 512) == 7).all()
+        # Act / Assert - refused instead of failing to paste
+        with pytest.raises(MrxsError, match="tile size"):
+            reader.decode_tile(next(iter(reader.overlap.placements)))
 
     def test_rejects_reduced_pyramid(self, reduced_mirax_path: Path):
-        # Act / Assert - a truncated pyramid is detected and rejected
+        # Act / Assert - a truncated pyramid is detected and rejected when opened
         with pytest.raises(NotImplementedError):
             MiraxReader(reduced_mirax_path)
 
-    def test_fluorescence_channels_split_to_bands(self, fluorescence_mirax_path: Path):
-        # Arrange
-        reader = MiraxReader(fluorescence_mirax_path)
-        level = min(3, reader.level_count - 1)
-        width, height = reader.level_dimensions[level]
-        location = (width // 3, height // 3)
-        region = reader.read_region(level, location, (256, 256))
+    def test_rejects_multi_leaf_fluorescence_on_open(self, tmp_path: Path):
+        # Arrange - 4 channels, so they span two data leaves
+        path = _write_slidedat(
+            tmp_path,
+            """
+            [GENERAL]
+            SLIDE_TYPE = SLIDE_TYPE_FLUORESCENCE
+            [HIERARCHICAL]
+            HIER_1_NAME = Slide filter level
+            HIER_1_COUNT = 4
+            HIER_1_VAL_0_SECTION = C0
+            HIER_1_VAL_1_SECTION = C1
+            HIER_1_VAL_2_SECTION = C2
+            HIER_1_VAL_3_SECTION = C3
+            [C0]
+            STORING_CHANNEL_NUMBER = 0
+            DATA_IN_THIS_FILTER_LEVEL = LEAF_0
+            [C1]
+            STORING_CHANNEL_NUMBER = 1
+            DATA_IN_THIS_FILTER_LEVEL = LEAF_0
+            [C2]
+            STORING_CHANNEL_NUMBER = 2
+            DATA_IN_THIS_FILTER_LEVEL = LEAF_0
+            [C3]
+            STORING_CHANNEL_NUMBER = 0
+            DATA_IN_THIS_FILTER_LEVEL = LEAF_1
+            """,
+        )
 
-        # Act / Assert - each channel equals its packed band of the region
-        assert reader.channels, "expected fluorescence channels"
-        for index, channel in enumerate(reader.channels):
-            channel_array = reader.read_channel(level, location, (256, 256), index)
-            assert np.array_equal(channel_array, region[:, :, channel.band]), channel
-        reader.close()
+        # Act / Assert - refused when opened, not when a channel is first read
+        with pytest.raises(NotImplementedError):
+            MiraxReader(path)
+
+    def test_failed_open_closes_data_files(
+        self, mirax_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        # Arrange - fail in placement, after the position buffer has been read
+        # through a data file handle
+        opened: list[mirax_reader.LocalFileReader] = []
+
+        class RecordingReader(mirax_reader.LocalFileReader):
+            def __init__(self, path: str) -> None:
+                super().__init__(path)
+                opened.append(self)
+
+        def failing_layout(*args, **kwargs):
+            raise RuntimeError("placement failed")
+
+        monkeypatch.setattr(mirax_reader, "LocalFileReader", RecordingReader)
+        monkeypatch.setattr(mirax_reader, "MiraxTileLayout", failing_layout)
+
+        # Act
+        with pytest.raises(RuntimeError):
+            MiraxReader(mirax_path)
+
+        # Assert
+        handles = [handle for reader in opened for handle in reader._pool._handles]
+        assert handles
+        assert all(handle.closed for handle in handles)

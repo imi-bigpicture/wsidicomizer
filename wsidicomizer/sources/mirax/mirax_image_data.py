@@ -12,215 +12,94 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Image data for a MIRAX (.mrxs) level, backed by MiraxReader."""
+"""Image data for the MIRAX (.mrxs) base level, composed from MiraxReader's tiles."""
 
 import numpy as np
-from PIL import Image as Pillow
-from PIL.Image import Image
+from opentile.geometry import Point as OpenTilePoint
 from wsidicom.codec import Encoder
-from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.thread import ReadExecutor
 
+from wsidicomizer.image_data import ComposedLevelImageData
 from wsidicomizer.sources.mirax.reader import MiraxReader
-from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
 
 
-class MiraxLevelImageData(OpenSlideLikeLevelImageData):
-    """A brightfield MIRAX pyramid level (RGB). Reuses OpenSlideLikeLevelImageData
-    for sizing and pixel spacing; only the pixel read differs. MiraxReader is
-    level-local, so there's no level-0-location downsample/offset dance."""
+class MiraxLevelImageData(ComposedLevelImageData):
+    """The brightfield MIRAX base level (RGB), composed from the stored tiles."""
 
     def __init__(
         self,
         mrxs: MiraxReader,
-        blank_color: int | tuple[int, int, int] | None,
         image_metadata: ImageMetadata,
-        level_index: int,
         tile_size: int | None,
         encoder: Encoder,
     ):
-        """Wrap a brightfield MIRAX pyramid level as ImageData.
+        """Wrap the brightfield MIRAX base level as ImageData.
 
         Parameters
         ----------
         mrxs: MiraxReader
-            The reader to read tiles from.
-        blank_color: int | tuple[int, int, int] | None
-            Background color for empty regions.
+            The reader to read tiles from; its fill color is the background.
         image_metadata: ImageMetadata
             Image metadata for the level.
-        level_index: int
-            Level in the reader to wrap.
         tile_size: int | None
             Output tile size. If None, the default tile size is used.
         encoder: Encoder
             Encoder to use.
         """
         super().__init__(
-            blank_color,
-            None,  # offset: the reader origin is already the tissue bounding box
-            None,  # size: use the reader's own level_dimensions
-            mrxs.level_dimensions,
-            mrxs.level_downsamples,
+            mrxs.overlap,
+            np.array(mrxs.fill_color, dtype=mrxs.dtype),
             image_metadata,
-            level_index,
             tile_size,
+            mrxs.fill_color,
             encoder,
         )
         self._mrxs = mrxs
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
-        """Read a pixel region from the reader as a Pillow image.
-
-        Parameters
-        ----------
-        region: Region
-            Pixel region to read.
-        z: float
-            Z coordinate.
-        path: str
-            Optical path.
-
-        Returns
-        -------
-        Image
-            The region as a Pillow image.
-        """
-        self._check_z_and_path(z, path)
-        data = self._get_region(region)
-        if data is None:
-            return self._get_blank_decoded_frame(region.size)
-        return Pillow.fromarray(data)
-
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
-        """Return an RGB Image for a tile.
-
-        Parameters
-        ----------
-        tile_point: Point
-            Tile position to get.
-        z: float
-            Focal plane of the tile.
-        path: str
-            Optical path of the tile.
-
-        Returns
-        -------
-        Image
-            The tile as a Pillow image.
-        """
-        self._check_z_and_path(z, path)
-        tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
-        if tile is None:
-            return self._get_blank_decoded_frame(self.tile_size)
-        return Pillow.fromarray(tile)
-
-    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
-        """Return the encoded bytes for a tile.
-
-        Parameters
-        ----------
-        tile: Point
-            Tile position to get.
-        z: float
-            Focal plane of the tile.
-        path: str
-            Optical path of the tile.
-
-        Returns
-        -------
-        bytes
-            The encoded tile.
-        """
-        self._check_z_and_path(z, path)
-        decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
-        if decoded is None:
-            return self._get_blank_encoded_frame(self.tile_size)
-        return self.encoder.encode(decoded)
-
-    def _check_z_and_path(self, z: float, path: str) -> None:
-        """Raise if `z` or `path` is not available on this level.
-
-        Parameters
-        ----------
-        z: float
-            Focal plane to check.
-        path: str
-            Optical path to check.
-        """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-
-    def _get_region(self, region: Region) -> np.ndarray | None:
-        """Return the region pixels as an RGB array, or None when all fill.
-
-        Parameters
-        ----------
-        region: Region
-            Region to read.
-
-        Returns
-        -------
-        np.ndarray | None
-            The region's RGB pixels, or None if the region is blank.
-        """
-        if region.size.width < 0 or region.size.height < 0:
-            raise ValueError("Negative size not allowed")
-        data = self._mrxs.read_region(
-            self._level_index, region.start.to_tuple(), region.size.to_tuple()
-        )
-        if self._detect_blank_tile(data):
-            return None
-        return data
+    def _decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
+        return self._mrxs.decode_tile(grid_position)
 
 
-class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
-    """A fluorescence MIRAX level: each channel is a separate grayscale
-    (MONOCHROME2) optical path, split out of the packed tile by
-    MiraxReader.read_channel. Grayscale is 8- or 16-bit per the slide's depth.
-    Reuses OpenSlideLikeLevelImageData for sizing."""
+class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
+    """The fluorescence MIRAX base level: each channel is a separate grayscale
+    (MONOCHROME2) optical path, the channel's band of the composed packed tiles.
+    Grayscale is 8- or 16-bit per the slide's depth."""
 
     def __init__(
         self,
         mrxs: MiraxReader,
-        blank_color: int | tuple[int, int, int] | None,
         image_metadata: ImageMetadata,
-        level_index: int,
         tile_size: int | None,
         encoder: Encoder,
     ):
-        """Wrap a fluorescence MIRAX level as ImageData.
+        """Wrap the fluorescence MIRAX base level as ImageData.
 
         Parameters
         ----------
         mrxs: MiraxReader
-            The reader to read channels from.
-        blank_color: int | tuple[int, int, int] | None
-            Background color for empty regions.
+            The reader to read tiles from; its fill color is the background.
         image_metadata: ImageMetadata
             Image metadata for the level.
-        level_index: int
-            Level in the reader to wrap.
         tile_size: int | None
             Output tile size. If None, the default tile size is used.
         encoder: Encoder
             Encoder to use (grayscale/MONOCHROME2).
         """
+        fill = np.array(mrxs.fill_color, dtype=mrxs.dtype)
+        # the blank color of the grayscale level is the fill of its first channel;
+        # each channel's blank tiles are filled with that channel's fill
         super().__init__(
-            blank_color,
-            None,
-            None,
-            mrxs.level_dimensions,
-            mrxs.level_downsamples,
+            mrxs.overlap,
+            fill,
             image_metadata,
-            level_index,
             tile_size,
+            int(fill[mrxs.channels[0].band]),
             encoder,
         )
         self._mrxs = mrxs
+        self._channels = mrxs.channels
         # optical path identifiers = the fluorophore channel names
         self._optical_paths = [channel.name for channel in mrxs.channels]
 
@@ -232,7 +111,9 @@ class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
     def optical_paths(self) -> list[str]:
         return self._optical_paths
 
-    def read_region(self, region: Region, z: float, path: str) -> Image:
+    def read_region(
+        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    ) -> np.ndarray:
         """Read one channel's grayscale intensity over a region.
 
         Parameters
@@ -243,15 +124,20 @@ class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
             Z coordinate.
         path: str
             Optical path (channel) to read.
+        executor: ReadExecutor | None
+            Per-read parallelism policy the tile decode fans out across (>1 worker
+            for viewing), or None on the conversion path.
 
         Returns
         -------
-        Image
-            The channel's intensity as a single-band ("L" or "I;16") image.
+        np.ndarray
+            The channel's ``(rows, columns)`` intensity (uint8 or uint16).
         """
-        return Pillow.fromarray(self._read_channel(region, z, path))
+        return self._read_channel(region, z, path, executor)
 
-    def get_decoded_tile(self, tile_point: Point, z: float, path: str) -> Image:
+    def get_decoded_tile(
+        self, tile_point: Point, z: float, path: str, cache: bool = True
+    ) -> np.ndarray:
         """Return a channel's grayscale tile.
 
         Parameters
@@ -262,14 +148,16 @@ class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
             Focal plane of the tile.
         path: str
             Optical path (channel) of the tile.
+        cache: bool = True
+            Unused; the reader caches decoded source tiles itself.
 
         Returns
         -------
-        Image
-            The tile as a single-band ("L" or "I;16") image.
+        np.ndarray
+            The tile's ``(rows, columns)`` intensity (uint8 or uint16).
         """
         region = Region(tile_point * self.tile_size, self.tile_size)
-        return Pillow.fromarray(self._read_channel(region, z, path))
+        return self._read_channel(region, z, path)
 
     def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
         """Return a channel's encoded grayscale tile.
@@ -289,9 +177,48 @@ class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
             The encoded tile.
         """
         region = Region(tile * self.tile_size, self.tile_size)
-        return self.encoder.encode(self._read_channel(region, z, path))
+        data = self._read_channel(region, z, path)
+        fill = self._channel_fill(path)
+        if self._detect_blank_tile(data, fill):
+            return self._get_blank_encoded_frame(self.tile_size, fill)
+        return self.encoder.encode(data)
 
-    def _read_channel(self, region: Region, z: float, path: str) -> np.ndarray:
+    def _decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
+        return self._mrxs.decode_tile(grid_position)
+
+    def _band(self, path: str) -> int:
+        """The band of the packed tiles a channel is stored in.
+
+        Parameters
+        ----------
+        path: str
+            Optical path (channel).
+
+        Returns
+        -------
+        int
+            The channel's band.
+        """
+        return self._channels[self._optical_paths.index(path)].band
+
+    def _channel_fill(self, path: str) -> int:
+        """The slide's stated fill value (IMAGE_FILL_COLOR_BGR) in a channel's band.
+
+        Parameters
+        ----------
+        path: str
+            Optical path (channel).
+
+        Returns
+        -------
+        int
+            The fill value empty areas of the channel read as.
+        """
+        return int(self._fill[self._band(path)])
+
+    def _read_channel(
+        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    ) -> np.ndarray:
         """Return one channel's (H, W) intensity array for a region.
 
         Parameters
@@ -302,20 +229,13 @@ class MiraxFluorescenceLevelImageData(OpenSlideLikeLevelImageData):
             Focal plane to read.
         path: str
             Optical path (channel) to read.
+        executor: ReadExecutor | None
+            Per-read parallelism policy the tile decode fans out across, or None.
 
         Returns
         -------
         np.ndarray
             The channel's (H, W) intensity (uint8 or uint16).
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
-        channel = self._optical_paths.index(path)
-        return self._mrxs.read_channel(
-            self._level_index,
-            region.start.to_tuple(),
-            region.size.to_tuple(),
-            channel,
-        )
+        self._check_z_and_path(z, path)
+        return self._compose(region, executor)[:, :, self._band(path)]

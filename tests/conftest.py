@@ -19,6 +19,9 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 import pytest
+from opentile.geometry import Point as OpenTilePoint
+from opentile.geometry import Region as OpenTileRegion
+from opentile.geometry import Size as OpenTileSize
 from pydicom.uid import JPEG2000, UID, JPEGBaseline8Bit
 from upath import UPath
 from wsidicom import WsiDicom
@@ -399,8 +402,67 @@ test_parameters = {
                     "pixel_spacings": [(0.00372, 0.00372), (0.01488, 0.01488)],
                     "focal_planes": [0.0],
                 },
+                "mirax": {
+                    # only the base level is read; the pyramid is built from it
+                    "convert_levels": None,
+                    "lowest_included_pyramid_level": 0,
+                    "pixel_spacings": [
+                        (0.0002325, 0.0002325),
+                        (0.000465, 0.000465),
+                        (0.00093, 0.00093),
+                        (0.00186, 0.00186),
+                        (0.00372, 0.00372),
+                        (0.00744, 0.00744),
+                        (0.01488, 0.01488),
+                        (0.02976, 0.02976),
+                    ],
+                    "has_label": True,
+                    "photometric_interpretation": "YBR_FULL_422",
+                    "read_region": [
+                        {
+                            "location": {"x": 50, "y": 100},
+                            "level": 6,
+                            "size": {"width": 500, "height": 500},
+                            "md5": "227a98c8ee2fa94e5ef5058007f81c39",
+                        },
+                        {
+                            "location": {"x": 400, "y": 500},
+                            "level": 4,
+                            "size": {"width": 500, "height": 500},
+                            "md5": "b5ba3b652194e454a4f188c87ef87477",
+                        },
+                    ],
+                    "read_thumbnail": [],
+                    "focal_planes": [0.0],
+                },
             },
+            # The native reader builds its pyramid from the base level, openslide
+            # reads the stored levels (blurrier, composed from other photos).
             "agreement": [
+                {
+                    "converted": "mirax",
+                    "reference": "openslide",
+                    "location": {"x": 15360, "y": 40448},
+                    "level": 0,
+                    "size": {"width": 500, "height": 500},
+                    "min_psnr": math.inf,
+                },
+                {
+                    "converted": "mirax",
+                    "reference": "openslide",
+                    "location": {"x": 50, "y": 100},
+                    "level": 6,
+                    "size": {"width": 500, "height": 500},
+                    "min_psnr": 29.0,
+                },
+                {
+                    "converted": "mirax",
+                    "reference": "openslide",
+                    "location": {"x": 400, "y": 500},
+                    "level": 4,
+                    "size": {"width": 500, "height": 500},
+                    "min_psnr": 27.0,
+                },
                 {
                     "converted": "openslide",
                     "reference": "openslide",
@@ -945,6 +1007,14 @@ def convert_wsi(
         regenerate_pyramid=False,
     )
     return tempdir
+
+
+@pytest.fixture
+def whole_tile(request: pytest.FixtureRequest) -> OpenTileRegion:
+    """The region covering a whole square tile, of the size the test parametrizes
+    indirectly."""
+    size: int = request.param
+    return OpenTileRegion(OpenTilePoint(0, 0), OpenTileSize(size, size))
 
 
 @pytest.fixture(scope="module")

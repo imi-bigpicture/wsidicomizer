@@ -247,7 +247,7 @@ class LeicaMetadata(VendorMetadata):
         return self.parse_float(self._properties.get("leica.aperture"))
 
 
-class MiraxMetadata(VendorMetadata):
+class OpenSlideMiraxMetadata(VendorMetadata):
     _VENDOR = "mirax"
 
     @property

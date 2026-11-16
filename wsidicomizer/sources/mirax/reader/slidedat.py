@@ -1,3 +1,17 @@
+#    Copyright 2026 SECTRA AB
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
 """The MIRAX Slidedat.ini: geometry, data-file map, pyramid structure, properties.
 
 `Slidedat` is the sole owner of the parsed Slidedat.ini, exposing both
@@ -5,14 +19,17 @@ structural config (data files, level layout) and descriptive metadata.
 """
 
 from configparser import RawConfigParser, SectionProxy
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import NamedTuple
+
+from opentile.geometry import PointF, Size
 
 from wsidicomizer.sources.mirax.reader.errors import MrxsError
 
 
-class Channel(NamedTuple):
+@dataclass(frozen=True)
+class Channel:
     """A fluorescence channel: display name, the RGB band it's stored in, and its
     display colour. Channels are packed into one RGB tile in BGR order, so
     STORING_CHANNEL_NUMBER 0 is the blue band (index 2), 1 green (1), 2 red (0)."""
@@ -25,22 +42,22 @@ class Channel(NamedTuple):
 class Slidedat:
     """Parsed Slidedat.ini for one slide, with typed accessors."""
 
-    def __init__(self, directory: Path):
-        """Parse the Slidedat.ini in a slide's data directory.
+    def __init__(self, data_folder: Path):
+        """Parse the Slidedat.ini in a slide's data folder.
 
         Parameters
         ----------
-        directory: Path
-            The slide's data directory (the .mrxs path without its suffix).
+        data_folder: Path
+            The slide's data folder, next to the .mrxs file and named after it.
         """
-        slidedat = directory / "Slidedat.ini"
+        slidedat = data_folder / "Slidedat.ini"
         if not slidedat.is_file():
             raise MrxsError(f"missing {slidedat}")
         ini = RawConfigParser()
         ini.optionxform = str  # type: ignore[assignment]  # preserve key case
         ini.read_string(slidedat.read_text(encoding="utf-8-sig", errors="replace"))
         self._ini = ini
-        self._dir = directory
+        self._data_folder = data_folder
 
     @property
     def imagenumber_x(self) -> int:
@@ -61,33 +78,27 @@ class Slidedat:
         return self._ini["HIERARCHICAL"]["INDEXFILE"]
 
     @property
-    def level_count(self) -> int:
-        """Number of zoom levels in the HIER_0 pyramid."""
-        return int(self._ini["HIERARCHICAL"]["HIER_0_COUNT"])
-
-    @property
     def datafiles(self) -> dict[int, Path]:
         """File-number -> Data*.dat path."""
         datafile_section = self._ini["DATAFILE"]
         count = int(datafile_section["FILE_COUNT"])
-        return {i: self._dir / datafile_section[f"FILE_{i}"] for i in range(count)}
-
-    def _level0_section(self) -> SectionProxy:
-        return self._ini[self._ini["HIERARCHICAL"]["HIER_0_VAL_0_SECTION"]]
+        return {
+            i: self._data_folder / datafile_section[f"FILE_{i}"] for i in range(count)
+        }
 
     @property
-    def tile_size(self) -> tuple[int, int]:
-        """Source-tile pixel size (width, height); uniform across the slide."""
+    def tile_size(self) -> Size:
+        """Source-tile pixel size; uniform across the slide."""
         level0 = self._level0_section()
-        return int(level0["DIGITIZER_WIDTH"]), int(level0["DIGITIZER_HEIGHT"])
+        return Size(int(level0["DIGITIZER_WIDTH"]), int(level0["DIGITIZER_HEIGHT"]))
 
     @property
-    def overlap(self) -> tuple[float, float]:
-        """Nominal per-photo overlap (x, y) in level-0 pixels; may be fractional.
+    def overlap(self) -> PointF:
+        """Nominal per-photo overlap in level-0 pixels; may be fractional.
         Placement keeps it float and rounds the final tile position, so rounding
         error can't accumulate across photo seams."""
         level0 = self._level0_section()
-        return (
+        return PointF(
             float(level0.get("OVERLAP_X", 0)),
             float(level0.get("OVERLAP_Y", 0)),
         )
@@ -146,18 +157,6 @@ class Slidedat:
             leaves.add(section.get("DATA_IN_THIS_FILTER_LEVEL"))
         return len(leaves) == 1
 
-    def nonhier_entries(self) -> list[tuple[str, str]]:
-        """Flat (group_name, value_name) list, in the order the index stores it."""
-        hierarchical = self._ini["HIERARCHICAL"]
-        entries: list[tuple[str, str]] = []
-        for group_index in range(int(hierarchical["NONHIER_COUNT"])):
-            group_name = hierarchical[f"NONHIER_{group_index}_NAME"]
-            value_count = int(hierarchical[f"NONHIER_{group_index}_COUNT"])
-            for value_index in range(value_count):
-                value_name = hierarchical[f"NONHIER_{group_index}_VAL_{value_index}"]
-                entries.append((group_name, value_name))
-        return entries
-
     @property
     def mpp(self) -> tuple[float, float] | None:
         """Microns per pixel (x, y) at level 0, or None if unspecified."""
@@ -194,3 +193,44 @@ class Slidedat:
             if version:
                 return [version]
         return None
+
+    @property
+    def scanner_hardware_version(self) -> str | None:
+        """Scanner model (SCANNER_HARDWARE_VERSION), or None; absent on older
+        Pannoramic slides."""
+        return self._general_value("SCANNER_HARDWARE_VERSION")
+
+    @property
+    def scanner_hardware_id(self) -> str | None:
+        """Scanner serial number (SCANNER_HARDWARE_ID), or None; absent on older
+        Pannoramic slides."""
+        return self._general_value("SCANNER_HARDWARE_ID")
+
+    @property
+    def slide_name(self) -> str | None:
+        """Slide name (SLIDE_NAME), or None."""
+        return self._general_value("SLIDE_NAME")
+
+    @property
+    def slide_id(self) -> str | None:
+        """Slide identifier (SLIDE_ID), or None."""
+        return self._general_value("SLIDE_ID")
+
+    def nonhierarchical_entries(self) -> list[tuple[str, str]]:
+        """Flat (group_name, value_name) list, in the order the index stores it."""
+        hierarchical = self._ini["HIERARCHICAL"]
+        entries: list[tuple[str, str]] = []
+        for group_index in range(int(hierarchical["NONHIER_COUNT"])):
+            group_name = hierarchical[f"NONHIER_{group_index}_NAME"]
+            value_count = int(hierarchical[f"NONHIER_{group_index}_COUNT"])
+            for value_index in range(value_count):
+                value_name = hierarchical[f"NONHIER_{group_index}_VAL_{value_index}"]
+                entries.append((group_name, value_name))
+        return entries
+
+    def _level0_section(self) -> SectionProxy:
+        return self._ini[self._ini["HIERARCHICAL"]["HIER_0_VAL_0_SECTION"]]
+
+    def _general_value(self, key: str) -> str | None:
+        """A [GENERAL] value, or None if absent or empty."""
+        return self._ini["GENERAL"].get(key) or None

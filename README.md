@@ -17,6 +17,14 @@
 - Zeiss czi (lossy)
 - Optional: Formats supported by Bioformats (lossy)
 
+3DHISTECH Mirax mrxs files (brightfield and fluorescence) are supported (lossy) by a native reader that composes the overlapping camera tiles. Slides it can not read are left to the `openslide` extra, if installed.
+
+Limitations of the native Mirax reader:
+
+- Only the base level is read. The stored lower-resolution levels are mosaics of the camera images at fractional positions, so a conversion builds the pyramid from the base level, and `WsiDicomizer.open()` gives the base level only.
+- Fluorescence slides with more than three channels are not supported. These store the channels in more than one data layer, and supporting them needs test data; please share such a slide if you need it.
+- Slides re-saved at reduced resolution (the base levels removed) are not supported.
+
 With the `openslide` extra the following formats are also supported:
 
 - Mirax mrxs (lossy)

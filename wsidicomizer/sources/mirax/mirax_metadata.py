@@ -12,17 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""DICOM metadata extracted from a MIRAX slide's Slidedat.ini."""
+"""DICOM metadata for a MIRAX slide, built from its `Slidedat`."""
 
-from wsidicom.geometry import SizeMm
+from wsidicom.geometry import Point, PointMm, SizeMm
 from wsidicom.metadata import (
     Equipment,
     Image,
+    ImageCoordinateSystem,
     Label,
     Objectives,
     OpticalPath,
     Overview,
     Pyramid,
+    Series,
+    Slide,
 )
 
 from wsidicomizer.metadata import WsiDicomizerMetadata
@@ -33,30 +36,47 @@ _MANUFACTURER = "3DHISTECH"
 
 
 class MiraxMetadata(WsiDicomizerMetadata):
-    """Metadata for a MIRAX file, built from its Slidedat.ini: pixel spacing,
+    """Metadata for a MIRAX slide, built from its `Slidedat`: pixel spacing,
     objective and coordinate systems, plus the scanner manufacturer, acquisition
     datetime and software version."""
 
-    def __init__(self, slidedat: Slidedat):
-        """Build DICOM metadata from a parsed Slidedat.ini.
+    def __init__(self, slidedat: Slidedat, bounds_offset: Point):
+        """Build DICOM metadata from a slide's `Slidedat`.
 
         Parameters
         ----------
         slidedat: Slidedat
-            The slide's parsed Slidedat.ini.
+            The slide's settings and scanner metadata.
+        bounds_offset: Point
+            Level-0 pixel position of the read tissue bounding box in the slide's
+            scan coordinates, placing the image origin as openslide's bounds do.
         """
         defaults = FormatCoordinateDefaults.from_wsi_format(WsiFormat.MIRAX)
         mpp = slidedat.mpp
         pixel_spacing = SizeMm(mpp[0] / 1000.0, mpp[1] / 1000.0) if mpp else None
+        if pixel_spacing is not None:
+            image_coordinate_system = ImageCoordinateSystem(
+                PointMm(
+                    bounds_offset.x * pixel_spacing.width,
+                    bounds_offset.y * pixel_spacing.height,
+                ),
+                defaults.level_rotation,
+            )
+        else:
+            image_coordinate_system = defaults.level_coordinate_system()
 
         equipment = Equipment(
             manufacturer=_MANUFACTURER,
+            model_name=slidedat.scanner_hardware_version,
+            device_serial_number=slidedat.scanner_hardware_id,
             software_versions=slidedat.software_versions,
         )
+        series = Series(description=slidedat.slide_name)
+        slide = Slide(identifier=slidedat.slide_id)
         image = Image(
             acquisition_datetime=slidedat.acquisition_datetime,
             pixel_spacing=pixel_spacing,
-            image_coordinate_system=defaults.level_coordinate_system(),
+            image_coordinate_system=image_coordinate_system,
         )
         objective_power = slidedat.objective_power
         objectives = (
@@ -89,5 +109,10 @@ class MiraxMetadata(WsiDicomizerMetadata):
                 optical_paths=[],
             )
         super().__init__(
-            equipment=equipment, pyramid=pyramid, label=label, overview=overview
+            series=series,
+            equipment=equipment,
+            slide=slide,
+            pyramid=pyramid,
+            label=label,
+            overview=overview,
         )

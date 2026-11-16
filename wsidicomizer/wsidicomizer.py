@@ -399,6 +399,7 @@ class WsiDicomizer(WsiDicom):
             SourceIdentifier.OPENTILE: OpenTileSource,
             SourceIdentifier.TIFFSLIDE: TiffSlideSource,
             SourceIdentifier.CZI: CziSource,
+            # Before openslide, so the native MIRAX reader wins.
             SourceIdentifier.MIRAX: MiraxSource,
         }
         try:
