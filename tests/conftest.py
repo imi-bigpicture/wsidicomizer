@@ -448,6 +448,16 @@ test_parameters = {
                     "min_psnr": math.inf,
                 },
                 {
+                    # spans three vertical photo seams; a paste order by placed
+                    # position takes the other photo at two of them
+                    "converted": "mirax",
+                    "reference": "openslide",
+                    "location": {"x": 19700, "y": 23743},
+                    "level": 0,
+                    "size": {"width": 2800, "height": 512},
+                    "min_psnr": math.inf,
+                },
+                {
                     "converted": "mirax",
                     "reference": "openslide",
                     "location": {"x": 50, "y": 100},
