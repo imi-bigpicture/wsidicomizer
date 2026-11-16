@@ -84,7 +84,7 @@ class WsiDicomizer(WsiDicom):
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> WsiDicom:
+    ) -> "WsiDicomizer":
         """Open data in file in filepath as WsiDicom.
 
         Parameters
@@ -126,8 +126,8 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        WsiDicom
-            WsiDicom object of file.
+        WsiDicomizer
+            WsiDicomizer object of file.
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
