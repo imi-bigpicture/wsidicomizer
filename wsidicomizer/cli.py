@@ -137,16 +137,22 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     ),
 )
 @click.option(
-    "--add-missing-levels",
-    is_flag=True,
-    help="If to add missing dyadic levels up to the single tile level.",
+    "--add-missing-levels/--no-add-missing-levels",
+    default=None,
+    help=(
+        "Add missing dyadic levels up to the single tile level, or not. Default: "
+        "add them if the format prefers a regenerated pyramid (MIRAX, iSyntax, "
+        "CZI) and no --levels are given."
+    ),
 )
 @click.option(
-    "--regenerate-pyramid",
-    is_flag=True,
+    "--regenerate-pyramid/--keep-stored-levels",
+    default=None,
     help=(
         "Read only the base level from the source and re-derive every other "
-        "written level by downsampling from it."
+        "written level by downsampling from it, or keep the levels stored in "
+        "the file. Default: regenerate if the format prefers it (MIRAX, "
+        "iSyntax, CZI) and no --levels are given."
     ),
 )
 @click.option(
@@ -279,8 +285,8 @@ def main(
     metadata: Path | None,
     default_metadata: Path | None,
     levels: tuple[int, ...],
-    add_missing_levels: bool,
-    regenerate_pyramid: bool,
+    add_missing_levels: bool | None,
+    regenerate_pyramid: bool | None,
     split_focal_planes: bool,
     split_optical_paths: bool,
     concatenate_frames: int | None,

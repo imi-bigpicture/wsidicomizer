@@ -55,7 +55,6 @@ from wsidicomizer.sources import (
     TiffSlideSource,
 )
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -191,8 +190,8 @@ class WsiDicomizer(WsiDicom):
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
-        add_missing_levels: bool = False,
-        regenerate_pyramid: bool = False,
+        add_missing_levels: bool | None = None,
+        regenerate_pyramid: bool | None = None,
         include_levels: Sequence[int] | None = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -236,12 +235,17 @@ class WsiDicomizer(WsiDicom):
         uid_generator: Callable[[], UID] | UidGenerator | None = None
             Generator used to populate UIDs on the metadata if not already set and to
             generate UIDs for created instances.
-        add_missing_levels: bool = False
-            If to add missing dyadic levels up to the single tile level.
-        regenerate_pyramid: bool = False
+        add_missing_levels: bool | None = None
+            If to add missing dyadic levels up to the single tile level. If None,
+            follows the source's `prefer_regenerated_pyramid` when `include_levels`
+            is not given, so a source that stores only its base level (MIRAX) gets
+            a pyramid built from it; with `include_levels`, no levels are added.
+        regenerate_pyramid: bool | None = None
             If True, only the base level is read from the source and every
             other written level is re-derived by downsampling from the base.
             When set, the base level must be among the selected `include_levels`.
+            If None, follows the source's `prefer_regenerated_pyramid` when
+            `include_levels` is not given, and otherwise keeps the stored levels.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
             includes the two lowest levels. Negative indices can be used,
@@ -337,6 +341,14 @@ class WsiDicomizer(WsiDicom):
                 **source_args,
             ) as wsi,
         ):
+            if regenerate_pyramid is None:
+                regenerate_pyramid = include_levels is None and (
+                    wsi._prefer_regenerated_pyramid
+                )
+            if add_missing_levels is None:
+                add_missing_levels = include_levels is None and (
+                    wsi._prefer_regenerated_pyramid
+                )
             created_files = wsi.save(
                 output_path,
                 uid_generator,
@@ -358,6 +370,15 @@ class WsiDicomizer(WsiDicom):
             )
 
         return created_files
+
+    @property
+    def _prefer_regenerated_pyramid(self) -> bool:
+        """Return True if the source prefers its pyramid to be re-derived from the
+        base level on conversion."""
+        return (
+            isinstance(self._source, DicomizerSource)
+            and self._source.prefer_regenerated_pyramid
+        )
 
     @staticmethod
     def _select_sources(

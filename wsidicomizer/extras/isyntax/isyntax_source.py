@@ -130,6 +130,10 @@ class ISyntaxSource(DicomizerSource):
         return self._base_metadata
 
     @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        return True
+
+    @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 

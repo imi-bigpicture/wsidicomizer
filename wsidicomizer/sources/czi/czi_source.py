@@ -103,6 +103,10 @@ class CziSource(DicomizerSource):
         return self._pixel_format_from(samples_per_pixel, dtype)
 
     @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        return True
+
+    @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
         return {(0, 0.0, "0"): 0}
 

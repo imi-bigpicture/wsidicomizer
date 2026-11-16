@@ -206,6 +206,14 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         raise NotImplementedError()
 
     @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        """Return True if the levels above the base level stored in the file are
+        poor material for conversion (e.g. overlapping or cropped tiles, or a
+        softer downsampling), so that conversion by default should re-derive
+        them from the base level."""
+        return False
+
+    @property
     @abstractmethod
     def base_metadata(self) -> WsiDicomizerMetadata:
         """Return metadata read from file."""
