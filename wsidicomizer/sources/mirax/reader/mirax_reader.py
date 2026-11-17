@@ -22,7 +22,8 @@ from enum import Enum
 from pathlib import Path
 
 import numpy as np
-from opentile.file import LocalFileReader
+from opentile.config import get_settings as get_opentile_settings
+from opentile.file import FileHandlePool, LocalFileReader
 from opentile.geometry import Point as OpenTilePoint
 from opentile.tile_overlap import TileOverlap
 from PIL import Image
@@ -92,11 +93,14 @@ class MiraxReader:
         self._dtype = np.dtype(
             np.uint16 if self._slidedat.bit_depth == 16 else np.uint8
         )
-        # one thread-safe handle pool per data file (opentile.LocalFileReader)
+        # one thread-safe handle pool per data file, as opentile reads its files
         self._file_readers: dict[int, LocalFileReader] = {}
+        max_handles = get_opentile_settings().max_file_handles_per_file
         try:
             for number, datafile_path in self._slidedat.datafiles.items():
-                self._file_readers[number] = LocalFileReader(str(datafile_path))
+                self._file_readers[number] = LocalFileReader(
+                    FileHandlePool(str(datafile_path), max_handles)
+                )
             self._open_index(data_folder)
         except BaseException:
             self.close()

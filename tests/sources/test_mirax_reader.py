@@ -17,9 +17,11 @@
 from collections.abc import Iterator
 from pathlib import Path
 from textwrap import dedent
+from typing import Any, BinaryIO
 
 import numpy as np
 import pytest
+from opentile.file import FileHandlePool
 
 from wsidicomizer.sources.mirax.reader import (
     MiraxAssociatedImageType,
@@ -167,17 +169,18 @@ class TestMiraxReader:
     ):
         # Arrange - fail in placement, after the position buffer has been read
         # through a data file handle
-        opened: list[mirax_reader.LocalFileReader] = []
+        handles: list[BinaryIO] = []
 
-        class RecordingReader(mirax_reader.LocalFileReader):
-            def __init__(self, path: str) -> None:
-                super().__init__(path)
-                opened.append(self)
+        class RecordingPool(FileHandlePool):
+            def open_or_wait(self) -> BinaryIO:
+                handle = super().open_or_wait()
+                handles.append(handle)
+                return handle
 
-        def failing_layout(*args, **kwargs):
+        def failing_layout(*args: Any, **kwargs: Any) -> None:
             raise RuntimeError("placement failed")
 
-        monkeypatch.setattr(mirax_reader, "LocalFileReader", RecordingReader)
+        monkeypatch.setattr(mirax_reader, "FileHandlePool", RecordingPool)
         monkeypatch.setattr(mirax_reader, "MiraxTileLayout", failing_layout)
 
         # Act
@@ -185,6 +188,5 @@ class TestMiraxReader:
             MiraxReader(mirax_path)
 
         # Assert
-        handles = [handle for reader in opened for handle in reader._pool._handles]
         assert handles
         assert all(handle.closed for handle in handles)
