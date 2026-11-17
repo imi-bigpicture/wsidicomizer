@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `convert()` defaults `add_missing_levels` and `regenerate_pyramid` to `None`: both are applied when the source prefers a regenerated pyramid and no `include_levels` are given.
+- `PixelImageData` reads regions with `get_decoded_region()`, an override of wsidicom's `ImageData.get_decoded_region()`, so its instances are plain `WsiInstance`s. `PixelWsiInstance` and `DicomizerSource._instance_cls` are removed.
 - `DicomizerSource.is_supported()` only checks the file's format. A source refuses a variant it does not read by raising the new `SourceNotSupportedError` when created, and `WsiDicomizer.open()` tries the next source. Other errors are raised instead of moving on, except from OpenTile.
 - The openslide vendor metadata class `MiraxMetadata` is renamed `OpenSlideMiraxMetadata`.
 - `OpenSlideLikeAssociatedImageData` and `OpenSlideLikeThumbnailImageData` are replaced by `PixelAssociatedImageData` and `PixelThumbnailImageData` in `wsidicomizer.image_data`, and `OpenSlideLikeLevelImageData` builds on the new `PixelLevelImageData`. `OpenSlideLikeImageData` is removed.

@@ -63,8 +63,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
      Subclasses can override the __init__().
     """
 
-    _instance_cls: type[WsiInstance] = WsiInstance
-
     def __init__(
         self,
         filepath: UPath,
@@ -374,11 +372,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         image_type: ImageType,
         pyramid_index: int | None = None,
     ) -> WsiInstance:
-        """Create instance from image data using this source's ``_instance_cls``."""
+        """Create instance from image data."""
         dataset = self._create_dataset(
             image_type, image_data.photometric_interpretation
         )
-        return self._instance_cls.create_instance(
+        return WsiInstance.create_instance(
             image_data, dataset, image_type, pyramid_index
         )
 

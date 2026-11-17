@@ -19,6 +19,7 @@ from tiffslide import TiffSlide
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
 
@@ -73,7 +74,14 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         """Number of samples per pixel in the image."""
         return self._samples_per_pixel
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         """Read the pixels of a region directly from the tiffslide object.
 
 

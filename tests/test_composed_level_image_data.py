@@ -71,7 +71,9 @@ class TestComposedLevelImageData:
         image_data = InMemoryComposedLevel(overlap, tiles)
 
         # Act
-        region = image_data.read_region(Region(Point(0, 0), Size(6, 4)), 0.0, "1")
+        region = image_data.get_decoded_region(
+            Region(Point(0, 0), Size(6, 4)), 0.0, "1"
+        )
 
         # Assert
         assert image_data.image_size == Size(6, 4)
@@ -100,7 +102,9 @@ class TestComposedLevelImageData:
         image_data = InMemoryComposedLevel(overlap, {OpenTilePoint(0, 0): tile})
 
         # Act
-        region = image_data.read_region(Region(Point(0, 0), Size(8, 4)), 0.0, "1")
+        region = image_data.get_decoded_region(
+            Region(Point(0, 0), Size(8, 4)), 0.0, "1"
+        )
 
         # Assert
         assert image_data.decoded == [OpenTilePoint(0, 0)]
@@ -118,13 +122,13 @@ class TestComposedLevelImageData:
             overlap, {OpenTilePoint(0, 0): np.full((2, 2, 3), 9, np.uint8)}
         )
         region = Region(Point(0, 0), Size(4, 2))
-        first = image_data.read_region(region, 0.0, "1")
+        first = image_data.get_decoded_region(region, 0.0, "1")
 
         # Act - mutate one composed region
         first[:] = 7
 
         # Assert - the background template is not corrupted
-        second = image_data.read_region(region, 0.0, "1")
+        second = image_data.get_decoded_region(region, 0.0, "1")
         assert (second[:, 2:] == 0).all()
 
     @pytest.mark.parametrize("whole_tile", [2], indirect=True)
@@ -139,7 +143,9 @@ class TestComposedLevelImageData:
         )
 
         # Act
-        region = image_data.read_region(Region(Point(4, 4), Size(4, 4)), 0.0, "1")
+        region = image_data.get_decoded_region(
+            Region(Point(4, 4), Size(4, 4)), 0.0, "1"
+        )
 
         # Assert - no tile decoded, the region is the background
         assert image_data.decoded == []
@@ -157,7 +163,9 @@ class TestComposedLevelImageData:
         image_data = InMemoryComposedLevel(overlap, {OpenTilePoint(0, 0): tile})
 
         # Act
-        region = image_data.read_region(Region(Point(12, 22), Size(4, 4)), 0.0, "1")
+        region = image_data.get_decoded_region(
+            Region(Point(12, 22), Size(4, 4)), 0.0, "1"
+        )
 
         # Assert - the quarter lands in the top-left corner, the rest is background
         assert (region[:2, :2] == tile[2:, 2:]).all()

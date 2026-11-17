@@ -129,10 +129,10 @@ class TestMiraxSource:
         assert isinstance(image_data, MiraxLevelImageData)
 
         # Act
-        tissue = image_data.read_region(
+        tissue = image_data.get_decoded_region(
             Region(Point(15360, 40448), Size(512, 512)), 0.0, "1"
         )
-        margin = image_data.read_region(  # no tiles
+        margin = image_data.get_decoded_region(  # no tiles
             Region(Point(0, 0), Size(64, 64)), 0.0, "1"
         )
 
@@ -149,7 +149,7 @@ class TestMiraxSource:
         fill = np.array(image_data.blank_color, dtype=np.uint8)
 
         # Act
-        region = image_data.read_region(
+        region = image_data.get_decoded_region(
             Region(Point(15360, 40448), Size(2048, 2048)), 0.0, "1"
         )
 
@@ -174,13 +174,13 @@ class TestMiraxSource:
         )
         size = image_data.image_size
         region = Region(Point(size.width // 3, size.height // 3), Size(256, 256))
-        packed_region = packed.read_region(region, 0.0, "1")
+        packed_region = packed.get_decoded_region(region, 0.0, "1")
 
         # Act / Assert - each channel equals its band of the packed region
         for path, channel in zip(
             image_data.optical_paths, fluorescence_source._mrxs.channels, strict=True
         ):
-            channel_region = image_data.read_region(region, 0.0, path)
+            channel_region = image_data.get_decoded_region(region, 0.0, path)
             assert np.array_equal(channel_region, packed_region[:, :, channel.band])
 
     def test_level_image_data_reads_rgb_tile(self, source: MiraxSource):

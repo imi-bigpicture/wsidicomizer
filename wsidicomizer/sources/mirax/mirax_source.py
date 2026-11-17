@@ -37,7 +37,6 @@ from wsidicomizer.metadata import (
     MetadataPreProcessor,
     WsiDicomizerMetadata,
 )
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 from wsidicomizer.sources.mirax.mirax_image_data import (
     MiraxFluorescenceLevelImageData,
     MiraxLevelImageData,
@@ -50,8 +49,6 @@ from wsidicomizer.sources.mirax.reader import (
 
 
 class MiraxSource(DicomizerSource):
-    _instance_cls = PixelWsiInstance
-
     def __init__(
         self,
         filepath: UPath,

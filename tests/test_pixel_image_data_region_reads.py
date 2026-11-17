@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Tests for PixelWsiInstance / PixelImageData wiring."""
+"""Tests that an instance reads a PixelImageData with get_decoded_region."""
 
 import numpy as np
 import pytest
@@ -20,12 +20,12 @@ from decoy import Decoy
 from pydicom import Dataset
 from pydicom.uid import JPEGBaseline8Bit
 from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.instance import WsiInstance
 from wsidicom.instance.dataset import WsiDataset
 from wsidicom.metadata import ImageType
 from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.image_data import PixelImageData
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def tile_size() -> Size:
 @pytest.fixture
 def instance(
     decoy: Decoy, size: Size, tile_size: Size
-) -> tuple[PixelWsiInstance, PixelImageData]:
+) -> tuple[WsiInstance, PixelImageData]:
     image_data = decoy.mock(cls=PixelImageData)
     decoy.when(image_data.transfer_syntax).then_return(JPEGBaseline8Bit)
     decoy.when(image_data.image_size).then_return(size)
@@ -74,29 +74,31 @@ def instance(
     instance_dataset = WsiDataset.create_instance_dataset(
         base, ImageType.VOLUME, image_data, pyramid_index=0
     )
-    return PixelWsiInstance(instance_dataset, image_data), image_data
+    return WsiInstance(instance_dataset, image_data), image_data
 
 
 @pytest.mark.unittest
-class TestPixelWsiInstance:
-    """PixelWsiInstance reads via PixelImageData.read_region, returning the
+class TestPixelImageDataRegionReads:
+    """An instance reads via PixelImageData.get_decoded_region, returning the
     numpy array directly and downsampling it in numpy when asked for a smaller
     output."""
 
-    def test_get_region_returns_read_region_array(
+    def test_get_region_returns_decoded_region(
         self,
         decoy: Decoy,
-        instance: tuple[PixelWsiInstance, PixelImageData],
+        instance: tuple[WsiInstance, PixelImageData],
         read_executor: ReadExecutor,
     ):
         # Arrange
-        pixel_wsi_instance, image_data = instance
+        wsi_instance, image_data = instance
         region = Region(position=Point(100, 200), size=Size(400, 300))
         array = np.zeros((300, 400, 3), np.uint8)
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
+        decoy.when(
+            image_data.get_decoded_region(region, 0.0, "0", executor=read_executor)
+        ).then_return(array)
 
         # Act
-        result = pixel_wsi_instance.get_region(
+        result = wsi_instance.get_region(
             region, z=0.0, path="0", executor=read_executor
         )
 
@@ -106,18 +108,20 @@ class TestPixelWsiInstance:
     def test_get_region_downsamples_when_output_size_given(
         self,
         decoy: Decoy,
-        instance: tuple[PixelWsiInstance, PixelImageData],
+        instance: tuple[WsiInstance, PixelImageData],
         read_executor: ReadExecutor,
     ):
         # Arrange
-        pixel_wsi_instance, image_data = instance
+        wsi_instance, image_data = instance
         region = Region(position=Point(0, 0), size=Size(400, 300))
         output_size = Size(200, 150)
         array = np.zeros((300, 400, 3), np.uint8)
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
+        decoy.when(
+            image_data.get_decoded_region(region, 0.0, "0", executor=read_executor)
+        ).then_return(array)
 
         # Act
-        result = pixel_wsi_instance.get_region(
+        result = wsi_instance.get_region(
             region, z=0.0, path="0", output_size=output_size, executor=read_executor
         )
 
@@ -128,17 +132,19 @@ class TestPixelWsiInstance:
     def test_get_region_skips_downsample_when_output_matches_region(
         self,
         decoy: Decoy,
-        instance: tuple[PixelWsiInstance, PixelImageData],
+        instance: tuple[WsiInstance, PixelImageData],
         read_executor: ReadExecutor,
     ):
         # Arrange
-        pixel_wsi_instance, image_data = instance
+        wsi_instance, image_data = instance
         region = Region(position=Point(0, 0), size=Size(400, 300))
         array = np.zeros((300, 400, 3), np.uint8)
-        decoy.when(image_data.read_region(region, 0.0, "0")).then_return(array)
+        decoy.when(
+            image_data.get_decoded_region(region, 0.0, "0", executor=read_executor)
+        ).then_return(array)
 
         # Act
-        result = pixel_wsi_instance.get_region(
+        result = wsi_instance.get_region(
             region, z=0.0, path="0", output_size=region.size, executor=read_executor
         )
 

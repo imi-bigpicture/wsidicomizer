@@ -21,6 +21,7 @@ import numpy as np
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.extras.openslide.openslide import (
     OpenSlide,
@@ -84,12 +85,19 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         )
         self._osr = open_slide._osr
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         """Read the pixels of a region directly from the openslide object.
 
         openslide reads 4-byte ARGB; the alpha is composited over the background
-        colour in numpy. ``read_region`` (Pillow) is derived from this by the
-        base class.
+        colour in numpy. Pillow, when needed, is derived by wsidicom at the read
+        boundary.
 
         Parameters
         ----------

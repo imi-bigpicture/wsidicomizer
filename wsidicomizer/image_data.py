@@ -30,6 +30,7 @@ from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.config import get_settings
 from wsidicomizer.overlap_index import OverlapIndex, Placement
@@ -184,11 +185,8 @@ class PixelImageData(BaseDicomizerImageData):
     source-encoded bytes to pass through, so producing an encoded tile
     requires re-encoding.
 
-    Concrete subclasses implement ``read_region`` either as a native call
-    (for pyramidal/tiled sources) or as an in-memory crop of a pre-decoded
-    image (for single-image label/overview/thumbnail sources). Pair with
-    ``PixelWsiInstance`` so reads route through ``read_region`` instead of
-    per-tile stitching.
+    Subclasses that can read a region more efficiently than wsidicom assembles
+    it from tiles override ``get_decoded_region``.
 
     Every tile is encoded with the encoder, so the transfer syntax and
     photometric interpretation come from it. The defaults are one focal plane,
@@ -243,29 +241,6 @@ class PixelImageData(BaseDicomizerImageData):
     @property
     def thread_safe(self) -> bool:
         return True
-
-    @abstractmethod
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
-        """Read the pixels of a region from the source.
-
-        The region-read primitive. Pixel sources decode to numpy and implement
-        this; Pillow, when needed, is derived at the read boundary.
-
-        Parameters
-        ----------
-        region: Region
-            Pixel region to read.
-        z: float
-            Z coordinate.
-        path: str
-            Optical path.
-
-        Returns
-        -------
-        np.ndarray
-            The region as ``(rows, columns)`` or ``(rows, columns, samples)``.
-        """
-        raise NotImplementedError()
 
     def _check_z_and_path(self, z: float, path: str) -> None:
         """Raise if `z` or `path` is not available on this image.
@@ -444,8 +419,13 @@ class ComposedLevelImageData(PixelLevelImageData):
         self._fill = fill
         self._templates = LRU[Size, np.ndarray](self._TEMPLATE_COUNT)
 
-    def read_region(
-        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
     ) -> np.ndarray:
         """Compose the pixels of a region.
 
@@ -493,7 +473,7 @@ class ComposedLevelImageData(PixelLevelImageData):
         np.ndarray
             The tile as a ``(rows, columns, samples)`` array.
         """
-        return self.read_region(
+        return self.get_decoded_region(
             Region(tile_point * self.tile_size, self.tile_size), z, path
         )
 
@@ -699,8 +679,13 @@ class PixelSingleImageData(PixelImageData):
             raise ValueError("Point(0, 0) only valid tile for non-tiled image")
         return self._decoded
 
-    def read_region(
-        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
     ) -> np.ndarray:
         left, upper, right, lower = region.box
         return self._decoded[upper:lower, left:right]

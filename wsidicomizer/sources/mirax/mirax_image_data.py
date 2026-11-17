@@ -111,8 +111,13 @@ class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
     def optical_paths(self) -> list[str]:
         return self._optical_paths
 
-    def read_region(
-        self, region: Region, z: float, path: str, executor: ReadExecutor | None = None
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
     ) -> np.ndarray:
         """Read one channel's grayscale intensity over a region.
 

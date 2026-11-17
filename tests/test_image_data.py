@@ -92,12 +92,12 @@ class TestBlankRegion:
         ).then_return(background)
 
         # Act
-        result = level_image_data.read_region(region, 0.0, "1")
+        result = level_image_data.get_decoded_region(region, 0.0, "1")
 
         # Assert
         assert result.shape == (size.height, size.width, 3)
 
-    def test_blank_and_read_region_agree_on_shape(
+    def test_blank_and_decoded_region_agree_on_shape(
         self,
         decoy: Decoy,
         image_data: tuple[TiffSlideLevelImageData, TiffSlide],
@@ -117,8 +117,8 @@ class TestBlankRegion:
         ).then_return(tissue)
 
         # Act
-        blank_result = level_image_data.read_region(blank_region, 0.0, "1")
-        tissue_result = level_image_data.read_region(tissue_region, 0.0, "1")
+        blank_result = level_image_data.get_decoded_region(blank_region, 0.0, "1")
+        tissue_result = level_image_data.get_decoded_region(tissue_region, 0.0, "1")
 
         # Assert
         assert blank_result.shape == tissue_result.shape

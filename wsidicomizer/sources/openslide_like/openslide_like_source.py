@@ -40,7 +40,6 @@ from wsidicomizer.metadata import (
     MetadataPreProcessor,
     WsiDicomizerMetadata,
 )
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 from wsidicomizer.sources.openslide_like import OpenSlideLikeProperties
 
 logger = logging.getLogger(__name__)
@@ -53,8 +52,6 @@ class OpenSlideLikeAssociatedImageType(Enum):
 
 
 class OpenSlideLikeSource(DicomizerSource):
-    _instance_cls = PixelWsiInstance
-
     def __init__(
         self,
         filepath: UPath,

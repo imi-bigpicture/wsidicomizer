@@ -37,12 +37,9 @@ from wsidicomizer.metadata import (
     MetadataPreProcessor,
     WsiDicomizerMetadata,
 )
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 
 
 class ISyntaxSource(DicomizerSource):
-    _instance_cls = PixelWsiInstance
-
     def __init__(
         self,
         filepath: UPath,

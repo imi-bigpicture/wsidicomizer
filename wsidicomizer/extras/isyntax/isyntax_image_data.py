@@ -23,6 +23,7 @@ from wsidicom.codec.decoder import ImageCodecsDecoder
 from wsidicom.geometry import Point, PointMm, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, ImageType
+from wsidicom.thread import ReadExecutor
 
 from isyntax import ISyntax
 from wsidicomizer.image_data import PixelImageData
@@ -116,7 +117,14 @@ class ISyntaxLevelImageData(PixelImageData):
     def thread_safe(self) -> bool:
         return False
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         """Read the pixels of a region directly from the ISyntax object.
 
 
@@ -339,6 +347,13 @@ class ISyntaxAssociatedImageImageData(PixelImageData):
     ) -> np.ndarray:
         return self._decoded
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         left, upper, right, lower = region.box
         return self._decoded[upper:lower, left:right]
