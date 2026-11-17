@@ -30,6 +30,7 @@ class WsiFormat(Enum):
     PHILIPS_TIFF = "philips_tiff"
     HISTECH_TIFF = "histech_tiff"
     OME_TIFF = "ome_tiff"
+    TRESTLE = "trestle"
     MIRAX = "mirax"
     VENTANA = "ventana"
     CZI = "czi"
@@ -58,6 +59,7 @@ class FormatCoordinateDefaults:
         WsiFormat.PHILIPS_TIFF: (180.0, 180.0, 180.0),
         WsiFormat.HISTECH_TIFF: (0.0, None, None),
         WsiFormat.OME_TIFF: (0.0, None, None),
+        WsiFormat.TRESTLE: (0.0, None, None),
         WsiFormat.MIRAX: (270.0, 270.0, 270.0),
         WsiFormat.VENTANA: (0.0, None, None),
         WsiFormat.CZI: (0.0, None, None),

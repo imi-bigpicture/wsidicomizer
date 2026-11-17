@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Native reader for 3DHISTECH MIRAX (mrxs) files, brightfield and fluorescence, used instead of openslide. Only the base level is read and the pyramid is built from it, so `WsiDicomizer.open()` gives a single level. Slides it can not read (reduced pyramids, more than 3 fluorescence channels, tiles without recorded positions) are left to openslide.
-- `DicomizerSource.prefer_regenerated_pyramid`, true for MIRAX, iSyntax and CZI.
+- Trestle (`.tif`) and Ventana (`.bif`) slides, whose stored tiles overlap, through opentile. A level opentile can not serve as a plain grid is composed into non-overlapping output tiles and encoded anew. Only the base level is read and the pyramid is built from it.
+- `DicomizerSource.prefer_regenerated_pyramid`, true for MIRAX, Trestle, Ventana, iSyntax and CZI.
 - `--regenerate-pyramid/--keep-stored-levels` and `--no-add-missing-levels` on the cli.
 
 ### Changed

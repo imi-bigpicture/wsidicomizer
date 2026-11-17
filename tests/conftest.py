@@ -492,6 +492,248 @@ test_parameters = {
             ],
         }
     },
+    "trestle_tiff": {
+        # opentile serves Trestle as a lossless non-overlapping grid (stored tiles
+        # re-gridded by block copy). Level 0 is passed through without transcoding;
+        # only it is read, and levels 1-7 are rebuilt from it.
+        # The level 0-2 regions are centred where four stored tiles join (every
+        # 384 x 288 px).
+        # Against openslide level 0 measured 56.6-61.0 dB (colour upsampling differs
+        # at the joins). The rebuilt levels measured 29-34 dB against a box
+        # reduction of the converted base, the loss of re-encoding at JPEG
+        # quality 80.
+        "CMU-1/CMU-1.tif": {
+            "convert": True,
+            "has_overview": False,
+            "convert_levels": None,
+            "force_transcoding": False,
+            "lowest_included_pyramid_level": 0,
+            "tile_size": 512,
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "icc_profile": False,
+            "embedded_thumbnail_size": None,
+            "thumbnail_pixel_spacing": None,
+            "imaged_size": (22.987674713134766, 15.93613052368164),
+            "sources": {
+                "opentile": {
+                    "has_label": False,
+                    "photometric_interpretation": "YBR_FULL_422",
+                    "transfer_syntax": JPEGBaseline8Bit,
+                    "passthrough": True,
+                    # rebuilt levels are encoded
+                    "transcoded_levels": [1, 2, 3, 4, 5, 6, 7],
+                    "read_region": [
+                        {
+                            "location": {"x": 11008, "y": 22336},
+                            "level": 0,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "660671a37ddac17831941ef35d23eb2a",
+                        },
+                        {
+                            "location": {"x": 33664, "y": 4768},
+                            "level": 0,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "78c1d4ea3f600ab3d745811dfa67df7d",
+                        },
+                        {
+                            "location": {"x": 5248, "y": 11104},
+                            "level": 1,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "215ffac4f3f80e1a8ee4a8d91a73a46e",
+                        },
+                        {
+                            "location": {"x": 5248, "y": 5632},
+                            "level": 1,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "5fa033490190e51e8f4a12a780bf9797",
+                        },
+                        {
+                            "location": {"x": 7168, "y": 2752},
+                            "level": 2,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "61365774fe13010f21946b04929ca306",
+                        },
+                        {
+                            "location": {"x": 2176, "y": 3040},
+                            "level": 2,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "949acfcc2ff086a73777bf18467ef3be",
+                        },
+                        # levels 3-6, like 1 and 2, are rebuilt from level 0
+                        {
+                            "location": {"x": 1280, "y": 2688},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "6eb0a1675cda01482c0c8f61f996bed3",
+                        },
+                        {
+                            "location": {"x": 0, "y": 0},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "0139c6c3c75532c50e37d60a395d9831",
+                        },
+                        {
+                            "location": {"x": 320, "y": 576},
+                            "level": 5,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "aef71357f37de385e78d8a93f28a8f73",
+                        },
+                        {
+                            "location": {"x": 100, "y": 100},
+                            "level": 6,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "0fdae26eeb16310b8035b26bd9df609a",
+                        },
+                    ],
+                    "read_thumbnail": [],
+                    "pixel_spacings": [
+                        (0.00057469189167, 0.00057506245375),
+                        (0.00114938378334, 0.00115012490749),
+                        (0.00229876756668, 0.00230024981499),
+                        # levels 3-6 are rebuilt at their full dyadic size, so
+                        # exactly 8-64 x the base spacing
+                        (0.00459753513336, 0.00460049962997),
+                        (0.00919507026672, 0.00920099925995),
+                        (0.01839014053345, 0.01840199851990),
+                        (0.03678028106689, 0.03680399703979),
+                        (0.07356056213379, 0.07360799407959),
+                    ],
+                    "focal_planes": [0.0],
+                }
+            },
+            "agreement": [
+                {
+                    "converted": "opentile",
+                    "reference": "openslide",
+                    "location": {"x": 11008, "y": 22336},
+                    "level": 0,
+                    "size": {"width": 256, "height": 256},
+                    "min_psnr": 50.0,
+                },
+                {
+                    "converted": "opentile",
+                    "reference": "openslide",
+                    "location": {"x": 33664, "y": 4768},
+                    "level": 0,
+                    "size": {"width": 256, "height": 256},
+                    "min_psnr": 50.0,
+                },
+            ],
+        }
+    },
+    "ventana_bif": {
+        # Ventana tiles overlap and are composed at their solved positions, so the
+        # regions are centred where a row seam and a column seam of the composition
+        # cross, at two levels each. openslide is not a reference here: it can not
+        # open Ventana-1 and places OS-1 tile rows differently.
+        "OS-1/OS-1.bif": {
+            # too large to convert in the tests: read from the source instead
+            "convert": False,
+            "has_overview": True,
+            "convert_levels": None,
+            "lowest_included_pyramid_level": 0,
+            "tile_size": 512,
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "icc_profile": False,
+            "embedded_thumbnail_size": None,
+            "thumbnail_pixel_spacing": None,
+            "imaged_size": (24.633375, 21.889177500000002),
+            "sources": {
+                "opentile": {
+                    "has_label": False,
+                    "photometric_interpretation": "YBR_FULL_422",
+                    "transfer_syntax": JPEGBaseline8Bit,
+                    "read_region": [
+                        {
+                            "location": {"x": 8760, "y": 1612},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "e5b81e1b0545f75cf811887a39580580",
+                        },
+                        {
+                            "location": {"x": 5003, "y": 3020},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "af1f6eb3cad48dee1b183ecc1276fab1",
+                        },
+                        {
+                            "location": {"x": 1781, "y": 619},
+                            "level": 5,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "deb4a2a2aae368731bda73ee0ed844e5",
+                        },
+                        {
+                            "location": {"x": 1239, "y": 114},
+                            "level": 5,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "fcfd6e84324a6267245656bec99ee13b",
+                        },
+                    ],
+                    "read_thumbnail": [],
+                    # read from the source, which serves only the base level
+                    "pixel_spacings": [(0.0002325, 0.0002325)],
+                    "focal_planes": [0.0],
+                }
+            },
+        },
+        "Ventana-1/Ventana-1.bif": {
+            "convert": True,
+            "has_overview": True,
+            # only the base level is read; the pyramid is built from it
+            "convert_levels": None,
+            "lowest_included_pyramid_level": 0,
+            "tile_size": 512,
+            "image_coordinate_system": {"x": 0.0, "y": 0.0, "rotation": 0},
+            "icc_profile": False,
+            "embedded_thumbnail_size": None,
+            "thumbnail_pixel_spacing": None,
+            "imaged_size": (5.857999801635742, 5.375999927520752),
+            "sources": {
+                "opentile": {
+                    "has_label": False,
+                    "photometric_interpretation": "YBR_FULL_422",
+                    "transfer_syntax": JPEGBaseline8Bit,
+                    "read_region": [
+                        {
+                            "location": {"x": 6492, "y": 2944},
+                            "level": 1,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "4a554ed34833addd790360bc516d1b7d",
+                        },
+                        {
+                            "location": {"x": 8528, "y": 6528},
+                            "level": 1,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "b7970701dfd32f335fa4fd5e22236d6b",
+                        },
+                        {
+                            "location": {"x": 1655, "y": 768},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "caa3b6d127b9117d435334340581c158",
+                        },
+                        {
+                            "location": {"x": 1399, "y": 1408},
+                            "level": 3,
+                            "size": {"width": 256, "height": 256},
+                            "md5": "d34d24d12a7a4b3d216e3c8ddd261f7a",
+                        },
+                    ],
+                    "read_thumbnail": [],
+                    "pixel_spacings": [
+                        (0.00025, 0.00025),
+                        (0.0005, 0.0005),
+                        (0.001, 0.001),
+                        (0.002, 0.002),
+                        (0.004, 0.004),
+                        (0.008, 0.008),
+                        (0.016, 0.016),
+                    ],
+                    "focal_planes": [0.0],
+                }
+            },
+        },
+    },
     "ndpi": {
         "CMU-1/CMU-1.ndpi": {
             "convert": True,

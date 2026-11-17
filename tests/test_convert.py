@@ -413,7 +413,14 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "source", "native_transfer_syntax", "is_transcoded"],
+        [
+            "file_format",
+            "file",
+            "source",
+            "native_transfer_syntax",
+            "is_transcoded",
+            "transcoded_levels",
+        ],
         [
             (
                 file_format,
@@ -422,6 +429,7 @@ class TestWsiDicomizerConvert:
                 file_parameters.get("transfer_syntax"),
                 file_parameters["convert"]
                 and file_parameters.get("force_transcoding", True),
+                file_parameters.get("transcoded_levels", []),
             )
             for file_format, file, source, file_parameters in source_cases()
         ],
@@ -432,22 +440,25 @@ class TestWsiDicomizerConvert:
         encoder: Encoder,
         native_transfer_syntax: str,
         is_transcoded: bool,
+        transcoded_levels: list[int],
         wsi: WsiDicom,
     ):
-        # Arrange
-        expected_transfer_syntax = (
-            encoder.transfer_syntax if is_transcoded else native_transfer_syntax
-        )
+        # Arrange - levels that can not be passed through are encoded even when
+        # the others are
+        def expected_transfer_syntax(level: int) -> str:
+            if is_transcoded or level in transcoded_levels:
+                return encoder.transfer_syntax
+            return native_transfer_syntax
 
         # Act
-        transfer_syntaxes = [
-            level.default_instance.image_data.transfer_syntax
+        transfer_syntaxes = {
+            level.level: level.default_instance.image_data.transfer_syntax
             for level in wsi.pyramid.levels
-        ]
+        }
 
         # Assert
-        for transfer_syntax in transfer_syntaxes:
-            assert transfer_syntax == expected_transfer_syntax
+        for level, transfer_syntax in transfer_syntaxes.items():
+            assert transfer_syntax == expected_transfer_syntax(level)
 
     @pytest.mark.parametrize(
         ["file_format", "file", "source"],
