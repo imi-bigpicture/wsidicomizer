@@ -99,39 +99,47 @@ class OpenSlideSource(OpenSlideLikeSource):
             path. Ignored by sources that only read local files.
         """
         self._slide = OpenSlide(self._require_local_filepath(filepath))
-        properties = OpenSlideLikeProperties(
-            background_color=self._slide.properties.get(PROPERTY_NAME_BACKGROUND_COLOR),
-            bounds_x=self._slide.properties.get(PROPERTY_NAME_BOUNDS_X),
-            bounds_y=self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y),
-            bounds_width=self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
-            bounds_height=self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
-            objective_power=self._slide.properties.get(PROPERTY_NAME_OBJECTIVE_POWER),
-            vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
-            mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
-            mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
-            barcode=self._slide.properties.get(PROPERTY_NAME_BARCODE),
-            raw_properties=dict(self._slide.properties),
-        )
-        super().__init__(
-            filepath=filepath,
-            properties=properties,
-            level_downsamples=self._slide.level_downsamples,
-            level_dimensions=self._slide.level_dimensions,
-            associated_images=self._slide.associated_images,
-            base_metadata=OpenSlideLikeMetadata(
-                properties,
-                self._slide.color_profile,
-                Size(*self._slide.level_dimensions[0]),
-            ),
-            encoder=encoder,
-            tile_size=tile_size,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            include_confidential=include_confidential,
-            metadata_post_processor=metadata_post_processor,
-            metadata_pre_processor=metadata_pre_processor,
-            uid_generator=uid_generator,
-        )
+        try:
+            properties = OpenSlideLikeProperties(
+                background_color=self._slide.properties.get(
+                    PROPERTY_NAME_BACKGROUND_COLOR
+                ),
+                bounds_x=self._slide.properties.get(PROPERTY_NAME_BOUNDS_X),
+                bounds_y=self._slide.properties.get(PROPERTY_NAME_BOUNDS_Y),
+                bounds_width=self._slide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
+                bounds_height=self._slide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
+                objective_power=self._slide.properties.get(
+                    PROPERTY_NAME_OBJECTIVE_POWER
+                ),
+                vendor=self._slide.properties.get(PROPERTY_NAME_VENDOR),
+                mpp_x=self._slide.properties.get(PROPERTY_NAME_MPP_X),
+                mpp_y=self._slide.properties.get(PROPERTY_NAME_MPP_Y),
+                barcode=self._slide.properties.get(PROPERTY_NAME_BARCODE),
+                raw_properties=dict(self._slide.properties),
+            )
+            super().__init__(
+                filepath=filepath,
+                properties=properties,
+                level_downsamples=self._slide.level_downsamples,
+                level_dimensions=self._slide.level_dimensions,
+                associated_images=self._slide.associated_images,
+                base_metadata=OpenSlideLikeMetadata(
+                    properties,
+                    self._slide.color_profile,
+                    Size(*self._slide.level_dimensions[0]),
+                ),
+                encoder=encoder,
+                tile_size=tile_size,
+                metadata=metadata,
+                default_metadata=default_metadata,
+                include_confidential=include_confidential,
+                metadata_post_processor=metadata_post_processor,
+                metadata_pre_processor=metadata_pre_processor,
+                uid_generator=uid_generator,
+            )
+        except BaseException:
+            self._slide.close()
+            raise
 
     def close(self) -> None:
         return self._slide.close()

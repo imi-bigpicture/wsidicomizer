@@ -92,22 +92,26 @@ class BioformatsSource(DicomizerSource):
         self._reader = BioformatsReader(
             self._require_local_filepath(filepath), readers, cache_path
         )
-        (
-            self._pyramid_image_index,
-            self._label_image_index,
-            self._overview_image_index,
-        ) = self._get_image_indices(self._reader)
-        super().__init__(
-            filepath=filepath,
-            encoder=encoder,
-            tile_size=tile_size,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            include_confidential=include_confidential,
-            metadata_post_processor=metadata_post_processor,
-            metadata_pre_processor=metadata_pre_processor,
-            uid_generator=uid_generator,
-        )
+        try:
+            (
+                self._pyramid_image_index,
+                self._label_image_index,
+                self._overview_image_index,
+            ) = self._get_image_indices(self._reader)
+            super().__init__(
+                filepath=filepath,
+                encoder=encoder,
+                tile_size=tile_size,
+                metadata=metadata,
+                default_metadata=default_metadata,
+                include_confidential=include_confidential,
+                metadata_post_processor=metadata_post_processor,
+                metadata_pre_processor=metadata_pre_processor,
+                uid_generator=uid_generator,
+            )
+        except BaseException:
+            self._reader.close()
+            raise
 
     @staticmethod
     def is_supported(

@@ -94,18 +94,22 @@ class ISyntaxSource(DicomizerSource):
         """
         self._slide = ISyntax.open(self._require_local_filepath(filepath), cache)
         self._force_transcoding = force_transcoding
-        self._base_metadata = ISyntaxMetadata(self._slide)
-        super().__init__(
-            filepath=filepath,
-            encoder=encoder,
-            tile_size=tile_size,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            include_confidential=include_confidential,
-            metadata_post_processor=metadata_post_processor,
-            metadata_pre_processor=metadata_pre_processor,
-            uid_generator=uid_generator,
-        )
+        try:
+            self._base_metadata = ISyntaxMetadata(self._slide)
+            super().__init__(
+                filepath=filepath,
+                encoder=encoder,
+                tile_size=tile_size,
+                metadata=metadata,
+                default_metadata=default_metadata,
+                include_confidential=include_confidential,
+                metadata_post_processor=metadata_post_processor,
+                metadata_pre_processor=metadata_pre_processor,
+                uid_generator=uid_generator,
+            )
+        except BaseException:
+            self._slide.close()
+            raise
 
     @staticmethod
     def is_supported(

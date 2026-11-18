@@ -88,7 +88,11 @@ class CziSource(DicomizerSource):
             uid_generator=uid_generator,
         )
         self._czi = CziFile(self._require_local_filepath(filepath))
-        self._base_metadata = CziMetadata(self._czi)
+        try:
+            self._base_metadata = CziMetadata(self._czi)
+        except BaseException:
+            self._czi.close()
+            raise
 
     def close(self) -> None:
         return self._czi.close()

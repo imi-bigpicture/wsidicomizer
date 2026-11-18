@@ -145,7 +145,14 @@ class WsiDicomizer(WsiDicom):
                 metadata_pre_processor=metadata_pre_processor,
                 **source_args,
             )
-            return cls(source, True, settings=settings)
+            try:
+                return cls(source, True, settings=settings)
+            except BaseException:
+                # The source is only owned once the WsiDicomizer exists, so a
+                # source that is refused while building it (e.g. several
+                # pyramids) must be closed here or its files stay open.
+                source.close()
+                raise
 
     @classmethod
     def convert(
