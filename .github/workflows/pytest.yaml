@@ -2,8 +2,14 @@ name: pytest
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
   workflow_call:
+
+concurrency:
+  group: pytest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -40,11 +46,21 @@ jobs:
     name: pytest ${{ matrix.os }}::py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 6
+      max-parallel: 8
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # Every supported Python on Linux; oldest and newest on macOS and Windows.
+        os: [ubuntu-latest]
         python-version: ["3.12", "3.13", "3.14"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.14"
     steps:
       - name: Prevent cache-miss on windows
         run: |
