@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WsiDicomizer.convert()` returns a `dict` from path to wsidicom `WsiFile` instead of a list of paths (#197). Indexing such as `created[0]` no longer works.
 - Opentile sources whose tiles are not transcoded give the byte ranges of their tiles, so that `read_encoded_tile()` of an opened slide reads a tile with a single read from the file.
 
+### Fixed
+
+- A file that a source opened but then refused was left open, keeping it locked on Windows until garbage collection. `WsiDicomizer.open` now closes the source when building the `WsiDicomizer` fails, and the opentile, tiffslide, openslide, czi, isyntax and bioformats sources close their file when their own initialisation fails.
+
 ## [0.31.0] - 2026-09-28
 
 ### Added

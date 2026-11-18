@@ -102,43 +102,49 @@ class TiffSlideSource(OpenSlideLikeSource):
             storage_options=file_options,
             **source_args,
         )
-        properties = OpenSlideLikeProperties(
-            background_color=self._tiffslide.properties.get(
-                PROPERTY_NAME_BACKGROUND_COLOR
-            ),
-            bounds_x=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_X),
-            bounds_y=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_Y),
-            bounds_height=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_HEIGHT),
-            bounds_width=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
-            objective_power=self._tiffslide.properties.get(
-                PROPERTY_NAME_OBJECTIVE_POWER
-            ),
-            vendor=self._tiffslide.properties.get(PROPERTY_NAME_VENDOR),
-            mpp_x=self._tiffslide.properties.get(PROPERTY_NAME_MPP_X),
-            mpp_y=self._tiffslide.properties.get(PROPERTY_NAME_MPP_Y),
-            raw_properties=dict(self._tiffslide.properties),
-        )
+        try:
+            properties = OpenSlideLikeProperties(
+                background_color=self._tiffslide.properties.get(
+                    PROPERTY_NAME_BACKGROUND_COLOR
+                ),
+                bounds_x=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_X),
+                bounds_y=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_Y),
+                bounds_height=self._tiffslide.properties.get(
+                    PROPERTY_NAME_BOUNDS_HEIGHT
+                ),
+                bounds_width=self._tiffslide.properties.get(PROPERTY_NAME_BOUNDS_WIDTH),
+                objective_power=self._tiffslide.properties.get(
+                    PROPERTY_NAME_OBJECTIVE_POWER
+                ),
+                vendor=self._tiffslide.properties.get(PROPERTY_NAME_VENDOR),
+                mpp_x=self._tiffslide.properties.get(PROPERTY_NAME_MPP_X),
+                mpp_y=self._tiffslide.properties.get(PROPERTY_NAME_MPP_Y),
+                raw_properties=dict(self._tiffslide.properties),
+            )
 
-        super().__init__(
-            filepath=filepath,
-            properties=properties,
-            level_downsamples=self._tiffslide.level_downsamples,
-            level_dimensions=self._tiffslide.level_dimensions,
-            associated_images=self._tiffslide.associated_images,
-            base_metadata=OpenSlideLikeMetadata(
-                properties,
-                self._tiffslide.color_profile,
-                Size(*self._tiffslide.level_dimensions[0]),
-            ),
-            encoder=encoder,
-            tile_size=tile_size,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            include_confidential=include_confidential,
-            metadata_post_processor=metadata_post_processor,
-            metadata_pre_processor=metadata_pre_processor,
-            uid_generator=uid_generator,
-        )
+            super().__init__(
+                filepath=filepath,
+                properties=properties,
+                level_downsamples=self._tiffslide.level_downsamples,
+                level_dimensions=self._tiffslide.level_dimensions,
+                associated_images=self._tiffslide.associated_images,
+                base_metadata=OpenSlideLikeMetadata(
+                    properties,
+                    self._tiffslide.color_profile,
+                    Size(*self._tiffslide.level_dimensions[0]),
+                ),
+                encoder=encoder,
+                tile_size=tile_size,
+                metadata=metadata,
+                default_metadata=default_metadata,
+                include_confidential=include_confidential,
+                metadata_post_processor=metadata_post_processor,
+                metadata_pre_processor=metadata_pre_processor,
+                uid_generator=uid_generator,
+            )
+        except BaseException:
+            self._tiffslide.close()
+            raise
 
     def close(self):
         self._tiffslide.close()

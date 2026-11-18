@@ -91,32 +91,36 @@ class OpenTileSource(DicomizerSource):
         if tile_size is None:
             tile_size = get_settings().default_tile_size
         self._tiler = OpenTile.open(filepath, tile_size, file_options=file_options)
-        format_name = self._tiler.format.name
         try:
-            self._wsi_format = WsiFormat[format_name]
-        except KeyError:
-            self._wsi_format = WsiFormat.GENERIC
-        self._base_metadata = OpenTileMetadata(
-            self._tiler.metadata,
-            self.has_label,
-            self.has_overview,
-            self._tiler.icc_profile,
-            wsi_format=self._wsi_format,
-            imaged_size=self._volume_imaged_size,
-        )
+            format_name = self._tiler.format.name
+            try:
+                self._wsi_format = WsiFormat[format_name]
+            except KeyError:
+                self._wsi_format = WsiFormat.GENERIC
+            self._base_metadata = OpenTileMetadata(
+                self._tiler.metadata,
+                self.has_label,
+                self.has_overview,
+                self._tiler.icc_profile,
+                wsi_format=self._wsi_format,
+                imaged_size=self._volume_imaged_size,
+            )
 
-        self._force_transcoding = force_transcoding
-        super().__init__(
-            filepath=filepath,
-            encoder=encoder,
-            tile_size=tile_size,
-            metadata=metadata,
-            default_metadata=default_metadata,
-            include_confidential=include_confidential,
-            metadata_post_processor=metadata_post_processor,
-            metadata_pre_processor=metadata_pre_processor,
-            uid_generator=uid_generator,
-        )
+            self._force_transcoding = force_transcoding
+            super().__init__(
+                filepath=filepath,
+                encoder=encoder,
+                tile_size=tile_size,
+                metadata=metadata,
+                default_metadata=default_metadata,
+                include_confidential=include_confidential,
+                metadata_post_processor=metadata_post_processor,
+                metadata_pre_processor=metadata_pre_processor,
+                uid_generator=uid_generator,
+            )
+        except BaseException:
+            self._tiler.close()
+            raise
 
     def close(self):
         self._tiler.close()
