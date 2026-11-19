@@ -88,15 +88,15 @@ jobs:
           path: tests/testdata/slides
           enableCrossOsArchive: true
           fail-on-cache-miss: true
+      # openslide comes from openslide-bin in the dev group, on every OS.
       - name: Set up Ubuntu
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y libturbojpeg libopenslide0
+        run: sudo apt-get install -y libturbojpeg0
       - name: Set up OSX
         if: matrix.os == 'macos-latest'
         run: |
           echo OS_TAG=macos >> $GITHUB_ENV
           echo DYLD_LIBRARY_PATH=/opt/homebrew/lib >> $GITHUB_ENV
-          brew install openslide
           brew unlink jpeg-turbo && brew install jpeg-turbo --HEAD
       - name: Set up Windows
         shell: pwsh
@@ -104,14 +104,11 @@ jobs:
         run: |
           Invoke-WebRequest -Uri https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.90/libjpeg-turbo-3.0.90-vc64.exe -OutFile libjpeg-turbo-3.0.90-vc64.exe -UserAgent "NativeHost"
           7z e libjpeg-turbo-3.0.90-vc64.exe -oC:\turbojpeg bin/turbojpeg.dll
-          Invoke-WebRequest -Uri https://github.com/openslide/openslide-winbuild/releases/download/v20221217/openslide-win64-20221217.zip -OutFile openslide-win64-20221217.zip -UserAgent "NativeHost"
-          7z e openslide-win64-20221217.zip -oC:\openslide openslide-win64-20221217\bin
       - name: Set up paths in windows
         if: matrix.os == 'windows-latest'
         uses: actions/github-script@v9
         with:
           script: |
-            core.addPath('C:\\openslide')
             core.addPath('C:\\turbojpeg')
 
       - name: Install uv

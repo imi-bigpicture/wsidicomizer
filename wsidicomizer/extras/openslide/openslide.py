@@ -16,12 +16,14 @@
 
 import os
 from ctypes.util import find_library
+from importlib.util import find_spec
 from pathlib import Path
 
-# On windows, use find_library to find directory with openslide dll in
-# the Path environmental variable.
+# openslide-python loads the library from openslide-bin when that is installed.
+# Without it, on windows, use find_library to find the directory with the
+# openslide dll in the Path environmental variable, or use the OPENSLIDE one.
 openslide_libs = ["libopenslide-1", "libopenslide-0"]
-if os.name == "nt":
+if os.name == "nt" and find_spec("openslide_bin") is None:
 
     def find_openslide_lib(openslide_lib_name: str) -> Path | None:
         openslide_lib_path = find_library(openslide_lib_name)
@@ -46,10 +48,9 @@ if os.name == "nt":
     ]
     if len(openslide_lib_paths) == 0:
         raise ModuleNotFoundError(
-            "Could not find libopenslide-0.dll or libopenslide-1.dll in the directories"
-            "defined in the 'Path' and 'OPENSLIDE' environmental variables. Please add "
-            "the directory with openslide bin content to the 'Path' or 'OPENSLIDE' "
-            "environmental variable."
+            "Could not find openslide. Install openslide-bin, or add the directory "
+            "with libopenslide-0.dll or libopenslide-1.dll to the 'Path' or "
+            "'OPENSLIDE' environmental variable."
         )
     for openslide_lib_path in openslide_lib_paths:
         openslide_dir = str(openslide_lib_path.parent)

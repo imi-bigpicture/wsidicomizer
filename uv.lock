@@ -1702,6 +1702,7 @@ opencv = [
     { name = "opencv-python-headless" },
 ]
 openslide = [
+    { name = "openslide-bin" },
     { name = "openslide-python" },
 ]
 pyjpegls = [
@@ -1737,6 +1738,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.8.0" },
     { name = "opencv-python-headless", marker = "extra == 'opencv'", specifier = ">=4.5.0" },
+    { name = "openslide-bin", marker = "extra == 'openslide'", specifier = ">=4.0.1,<5.0.0" },
     { name = "openslide-python", marker = "extra == 'openslide'", specifier = ">=1.4.6,<2.0.0" },
     { name = "opentile", specifier = ">=0.26.0,<0.27.0" },
     { name = "pydicom", specifier = ">=3.0.0" },
