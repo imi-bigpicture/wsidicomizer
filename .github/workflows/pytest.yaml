@@ -88,28 +88,6 @@ jobs:
           path: tests/testdata/slides
           enableCrossOsArchive: true
           fail-on-cache-miss: true
-      # openslide comes from openslide-bin in the dev group, on every OS.
-      - name: Set up Ubuntu
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y libturbojpeg0
-      - name: Set up OSX
-        if: matrix.os == 'macos-latest'
-        run: |
-          echo OS_TAG=macos >> $GITHUB_ENV
-          echo DYLD_LIBRARY_PATH=/opt/homebrew/lib >> $GITHUB_ENV
-          brew unlink jpeg-turbo && brew install jpeg-turbo --HEAD
-      - name: Set up Windows
-        shell: pwsh
-        if: matrix.os == 'windows-latest'
-        run: |
-          Invoke-WebRequest -Uri https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.90/libjpeg-turbo-3.0.90-vc64.exe -OutFile libjpeg-turbo-3.0.90-vc64.exe -UserAgent "NativeHost"
-          7z e libjpeg-turbo-3.0.90-vc64.exe -oC:\turbojpeg bin/turbojpeg.dll
-      - name: Set up paths in windows
-        if: matrix.os == 'windows-latest'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            core.addPath('C:\\turbojpeg')
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
