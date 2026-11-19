@@ -18,6 +18,7 @@ import dataclasses
 from collections.abc import Iterable, Iterator, Sequence
 
 import numpy as np
+from opentile.geometry import Point as OpenTilePoint
 from opentile.jpeg import JpegInfo, JpegProcess
 from opentile.jpeg2000 import Jpeg2000Info
 from opentile.tiff_image import (
@@ -28,13 +29,17 @@ from opentile.tiff_image import (
 )
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
+from wsidicom.cache import lru_cached_method
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.instance import FrameReader, TileByteRanges
 from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageCoordinateSystem, LossyCompression
 
-from wsidicomizer.image_data import BaseDicomizerImageData
+from wsidicomizer.image_data import (
+    BaseDicomizerImageData,
+    ComposedLevelImageData,
+)
 
 
 class OpenTileImageData(BaseDicomizerImageData):
@@ -352,6 +357,90 @@ class OpenTileLevelImageData(OpenTileImageData):
     @property
     def optical_paths(self) -> list[str]:
         return [self._tiff_image.optical_path]
+
+
+class OpenTileOverlappingLevelImageData(ComposedLevelImageData):
+    """A base level whose stored tiles overlap (Ventana, and Trestle when opentile
+    does not re-grid it), composed into non-overlapping output tiles.
+
+    The stored tiles are decoded and pasted at their de-overlapped positions, so
+    the level is always encoded anew. Each opentile level is one focal plane and
+    optical path.
+    """
+
+    def __init__(
+        self,
+        tiff_image: LevelTiffImage,
+        image_metadata: ImageMetadata,
+        merged_metadata: ImageMetadata,
+        encoder: Encoder,
+        output_tile_size: int,
+    ):
+        """Wrap an overlapping opentile level.
+
+        Parameters
+        ----------
+        tiff_image: LevelTiffImage
+            The level, whose `overlap` places its stored tiles.
+        image_metadata: ImageMetadata
+            Image metadata read from the file.
+        merged_metadata: ImageMetadata
+            Image metadata merged with what the user gave, which can override the
+            pixel spacing and gives the coordinate system.
+        encoder: Encoder
+            Encoder that encodes every output tile.
+        output_tile_size: int
+            Size of the output tiles.
+        """
+        overlap = tiff_image.overlap
+        if overlap is None:
+            raise ValueError(f"{tiff_image} has no overlapping tiles to compose.")
+        samples = tiff_image.samples_per_pixel
+        fill = np.full(samples, tiff_image.fill_value, dtype=tiff_image.np_dtype)
+        pixel_spacing = merged_metadata.pixel_spacing or SizeMm(
+            *tiff_image.pixel_spacing.to_tuple()
+        )
+        image_coordinate_system = merged_metadata.image_coordinate_system
+        if image_coordinate_system is not None:
+            image_coordinate_system = dataclasses.replace(
+                image_coordinate_system, z_offset=tiff_image.focal_plane
+            )
+        blank_color: int | tuple[int, int, int] = (
+            (int(fill[0]), int(fill[1]), int(fill[2])) if samples == 3 else int(fill[0])
+        )
+        super().__init__(
+            overlap,
+            fill,
+            dataclasses.replace(
+                image_metadata,
+                pixel_spacing=pixel_spacing,
+                image_coordinate_system=image_coordinate_system,
+            ),
+            output_tile_size,
+            blank_color,
+            encoder,
+        )
+        self._tiff_image = tiff_image
+
+    def __str__(self) -> str:
+        return f"{type(self).__name__} for page {self._tiff_image}"
+
+    @property
+    def samples_per_pixel(self) -> int:
+        return self._tiff_image.samples_per_pixel
+
+    @property
+    def focal_planes(self) -> list[float]:
+        return [self._tiff_image.focal_plane]
+
+    @property
+    def optical_paths(self) -> list[str]:
+        return [self._tiff_image.optical_path]
+
+    @lru_cached_method(maxsize=16)
+    def _decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
+        # cached: neighbouring output tiles share the stored tiles at their edges
+        return self._tiff_image.get_decoded_tile(grid_position.to_tuple())
 
 
 class OpenTileAssociatedImageData(OpenTileImageData):

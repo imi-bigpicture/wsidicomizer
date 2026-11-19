@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from opentile import OpenTile
+from opentile.tiff_format import TiffFormat
 from pydicom import Dataset
 from upath import UPath
 from wsidicom.codec import Encoder
@@ -35,6 +36,7 @@ from wsidicomizer.metadata import MetadataPostProcessor, MetadataPreProcessor
 from wsidicomizer.sources.opentile.opentile_image_data import (
     OpenTileAssociatedImageData,
     OpenTileLevelImageData,
+    OpenTileOverlappingLevelImageData,
 )
 from wsidicomizer.sources.opentile.opentile_metadata import OpenTileMetadata
 from wsidicomizer.wsi_format import WsiFormat
@@ -100,15 +102,8 @@ class OpenTileSource(DicomizerSource):
             raise SourceNotSupportedError(
                 f"OpenTile can not open {filepath}: {error}"
             ) from error
+        self._output_tile_size = tile_size
         try:
-            if self._tiler.get_level(0).overlap is not None:
-                # Formats whose tiles overlap (e.g. Trestle, Ventana) are not
-                # composed by this source yet and are left for another source to
-                # handle.
-                raise SourceNotSupportedError(
-                    f"{filepath} has overlapping tiles, which OpenTileSource does "
-                    "not compose."
-                )
             format_name = self._tiler.format.name
             try:
                 self._wsi_format = WsiFormat[format_name]
@@ -152,16 +147,25 @@ class OpenTileSource(DicomizerSource):
         return self._base_metadata
 
     @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        return self._reads_only_base_levels
+
+    @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+        """The levels read: every level, or only the base levels for the formats
+        whose pyramid is rebuilt from the base (Trestle, Ventana)."""
         pyramid_count = len(self._tiler.pyramids)
         if pyramid_count > 1:
             raise NotImplementedError(
                 f"File holds {pyramid_count} pyramids (e.g. several ROIs); only one is "
                 "supported."
             )
+        base_pyramid_index = self._tiler.levels[0].pyramid_index
         return {
             (level.pyramid_index, level.focal_plane, level.optical_path): index
             for index, level in enumerate(self._tiler.levels)
+            if not self._reads_only_base_levels
+            or level.pyramid_index == base_pyramid_index
         }
 
     @property
@@ -179,9 +183,28 @@ class OpenTileSource(DicomizerSource):
         """Return True if file in path is of a format OpenTile detects."""
         return OpenTile.detect_format(path, file_options) is not None
 
+    @property
+    def _reads_only_base_levels(self) -> bool:
+        # Ventana stores overlapping tiles on every level, above the base at
+        # fractional positions. Trestle's stored coarse levels are softer (scanner
+        # downsampled, JPEG q75), slightly shrunk at level 2 and cropped from level
+        # 3. Both pyramids are rebuilt from the base level instead.
+        return self._tiler.format in (TiffFormat.TRESTLE, TiffFormat.VENTANA)
+
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
+        level = self._tiler.levels[level_index]
+        # A base level whose tiles overlap (Ventana, and Trestle when opentile
+        # does not re-grid it): composed into non-overlapping output tiles.
+        if level.overlap is not None:
+            return OpenTileOverlappingLevelImageData(
+                level,
+                self.base_metadata.pyramid.image,
+                self.metadata.pyramid.image,
+                self._encoder,
+                self._output_tile_size,
+            )
         return OpenTileLevelImageData(
-            self._tiler.levels[level_index],
+            level,
             self.base_metadata.pyramid.image,
             self.metadata.pyramid.image,
             self._encoder,
@@ -234,8 +257,11 @@ class OpenTileSource(DicomizerSource):
 
     @cached_property
     def _volume_imaged_size(self):
-        """Return the imaged size of the volume."""
+        """Return the imaged size of the volume. For overlapping levels the physical
+        extent is the de-overlapped (composed) size, not the raw tile mosaic."""
         base_level = self._tiler.levels[0]
-        return SizeMm(*base_level.pixel_spacing.to_tuple()) * Size(
-            *base_level.image_size.to_tuple()
-        )
+        if base_level.overlap is not None:
+            size = base_level.overlap.image_size
+        else:
+            size = base_level.image_size
+        return SizeMm(*base_level.pixel_spacing.to_tuple()) * Size(*size.to_tuple())
