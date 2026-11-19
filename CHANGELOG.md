@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Native reader for 3DHISTECH MIRAX (mrxs) files, brightfield and fluorescence, used instead of openslide. Only the base level is read and the pyramid is built from it, so `WsiDicomizer.open()` gives a single level. Slides it can not read (reduced pyramids, more than 3 fluorescence channels, tiles without recorded positions) are left to openslide.
+- `DicomizerSource.prefer_regenerated_pyramid`, true for MIRAX, iSyntax and CZI.
+- `--regenerate-pyramid/--keep-stored-levels` and `--no-add-missing-levels` on the cli.
+
 ### Changed
 
+- `convert()` defaults `add_missing_levels` and `regenerate_pyramid` to `None`: both are applied when the source prefers a regenerated pyramid and no `include_levels` are given.
+- `PixelImageData` reads regions with `get_decoded_region()`, an override of wsidicom's `ImageData.get_decoded_region()`, so its instances are plain `WsiInstance`s. `PixelWsiInstance` and `DicomizerSource._instance_cls` are removed.
+- `DicomizerSource.is_supported()` only checks the file's format. A source refuses a variant it does not read by raising the new `SourceNotSupportedError` when created, and `WsiDicomizer.open()` tries the next source. Other errors are raised instead of moving on, except from OpenTile.
+- The openslide vendor metadata class `MiraxMetadata` is renamed `OpenSlideMiraxMetadata`.
+- `OpenSlideLikeAssociatedImageData` and `OpenSlideLikeThumbnailImageData` are replaced by `PixelAssociatedImageData` and `PixelThumbnailImageData` in `wsidicomizer.image_data`, and `OpenSlideLikeLevelImageData` builds on the new `PixelLevelImageData`. `OpenSlideLikeImageData` is removed.
 - `WsiDicomizer.convert()` returns a `dict` from path to wsidicom `WsiFile` instead of a list of paths (#197). Indexing such as `created[0]` no longer works.
 - Opentile sources whose tiles are not transcoded give the byte ranges of their tiles, so that `read_encoded_tile()` of an opened slide reads a tile with a single read from the file.
 - The `openslide` extra installs openslide-bin, and on Windows the openslide source uses it instead of requiring the openslide DLL in `Path` or `OPENSLIDE`.

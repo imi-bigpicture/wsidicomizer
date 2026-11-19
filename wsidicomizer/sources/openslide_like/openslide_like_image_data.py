@@ -14,228 +14,17 @@
 
 from collections.abc import Sequence
 
-import numpy as np
-from PIL.Image import Image
-from pydicom.uid import UID
 from wsidicom.codec import Encoder
-from wsidicom.geometry import Point, Region, Size, SizeMm
+from wsidicom.geometry import Point, Size
 from wsidicom.metadata import Image as ImageMetadata
-from wsidicom.metadata import ImageCoordinateSystem
 
-from wsidicomizer.config import get_settings
-from wsidicomizer.image_data import PixelImageData
+from wsidicomizer.image_data import PixelLevelImageData
 
 
-class OpenSlideLikeImageData(PixelImageData):
-    def __init__(
-        self,
-        blank_color: int | tuple[int, int, int] | None,
-        encoder: Encoder,
-    ):
-        super().__init__(encoder)
-        if blank_color is None:
-            blank_color = self._get_blank_color(encoder.photometric_interpretation)
-        self._blank_color = blank_color
+class OpenSlideLikeLevelImageData(PixelLevelImageData):
+    """A level of an OpenSlide-like pyramid, optionally limited to the slide's
+    bounds."""
 
-    @property
-    def transfer_syntax(self) -> UID:
-        return self.encoder.transfer_syntax
-
-    @property
-    def photometric_interpretation(self) -> str:
-        return self.encoder.photometric_interpretation
-
-    @property
-    def samples_per_pixel(self) -> int:
-        return 3
-
-    @property
-    def focal_planes(self) -> list[float]:
-        return [0.0]
-
-    @property
-    def optical_paths(self) -> list[str]:
-        return ["1"]
-
-    @property
-    def blank_color(self) -> int | tuple[int, int, int]:
-        return self._blank_color
-
-    @property
-    def thread_safe(self) -> bool:
-        return True
-
-    def _composite_over_background(self, rgba: np.ndarray) -> np.ndarray:
-        """Composite an RGBA array over the background colour, returning RGB.
-
-        Bit-exact with Pillow's paste-with-mask blend
-        (``(src * a + bg * (255 - a) + 127) // 255``).
-
-        Parameters
-        ----------
-        rgba: np.ndarray
-            RGBA array to composite.
-
-        Returns
-        ----------
-        np.ndarray
-            RGB array with the alpha composited over the background colour.
-        """
-        alpha = rgba[..., 3:4].astype(np.int32)
-        rgb = rgba[..., :3].astype(np.int32)
-        background = np.asarray(self.blank_color, dtype=np.int32)
-        composited = (rgb * alpha + background * (255 - alpha) + 127) // 255
-        return composited.astype(np.uint8)
-
-
-class OpenSlideLikeSingleImageData(OpenSlideLikeImageData):
-    def __init__(
-        self,
-        image: Image,
-        blank_color: int | tuple[int, int, int] | None,
-        encoder: Encoder,
-    ) -> None:
-        super().__init__(
-            blank_color,
-            encoder,
-        )
-        array = np.asarray(image)
-        if array.ndim == 3 and array.shape[2] == 4:
-            array = self._composite_over_background(array)
-        self._decoded = array
-        self._image_size = Size(width=array.shape[1], height=array.shape[0])
-        self._encoded_image = self.encoder.encode(array)
-
-    @property
-    def image_size(self) -> Size:
-        """The pixel size of the image."""
-        return self._image_size
-
-    @property
-    def tile_size(self) -> Size:
-        """The pixel tile size of the image."""
-        return self._image_size
-
-    def get_encoded_tile(self, tile: Point, z: float, path: str) -> bytes:
-        if tile != Point(0, 0):
-            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
-        return self._encoded_image
-
-    def get_decoded_tile(
-        self,
-        tile_point: Point,
-        z: float,
-        path: str,
-        cache: bool = True,
-    ) -> np.ndarray:
-        if tile_point != Point(0, 0):
-            raise ValueError("Point(0, 0) only valid tile for non-tiled image")
-        return self._decoded
-
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
-        left, upper, right, lower = region.box
-        return self._decoded[upper:lower, left:right]
-
-
-class OpenSlideLikeAssociatedImageData(OpenSlideLikeSingleImageData):
-    def __init__(
-        self,
-        image: Image,
-        blank_color: int | tuple[int, int, int] | None,
-        encoder: Encoder,
-        image_coordinate_system: ImageCoordinateSystem | None = None,
-    ) -> None:
-        super().__init__(image, blank_color, encoder)
-        self._image_coordinate_system = image_coordinate_system
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
-        return self._image_coordinate_system
-
-    @property
-    def pixel_spacing(self) -> SizeMm | None:
-        """Size of the pixels in mm/pixel."""
-        return None
-
-    @property
-    def imaged_size(self) -> SizeMm | None:
-        return None
-
-
-class OpenSlideLikeThumbnailImageData(OpenSlideLikeSingleImageData):
-    def __init__(
-        self,
-        image: Image,
-        blank_color: int | tuple[int, int, int] | None,
-        offset: Point | None,
-        size: Size | None,
-        level_dimensions: Sequence[tuple[int, int]],
-        image_metadata: ImageMetadata,
-        encoder: Encoder,
-    ) -> None:
-        self._image_coordinate_system = image_metadata.image_coordinate_system
-        if image_metadata.pixel_spacing is None:
-            raise ValueError(
-                "Could not determine pixel spacing for the thumbnail image: the file "
-                "did not provide an mpp that could be read. Give one with the "
-                "`metadata` or `default_metadata` argument to convert it anyway."
-            )
-        base_level_dimensions = level_dimensions[0]
-        downsample = (
-            SizeMm.from_tuple(base_level_dimensions).width
-            / Size.from_tuple(image.size).width
-        )
-        self._pixel_spacing = SizeMm(
-            image_metadata.pixel_spacing.width * downsample,
-            image_metadata.pixel_spacing.height * downsample,
-        )
-
-        if offset is not None:
-            crop_offset = Point(
-                round(offset.x / downsample), round(offset.y / downsample)
-            )
-        else:
-            crop_offset = Point(0, 0)
-        if size is not None:
-            crop_size = Size(
-                round(size.width / downsample), round(size.height / downsample)
-            )
-            self._imaged_size = image_metadata.pixel_spacing * size
-        else:
-            crop_size = Size.from_tuple(image.size) - crop_offset
-            self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-                base_level_dimensions
-            )
-
-        cropped = image.crop(
-            (
-                crop_offset.x,
-                crop_offset.y,
-                crop_offset.x + crop_size.width,
-                crop_offset.y + crop_size.height,
-            )
-        )
-        super().__init__(
-            cropped,
-            blank_color,
-            encoder,
-        )
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
-        return self._image_coordinate_system
-
-    @property
-    def pixel_spacing(self) -> SizeMm:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
-    def imaged_size(self) -> SizeMm:
-        return self._imaged_size
-
-
-class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
     def __init__(
         self,
         blank_color: int | tuple[int, int, int] | None,
@@ -248,58 +37,45 @@ class OpenSlideLikeLevelImageData(OpenSlideLikeImageData):
         tile_size: int | None,
         encoder: Encoder,
     ):
+        """Create a level of an OpenSlide-like pyramid.
+
+        Parameters
+        ----------
+        blank_color: int | tuple[int, int, int] | None
+            Background color for empty regions, or None for the encoder's default.
+        offset: Point | None
+            Base-level position of the slide's bounds, or None if unbounded.
+        size: Size | None
+            Base-level size of the slide's bounds, or None if unbounded.
+        level_dimensions: Sequence[tuple[int, int]]
+            Dimensions of every level.
+        level_downsamples: Sequence[float]
+            Downsamples of every level.
+        image_metadata: ImageMetadata
+            Image metadata of the base level.
+        level_index: int
+            Index of this level.
+        tile_size: int | None
+            Output tile size. If None, the default tile size is used.
+        encoder: Encoder
+            Encoder that encodes every tile.
+        """
+        downsample = level_downsamples[level_index]
+        if size is not None:
+            image_size = size // int(round(downsample))
+            base_size = size
+        else:
+            image_size = Size.from_tuple(level_dimensions[level_index])
+            base_size = Size.from_tuple(level_dimensions[0])
         super().__init__(
+            image_size,
+            image_metadata,
+            tile_size,
             blank_color,
             encoder,
+            downsample=downsample,
+            base_size=base_size,
         )
-        if tile_size is None:
-            tile_size = get_settings().default_tile_size
-        self._tile_size = Size(tile_size, tile_size)
         self._level_index = level_index
-        self._downsample = level_downsamples[self._level_index]
-        if image_metadata.pixel_spacing is None:
-            raise ValueError(
-                "Could not determine pixel spacing for the level image: the file did "
-                "not provide an mpp that could be read. Give one with the `metadata` "
-                "or `default_metadata` argument to convert it anyway."
-            )
-        self._pixel_spacing = SizeMm(
-            image_metadata.pixel_spacing.width * self._downsample,
-            image_metadata.pixel_spacing.height * self._downsample,
-        )
-
+        self._downsample = downsample
         self._offset = offset or Point(0, 0)
-
-        if size is not None:
-            self._image_size = size // int(round(self._downsample))
-            self._imaged_size = image_metadata.pixel_spacing * size
-        else:
-            self._image_size = Size.from_tuple(level_dimensions[self._level_index])
-            self._imaged_size = image_metadata.pixel_spacing * Size.from_tuple(
-                level_dimensions[0]
-            )
-
-        self._image_coordinate_system = image_metadata.image_coordinate_system
-
-    @property
-    def image_size(self) -> Size:
-        """The pixel size of the image."""
-        return self._image_size
-
-    @property
-    def tile_size(self) -> Size:
-        """The pixel tile size of the image."""
-        return self._tile_size
-
-    @property
-    def pixel_spacing(self) -> SizeMm:
-        """Size of the pixels in mm/pixel."""
-        return self._pixel_spacing
-
-    @property
-    def imaged_size(self) -> SizeMm:
-        return self._imaged_size
-
-    @property
-    def image_coordinate_system(self) -> ImageCoordinateSystem | None:
-        return self._image_coordinate_system

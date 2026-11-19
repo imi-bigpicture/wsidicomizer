@@ -19,9 +19,9 @@ from enum import Enum
 
 import numpy as np
 from wsidicom.codec import Encoder
-from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.extras.openslide.openslide import (
     OpenSlide,
@@ -85,12 +85,19 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         )
         self._osr = open_slide._osr
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         """Read the pixels of a region directly from the openslide object.
 
         openslide reads 4-byte ARGB; the alpha is composited over the background
-        colour in numpy. ``read_region`` (Pillow) is derived from this by the
-        base class.
+        colour in numpy. Pillow, when needed, is derived by wsidicom at the read
+        boundary.
 
         Parameters
         ----------
@@ -106,10 +113,7 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         np.ndarray
             The region as an RGB numpy array.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         region_data = self._get_region(region)
         if region_data is None:
             return self._get_blank_decoded_frame(region.size)
@@ -175,10 +179,7 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         bytes
             Tile bytes.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
         if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
@@ -207,16 +208,15 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         np.ndarray
             Tile pixels.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)
         return tile
 
-    def _detect_blank_tile(self, tile: np.ndarray) -> bool:
+    def _detect_blank_tile(
+        self, tile: np.ndarray, fill: int | tuple[int, ...] | None = None
+    ) -> bool:
         """Detect if tile is a blank tile, i.e. either has full
         transparency or is filled with background color. First checks if the
         corners are transparent or has background color before checking whole
@@ -226,6 +226,8 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
         ----------
         tile: np.ndarray
             Tile to check if blank.
+        fill: int | tuple[int, ...] | None = None
+            Value a blank tile is filled with, or None for the blank color.
 
         Returns
         ----------
@@ -243,7 +245,7 @@ class OpenSlideLevelImageData(OpenSlideLikeLevelImageData):
             tile[:, :, TRANSPARENCY] == 0
         ):
             return True
-        background = np.array(self.blank_color)
+        background = np.array(self.blank_color if fill is None else fill)
         corners_rgb = np.ix_(CORNERS_X, CORNERS_Y, range(TRANSPARENCY))
         return bool(
             np.all(tile[corners_rgb] == background)

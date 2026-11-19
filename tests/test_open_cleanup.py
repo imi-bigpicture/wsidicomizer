@@ -74,6 +74,7 @@ class TestOpenCleanup:
         closed: list[bool] = []
         tiler = SimpleNamespace(
             format=SimpleNamespace(name="SVS"),
+            get_level=lambda level: SimpleNamespace(overlap=None),
             metadata=None,
             labels=[],
             overviews=[],

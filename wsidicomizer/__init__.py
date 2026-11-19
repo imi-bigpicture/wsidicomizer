@@ -21,6 +21,7 @@ from wsidicomizer.config import (
     set_default_settings,
     use_settings,
 )
+from wsidicomizer.errors import SourceNotSupportedError
 from wsidicomizer.uid_resolver import MetadataUidResolver
 from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
@@ -34,6 +35,7 @@ __all__ = [
     "set_default_settings",
     "use_settings",
     "MetadataUidResolver",
+    "SourceNotSupportedError",
     "SourceIdentifier",
     "WsiDicomizer",
 ]

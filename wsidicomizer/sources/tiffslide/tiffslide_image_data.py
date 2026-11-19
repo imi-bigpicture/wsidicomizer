@@ -17,9 +17,9 @@
 import numpy as np
 from tiffslide import TiffSlide
 from wsidicom.codec import Encoder
-from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size
 from wsidicom.metadata import Image as ImageMetadata
+from wsidicom.thread import ReadExecutor
 
 from wsidicomizer.sources.openslide_like import OpenSlideLikeLevelImageData
 
@@ -74,7 +74,14 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         """Number of samples per pixel in the image."""
         return self._samples_per_pixel
 
-    def read_region(self, region: Region, z: float, path: str) -> np.ndarray:
+    def get_decoded_region(
+        self,
+        region: Region,
+        z: float,
+        path: str,
+        *,
+        executor: ReadExecutor | None = None,
+    ) -> np.ndarray:
         """Read the pixels of a region directly from the tiffslide object.
 
 
@@ -92,10 +99,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         np.ndarray
             The region pixels (RGB, as tifffile decodes it).
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         image_data = self._get_region(region)
         if image_data is None:
             return self._get_blank_decoded_frame(region.size)
@@ -151,10 +155,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         bytes
             Tile bytes.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         decoded = self._get_region(Region(tile * self.tile_size, self.tile_size))
         if decoded is None:
             return self._get_blank_encoded_frame(self.tile_size)
@@ -183,10 +184,7 @@ class TiffSlideLevelImageData(OpenSlideLikeLevelImageData):
         np.ndarray
             Tile pixels.
         """
-        if z not in self.focal_planes:
-            raise WsiDicomNotFoundError(f"focal plane {z}", str(self))
-        if path not in self.optical_paths:
-            raise WsiDicomNotFoundError(f"optical path {path}", str(self))
+        self._check_z_and_path(z, path)
         tile = self._get_region(Region(tile_point * self.tile_size, self.tile_size))
         if tile is None:
             return self._get_blank_decoded_frame(self.tile_size)

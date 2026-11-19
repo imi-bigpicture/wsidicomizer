@@ -30,18 +30,17 @@ from wsidicom.geometry import Point, Size
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
 from wsidicomizer.dicomizer_source import DicomizerSource
-from wsidicomizer.image_data import BaseDicomizerImageData
+from wsidicomizer.image_data import (
+    BaseDicomizerImageData,
+    PixelAssociatedImageData,
+    PixelThumbnailImageData,
+)
 from wsidicomizer.metadata import (
     MetadataPostProcessor,
     MetadataPreProcessor,
     WsiDicomizerMetadata,
 )
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
-from wsidicomizer.sources.openslide_like import (
-    OpenSlideLikeAssociatedImageData,
-    OpenSlideLikeProperties,
-    OpenSlideLikeThumbnailImageData,
-)
+from wsidicomizer.sources.openslide_like import OpenSlideLikeProperties
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +52,6 @@ class OpenSlideLikeAssociatedImageType(Enum):
 
 
 class OpenSlideLikeSource(DicomizerSource):
-    _instance_cls = PixelWsiInstance
-
     def __init__(
         self,
         filepath: UPath,
@@ -178,7 +175,7 @@ class OpenSlideLikeSource(DicomizerSource):
             label_image_coordinate_system = (
                 self.metadata.label.image.image_coordinate_system
             )
-        return OpenSlideLikeAssociatedImageData(
+        return PixelAssociatedImageData(
             label_image,
             self._blank_color,
             self._encoder,
@@ -196,7 +193,7 @@ class OpenSlideLikeSource(DicomizerSource):
             overview_image_coordinate_system = (
                 self.metadata.overview.image.image_coordinate_system
             )
-        return OpenSlideLikeAssociatedImageData(
+        return PixelAssociatedImageData(
             overview_image,
             self._blank_color,
             self._encoder,
@@ -209,12 +206,12 @@ class OpenSlideLikeSource(DicomizerSource):
         )
         if label_image is None:
             return None
-        return OpenSlideLikeThumbnailImageData(
+        return PixelThumbnailImageData(
             label_image,
             self._blank_color,
             self._base_level_offset,
             self._base_level_size,
-            self._level_dimensions,
+            Size.from_tuple(self._level_dimensions[0]),
             self.metadata.pyramid.image,
             self._encoder,
         )

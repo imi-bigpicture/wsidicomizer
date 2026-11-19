@@ -22,22 +22,22 @@ from wsidicom import WsiDicom
 
 from wsidicomizer.wsidicomizer import WsiDicomizer
 
-from .conftest import test_parameters
+from .conftest import available_source, source_cases
 
 
 @pytest.mark.integrationtest
 class TestNativePassthrough:
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_transfer_syntax", "photometric"],
+        ["file_format", "file", "source", "expected_transfer_syntax", "photometric"],
         [
             (
                 file_format,
                 file,
+                source,
                 file_parameters["transfer_syntax"],
                 file_parameters["photometric_interpretation"],
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
             if file_parameters.get("passthrough")
         ],
     )
@@ -45,6 +45,7 @@ class TestNativePassthrough:
         self,
         file_format: str,
         file: str,
+        source: str,
         expected_transfer_syntax: UID,
         photometric: str,
         wsi_files: dict[str, dict[str, Path]],
@@ -55,7 +56,9 @@ class TestNativePassthrough:
             pytest.skip(f"{file_path} not present")
 
         # Act
-        with WsiDicomizer.open(file_path) as wsi:
+        with WsiDicomizer.open(
+            file_path, preferred_source=available_source(file_path, source)
+        ) as wsi:
             assert isinstance(wsi, WsiDicom)
             image_data = wsi.pyramids[0].base_level.default_instance.image_data
 

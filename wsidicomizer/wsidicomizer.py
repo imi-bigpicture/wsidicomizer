@@ -18,6 +18,7 @@ like DICOM instances, enabling viewing and saving.
 """
 
 import contextlib
+import logging
 from collections.abc import Callable, Sequence
 from enum import Enum
 from pathlib import Path
@@ -42,11 +43,19 @@ from wsidicom.paths import as_upath
 
 from wsidicomizer.config import Settings, use_settings
 from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.errors import SourceNotSupportedError
 from wsidicomizer.metadata import (
     MetadataPostProcessor,
     MetadataPreProcessor,
 )
-from wsidicomizer.sources import CziSource, OpenTileSource, TiffSlideSource
+from wsidicomizer.sources import (
+    CziSource,
+    MiraxSource,
+    OpenTileSource,
+    TiffSlideSource,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SourceIdentifier(Enum):
@@ -54,6 +63,7 @@ class SourceIdentifier(Enum):
     TIFFSLIDE = "tiffslide"
     OPENSLIDE = "openslide"
     CZI = "czi"
+    MIRAX = "mirax"
     ISYNTAX = "isyntax"
     BIOFORMATS = "bioformats"
 
@@ -78,7 +88,7 @@ class WsiDicomizer(WsiDicom):
         *,
         settings: Settings | None = None,
         **source_args,
-    ) -> WsiDicom:
+    ) -> "WsiDicomizer":
         """Open data in file in filepath as WsiDicom.
 
         Parameters
@@ -107,7 +117,9 @@ class WsiDicomizer(WsiDicom):
             Encoding setting or encoder to use for transcoding. If None, each
             source picks a default matching its pixel format.
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None
-            Optional override source to use.
+            Optional override source to use. If None, the sources whose format
+            the file is are tried in priority order, and the first that reads it
+            is used.
         uid_generator: Callable[[], UID] | UidGenerator | None = None
             Generator used to populate UIDs on the metadata if not already set.
         file_options: dict[str, Any] | None = None
@@ -120,39 +132,54 @@ class WsiDicomizer(WsiDicom):
 
         Returns
         ----------
-        WsiDicom
-            WsiDicom object of file.
+        WsiDicomizer
+            WsiDicomizer object of file.
+
+        Raises
+        ------
+        SourceNotSupportedError
+            If no source reads the file.
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
         elif not isinstance(uid_generator, UidGenerator):
             uid_generator = CallableUidGenerator(uid_generator)
         filepath = as_upath(filepath, file_options)
-        selected_source = cls._select_source(filepath, preferred_source, file_options)
+        candidates = cls._select_sources(filepath, preferred_source, file_options)
         encoder = cls._select_encoder(encoding)
 
+        refusal: SourceNotSupportedError | None = None
         with use_settings(settings):
-            source = selected_source(
-                filepath,
-                encoder,
-                tile_size,
-                metadata,
-                default_metadata,
-                include_confidential,
-                metadata_post_processor,
-                uid_generator=uid_generator,
-                file_options=file_options,
-                metadata_pre_processor=metadata_pre_processor,
-                **source_args,
-            )
-            try:
-                return cls(source, True, settings=settings)
-            except BaseException:
-                # The source is only owned once the WsiDicomizer exists, so a
-                # source that is refused while building it (e.g. several
-                # pyramids) must be closed here or its files stay open.
-                source.close()
-                raise
+            for candidate in candidates:
+                try:
+                    source = candidate(
+                        filepath,
+                        encoder,
+                        tile_size,
+                        metadata,
+                        default_metadata,
+                        include_confidential,
+                        metadata_post_processor,
+                        uid_generator=uid_generator,
+                        file_options=file_options,
+                        metadata_pre_processor=metadata_pre_processor,
+                        **source_args,
+                    )
+                except SourceNotSupportedError as error:
+                    logger.info(
+                        "%s does not read %s: %s", candidate.__name__, filepath, error
+                    )
+                    refusal = error
+                    continue
+                try:
+                    return cls(source, True, settings=settings)
+                except BaseException:
+                    # The source is only owned once the WsiDicomizer exists, so a
+                    # source that is refused while building it (e.g. several
+                    # pyramids) must be closed here or its files stay open.
+                    source.close()
+                    raise
+        raise SourceNotSupportedError(f"{filepath} is not supported") from refusal
 
     @classmethod
     def convert(
@@ -163,8 +190,8 @@ class WsiDicomizer(WsiDicom):
         default_metadata: WsiMetadata | None = None,
         tile_size: int | None = 512,
         uid_generator: Callable[[], UID] | UidGenerator | None = None,
-        add_missing_levels: bool = False,
-        regenerate_pyramid: bool = False,
+        add_missing_levels: bool | None = None,
+        regenerate_pyramid: bool | None = None,
         include_levels: Sequence[int] | None = None,
         include_label: bool = True,
         include_overview: bool = True,
@@ -208,12 +235,17 @@ class WsiDicomizer(WsiDicom):
         uid_generator: Callable[[], UID] | UidGenerator | None = None
             Generator used to populate UIDs on the metadata if not already set and to
             generate UIDs for created instances.
-        add_missing_levels: bool = False
-            If to add missing dyadic levels up to the single tile level.
-        regenerate_pyramid: bool = False
+        add_missing_levels: bool | None = None
+            If to add missing dyadic levels up to the single tile level. If None,
+            follows the source's `prefer_regenerated_pyramid` when `include_levels`
+            is not given, so a source that stores only its base level (MIRAX) gets
+            a pyramid built from it; with `include_levels`, no levels are added.
+        regenerate_pyramid: bool | None = None
             If True, only the base level is read from the source and every
             other written level is re-derived by downsampling from the base.
             When set, the base level must be among the selected `include_levels`.
+            If None, follows the source's `prefer_regenerated_pyramid` when
+            `include_levels` is not given, and otherwise keeps the stored levels.
         include_levels: Optional[Sequence[int]] = None
             Optional list indices (in present levels) to include, e.g. [0, 1]
             includes the two lowest levels. Negative indices can be used,
@@ -309,6 +341,14 @@ class WsiDicomizer(WsiDicom):
                 **source_args,
             ) as wsi,
         ):
+            if regenerate_pyramid is None:
+                regenerate_pyramid = include_levels is None and (
+                    wsi._prefer_regenerated_pyramid
+                )
+            if add_missing_levels is None:
+                add_missing_levels = include_levels is None and (
+                    wsi._prefer_regenerated_pyramid
+                )
             created_files = wsi.save(
                 output_path,
                 uid_generator,
@@ -331,18 +371,36 @@ class WsiDicomizer(WsiDicom):
 
         return created_files
 
+    @property
+    def _prefer_regenerated_pyramid(self) -> bool:
+        """Return True if the source prefers its pyramid to be re-derived from the
+        base level on conversion."""
+        return (
+            isinstance(self._source, DicomizerSource)
+            and self._source.prefer_regenerated_pyramid
+        )
+
     @staticmethod
-    def _select_source(
+    def _select_sources(
         filepath: UPath,
         preferred_source: type[DicomizerSource] | SourceIdentifier | None = None,
         file_options: dict[str, Any] | None = None,
-    ) -> type[DicomizerSource]:
-        """Return source that supports file in filepath."""
+    ) -> list[type[DicomizerSource]]:
+        """Return the sources whose format the file in filepath is, in priority
+        order, or only the preferred source if one is given.
+
+        Raises
+        ------
+        SourceNotSupportedError
+            If no source is of the file's format.
+        """
         # List of supported sources in prioritization order.
         loaded_sources: dict[SourceIdentifier, type[DicomizerSource]] = {
             SourceIdentifier.OPENTILE: OpenTileSource,
             SourceIdentifier.TIFFSLIDE: TiffSlideSource,
             SourceIdentifier.CZI: CziSource,
+            # Before openslide, so the native MIRAX reader wins.
+            SourceIdentifier.MIRAX: MiraxSource,
         }
         try:
             from wsidicomizer.extras.isyntax import ISyntaxSource
@@ -371,21 +429,17 @@ class WsiDicomizer(WsiDicom):
                     f"Source {preferred_source.value} is not available. It needs the "
                     f"'{preferred_source.value}' extra to be installed."
                 ) from None
-        selected_source = None
-        if preferred_source is None:
-            selected_source = next(
-                (
-                    source
-                    for source in loaded_sources.values()
-                    if source.is_supported(filepath, file_options)
-                ),
-                None,
-            )
-        elif preferred_source.is_supported(filepath, file_options):
-            selected_source = preferred_source
-        if selected_source is None:
-            raise NotImplementedError(f"{filepath} is not supported")
-        return selected_source
+        sources = (
+            list(loaded_sources.values())
+            if preferred_source is None
+            else [preferred_source]
+        )
+        selected_sources = [
+            source for source in sources if source.is_supported(filepath, file_options)
+        ]
+        if not selected_sources:
+            raise SourceNotSupportedError(f"{filepath} is not supported")
+        return selected_sources
 
     @staticmethod
     def _select_encoder(

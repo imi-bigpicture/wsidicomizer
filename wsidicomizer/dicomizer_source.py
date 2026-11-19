@@ -63,8 +63,6 @@ class DicomizerSource(Source, metaclass=ABCMeta):
      Subclasses can override the __init__().
     """
 
-    _instance_cls: type[WsiInstance] = WsiInstance
-
     def __init__(
         self,
         filepath: UPath,
@@ -181,7 +179,12 @@ class DicomizerSource(Source, metaclass=ABCMeta):
     def is_supported(
         path: str | Path | UPath, file_options: dict[str, Any] | None = None
     ) -> bool:
-        """Return True if the file at `path` is supported.
+        """Return True if the file at `path` is of this source's format.
+
+        A check of the format only, meant to be cheap: it does not open the whole
+        file. A file of the format that the source does not read (a variant it
+        refuses) passes it, and the constructor raises `SourceNotSupportedError`
+        for it, so that `WsiDicomizer.open` tries the next source.
 
         Parameters
         ----------
@@ -196,9 +199,17 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         Returns
         -------
         bool
-            True if the file at `path` is supported.
+            True if the file at `path` is of this source's format.
         """
         raise NotImplementedError()
+
+    @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        """Return True if the levels above the base level stored in the file are
+        poor material for conversion (e.g. overlapping or cropped tiles, or a
+        softer downsampling), so that conversion by default should re-derive
+        them from the base level."""
+        return False
 
     @property
     @abstractmethod
@@ -361,11 +372,11 @@ class DicomizerSource(Source, metaclass=ABCMeta):
         image_type: ImageType,
         pyramid_index: int | None = None,
     ) -> WsiInstance:
-        """Create instance from image data using this source's ``_instance_cls``."""
+        """Create instance from image data."""
         dataset = self._create_dataset(
             image_type, image_data.photometric_interpretation
         )
-        return self._instance_cls.create_instance(
+        return WsiInstance.create_instance(
             image_data, dataset, image_type, pyramid_index
         )
 

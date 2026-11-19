@@ -37,12 +37,9 @@ from wsidicomizer.metadata import (
     MetadataPreProcessor,
     WsiDicomizerMetadata,
 )
-from wsidicomizer.pixel_wsi_instance import PixelWsiInstance
 
 
 class ISyntaxSource(DicomizerSource):
-    _instance_cls = PixelWsiInstance
-
     def __init__(
         self,
         filepath: UPath,
@@ -128,6 +125,10 @@ class ISyntaxSource(DicomizerSource):
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
         return self._base_metadata
+
+    @property
+    def prefer_regenerated_pyramid(self) -> bool:
+        return True
 
     @property
     def pyramid_levels(self) -> dict[tuple[int, float, str], int]:

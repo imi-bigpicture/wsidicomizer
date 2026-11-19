@@ -15,11 +15,13 @@
 - Hamamatsu ndpi (lossless)
 - Philips tiff (lossless)
 - Zeiss czi (lossy)
+- 3DHISTECH mrxs, brightfield and fluorescence (lossy)
 - Optional: Formats supported by Bioformats (lossy)
+
+The native mrxs reader composes the overlapping camera tiles. Slides it can not read (reduced pyramids, more than three fluorescence channels, tiles without recorded positions) are passed to the `openslide` extra, if installed.
 
 With the `openslide` extra the following formats are also supported:
 
-- Mirax mrxs (lossy)
 - Leica scn (lossy)
 - Sakura svslide (lossy)
 - Trestle tif (lossy)
@@ -30,7 +32,7 @@ The `bioformats` extra by default enables lossy support for the [BSD-licensed Bi
 
 The `isyntax` extra enables lossy single-thread support for isynax files.
 
-For czi and isyntax only the base level is read from file. To produce a conversion with full levels, use `add_missing_levels` in the `save()` method.
+For czi, isyntax and mrxs only the base level is read from the file. The lower-resolution levels are instead created from the base level, which `convert()` does by default. `WsiDicomizer.open()` gives the base level only.
 
 ## Installation
 
@@ -66,47 +68,7 @@ wsidicomizer -i 'path_to_wsi_file' -o 'path_to_output_folder'
 
 ### Options
 
-```console
-  -i, --input PATH                Path to input wsi file.  [required]
-  -o, --output PATH               Path to output folder. Must not already
-                                  exist, or be an empty folder.  [required]
-  -t, --tile-size INTEGER         Tile size (same for width and height).
-                                  Required for ndpi and openslide formats.
-  -m, --metadata PATH             Path to json metadata that will override
-                                  metadata from source image file.
-  -d, --default-metadata PATH     Path to json metadata that will be used as
-                                  default values.
-  -l, --levels INTEGER            Pyramid levels to include, if not all. E.g.
-                                  0 1 for base and first pyramid layer. Can be
-                                  specified multiple times.
-  --add-missing-levels            If to add missing dyadic levels up to the
-                                  single tile level.
-  --label PATH                    Optional label image to use instead of label
-                                  found in file.
-  --no-label                      If not to include label
-  --no-overview                   If not to include overview
-  --no-confidential               If not to include confidential metadata
-  -w, --workers INTEGER           Number of worker threads to use
-  --chunk-size INTEGER            Number of tiles to give each worker at a
-                                  time
-  --format [jpeg|jpeg2000|htjpeg2000|jpegxl]
-                                  Encoding format to use if re-encoding.
-  --quality FLOAT                 Quality to use if re-encoding. It is not
-                                  recommended to use > 95 for jpeg. Use < 1 or
-                                  > 1000 for lossless jpeg2000.
-  --subsampling [r444|r422|r420|r411|r440]
-                                  Subsampling option if using jpeg for re-
-                                  encoding. Use '444' for no subsampling,
-                                  '422' for 2x1 subsampling, and '420' for 2x2
-                                  subsampling.
-  --offset-table [basic|extended|empty]
-                                  Offset table to use.
-  --source [opentile|tiffslide|openslide|czi|isyntax|bioformats]
-                                  Source library to use for reading the input
-                                  file. If not specified, the library will be
-                                  chosen based on file type.
-  --help                          Show this message and exit.
-```
+Run `wsidicomizer --help` for the options of the cli.
 
 Using the no-confidential-flag properties according to [DICOM Basic Confidentiality Profile](https://dicom.nema.org/medical/dicom/current/output/html/part15.html#table_E.1-1) are not included in the output file. Properties otherwise included are currently:
 

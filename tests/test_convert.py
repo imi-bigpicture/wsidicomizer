@@ -27,7 +27,7 @@ import pytest
 from dicom_validator.spec_reader.edition_reader import EditionReader
 from dicom_validator.validator.dicom_file_validator import DicomFileValidator
 from dicom_validator.validator.validation_result import ValidationResult
-from PIL import Image, ImageChops, ImageStat
+from PIL import Image
 from pydicom import Dataset
 from pydicom import config as pydicom_config
 from upath import UPath
@@ -45,15 +45,62 @@ from wsidicom.metadata import Image as ImageMetadata
 from wsidicom.metadata import ImageType, Pyramid, WsiMetadata
 from wsidicom.options import DownsamplerOption
 
-from wsidicomizer.extras.openslide.openslide import (
-    PROPERTY_NAME_BOUNDS_X,
-    PROPERTY_NAME_BOUNDS_Y,
-    OpenSlide,
-)
 from wsidicomizer.metadata import WsiDicomizerMetadata
-from wsidicomizer.wsidicomizer import WsiDicomizer
+from wsidicomizer.wsidicomizer import SourceIdentifier, WsiDicomizer
 
-from .conftest import Jpeg2kTestEncoder, converted_folder, test_parameters
+from .conftest import (
+    Jpeg2kTestEncoder,
+    agreement_cases,
+    available_source,
+    converted_folder,
+    source_cases,
+    source_parameters,
+)
+
+
+def read_for_agreement(
+    wsi: WsiDicom, agreement: dict[str, Any], level_offset: int
+) -> Image.Image:
+    """Read the region or thumbnail an agreement case compares.
+
+    Parameters
+    ----------
+    wsi: WsiDicom
+        Slide to read from.
+    agreement: dict[str, Any]
+        The agreement case, with either a `thumbnail` size or a region given by
+        `location`, `level`, `size` and optional `z`.
+    level_offset: int
+        Pyramid level the slide's base level has in the original file.
+
+    Returns
+    -------
+    Image.Image
+        The read image.
+    """
+    if "thumbnail" in agreement:
+        return wsi.read_thumbnail(
+            (agreement["thumbnail"]["width"], agreement["thumbnail"]["height"]),
+            force_generate=True,
+        )
+    return wsi.read_region(
+        (agreement["location"]["x"], agreement["location"]["y"]),
+        agreement["level"] - level_offset,
+        (agreement["size"]["width"], agreement["size"]["height"]),
+        z=agreement.get("z"),
+    )
+
+
+def psnr(image: Image.Image, reference: Image.Image) -> float:
+    """Return the peak signal-to-noise ratio (dB) of an 8-bit image against a
+    reference, inf for identical images."""
+    difference = np.asarray(image, dtype=np.float64) - np.asarray(
+        reference, dtype=np.float64
+    )
+    mean_squared_error = float(np.mean(difference**2))
+    if mean_squared_error == 0:
+        return math.inf
+    return 10 * math.log10(255**2 / mean_squared_error)
 
 
 @pytest.fixture(autouse=True)
@@ -68,22 +115,27 @@ def pin_pillow_downsampler():
 
 @pytest.fixture
 def wsi(
-    converted: dict[tuple[str, str], "TemporaryDirectory"],
+    converted: dict[tuple[str, str, str], "TemporaryDirectory"],
     wsi_files: dict[str, dict[str, Path]],
     encoder: Encoder,
     file_format: str,
     file: str,
+    source: str,
 ):
-    """Open the (cached) converted wsi."""
+    """Open the (cached) wsi converted with the source."""
     file_path = wsi_files[file_format][file]
     if not file_path.exists():
         pytest.skip(f"Skipping {file_format} {file} due to missing file.")
-    if test_parameters[file_format][file]["convert"]:
-        folder = converted_folder(converted, wsi_files, encoder, file_format, file)
+    if source_parameters(file_format, file, source)["convert"]:
+        folder = converted_folder(
+            converted, wsi_files, encoder, file_format, file, source
+        )
         assert folder is not None
         wsi = WsiDicom.open(folder.name)
     else:
-        wsi = WsiDicomizer.open(file_path)
+        wsi = WsiDicomizer.open(
+            file_path, preferred_source=available_source(file_path, source)
+        )
     yield wsi
     wsi.close()
 
@@ -105,12 +157,11 @@ def validator(
 @pytest.mark.integrationtest
 class TestWsiDicomizerConvert:
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            if file_parameters["convert"]
+            (file_format, file, source)
+            for file_format, file, source, parameters in source_cases()
+            if parameters["convert"]
         ],
         scope="module",
     )
@@ -159,11 +210,10 @@ class TestWsiDicomizerConvert:
         assert len(errors_per_module) == 0
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
@@ -175,11 +225,10 @@ class TestWsiDicomizerConvert:
             wsi.read_tile(0, (0, 0), path="non-existent-optical-path")
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
@@ -194,6 +243,7 @@ class TestWsiDicomizerConvert:
         [
             "file_format",
             "file",
+            "source",
             "region",
             "lowest_included_level",
             "skip_hash_test_platforms",
@@ -202,13 +252,13 @@ class TestWsiDicomizerConvert:
             (
                 file_format,
                 file,
+                source,
                 region,
-                file_parameters["lowest_included_pyramid_level"],
-                file_parameters.get("skip_hash_test_platforms", []),
+                parameters["lowest_included_pyramid_level"],
+                parameters.get("skip_hash_test_platforms", []),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            for region in file_parameters["read_region"]
+            for file_format, file, source, parameters in source_cases()
+            for region in parameters["read_region"]
         ],
         scope="module",
     )
@@ -240,17 +290,17 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "thumbnail", "skip_hash_test_platforms"],
+        ["file_format", "file", "source", "thumbnail", "skip_hash_test_platforms"],
         [
             (
                 file_format,
                 file,
+                source,
                 thumbnail,
-                file_parameters.get("skip_hash_test_platforms", []),
+                parameters.get("skip_hash_test_platforms", []),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            for thumbnail in file_parameters["read_thumbnail"]
+            for file_format, file, source, parameters in source_cases()
+            for thumbnail in parameters["read_thumbnail"]
         ],
         scope="module",
     )
@@ -278,129 +328,65 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
+        ["file_format", "file", "agreement"],
+        agreement_cases(),
+        scope="module",
+    )
+    def test_converted_file_should_agree_with_reference_source(
+        self,
+        file_format: str,
+        file: str,
+        agreement: dict[str, Any],
+        converted: dict[tuple[str, str, str], "TemporaryDirectory"],
+        wsi_files: dict[str, dict[str, Path]],
+        encoder: Encoder,
+    ):
+        # Arrange
+        file_path = wsi_files[file_format][file]
+        if not file_path.exists():
+            pytest.skip(f"Skipping {file_format} {file} due to missing file.")
+        reference_source = available_source(file_path, agreement["reference"])
+        folder = converted_folder(
+            converted, wsi_files, encoder, file_format, file, agreement["converted"]
+        )
+        assert folder is not None
+        lowest_included_level = source_parameters(
+            file_format, file, agreement["converted"]
+        )["lowest_included_pyramid_level"]
+        with WsiDicomizer.open(
+            file_path, preferred_source=reference_source
+        ) as reference_wsi:
+            reference = read_for_agreement(reference_wsi, agreement, 0)
+
+        # Act
+        with WsiDicom.open(folder.name) as converted_wsi:
+            image = read_for_agreement(converted_wsi, agreement, lowest_included_level)
+
+        # Assert
+        assert image.size == reference.size
+        measured = psnr(image.convert("RGB"), reference.convert("RGB"))
+        assert measured >= agreement["min_psnr"], (
+            f"{file_format}: {file} {agreement} has PSNR {measured:.2f} dB"
+        )
+
+    @pytest.mark.parametrize(
         [
             "file_format",
             "file",
-            "region",
-            "lowest_included_level",
-            "skip_hash_test_platforms",
+            "source",
+            "native_photometric_interpretation",
+            "is_transcoded",
         ],
         [
             (
                 file_format,
                 file,
-                region,
-                file_parameters["lowest_included_pyramid_level"],
-                file_parameters.get("skip_hash_test_platforms", []),
-            )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            for region in file_parameters["read_region_openslide"]
-            if file_parameters["openslide"]
-        ],
-        scope="module",
-    )
-    def test_read_region_from_converted_file_should_match_openslide(
-        self,
-        file_format: str,
-        file: str,
-        region: dict[str, Any],
-        lowest_included_level: int,
-        skip_hash_test_platforms: list[str],
-        wsi_file: Path,
-        wsi: WsiDicom,
-    ):
-        # Arrange
-        if platform.system() in skip_hash_test_platforms:
-            pytest.skip(f"Skipping hash test for {platform.system()}.")
-        level = region["level"] - lowest_included_level
-        with OpenSlide(wsi_file) as openslide_wsi:
-            scale: float = openslide_wsi.level_downsamples[region["level"]]
-            # If scale is not integer image can be blurry
-            assert scale.is_integer
-            scale = int(scale)
-            offset_x = int(openslide_wsi.properties.get(PROPERTY_NAME_BOUNDS_X, 0))
-            offset_y = int(openslide_wsi.properties.get(PROPERTY_NAME_BOUNDS_Y, 0))
-            scaled_location = (
-                (region["location"]["x"] * scale) + offset_x,
-                (region["location"]["y"] * scale) + offset_y,
-            )
-            reference = openslide_wsi.read_region(
-                scaled_location,
-                region["level"],
-                (region["size"]["width"], region["size"]["height"]),
-            )
-
-            reference_no_alpha = Image.new("RGB", reference.size, (255, 255, 255))
-            reference_no_alpha.paste(reference, mask=reference.split()[3])
-
-        # Act
-        converted = wsi.read_region(
-            (region["location"]["x"], region["location"]["y"]),
-            level,
-            (region["size"]["width"], region["size"]["height"]),
-            z=0,
-        )
-
-        # Assert
-        assert (
-            md5(converted.tobytes()).hexdigest()
-            == md5(reference_no_alpha.tobytes()).hexdigest()
-        ), (
-            f"{file_format}: {file} {region} does not match openslide at ",
-            scaled_location,
-            region["level"],
-            region["size"]["height"],
-        )
-
-    @pytest.mark.parametrize(
-        ["file_format", "file", "thumbnail"],
-        [
-            (file_format, file, thumbnail)
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
-            for thumbnail in file_parameters["read_thumbnail"]
-            if file_parameters["openslide"]
-        ],
-        scope="module",
-    )
-    def test_read_thumbnail_from_converted_file_should_almost_match_openslide_thumbnail(
-        self,
-        file_format: str,
-        file: str,
-        thumbnail: dict[str, Any],
-        wsi_file: Path,
-        wsi: WsiDicom,
-    ):
-        # Arrange
-        with OpenSlide(wsi_file) as openslide_wsi:
-            open_im = openslide_wsi.get_thumbnail(
-                (thumbnail["size"]["width"], thumbnail["size"]["height"])
-            ).convert("RGB")
-
-        # Act
-        im = wsi.read_thumbnail(
-            (thumbnail["size"]["width"], thumbnail["size"]["height"]),
-            force_generate=True,
-        )
-
-        # Assert
-        diff = ImageChops.difference(im, open_im)
-        for band_rms in ImageStat.Stat(diff).rms:
-            assert band_rms < 4, f"{file_format}: {file} {thumbnail}"
-
-    @pytest.mark.parametrize(
-        ["file_format", "file", "native_photometric_interpretation", "is_transcoded"],
-        [
-            (
-                file_format,
-                file,
+                source,
                 file_parameters["photometric_interpretation"],
                 file_parameters["convert"]
                 and file_parameters.get("force_transcoding", True),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -427,17 +413,17 @@ class TestWsiDicomizerConvert:
         )
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "native_transfer_syntax", "is_transcoded"],
+        ["file_format", "file", "source", "native_transfer_syntax", "is_transcoded"],
         [
             (
                 file_format,
                 file,
+                source,
                 file_parameters.get("transfer_syntax"),
                 file_parameters["convert"]
                 and file_parameters.get("force_transcoding", True),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -464,16 +450,17 @@ class TestWsiDicomizerConvert:
             assert transfer_syntax == expected_transfer_syntax
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
-            if format_files[file]["convert"]
+            (file_format, file, source)
+            for file_format, file, source, file_parameters in source_cases()
+            if file_parameters["convert"]
         ],
         scope="module",
     )
-    def test_replace_label_should_equal_new_label(self, wsi_file: Path):
+    def test_replace_label_should_equal_new_label(
+        self, wsi_file: Path, source_identifier: SourceIdentifier
+    ):
         # Arrange
 
         label = Image.new("RGB", (256, 256), (128, 128, 128))
@@ -487,6 +474,7 @@ class TestWsiDicomizerConvert:
                 include_levels=[-1],
                 label=label,
                 encoding=Jpeg2kTestEncoder(),
+                preferred_source=source_identifier,
             )
 
             # Assert
@@ -591,6 +579,7 @@ class TestWsiDicomizerConvert:
         [
             "file_format",
             "file",
+            "source",
             "expected_image_coordinate_system_origin",
             "expected_image_coordinate_system_rotation",
         ],
@@ -598,14 +587,14 @@ class TestWsiDicomizerConvert:
             (
                 file_format,
                 file,
+                source,
                 PointMm(
                     file_parameters["image_coordinate_system"]["x"],
                     file_parameters["image_coordinate_system"]["y"],
                 ),
                 file_parameters["image_coordinate_system"]["rotation"],
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -641,15 +630,16 @@ class TestWsiDicomizerConvert:
             )
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
-    def test_change_pixel_spacing(self, wsi_file: Path):
+    def test_change_pixel_spacing(
+        self, wsi_file: Path, source_identifier: SourceIdentifier
+    ):
         # Arrange
         given_pixel_spacing = SizeMm(47, 47)
         metadata = WsiDicomizerMetadata(
@@ -657,18 +647,19 @@ class TestWsiDicomizerConvert:
         )
 
         # Act
-        with WsiDicomizer.open(wsi_file, metadata=metadata) as wsi:
+        with WsiDicomizer.open(
+            wsi_file, metadata=metadata, preferred_source=source_identifier
+        ) as wsi:
             base_pixel_spacing = wsi.pixel_spacing
 
         # Assert
         assert base_pixel_spacing == given_pixel_spacing
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
@@ -685,11 +676,15 @@ class TestWsiDicomizerConvert:
         assert icc_profile is not None
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "embedded_thumbnail"],
+        ["file_format", "file", "source", "embedded_thumbnail"],
         [
-            (file_format, file, file_parameters["embedded_thumbnail_size"] is not None)
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            (
+                file_format,
+                file,
+                source,
+                file_parameters["embedded_thumbnail_size"] is not None,
+            )
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -705,11 +700,10 @@ class TestWsiDicomizerConvert:
         assert has_thumbnail_instances == embedded_thumbnail
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "has_label"],
+        ["file_format", "file", "source", "has_label"],
         [
-            (file_format, file, file_parameters["has_label"])
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            (file_format, file, source, file_parameters["has_label"])
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -723,11 +717,10 @@ class TestWsiDicomizerConvert:
         assert actual_has_label == has_label
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "has_overview"],
+        ["file_format", "file", "source", "has_overview"],
         [
-            (file_format, file, file_parameters["has_overview"])
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            (file_format, file, source, file_parameters["has_overview"])
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -741,11 +734,10 @@ class TestWsiDicomizerConvert:
         assert actual_has_overview == has_overview
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "embedded_thumbnail_size"],
+        ["file_format", "file", "source", "embedded_thumbnail_size"],
         [
-            (file_format, file, file_parameters["embedded_thumbnail_size"])
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            (file_format, file, source, file_parameters["embedded_thumbnail_size"])
+            for file_format, file, source, file_parameters in source_cases()
             if file_parameters["embedded_thumbnail_size"] is not None
         ],
         scope="module",
@@ -762,37 +754,43 @@ class TestWsiDicomizerConvert:
         assert thumbnail.size == Size.from_tuple(embedded_thumbnail_size)
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
-    def test_metadata_post_processor_with_dataset(self, wsi_file: Path):
+    def test_metadata_post_processor_with_dataset(
+        self, wsi_file: Path, source_identifier: SourceIdentifier
+    ):
         # Arrange
         given_patient_age = "042Y"
         dataset = Dataset()
         dataset.PatientAge = given_patient_age
 
         # Act
-        with WsiDicomizer.open(wsi_file, metadata_post_processor=dataset) as wsi:
+        with WsiDicomizer.open(
+            wsi_file,
+            metadata_post_processor=dataset,
+            preferred_source=source_identifier,
+        ) as wsi:
             patient_age = wsi.pyramid.datasets[0].as_dataset().PatientAge
 
         # Assert
         assert patient_age == given_patient_age
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
-            (file_format, file)
-            for file_format, format_files in test_parameters.items()
-            for file in format_files
+            (file_format, file, source)
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
-    def test_metadata_post_processor_with_callback(self, wsi_file: Path):
+    def test_metadata_post_processor_with_callback(
+        self, wsi_file: Path, source_identifier: SourceIdentifier
+    ):
         # Arrange
         given_patient_age = "042Y"
 
@@ -801,25 +799,29 @@ class TestWsiDicomizerConvert:
             return dataset
 
         # Act
-        with WsiDicomizer.open(wsi_file, metadata_post_processor=callback) as wsi:
+        with WsiDicomizer.open(
+            wsi_file,
+            metadata_post_processor=callback,
+            preferred_source=source_identifier,
+        ) as wsi:
             patient_age = wsi.pyramid.datasets[0].as_dataset().PatientAge
 
         # Assert
         assert patient_age == given_patient_age
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_pixel_spacings"],
+        ["file_format", "file", "source", "expected_pixel_spacings"],
         [
             (
                 file_format,
                 file,
+                source,
                 [
                     SizeMm.from_tuple(spacing)
                     for spacing in file_parameters["pixel_spacings"]
                 ],
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -835,15 +837,15 @@ class TestWsiDicomizerConvert:
         assert expected_pixel_spacings == pixel_spacings
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_thumbnail_pixel_spacing"],
+        ["file_format", "file", "source", "expected_thumbnail_pixel_spacing"],
         [
             (
                 file_format,
                 file,
+                source,
                 SizeMm.from_tuple(file_parameters["thumbnail_pixel_spacing"]),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
             if file_parameters["thumbnail_pixel_spacing"] is not None
         ],
         scope="module",
@@ -864,15 +866,15 @@ class TestWsiDicomizerConvert:
         assert expected_thumbnail_pixel_spacing == pixel_spacing
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_imaged_size"],
+        ["file_format", "file", "source", "expected_imaged_size"],
         [
             (
                 file_format,
                 file,
+                source,
                 SizeMm.from_tuple(file_parameters["imaged_size"]),
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -894,15 +896,15 @@ class TestWsiDicomizerConvert:
             assert imaged_size == expected_imaged_size
 
     @pytest.mark.parametrize(
-        ["file_format", "file", "expected_focal_planes"],
+        ["file_format", "file", "source", "expected_focal_planes"],
         [
             (
                 file_format,
                 file,
+                source,
                 file_parameters["focal_planes"],
             )
-            for file_format, format_files in test_parameters.items()
-            for file, file_parameters in format_files.items()
+            for file_format, file, source, file_parameters in source_cases()
         ],
         scope="module",
     )
@@ -916,25 +918,31 @@ class TestWsiDicomizerConvert:
         assert set(focal_planes) == set(expected_focal_planes)
 
     @pytest.mark.parametrize(
-        ["file_format", "file"],
+        ["file_format", "file", "source"],
         [
             (
                 file_format,
                 file,
+                source,
             )
-            for file_format, format_files in test_parameters.items()
-            for file, _ in format_files.items()
+            for file_format, file, source, _ in source_cases()
         ],
         scope="module",
     )
     def test_imaged_size_compared_to_pixel_spacing(self, wsi: WsiDicom):
-        # Arrange
+        # Arrange - a level whose size does not divide by its downsample is rounded
+        # up to whole pixels while it keeps the imaged size of the base level, so
+        # its imaged size per pixel can differ from its pixel spacing by up to half
+        # a pixel (e.g. 312.5 -> 313 px at the coarsest level)
         expected_pixel_spacings = [
-            SizeMm(
-                level.default_instance.mm_size.width
-                / level.default_instance.size.width,
-                level.default_instance.mm_size.height
-                / level.default_instance.size.height,
+            (
+                SizeMm(
+                    level.default_instance.mm_size.width
+                    / level.default_instance.size.width,
+                    level.default_instance.mm_size.height
+                    / level.default_instance.size.height,
+                ),
+                level.default_instance.size,
             )
             for level in wsi.levels
             if level.default_instance.mm_size is not None
@@ -948,14 +956,18 @@ class TestWsiDicomizerConvert:
         ]
 
         # Assert
-        for expected_pixel_spacing, pixel_size in zip(
+        for (expected_pixel_spacing, size), pixel_size in zip(
             expected_pixel_spacings, pixel_sizes, strict=False
         ):
             assert math.isclose(
-                expected_pixel_spacing.width, pixel_size.width, rel_tol=1.5e-3
+                expected_pixel_spacing.width,
+                pixel_size.width,
+                rel_tol=1.5e-3 + 0.5 / size.width,
             ), f"Width mismatch: {expected_pixel_spacing.width} != {pixel_size.width}"
             assert math.isclose(
-                expected_pixel_spacing.height, pixel_size.height, rel_tol=1.5e-3
+                expected_pixel_spacing.height,
+                pixel_size.height,
+                rel_tol=1.5e-3 + 0.5 / size.height,
             ), (
                 f"Height mismatch: {expected_pixel_spacing.height} "
                 f"!= {pixel_size.height}"
