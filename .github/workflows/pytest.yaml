@@ -91,7 +91,7 @@ jobs:
       # openslide comes from openslide-bin in the dev group, on every OS.
       - name: Set up Ubuntu
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y libturbojpeg
+        run: sudo apt-get install -y libturbojpeg0
       - name: Set up OSX
         if: matrix.os == 'macos-latest'
         run: |
