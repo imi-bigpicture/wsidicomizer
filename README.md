@@ -23,6 +23,8 @@
 
 The native mrxs reader composes the overlapping camera tiles. Slides it can not read (reduced pyramids, more than three fluorescence channels, tiles without recorded positions) are passed to the `openslide` extra, if installed.
 
+Olympus vsi files with several scanned areas, channels, focal planes or time points, or with uncompressed tiles, are not supported.
+
 With the `openslide` extra the following formats are also supported:
 
 - Leica scn (lossy)
