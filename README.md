@@ -16,6 +16,8 @@
 - Philips tiff (lossless)
 - Zeiss czi (lossy)
 - 3DHISTECH mrxs, brightfield and fluorescence (lossy)
+- Trestle tif (lossless base level where opentile re-grids it, otherwise lossy)
+- Ventana bif (lossy), and already-stitched Ventana tif (lossless base level)
 - Optional: Formats supported by Bioformats (lossy)
 
 The native mrxs reader composes the overlapping camera tiles. Slides it can not read (reduced pyramids, more than three fluorescence channels, tiles without recorded positions) are passed to the `openslide` extra, if installed.
@@ -24,15 +26,13 @@ With the `openslide` extra the following formats are also supported:
 
 - Leica scn (lossy)
 - Sakura svslide (lossy)
-- Trestle tif (lossy)
-- Ventana bif, tif (lossy)
 - Hamamatsu vms, vmu (lossy)
 
 The `bioformats` extra by default enables lossy support for the [BSD-licensed Bioformat formats](https://docs.openmicroscopy.org/bio-formats/8.0.1/supported-formats.html).
 
 The `isyntax` extra enables lossy single-thread support for isynax files.
 
-For czi, isyntax and mrxs only the base level is read from the file. The lower-resolution levels are instead created from the base level, which `convert()` does by default. `WsiDicomizer.open()` gives the base level only.
+For czi, isyntax, mrxs, Trestle and Ventana only the base level is read from the file. The lower-resolution levels are instead created from the base level, which `convert()` does by default. `WsiDicomizer.open()` gives the base level only. Trestle and Ventana bif tiles overlap their neighbours; tiles opentile can not serve as a plain grid are composed into non-overlapping tiles and encoded anew.
 
 ## Installation
 
