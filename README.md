@@ -48,17 +48,13 @@ conda install -c conda-forge wsidicomizer
 
 See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
 
-***Install libjpeg-turbo***
-Install libjpeg-turbo either as binary from <https://libjpeg-turbo.org/> or using your package manager.
-For Windows, you also need to add libjpeg-turbo's bin-folder to the environment variable 'Path'
-
 ## Important note
 
 Please note that this is an early release and the API is not frozen yet. Function names and functionality is prone to change.
 
 ## Requirements
 
-*wsidicomizer* requires python >=3.8 and uses numpy, pydicom, highdicom, imagecodecs, PyTurboJPEG, opentile, and wsidicom.
+*wsidicomizer* requires python >=3.12 and uses numpy, pydicom, wsidicom, opentile, tiffslide, czifile, click, and universal-pathlib.
 
 ## Basic cli-usage
 
@@ -347,13 +343,7 @@ Support for reading images using Openslide c library can optionally be enabled b
 pip install wsidicomizer[openslide]
 ```
 
-The OpenSlide extra requires the OpenSlide library to be installed separately. This can be done through pip:
-
-```sh
-pip install openslide-bin
-```
-
-Alternative instructions for how to install OpenSlide is available on <https://openslide.org/download/>
+The extra also installs openslide-bin, which provides the OpenSlide library, so it does not need to be installed separately. Other ways to install OpenSlide are described at <https://openslide.org/download/>.
 
 ## Bioformats support
 
