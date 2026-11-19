@@ -26,7 +26,7 @@ from wsidicom.metadata import UidGenerator
 from wsidicom.metadata.wsi import WsiMetadata
 from wsidicom.paths import as_local_path
 
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.extras.bioformats.bioformats_image_data import BioformatsImageData
 from wsidicomizer.extras.bioformats.bioformats_reader import BioformatsReader
 from wsidicomizer.image_data import BaseDicomizerImageData
@@ -124,7 +124,7 @@ class BioformatsSource(DicomizerSource):
         return BioformatsImageData.detect_format(local_filepath)
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+    def pyramid_levels(self) -> list[PyramidLevel]:
         return self._reader.pyramid_levels(self._pyramid_image_index)
 
     @property
@@ -168,14 +168,14 @@ class BioformatsSource(DicomizerSource):
         return pyramid_image_index, label_image_index, overview_image_index
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
+        # The level index is the resolution index the source addressed the level
+        # by in `pyramid_levels`.
         return BioformatsImageData(
             self._reader,
             self._tile_size,
             self._encoder,
             self._pyramid_image_index,
-            self._reader.pyramid_levels(self._pyramid_image_index)[
-                level_index, 0.0, "0"
-            ],
+            level_index,
             self._volume_imaged_size,
         )
 

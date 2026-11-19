@@ -83,10 +83,11 @@ class TestTrestleLevels:
         # Arrange - the stored levels above the base are softer, shrunk or cropped
 
         # Act
-        read_levels = sorted(trestle_source.pyramid_levels.values())
+        read_levels = trestle_source.pyramid_levels
 
         # Assert - they are rebuilt from the base instead
-        assert read_levels == [0]
+        assert len(read_levels) == 1
+        assert read_levels[0].index == 0
 
 
 class TestVentanaLevels:
@@ -96,12 +97,10 @@ class TestVentanaLevels:
         tiler_levels = ventana_source._tiler.levels
 
         # Act
-        read_levels = ventana_source.pyramid_levels.values()
+        read_levels = ventana_source.pyramid_levels
 
         # Assert
-        assert {tiler_levels[index].pyramid_index for index in read_levels} == {
-            tiler_levels[0].pyramid_index
-        }
+        assert {level.level for level in read_levels} == {tiler_levels[0].pyramid_index}
 
     def test_tissue_tile_is_composed(self, ventana_source: OpenTileSource):
         # Arrange

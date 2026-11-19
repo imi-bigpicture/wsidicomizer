@@ -53,6 +53,7 @@ from wsidicomizer.sources import (
     MiraxSource,
     OpenTileSource,
     TiffSlideSource,
+    VsiSource,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ class SourceIdentifier(Enum):
     OPENSLIDE = "openslide"
     CZI = "czi"
     MIRAX = "mirax"
+    VSI = "vsi"
     ISYNTAX = "isyntax"
     BIOFORMATS = "bioformats"
 
@@ -397,6 +399,9 @@ class WsiDicomizer(WsiDicom):
         # List of supported sources in prioritization order.
         loaded_sources: dict[SourceIdentifier, type[DicomizerSource]] = {
             SourceIdentifier.OPENTILE: OpenTileSource,
+            # Before tiffslide, as the .vsi is a TIFF that tiffslide opens but
+            # that holds only associated images, not the pyramid.
+            SourceIdentifier.VSI: VsiSource,
             SourceIdentifier.TIFFSLIDE: TiffSlideSource,
             SourceIdentifier.CZI: CziSource,
             # Before openslide, so the native MIRAX reader wins.

@@ -25,7 +25,7 @@ from wsidicom.metadata import ImageType, UidGenerator, WsiMetadata
 from wsidicom.paths import as_local_path
 
 from isyntax import ISyntax
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.extras.isyntax.isyntax_image_data import (
     ISyntaxAssociatedImageImageData,
     ISyntaxLevelImageData,
@@ -131,8 +131,8 @@ class ISyntaxSource(DicomizerSource):
         return True
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
-        return {(0, 0.0, "0"): 0}
+    def pyramid_levels(self) -> list[PyramidLevel]:
+        return [PyramidLevel(0, 0, 0)]
 
     def _create_level_image_data(self, level_index: int) -> BaseDicomizerImageData:
         return ISyntaxLevelImageData(

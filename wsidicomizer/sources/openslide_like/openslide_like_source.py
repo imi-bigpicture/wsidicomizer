@@ -29,7 +29,7 @@ from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Size
 from wsidicom.metadata import UidGenerator, WsiMetadata
 
-from wsidicomizer.dicomizer_source import DicomizerSource
+from wsidicomizer.dicomizer_source import DicomizerSource, PyramidLevel
 from wsidicomizer.image_data import (
     BaseDicomizerImageData,
     PixelAssociatedImageData,
@@ -133,37 +133,35 @@ class OpenSlideLikeSource(DicomizerSource):
         )
 
     @staticmethod
-    def _map_pyramid_levels(
-        level_downsamples: Sequence[float],
-    ) -> dict[tuple[int, float, str], int]:
-        """Map each level of the file to a dyadic pyramid index.
+    def _map_pyramid_levels(level_downsamples: Sequence[float]) -> list[PyramidLevel]:
+        """Map each level of the file to a dyadic pyramid level.
 
-        Several levels can map to the same index, and only one of them can be
-        written. That happens for files whose levels hold several same-sized
+        Several levels can map to the same pyramid level, and only one of them can
+        be written. That happens for files whose levels hold several same-sized
         planes, such as a fluorescence qptiff read as a generic tiff. Log each
         level left out rather than dropping it without a word.
         """
-        levels: dict[tuple[int, float, str], int] = {}
+        levels: dict[int, int] = {}
         for index, downsample in enumerate(level_downsamples):
-            key = (round(math.log2(downsample)), 0.0, "0")
-            if key in levels:
+            level = round(math.log2(downsample))
+            if level in levels:
                 logger.warning(
                     "Level %d and level %d both map to pyramid index %d; "
                     "leaving out level %d.",
-                    levels[key],
+                    levels[level],
                     index,
-                    key[0],
-                    levels[key],
+                    level,
+                    levels[level],
                 )
-            levels[key] = index
-        return levels
+            levels[level] = index
+        return [PyramidLevel(0, level, index) for level, index in levels.items()]
 
     @property
     def base_metadata(self) -> WsiDicomizerMetadata:
         return self._base_metadata
 
     @property
-    def pyramid_levels(self) -> dict[tuple[int, float, str], int]:
+    def pyramid_levels(self) -> list[PyramidLevel]:
         return self._pyramid_levels
 
     def _create_label_image_data(self) -> BaseDicomizerImageData | None:

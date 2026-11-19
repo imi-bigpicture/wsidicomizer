@@ -85,6 +85,8 @@ ignore = ["S101"]
 
 [tool.typos.default.extend-words]
 ome = "ome"  # OME-TIFF format / ome-types package
+oly = "oly"  # OlyVIA, the Olympus viewer
+siz = "siz"  # SIZ, the JPEG 2000 image and tile size marker
 
 [build-system]
 requires = ["hatchling"]

@@ -18,9 +18,12 @@
 - 3DHISTECH mrxs, brightfield and fluorescence (lossy)
 - Trestle tif (lossless base level where opentile re-grids it, otherwise lossy)
 - Ventana bif (lossy), and already-stitched Ventana tif (lossless base level)
+- Olympus vsi (lossless)
 - Optional: Formats supported by Bioformats (lossy)
 
 The native mrxs reader composes the overlapping camera tiles. Slides it can not read (reduced pyramids, more than three fluorescence channels, tiles without recorded positions) are passed to the `openslide` extra, if installed.
+
+Olympus vsi files with several scanned areas, channels, focal planes or time points, or with uncompressed tiles, are not supported.
 
 With the `openslide` extra the following formats are also supported:
 
