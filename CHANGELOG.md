@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `kernels` extra, installing wsidicom-kernels for faster downsampling when building pyramids.
 - Native reader for 3DHISTECH MIRAX (mrxs) files, brightfield and fluorescence, used instead of openslide. Only the base level is read and the pyramid is built from it, so `WsiDicomizer.open()` gives a single level. Slides it can not read (reduced pyramids, more than 3 fluorescence channels, tiles without recorded positions) are left to openslide.
 - Trestle (`.tif`) and Ventana (`.bif`) slides, whose stored tiles overlap, through opentile. A level opentile can not serve as a plain grid is composed into non-overlapping output tiles and encoded anew. Only the base level is read and the pyramid is built from it.
 - `DicomizerSource.prefer_regenerated_pyramid`, true for MIRAX, Trestle, Ventana, iSyntax and CZI.
@@ -20,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Requires wsidicom 0.37.
 - Levels added when converting are encoded with `encoding`, also when the levels they are generated from are passed through, rather than in the encoding of those levels. Converting a JPEG 2000 slide with the default jpeg `--format` therefore gives JPEG added levels.
 - `convert()` defaults `add_missing_levels` and `regenerate_pyramid` to `None`: both are applied when the source prefers a regenerated pyramid and no `include_levels` are given.
 - `PixelImageData` reads regions with `get_decoded_region()`, an override of wsidicom's `ImageData.get_decoded_region()`, so its instances are plain `WsiInstance`s. `PixelWsiInstance` and `DicomizerSource._instance_cls` are removed.

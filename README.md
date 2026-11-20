@@ -53,6 +53,12 @@ conda install -c conda-forge wsidicomizer
 
 See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
 
+For faster pyramid generation, install the `kernels` extra, which installs wsidicom-kernels:
+
+```console
+pip install wsidicomizer[kernels]
+```
+
 ## Important note
 
 Please note that this is an early release and the API is not frozen yet. Function names and functionality is prone to change.
