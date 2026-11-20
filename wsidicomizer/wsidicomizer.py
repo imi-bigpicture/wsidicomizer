@@ -32,6 +32,7 @@ from wsidicom import (
     ConcatenationByBytes,
     ConcatenationByFrames,
     InstanceSplit,
+    TranscodingMode,
     WsiDicom,
     WsiFile,
 )
@@ -276,7 +277,10 @@ class WsiDicomizer(WsiDicom):
         encoding: Optional[Union[EncodingSettings, Encoder]] = None,
             Encoding setting or encoder to use for images that cannot be passed
             through, or for all images if `force_transcoding=True`. If None,
-            each source picks a default matching its pixel format.
+            each source picks a default matching its pixel format. With
+            `JpegSettings(optimize=True)`, JPEG Baseline images that are passed
+            through also get optimized Huffman tables, without changing their
+            pixels. Images in other transfer syntaxes are still passed through.
         force_transcoding: bool = False,
             If True, re-encode images using `encoding` even when the source
             transfer syntax is DICOM-compatible. Has no effect if `encoding` is
@@ -364,8 +368,12 @@ class WsiDicomizer(WsiDicom):
                 add_missing_levels=add_missing_levels,
                 regenerate_pyramid=regenerate_pyramid,
                 label=label,
-                transcoding=encoding if force_transcoding else None,
-                force_transcoding=force_transcoding,
+                transcoding=encoding,
+                transcoding_mode=(
+                    TranscodingMode.ALWAYS
+                    if force_transcoding
+                    else TranscodingMode.WHEN_REQUIRED
+                ),
                 instance_split=instance_split,
                 concatenation=concatenation,
                 file_options=output_file_options,
