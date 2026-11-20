@@ -75,3 +75,27 @@ class TestCli:
         # Assert
         assert result.exit_code == 2
         assert "--file-options" in result.output
+
+    def test_optimize_with_other_format_than_jpeg_gives_error(self, tmp_path):
+        # Arrange
+        runner = CliRunner()
+        input_path = tmp_path.joinpath("input.svs")
+        input_path.touch()
+
+        # Act
+        result = runner.invoke(
+            main,
+            [
+                "-i",
+                str(input_path),
+                "-o",
+                str(tmp_path.joinpath("output")),
+                "--format",
+                "jpeg2000",
+                "--optimize",
+            ],
+        )
+
+        # Assert
+        assert result.exit_code == 2
+        assert "--optimize" in result.output

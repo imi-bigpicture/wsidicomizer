@@ -237,6 +237,15 @@ def _print_versions(ctx: click.Context, _param: click.Parameter, value: bool):
     ),
 )
 @click.option(
+    "--optimize",
+    is_flag=True,
+    help=(
+        "Encode jpeg with Huffman tables optimized for each tile, which makes "
+        "the files smaller. Jpeg tiles that are passed through are also "
+        "optimized, without changing their pixels. Only for --format jpeg."
+    ),
+)
+@click.option(
     "--force-transcoding",
     is_flag=True,
     help="If to force transcoding even if lossless conversion possible.",
@@ -300,6 +309,7 @@ def main(
     encoding_format: CliEncodingsOptions | None,
     quality: float | None,
     subsampling: str | None,
+    optimize: bool,
     force_transcoding: bool,
     offset_table: OffsetTableType,
     source: SourceIdentifier | None,
@@ -351,6 +361,9 @@ def main(
     except ValueError as error:
         raise click.UsageError(str(error)) from error
 
+    if optimize and encoding_format != CliEncodingsOptions.JPEG:
+        raise click.UsageError("--optimize is only for --format jpeg.")
+
     # Create encoding settings
     if encoding_format is None:
         encoding_settings = None
@@ -363,6 +376,7 @@ def main(
         encoding_settings = JpegSettings(
             quality=int(quality) if quality is not None else 80,
             subsampling=subsampling_enum,
+            optimize=optimize,
         )
     # A jpeg2000 level is a signal-to-noise ratio in dB, so a fractional value is
     # meaningful and is passed through rather than truncated. wsidicom <=0.35.0
