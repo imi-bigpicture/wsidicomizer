@@ -96,6 +96,23 @@ FILES: dict[str, dict[str, Any]] = {
             "CMU-1/Slidedat.ini": "c6aa2792a44f84090ff4eec87a766056977693f82c69d3b03304cd15573dc761",
         },
     },
+    "trestle_tiff/CMU-1": {
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Trestle/CMU-1.zip",
+        "description": "Brightfield, JPEG, overlapping tiles; only the TIFF is used",
+        "license": "CC0-1.0",
+        "sha256": {
+            "CMU-1.tif": "dcb9b4ffc324334561eb744923dd4b3e8072fee369266b8b89e7deecc23dc216",
+        },
+    },
+    "ventana_bif/Ventana-1": {
+        "source": "https://openslide.cs.cmu.edu/download/openslide-testdata/Ventana/Ventana-1.bif",
+        "description": "Human liver, trichrome stain, brightfield, joint direction LEFT, scanned on Ventana DP 200",
+        "license": "CC0-1.0",
+        "credit": "PathAI",
+        "sha256": {
+            "Ventana-1.bif": "2eb05cd8f628c36408c3fde09beeeebaaae90181c4f840d5475ec7594bdcbbb6",
+        },
+    },
     "isyntax/isyntax1": {
         "source": "https://doi.org/10.5281/zenodo.5037046",
         "description": "iSyntax test slide from the OpenPhi project",
