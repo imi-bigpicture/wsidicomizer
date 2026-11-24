@@ -322,6 +322,7 @@ class WsiDicomizer(WsiDicom):
             `WsiLevelFile` for a pyramid level, a `WsiThumbnailFile`
             for a thumbnail, and a `WsiAssociatedFile` for a label or
             overview. Iterating gives the paths.
+            InstanceNumber of created starting from 1 to len() of array
         """
         if uid_generator is None:
             uid_generator = CallableUidGenerator()
