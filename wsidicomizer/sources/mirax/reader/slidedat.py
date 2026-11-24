@@ -191,14 +191,20 @@ class Slidedat:
         for section in self._ini.sections():
             version = self._ini[section].get("SCANNER_SOFTWARE_VERSION")
             if version:
-                return [version]
+                # INI storage has comma, but SliceViewer display them as dot
+                return [version.replace(",", ".")]
         return None
 
     @property
     def scanner_hardware_version(self) -> str | None:
         """Scanner model (SCANNER_HARDWARE_VERSION), or None; absent on older
         Pannoramic slides."""
-        return self._general_value("SCANNER_HARDWARE_VERSION")
+        for section in self._ini.sections():
+            version = self._ini[section].get("SCANNER_HARDWARE_VERSION")
+            if version:
+                return version
+        return None
+
 
     @property
     def scanner_hardware_id(self) -> str | None:
