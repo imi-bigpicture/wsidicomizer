@@ -65,6 +65,7 @@ class SourceIdentifier(Enum):
     TIFFSLIDE = "tiffslide"
     OPENSLIDE = "openslide"
     CZI = "czi"
+    CZIRW = "czirw"
     MIRAX = "mirax"
     VSI = "vsi"
     ISYNTAX = "isyntax"
@@ -99,7 +100,8 @@ class WsiDicomizer(WsiDicom):
         filepath: str | Path | UPath
             Path to file. May be a fsspec path (e.g. ``s3://``) for sources that
             can read through fsspec (opentile, tiffslide); sources that only read
-            local files (openslide, czifile, isyntax) decline such paths.
+            local files (openslide, czifile, pylibCZIrw, isyntax) decline such
+            paths.
         metadata: Optional[WsiMetadata] = None
             User-specified metadata that will overload metadata from source image file.
         default_metadata: Optional[WsiMetadata] = None
@@ -415,6 +417,12 @@ class WsiDicomizer(WsiDicom):
             # Before openslide, so the native MIRAX reader wins.
             SourceIdentifier.MIRAX: MiraxSource,
         }
+        try:
+            from wsidicomizer.sources.czirw import CziRwSource
+
+            loaded_sources[SourceIdentifier.CZIRW] = CziRwSource
+        except ImportError:
+            pass
         try:
             from wsidicomizer.extras.isyntax import ISyntaxSource
 

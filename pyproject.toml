@@ -32,6 +32,7 @@ dependencies = [
 openslide = ["openslide-python>=1.4.6,<2.0.0", "openslide-bin>=4.0.1,<5.0.0"]
 bioformats = ["scyjava>=1.8.1,<2.0.0", "ome-types>=0.5.0,<0.8.0"]
 isyntax = ["pyisyntax>=0.1.2,<0.2.0"]
+czirw = ["pylibCZIrw"]
 imagecodecs = ["imagecodecs>=2026.11.11"]
 pylibjpeg-rle = ["pylibjpeg-rle>=2.0.0,<3.0.0"]
 pyjpegls = ["pyjpegls>=1.2.0,<2.0.0"]
@@ -93,4 +94,3 @@ siz = "siz"  # SIZ, the JPEG 2000 image and tile size marker
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-

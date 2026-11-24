@@ -35,7 +35,9 @@ The `bioformats` extra by default enables lossy support for the [BSD-licensed Bi
 
 The `isyntax` extra enables lossy single-thread support for isynax files.
 
-For czi, isyntax, mrxs, Trestle and Ventana only the base level is read from the file. The lower-resolution levels are instead created from the base level, which `convert()` does by default. `WsiDicomizer.open()` gives the base level only. Trestle and Ventana bif tiles overlap their neighbours; tiles opentile can not serve as a plain grid are composed into non-overlapping tiles and encoded anew.
+The `czirw` extra enables native CZI reading through pylibCZIrw. Select it with `--source czirw` or `preferred_source=SourceIdentifier.CZIRW` when opening a file. Unlike the default CZI reader, it reads stored pyramid levels.
+
+For czi files read with the default `czi` source, isyntax, mrxs, Trestle and Ventana only the base level is read from the file. The lower-resolution levels are instead created from the base level, which `convert()` does by default. `WsiDicomizer.open()` gives the base level only. Trestle and Ventana bif tiles overlap their neighbours; tiles opentile can not serve as a plain grid are composed into non-overlapping tiles and encoded anew.
 
 ## Installation
 
@@ -51,7 +53,7 @@ pip install wsidicomizer
 conda install -c conda-forge wsidicomizer
 ```
 
-See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras.
+See [Openslide support](#openslide-support) and [Bioformats support](#bioformats-support) for how to install optional extras. Install native CZI support with `pip install wsidicomizer[czirw]`.
 
 For faster pyramid generation, install the `kernels` extra, which installs wsidicom-kernels:
 
