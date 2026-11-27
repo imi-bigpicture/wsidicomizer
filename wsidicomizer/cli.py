@@ -54,6 +54,7 @@ _VERSION_PACKAGES = [
     "tifffile",
     "imagecodecs",
     "czifile",
+    "pylibCZIrw",
     "openslide-python",
     "pyisyntax",
 ]
