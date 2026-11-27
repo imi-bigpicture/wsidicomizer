@@ -41,8 +41,8 @@ from wsidicomizer.sources.vsi.vsi_image_data import TileFormat, VsiLevelImageDat
 from wsidicomizer.sources.vsi.vsi_metadata import (
     LABEL_NAME,
     OVERVIEW_NAME,
-    VsiImage,
     VsiMetadata,
+    VsiTagReader,
 )
 
 MINIMUM_ASSOCIATED_WIDTH = 1024
@@ -116,9 +116,8 @@ class VsiSource(DicomizerSource):
         local_filepath = self._require_local_filepath(filepath)
         self._tiff = TiffFile(local_filepath)
         try:
-            self._images = {
-                image.name: image for image in VsiImage.read_all(local_filepath)
-            }
+            tag_reader = VsiTagReader(local_filepath)
+            self._images = {image.name: image for image in tag_reader.read_images()}
             self._stacks = self._open_stacks(local_filepath, list(self._images))
             self._areas = {
                 name: stack
@@ -135,7 +134,8 @@ class VsiSource(DicomizerSource):
             self._tiff,
             self._ets.image_size or self._ets.tiled_sizes[0] * self._ets.tile_size,
             self._images.get(self._name_of(self._ets)),
-            VsiImage.read_slide_identifier(local_filepath),
+            tag_reader.read_slide_identifier(),
+            tag_reader.read_creation_time(),
         )
 
     def close(self) -> None:

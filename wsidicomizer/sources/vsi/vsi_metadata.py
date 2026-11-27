@@ -16,9 +16,9 @@
 
 import logging
 import struct
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +47,9 @@ LABEL_NAME = "Label"
 OVERVIEW_NAME = "Overview"
 """Names the scanner gives the label and macro image."""
 
+_CREATION_TIME_TAG = 14
+_INT64_TYPE = 0x7
+_INT64 = struct.Struct("<q")
 _ORIGIN_TAG = 2018
 _PHYSICAL_SIZE_TAG = 2019
 _CALIBRATION_UNIT_TAG = 2020
@@ -63,7 +66,16 @@ _NOT_AN_IMAGE = (SAMPLE_MASK_NAME, FOCUS_MAP_NAME_SUFFIX, "FocusPoints")
 
 @dataclass(frozen=True)
 class VsiImage:
-    """An image described by the VSI metadata blocks.
+    """An image described by the VSI metadata blocks."""
+
+    name: str
+    origin: PointMm | None
+    """Position of the top left corner of the image on the slide."""
+    pixel_spacing: SizeMm | None
+
+
+class VsiTagReader:
+    """Reader of the metadata blocks of a `.vsi`.
 
     The blocks are a tag/length/value tree of
     `[u32 fieldType][u32 tag][u32 ...][u32 dataSize][data]` records. The tree
@@ -73,36 +85,38 @@ class VsiImage:
     and the unit of both (2020, a string such as `10^-6m^1`).
     """
 
-    name: str
-    origin: PointMm | None
-    """Position of the top left corner of the image on the slide."""
-    pixel_spacing: SizeMm | None
+    def __init__(self, filepath: Path):
+        """Read a `.vsi`.
 
-    @classmethod
-    def read_all(cls, filepath: Path) -> list["VsiImage"]:
+        Parameters
+        ----------
+        filepath: Path
+            Path to the `.vsi` file.
+        """
+        self._data = filepath.read_bytes()
+
+    def read_images(self) -> list[VsiImage]:
         """Return the images the `.vsi` describes, in file order.
 
         Entries that name a sample mask or a focus grid rather than a pyramid
         are left out; the rest match the `.ets` stacks of the slide one to one,
         in the same order, on every slide examined.
         """
-        data = filepath.read_bytes()
-        origins = cls._read_pairs(data, _ORIGIN_TAG)
-        physical_sizes = cls._read_pairs(data, _PHYSICAL_SIZE_TAG)
-        scale = cls._read_scale_to_mm(data)
-        images: list[VsiImage] = [
-            cls(
+        origins = self._read_pairs(_ORIGIN_TAG)
+        physical_sizes = self._read_pairs(_PHYSICAL_SIZE_TAG)
+        scale = self._read_scale_to_mm()
+        images = [
+            VsiImage(
                 name,
-                cls._pair_before(origins, offset, scale, PointMm),
-                cls._pair_before(physical_sizes, offset, scale, SizeMm),
+                self._pair_before(origins, offset, scale, PointMm),
+                self._pair_before(physical_sizes, offset, scale, SizeMm),
             )
-            for offset, name in cls._read_strings(data, _NAME_TAG)
+            for offset, name in self._read_strings(_NAME_TAG)
             if not name.endswith(_NOT_AN_IMAGE)
         ]
-        return cls._move_onto_slide(images)
+        return self._move_onto_slide(images)
 
-    @staticmethod
-    def read_slide_identifier(filepath: Path) -> str | None:
+    def read_slide_identifier(self) -> str | None:
         """Return the slide name / barcode string (tag 2061), or None if absent.
 
         Optional in the file - present as a real slide-label barcode on some
@@ -110,49 +124,85 @@ class VsiImage:
         others. Confirmed against Olympus's OlyVIA viewer, which shows it as
         `Slide Name`.
         """
-        strings = VsiImage._read_strings(filepath.read_bytes(), _SLIDE_NAME_TAG)
+        strings = self._read_strings(_SLIDE_NAME_TAG)
         return strings[0][1] if strings else None
 
-    @staticmethod
-    def _read_strings(data: bytes, tag: int) -> list[tuple[int, str]]:
+    def read_creation_time(self) -> datetime | None:
+        """Return the time in tag 14, or None if absent.
+
+        A 64-bit integer, read as Unix seconds in UTC. On the slides compared it
+        matches the `Creation Time` shown by OlyVIA, though it is not known
+        that OlyVIA reads this tag. It also differs from the Exif
+        `DateTimeDigitized` of the pages by a whole number of hours. The
+        meaning of the tag is not documented.
+        """
+        for offset, size in self._find_records(_CREATION_TIME_TAG):
+            field_type = _TLV_HEADER.unpack_from(self._data, offset)[0]
+            if size != _INT64.size or field_type & 0xFFFFFF != _INT64_TYPE:
+                continue
+            seconds = _INT64.unpack(self._read_value(offset, size))[0]
+            try:
+                return datetime.fromtimestamp(seconds, UTC)
+            except (OverflowError, OSError, ValueError):
+                continue
+        return None
+
+    def _read_strings(self, tag: int) -> list[tuple[int, str]]:
         """Return the offset and value of each UTF-16 record with a tag."""
         strings = []
-        for offset, size in VsiImage._find_records(data, tag):
-            field_type = _TLV_HEADER.unpack_from(data, offset)[0]
+        for offset, size in self._find_records(tag):
+            field_type = _TLV_HEADER.unpack_from(self._data, offset)[0]
             if field_type & 0xFFFFFF != _UNICODE_TYPE or size % 2 or size > 512:
                 continue
             try:
-                value = data[
-                    offset + _TLV_HEADER.size : offset + _TLV_HEADER.size + size
-                ].decode("utf-16-le")
+                value = self._read_value(offset, size).decode("utf-16-le")
             except UnicodeDecodeError:
                 continue
             if value.isprintable():
                 strings.append((offset, value))
         return strings
 
-    @staticmethod
-    def _read_pairs(data: bytes, tag: int) -> list[tuple[int, tuple[float, float]]]:
+    def _read_pairs(self, tag: int) -> list[tuple[int, tuple[float, float]]]:
         """Return the offset and value of each pair-of-doubles record for a tag."""
         return [
-            (offset, _PAIR.unpack_from(data, offset + _TLV_HEADER.size))
-            for offset, size in VsiImage._find_records(data, tag)
+            (offset, _PAIR.unpack(self._read_value(offset, size)))
+            for offset, size in self._find_records(tag)
             if size == _PAIR.size
-            and _TLV_HEADER.unpack_from(data, offset)[0] == _DOUBLE_2_TYPE
+            and _TLV_HEADER.unpack_from(self._data, offset)[0] == _DOUBLE_2_TYPE
         ]
 
-    @staticmethod
-    def _find_records(data: bytes, tag: int):
+    def _read_scale_to_mm(self) -> float | None:
+        """Return the factor from the unit the values are in to mm."""
+        for offset, size in self._find_records(_CALIBRATION_UNIT_TAG):
+            try:
+                unit = self._read_value(offset, size).decode("utf-16-le")
+            except UnicodeDecodeError:
+                continue
+            if unit == _MICROMETERS:
+                return 1 / 1000
+            logging.warning(
+                "Unknown VSI calibration unit %r, ignoring positions.", unit
+            )
+            return None
+        return None
+
+    def _read_value(self, offset: int, size: int) -> bytes:
+        """Return the data of the record at an offset."""
+        start = offset + _TLV_HEADER.size
+        return self._data[start : start + size]
+
+    def _find_records(self, tag: int) -> Iterator[tuple[int, int]]:
         """Yield the offset and data size of each record with a tag."""
         needle = struct.pack("<I", tag)
-        position = data.find(needle)
+        position = self._data.find(needle)
         while position != -1:
             offset = position - 4
             if offset >= 0:
-                size = _TLV_HEADER.unpack_from(data, offset)[3]
-                if 0 < size <= 4096 and offset + _TLV_HEADER.size + size <= len(data):
+                size = _TLV_HEADER.unpack_from(self._data, offset)[3]
+                end = offset + _TLV_HEADER.size + size
+                if 0 < size <= 4096 and end <= len(self._data):
                     yield offset, size
-            position = data.find(needle, position + 1)
+            position = self._data.find(needle, position + 1)
 
     @staticmethod
     def _pair_before(
@@ -168,24 +218,7 @@ class VsiImage:
         return factory(values[-1][0] * scale, values[-1][1] * scale)
 
     @staticmethod
-    def _read_scale_to_mm(data: bytes) -> float | None:
-        """Return the factor from the unit the values are in to mm."""
-        for offset, size in VsiImage._find_records(data, _CALIBRATION_UNIT_TAG):
-            raw = data[offset + _TLV_HEADER.size : offset + _TLV_HEADER.size + size]
-            try:
-                unit = raw.decode("utf-16-le")
-            except UnicodeDecodeError:
-                continue
-            if unit == _MICROMETERS:
-                return 1 / 1000
-            logging.warning(
-                "Unknown VSI calibration unit %r, ignoring positions.", unit
-            )
-            return None
-        return None
-
-    @staticmethod
-    def _move_onto_slide(images: list["VsiImage"]) -> list["VsiImage"]:
+    def _move_onto_slide(images: list[VsiImage]) -> list[VsiImage]:
         """Translate all images equally so that none is at a negative position.
 
         The newer files position images from the corner of the slide by the
@@ -220,6 +253,7 @@ class VsiMetadata(WsiDicomizerMetadata):
         base_size: Size,
         pyramid_image: VsiImage | None,
         slide_identifier: str | None,
+        creation_time: datetime | None = None,
     ):
         """Create metadata for a VSI file.
 
@@ -234,6 +268,10 @@ class VsiMetadata(WsiDicomizerMetadata):
             The metadata block entry of the converted pyramid, if found.
         slide_identifier: str | None
             The slide name / barcode (tag 2061), if the file states it.
+        creation_time: datetime | None
+            The time in tag 14, if the file states it. Used as the acquisition
+            datetime, falling back to the TIFF `DateTime` tag (no timezone) if
+            absent.
         """
         page = tiff.pages.first
         assert isinstance(page, TiffPage)
@@ -247,7 +285,7 @@ class VsiMetadata(WsiDicomizerMetadata):
         origin = pyramid_image.origin if pyramid_image else None
         image = Image(
             pixel_spacing=pixel_spacing or self._get_pixel_spacing(tiff, base_size),
-            acquisition_datetime=self._get_datetime(page),
+            acquisition_datetime=creation_time or self._get_datetime(page),
             image_coordinate_system=ImageCoordinateSystem(origin, rotation=0)
             if origin is not None
             else FormatCoordinateDefaults.from_wsi_format(

@@ -14,6 +14,7 @@
 
 import math
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -23,7 +24,11 @@ from wsidicom.geometry import Point, Size
 
 from wsidicomizer.sources.vsi import VsiSource
 from wsidicomizer.sources.vsi.ets import EtsFile
-from wsidicomizer.sources.vsi.vsi_metadata import LABEL_NAME, OVERVIEW_NAME, VsiImage
+from wsidicomizer.sources.vsi.vsi_metadata import (
+    LABEL_NAME,
+    OVERVIEW_NAME,
+    VsiTagReader,
+)
 
 J2K_SOC_SIZ = bytes.fromhex("ff4fff51")
 JPEG_SOI = bytes.fromhex("ffd8")
@@ -216,7 +221,7 @@ class TestVsiSource:
 
     def test_image_names(self, slide: Path):
         # Act
-        images = VsiImage.read_all(slide)
+        images = VsiTagReader(slide).read_images()
 
         # Assert
         assert [image.name for image in images] == ["Overview", "20x"]
@@ -227,7 +232,7 @@ class TestVsiSource:
         # tag 2020.
 
         # Act
-        images = {image.name: image for image in VsiImage.read_all(jpeg_slide)}
+        images = {image.name: image for image in VsiTagReader(jpeg_slide).read_images()}
 
         # Assert
         area = images["20x_BF_01"]
@@ -316,10 +321,33 @@ class TestVsiSource:
         # OS-1 states its slide barcode in tag 2061.
 
         # Act
-        identifier = VsiImage.read_slide_identifier(slide)
+        identifier = VsiTagReader(slide).read_slide_identifier()
 
         # Assert
         assert identifier == "04050732B0018S"
+
+    def test_creation_time(self, slide: Path):
+        # Matches the `Creation Time` OlyVIA shows for OS-1, 6:23:43 PM at UTC+1.
+
+        # Arrange
+
+        # Act
+        creation_time = VsiTagReader(slide).read_creation_time()
+
+        # Assert
+        assert creation_time == datetime(2012, 10, 30, 17, 23, 43, tzinfo=UTC)
+
+    def test_acquisition_datetime_is_creation_time(self, source: VsiSource):
+        # The TIFF DateTime tag of OS-1 holds another time (13:35:15, without
+        # timezone), which must not be used when tag 14 is present.
+
+        # Arrange
+
+        # Act
+        acquisition_datetime = source.metadata.pyramid.image.acquisition_datetime
+
+        # Assert
+        assert acquisition_datetime == datetime(2012, 10, 30, 17, 23, 43, tzinfo=UTC)
 
     def test_slide_identifier_is_confidential(self, slide: Path):
         # The slide barcode identifies the specimen, so it must be dropped when
