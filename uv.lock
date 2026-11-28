@@ -296,15 +296,15 @@ wheels = [
 
 [[package]]
 name = "czifile"
-version = "2026.10.14"
+version = "2026.11.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "imagecodecs" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d3/7c/fe1365648b2fb31d407498919f5de30322a460176e9933f7c262488773d7/czifile-2026.10.14.tar.gz", hash = "sha256:b25946dbf62877d4e47a4947a9c43fbc7005d3e9b7cf4397bfb834e4531b3a32", size = 111974, upload-time = "2026-10-14T19:33:22.392Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/b2/3a68eee828d92c8c4ae3dd72fb58867ac21b6ebaa41629506b332a751c72/czifile-2026.11.12.tar.gz", hash = "sha256:2dbf216336624c762d7d5f8debed9a1d8022865fc112f52d03609c586f7f0493", size = 114404, upload-time = "2026-11-13T01:20:35.499Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/df/790ce73e8006827f8a5333b4d79c429842291512abacb99723c7873b929e/czifile-2026.10.14-py3-none-any.whl", hash = "sha256:3cd45830bd841dde4db58e55530a127e1130a54425cf5535bbbd27fca2877f27", size = 67978, upload-time = "2026-10-14T19:33:21.243Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/aa/cb1f085772272955b2333649ca3a18cdd8f9b4bd598d6cbddceb8dfbec4a/czifile-2026.11.12-py3-none-any.whl", hash = "sha256:dc4ba33d171fa65cbdd81b38bced54b50f3f63b38c43432705d1cfcb446e1dfb", size = 71581, upload-time = "2026-11-13T01:20:34.37Z" },
 ]
 
 [[package]]
@@ -1770,7 +1770,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.3.0,<9.0.0" },
-    { name = "czifile", specifier = ">=2026.3.12" },
+    { name = "czifile", specifier = ">=2026.11.12" },
     { name = "imagecodecs", marker = "extra == 'imagecodecs'", specifier = ">=2026.11.11" },
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "ome-types", marker = "extra == 'bioformats'", specifier = ">=0.5.0,<0.8.0" },

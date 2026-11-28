@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The Olympus VSI reader takes the acquisition datetime from metadata tag 14, read as Unix seconds in UTC and written as a timezone-aware datetime. On the slides compared it matches the `Creation Time` shown by OlyVIA. It was previously taken from the TIFF `DateTime` tag, which has no timezone. The TIFF tag is used if tag 14 is absent.
+- Requires czifile 2026.11.12, which decodes JPEG XR with imagecodecs' JPEG XR codec instead of the Windows Imaging Component. The Windows Imaging Component decodes one block at a time however many threads read from it.
 
 ## [0.32.0] - 2026-11-20
 
