@@ -171,6 +171,7 @@ class TestMiraxSource:
             fluorescence_source.metadata.pyramid.image,
             None,
             fluorescence_source._encoder,
+            fluorescence_source._decoded_frame_cache,
         )
         size = image_data.image_size
         region = Region(Point(size.width // 3, size.height // 3), Size(256, 256))

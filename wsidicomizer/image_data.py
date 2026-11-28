@@ -15,6 +15,7 @@
 """Base ImageData classes for non-DICOM source adapters."""
 
 from abc import abstractmethod
+from uuid import uuid4
 
 import numpy as np
 from opentile.geometry import Point as OpenTilePoint
@@ -24,7 +25,7 @@ from opentile.tile_overlap import TileOverlap
 from PIL.Image import Image
 from pydicom.uid import UID
 from wsidicom import ImageData
-from wsidicom.cache import LRU, CacheItem
+from wsidicom.cache import LRU, CacheItem, DecodedFrameCache
 from wsidicom.codec import Encoder
 from wsidicom.errors import WsiDicomNotFoundError
 from wsidicom.geometry import Point, Region, Size, SizeMm
@@ -372,8 +373,9 @@ class ComposedLevelImageData(PixelLevelImageData):
     pasted in tile grid order (row, then column) onto a canvas of the background,
     so the lower and the right-hand tile win an overlap, the same way in every
     region. Each stored tile is decoded once per region,
-    even when it is placed several times in it. Subclasses decode the stored
-    tiles (`_decode_tile`).
+    even when it is placed several times in it, and is kept in the decoded frame
+    cache of the source for the regions that share it. Subclasses decode the
+    stored tiles (`_decode_tile`).
     """
 
     _TEMPLATE_COUNT = 4
@@ -387,6 +389,7 @@ class ComposedLevelImageData(PixelLevelImageData):
         tile_size: int | None,
         blank_color: int | tuple[int, int, int] | None,
         encoder: Encoder,
+        decoded_frame_cache: DecodedFrameCache,
     ):
         """Create a composed level.
 
@@ -407,6 +410,8 @@ class ComposedLevelImageData(PixelLevelImageData):
             default.
         encoder: Encoder
             Encoder that encodes every tile.
+        decoded_frame_cache: DecodedFrameCache
+            Cache of the source to keep decoded stored tiles in.
         """
         super().__init__(
             Size(overlap.image_size.width, overlap.image_size.height),
@@ -418,6 +423,8 @@ class ComposedLevelImageData(PixelLevelImageData):
         self._overlap_index = OverlapIndex(overlap)
         self._fill = fill
         self._templates = LRU[Size, np.ndarray](self._TEMPLATE_COUNT)
+        self._decoded_frame_cache = decoded_frame_cache
+        self._cache_id = uuid4().int
 
     def get_decoded_region(
         self,
@@ -519,6 +526,15 @@ class ComposedLevelImageData(PixelLevelImageData):
         """
         raise NotImplementedError()
 
+    def _get_stored_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
+        """Return the stored tile at a grid position, from the cache or decoded."""
+        return self._decoded_frame_cache.get_tile_frame(
+            self._cache_id,
+            # one index per grid position, whatever the width of the grid
+            (grid_position.y << 32) | grid_position.x,
+            lambda _: self._decode_tile(grid_position),
+        )
+
     def _compose(
         self, region: Region, executor: ReadExecutor | None = None
     ) -> np.ndarray:
@@ -548,9 +564,9 @@ class ComposedLevelImageData(PixelLevelImageData):
         # each stored tile once, even when it is placed several times
         tile_positions = list(dict.fromkeys(placement.tile for placement in placements))
         decoded = (
-            executor.map(self._decode_tile, tile_positions)
+            executor.map(self._get_stored_tile, tile_positions)
             if executor is not None
-            else map(self._decode_tile, tile_positions)
+            else map(self._get_stored_tile, tile_positions)
         )
         decoded_tiles = dict(zip(tile_positions, decoded, strict=True))
         canvas = self._blank_canvas(size)

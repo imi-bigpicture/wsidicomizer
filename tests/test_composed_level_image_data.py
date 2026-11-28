@@ -25,6 +25,7 @@ from wsidicom.codec import Encoder, JpegSettings
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
 
+from wsidicomizer.cache import SharedDecodedFrameCache
 from wsidicomizer.image_data import ComposedLevelImageData
 
 BLACK = np.array([0, 0, 0], dtype=np.uint8)
@@ -43,7 +44,9 @@ class InMemoryComposedLevel(ComposedLevelImageData):
             4,
             (0, 0, 0),
             Encoder.create_for_settings(JpegSettings()),
+            cache := SharedDecodedFrameCache(1024 * 1024),
         )
+        self.cache = cache
         self._tiles = tiles
         self.decoded: list[OpenTilePoint] = []
 
@@ -130,6 +133,30 @@ class TestComposedLevelImageData:
         # Assert - the background template is not corrupted
         second = image_data.get_decoded_region(region, 0.0, "1")
         assert (second[:, 2:] == 0).all()
+
+    @pytest.mark.parametrize("whole_tile", [4], indirect=True)
+    @pytest.mark.parametrize(["clear", "expected_decodes"], [(False, 1), (True, 2)])
+    def test_stored_tile_is_kept_in_the_cache_between_regions(
+        self, whole_tile: OpenTileRegion, clear: bool, expected_decodes: int
+    ):
+        # Arrange
+        overlap = TileOverlap(
+            OpenTileSize(4, 4),
+            {OpenTilePoint(0, 0): [TilePlacement(whole_tile, PointF(0, 0))]},
+        )
+        tile = np.full((4, 4, 3), 10, np.uint8)
+        image_data = InMemoryComposedLevel(overlap, {OpenTilePoint(0, 0): tile})
+        region = Region(Point(0, 0), Size(4, 4))
+        first = image_data.get_decoded_region(region, 0.0, "1")
+        if clear:
+            image_data.cache.clear()
+
+        # Act
+        second = image_data.get_decoded_region(region, 0.0, "1")
+
+        # Assert
+        assert np.array_equal(first, second)
+        assert len(image_data.decoded) == expected_decodes
 
     @pytest.mark.parametrize("whole_tile", [2], indirect=True)
     def test_region_without_tiles_is_blank(self, whole_tile: OpenTileRegion):

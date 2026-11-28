@@ -29,7 +29,7 @@ from opentile.tiff_image import (
 )
 from pydicom.uid import JPEG2000, UID, JPEG2000Lossless, JPEGBaseline8Bit
 from tifffile import COMPRESSION, PHOTOMETRIC
-from wsidicom.cache import lru_cached_method
+from wsidicom.cache import DecodedFrameCache
 from wsidicom.codec import Encoder, LossyCompressionIsoStandard
 from wsidicom.geometry import Point, Size, SizeMm
 from wsidicom.instance import FrameReader, TileByteRanges
@@ -375,6 +375,7 @@ class OpenTileOverlappingLevelImageData(ComposedLevelImageData):
         merged_metadata: ImageMetadata,
         encoder: Encoder,
         output_tile_size: int,
+        decoded_frame_cache: DecodedFrameCache,
     ):
         """Wrap an overlapping opentile level.
 
@@ -391,6 +392,8 @@ class OpenTileOverlappingLevelImageData(ComposedLevelImageData):
             Encoder that encodes every output tile.
         output_tile_size: int
             Size of the output tiles.
+        decoded_frame_cache: DecodedFrameCache
+            Cache of the source to keep decoded stored tiles in.
         """
         overlap = tiff_image.overlap
         if overlap is None:
@@ -419,6 +422,7 @@ class OpenTileOverlappingLevelImageData(ComposedLevelImageData):
             output_tile_size,
             blank_color,
             encoder,
+            decoded_frame_cache,
         )
         self._tiff_image = tiff_image
 
@@ -437,9 +441,7 @@ class OpenTileOverlappingLevelImageData(ComposedLevelImageData):
     def optical_paths(self) -> list[str]:
         return [self._tiff_image.optical_path]
 
-    @lru_cached_method(maxsize=16)
     def _decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
-        # cached: neighbouring output tiles share the stored tiles at their edges
         return self._tiff_image.get_decoded_tile(grid_position.to_tuple())
 
 

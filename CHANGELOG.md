@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Olympus VSI reader takes the acquisition datetime from metadata tag 14, read as Unix seconds in UTC and written as a timezone-aware datetime. On the slides compared it matches the `Creation Time` shown by OlyVIA. It was previously taken from the TIFF `DateTime` tag, which has no timezone. The TIFF tag is used if tag 14 is absent.
 - Requires czifile 2026.11.12, which decodes JPEG XR with imagecodecs' JPEG XR codec instead of the Windows Imaging Component. The Windows Imaging Component decodes one block at a time however many threads read from it.
 - The czi source keeps decoded blocks in the decoded frame cache of the source, sized in bytes by the wsidicom `decoded_frame_cache_size` setting, instead of a cache of its own. The `czi_block_cache_size` setting is removed.
+- Decoded stored tiles of MIRAX slides, and of Trestle and Ventana slides whose overlapping tiles are composed, are kept in the decoded frame cache of the source instead of caches of their own, and a tile that several threads ask for at once is decoded by one of them. `MiraxReader` no longer caches decoded tiles, and its `tile_cache` argument is removed.
 
 ### Fixed
 

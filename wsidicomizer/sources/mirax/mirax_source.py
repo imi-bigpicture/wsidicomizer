@@ -197,6 +197,7 @@ class MiraxSource(DicomizerSource):
             self.metadata.pyramid.image,
             self._tile_size,
             self._encoder,
+            self._decoded_frame_cache,
         )
 
     def _create_label_image_data(self) -> BaseDicomizerImageData | None:

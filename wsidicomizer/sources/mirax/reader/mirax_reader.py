@@ -27,7 +27,6 @@ from opentile.file import FileHandlePool, LocalFileReader
 from opentile.geometry import Point as OpenTilePoint
 from opentile.tile_overlap import TileOverlap
 from PIL import Image
-from wsidicom.cache import LRU, CacheItem
 from wsidicom.geometry import Point, Size
 
 from wsidicomizer.sources.mirax.reader.decoder import MiraxDecoderFactory
@@ -59,26 +58,18 @@ class MiraxReader:
     fluorescence.
     """
 
-    def __init__(self, path: str | Path, tile_cache: int = 64):
+    def __init__(self, path: str | Path):
         """Open a MIRAX slide.
 
         Parameters
         ----------
         path: str | Path
             Path to the .mrxs file.
-        tile_cache: int
-            Number of decoded tiles kept in an LRU cache. Adjacent regions
-            (raster scanning) share boundary tiles, so this avoids re-decoding
-            them. Set larger to reuse tiles across scan rows, 0 to
-            disable.
         """
         path = Path(path)
         data_folder = self._find_data_folder(path)
         if data_folder is None:
             raise MrxsError(f"not a .mrxs file with a Slidedat.ini: {path}")
-
-        # each tile counts 1, so the cache holds `tile_cache` tiles
-        self._cache = LRU[BlobLocation, np.ndarray](tile_cache)
 
         self._slidedat = Slidedat(data_folder)
         channels = self._slidedat.channels
@@ -200,7 +191,7 @@ class MiraxReader:
         return cls._find_data_folder(Path(path)) is not None
 
     def decode_tile(self, grid_position: OpenTilePoint) -> np.ndarray:
-        """Decode the base-level tile at a grid position, cached by location.
+        """Decode the base-level tile at a grid position.
 
         Parameters
         ----------
@@ -210,15 +201,14 @@ class MiraxReader:
         Returns
         -------
         np.ndarray
-            The decoded (H, W, 3) tile, possibly shared from the cache.
+            The decoded (H, W, 3) tile.
         """
-        return self._decode(self._index.tiles[grid_position])
+        return self._decode_stored(self._index.tiles[grid_position])
 
     def close(self) -> None:
-        """Close all file handles and clear the tile cache."""
+        """Close all file handles."""
         for reader in self._file_readers.values():
             reader.close()
-        self._cache.clear()
 
     def __enter__(self) -> "MiraxReader":
         return self
@@ -295,32 +285,6 @@ class MiraxReader:
         return self._file_readers[location.file_number].read(
             location.offset, location.length
         )
-
-    def _decode(self, location: BlobLocation) -> np.ndarray:
-        """Decode a tile to a numpy array, cached by location.
-
-        Thread-safe: the cache locks only around its own bookkeeping, and the
-        decode (which releases the GIL) runs outside it, so concurrent decodes
-        scale across cores; a lost race only decodes a tile twice.
-        Callers must not mutate the returned array, which the cache shares.
-
-        Parameters
-        ----------
-        location: BlobLocation
-            Where the tile is stored.
-
-        Returns
-        -------
-        np.ndarray
-            The decoded (H, W, 3) tile, possibly shared from the cache.
-        """
-        if not self._cache.maxsize:  # no cache: decode straight through
-            return self._decode_stored(location)
-        tile = self._cache.get(location)
-        if tile is None:
-            tile = self._decode_stored(location)
-            self._cache.put(location, CacheItem(tile, 1))
-        return tile
 
     def _decode_stored(self, location: BlobLocation) -> np.ndarray:
         """Read and decode a stored tile, checking its shape and bit depth.

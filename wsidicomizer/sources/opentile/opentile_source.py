@@ -204,6 +204,7 @@ class OpenTileSource(DicomizerSource):
                 self.metadata.pyramid.image,
                 self._encoder,
                 self._output_tile_size,
+                self._decoded_frame_cache,
             )
         return OpenTileLevelImageData(
             level,

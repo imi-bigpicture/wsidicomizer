@@ -16,6 +16,7 @@
 
 import numpy as np
 from opentile.geometry import Point as OpenTilePoint
+from wsidicom.cache import DecodedFrameCache
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region
 from wsidicom.metadata import Image as ImageMetadata
@@ -34,6 +35,7 @@ class MiraxLevelImageData(ComposedLevelImageData):
         image_metadata: ImageMetadata,
         tile_size: int | None,
         encoder: Encoder,
+        decoded_frame_cache: DecodedFrameCache,
     ):
         """Wrap the brightfield MIRAX base level as ImageData.
 
@@ -47,6 +49,8 @@ class MiraxLevelImageData(ComposedLevelImageData):
             Output tile size. If None, the default tile size is used.
         encoder: Encoder
             Encoder to use.
+        decoded_frame_cache: DecodedFrameCache
+            Cache of the source to keep decoded stored tiles in.
         """
         super().__init__(
             mrxs.overlap,
@@ -55,6 +59,7 @@ class MiraxLevelImageData(ComposedLevelImageData):
             tile_size,
             mrxs.fill_color,
             encoder,
+            decoded_frame_cache,
         )
         self._mrxs = mrxs
 
@@ -73,6 +78,7 @@ class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
         image_metadata: ImageMetadata,
         tile_size: int | None,
         encoder: Encoder,
+        decoded_frame_cache: DecodedFrameCache,
     ):
         """Wrap the fluorescence MIRAX base level as ImageData.
 
@@ -86,6 +92,8 @@ class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
             Output tile size. If None, the default tile size is used.
         encoder: Encoder
             Encoder to use (grayscale/MONOCHROME2).
+        decoded_frame_cache: DecodedFrameCache
+            Cache of the source to keep decoded stored tiles in.
         """
         fill = np.array(mrxs.fill_color, dtype=mrxs.dtype)
         # the blank color of the grayscale level is the fill of its first channel;
@@ -97,6 +105,7 @@ class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
             tile_size,
             int(fill[mrxs.channels[0].band]),
             encoder,
+            decoded_frame_cache,
         )
         self._mrxs = mrxs
         self._channels = mrxs.channels
@@ -154,7 +163,7 @@ class MiraxFluorescenceLevelImageData(ComposedLevelImageData):
         path: str
             Optical path (channel) of the tile.
         cache: bool = True
-            Unused; the reader caches decoded source tiles itself.
+            Unused; decoded stored tiles are cached by the source.
 
         Returns
         -------
