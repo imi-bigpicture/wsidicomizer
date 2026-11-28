@@ -14,9 +14,12 @@
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 
+from wsidicomizer import WsiDicomizer
 from wsidicomizer.sources import CziSource
+from wsidicomizer.wsidicomizer import SourceIdentifier
 
 
 @pytest.fixture
@@ -51,3 +54,16 @@ class TestCziSource:
 
         # Assert
         assert supported is False
+
+    def test_read_tile_after_clear_cache_is_unchanged(self, slide: Path):
+        # Arrange
+        with WsiDicomizer.open(slide, preferred_source=SourceIdentifier.CZI) as wsi:
+            tile = (wsi.pyramid.base_level.tiled_size.width // 2, 10)
+            before = wsi.read_tile(0, tile, as_array=True)
+
+            # Act
+            wsi.clear_cache()
+            after = wsi.read_tile(0, tile, as_array=True)
+
+        # Assert
+        assert np.array_equal(before, after)

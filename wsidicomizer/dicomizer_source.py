@@ -130,6 +130,7 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             sources that read through fsspec and ignored by the rest. Part of
             the signature every source is constructed with.
         """
+        super().__init__()
         self._filepath = filepath
         self._provided_encoder = encoder
         self._tile_size = tile_size
