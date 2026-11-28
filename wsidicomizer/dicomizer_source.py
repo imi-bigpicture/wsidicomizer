@@ -31,6 +31,7 @@ from wsidicom import ImageData
 from wsidicom.codec import Encoder, Jpeg2kSettings, JpegSettings
 from wsidicom.codec.settings import Channels
 from wsidicom.conceptcode import ContributingEquipmentPurposeCode
+from wsidicom.config import get_settings as get_dicom_settings
 from wsidicom.graphical_annotations import AnnotationInstance
 from wsidicom.instance import WsiDataset, WsiInstance
 from wsidicom.metadata import (
@@ -45,6 +46,7 @@ from wsidicom.metadata.schema.dicom import WsiMetadataDicomSchema
 from wsidicom.paths import as_local_path
 from wsidicom.source import Source
 
+from wsidicomizer.cache import SharedDecodedFrameCache
 from wsidicomizer.config import get_settings
 from wsidicomizer.image_data import BaseDicomizerImageData
 from wsidicomizer.metadata import (
@@ -131,6 +133,10 @@ class DicomizerSource(Source, metaclass=ABCMeta):
             the signature every source is constructed with.
         """
         super().__init__()
+        # Sources reading frames that neighbouring tiles share keep them here.
+        self._decoded_frame_cache = SharedDecodedFrameCache(
+            get_dicom_settings().decoded_frame_cache_size
+        )
         self._filepath = filepath
         self._provided_encoder = encoder
         self._tile_size = tile_size

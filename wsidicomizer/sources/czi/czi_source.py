@@ -132,6 +132,7 @@ class CziSource(DicomizerSource):
             self._encoder,
             self.base_metadata,
             self.metadata.pyramid.image,
+            self._decoded_frame_cache,
         )
 
     def _create_label_image_data(self) -> BaseDicomizerImageData | None:

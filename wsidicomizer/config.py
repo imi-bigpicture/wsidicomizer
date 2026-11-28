@@ -43,8 +43,6 @@ class Settings(DicomSettings):
 
     default_tile_size: int = 512
     """Default tile size to use."""
-    czi_block_cache_size: int = 8
-    """Size of block cache to use for czi files."""
     insert_icc_profile_if_missing: bool = True
     """Whether to insert a default ICC profile in the DICOM file if no profile
     is present in the source file or provided metadata."""

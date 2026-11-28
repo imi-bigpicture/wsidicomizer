@@ -19,12 +19,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from threading import RLock
+from uuid import uuid4
 
 import numpy as np
 from czifile import CziDirectoryEntryDV, CziFile, CziSubBlockSegmentData
 from pydicom.uid import UID
-from wsidicom.cache import lru_cached_method
+from wsidicom.cache import DecodedFrameCache
 from wsidicom.codec import Encoder
 from wsidicom.geometry import Point, Region, Size, SizeMm
 from wsidicom.metadata import Image as ImageMetadata
@@ -50,6 +50,7 @@ class CziImageData(BaseDicomizerImageData):
         encoder: Encoder,
         czi_metadata: CziMetadata,
         merged_metadata: ImageMetadata,
+        decoded_frame_cache: DecodedFrameCache,
     ) -> None:
         """Wraps a czi file to ImageData. Multiple pyramid levels are currently
         not supported.
@@ -66,10 +67,14 @@ class CziImageData(BaseDicomizerImageData):
             Czi metadata to use.
         merged_metadata: ImageMetadata
             Merged image metadata to use.
+        decoded_frame_cache: DecodedFrameCache
+            Cache of the source to keep decoded blocks in.
         """
         self._czi = czi
         self._czi_metadata = czi_metadata
         self._merged_metadata = merged_metadata
+        self._decoded_frame_cache = decoded_frame_cache
+        self._cache_id = uuid4().int
 
         self._czi.set_lock(True)
         super().__init__(encoder)
@@ -78,7 +83,6 @@ class CziImageData(BaseDicomizerImageData):
         self._tile_size = Size(tile_size, tile_size)
         self._block_directory = self._czi.filtered_subblock_directory
         self._dtype = np.dtype(self._block_directory[0].dtype)
-        self._block_locks: dict[int, RLock] = defaultdict(RLock)
 
         if self._merged_metadata.pixel_spacing is None:
             raise ValueError(
@@ -348,30 +352,20 @@ class CziImageData(BaseDicomizerImageData):
             dtype=self._dtype,
         )
 
-    @lru_cached_method(maxsize=lambda: get_settings().czi_block_cache_size)
     def _get_tile_data(self, block_index: int) -> np.ndarray:
-        """Get decompressed tile data from czi file. Cache the tile data. To
-        prevent multiple threads proceseing the same tile, use a lock for
-        each block."""
-        block_lock = self._block_locks[block_index]
-        acquired = False
-        try:
-            # Try to lock block.
-            acquired = block_lock.acquire(blocking=False)
-            if not acquired:
-                # Another thread is already reading the block.
-                # Wait for lock and hopefully read from cache.
-                acquired = block_lock.acquire(blocking=True)
-                return self._get_tile_data(block_index)
-            else:
-                # Read the block data.
-                block = self.block_directory[block_index]
-                segment = block.read_segment_data(self._czi)
-                assert isinstance(segment, CziSubBlockSegmentData)
-                return segment.data()
-        finally:
-            if acquired:
-                block_lock.release()
+        """Return the decoded block, from the decoded frame cache of the source.
+
+        A block is shared by neighbouring tiles."""
+        return self._decoded_frame_cache.get_tile_frame(
+            self._cache_id, block_index, self._read_block
+        )
+
+    def _read_block(self, block_index: int) -> np.ndarray:
+        """Read and decode a block from the czi file."""
+        block = self.block_directory[block_index]
+        segment = block.read_segment_data(self._czi)
+        assert isinstance(segment, CziSubBlockSegmentData)
+        return segment.data()
 
     def _get_block_dimensions(
         self, block: CziDirectoryEntryDV
